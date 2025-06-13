@@ -80,7 +80,7 @@ contains
    end subroutine initInterCrushing
 
 !****************************************************************************
-!  Continuous crushing uses the standard inerpolation routine
+!  Continuous crushing uses the standard interpolation routine
 !  of the precalculated time series
    function outputInterCrushLoad (myIceParams, iceLog, time)  result(iceLoads)
       type(iceFloe_ParameterType), intent(in)      :: myIceParams

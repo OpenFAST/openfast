@@ -714,7 +714,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	TStC_P_2_ED_P_T	{:}	-	-	"Map ServoDyn/T
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_BStC_P_B 	{:}{:}	-	-	"Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_ED_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade"
 typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BStC_P_B 	{:}{:}	-	-	"Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade"
+typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn distributed load mesh on the blade"
 # ED/SD <-> SrvD/StC -- Platform TMD
 typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SubStructure	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_SStC_P_P	{:}	-	-	"Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh"
@@ -801,7 +801,6 @@ typedef	^	FAST_ExternInputType	ReKi	YawRateCom	-	-	-	"yaw rate command from Simu
 typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	2pi	"blade pitch commands from Simulink/Labview"	"rad"
 typedef	^	FAST_ExternInputType	ReKi	BlAirfoilCom	3	-	-	"blade airfoil commands from Simulink/Labview"	"-"
 typedef	^	FAST_ExternInputType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"
-typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
 typedef	^	FAST_ExternInputType	ReKi	CableDeltaL	{20}	-	-	"Cable control DeltaL"	m
 typedef	^	FAST_ExternInputType	ReKi	CableDeltaLdot	{20}	-	-	"Cable control DeltaLdot"	m/s
 
@@ -811,8 +810,8 @@ typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for glo
 typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
 typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
 typedef	^	FAST_MiscVarType	ReKi	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
-typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
-typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
+typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without initialization)"	(s)
+typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including initialization)"
 typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
 #typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)

@@ -1746,6 +1746,27 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
    CALL BD_CopyInput(u, m%u2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   ! compute mapping of applied distributed loads to the root location
+   ! NOTE: PtLoads are not handled at present. See comments in BeamDyn_IO.f90 for changes required.
+   if (p%CompAppliedLdAtRoot .and. p%BldMotionNodeLoc == BD_MESH_QP) then
+      ! create point mesh at root (cousin of rootmotion) 
+      CALL MeshCopy( SrcMesh   = u%RootMotion     &
+                    , DestMesh = m%LoadsAtRoot    &
+                    , CtrlCode = MESH_COUSIN      &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , Force    = .TRUE.           &
+                    , Moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
+
+      ! mapping of distributed loads to LoadsAtRoot
+      CALL MeshMapCreate( u%DistrLoad, m%LoadsAtRoot, m%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      m%LoadsAtRoot%remapFlag = .false.
+
+   endif
 
 end subroutine Init_MiscVars
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2282,7 +2303,7 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
    DO nelem = 1,p%elem_total
        DO idx_qp = 1,p%nqp
-            !> ### Calculate the the initial displacement fields in an element
+            !> ### Calculate the initial displacement fields in an element
             !! Initial displacement field \n
             !!    \f$   \underline{u_0}\left( \xi \right) =
             !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{u}_0}^k
@@ -2370,7 +2391,7 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
 
-   !> ### Calculate the the displacement fields in an element
+   !> ### Calculate the displacement fields in an element
    !! Using equations (27) and (28) \n
    !!    \f$   \underline{u}\left( \xi \right) =
    !!                \sum_{i=1}^{p+1} h^i\left( \xi \right) \underline{\hat{u}}^i

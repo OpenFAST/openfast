@@ -355,7 +355,7 @@ PROGRAM OrcaDriver
                Orca_y, Orca_m, Settings%DT,  Orca_InitOut, ErrStat, ErrMsg )
 
 
-      ! Make sure no errors occured that give us reason to terminate now.
+      ! Make sure no errors occurred that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
@@ -447,7 +447,7 @@ PROGRAM OrcaDriver
 
 
 
-              ! Make sure no errors occured that give us reason to terminate now.
+              ! Make sure no errors occurred that give us reason to terminate now.
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
@@ -505,7 +505,7 @@ PROGRAM OrcaDriver
                   Orca_y, Orca_m, ErrStat, ErrMsg)
 
 
-            ! Make sure no errors occured that give us reason to terminate now.
+            ! Make sure no errors occurred that give us reason to terminate now.
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
@@ -535,7 +535,7 @@ PROGRAM OrcaDriver
                      TimeNow, Orca_InitOut, Orca_p, Orca_u, Orca_y, ErrStat, ErrMsg )
          CLOSE(TmpUnit)
 
-            ! Make sure no errors occured that give us reason to terminate now.
+            ! Make sure no errors occurred that give us reason to terminate now.
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
@@ -583,7 +583,7 @@ PROGRAM OrcaDriver
    IF ( SettingsFlags%AddedMassFile ) THEN
       CALL AddedMass_OutputWrite( Settings, SettingsFlags%AddedMassOutputInit, &
             Orca_m%PtfmAM, ErrStat, ErrMsg )
-         ! Make sure no errors occured that give us reason to terminate now.
+         ! Make sure no errors occurred that give us reason to terminate now.
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL DriverCleanup()
          CALL ProgAbort( ErrMsg )
@@ -611,7 +611,7 @@ PROGRAM OrcaDriver
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                   Orca_y, Orca_m,  ErrStat, ErrMsg )
 
-      ! Make sure no errors occured that give us reason to terminate now.
+      ! Make sure no errors occurred that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )

@@ -4868,7 +4868,9 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
    
    
    Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
-   Z(1) = Z(2) - p%grid%GridHeight                   ! bottom of the grid
+   Z(1) = MAX( Tolerance, Z(2) - p%grid%GridHeight ) ! bottom of the grid
+   Z(2) = Z(1) + p%grid%GridHeight ! re-calculate just in case Z1 is set to Tolerance
+   
    CALL getVelocityProfile(p, p%UHub, p%grid%HubHt, Z, V, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetDefaultRS')
 

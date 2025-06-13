@@ -25,6 +25,7 @@ Module SubDyn
    
    USE NWTC_Library
    USE SubDyn_Types
+   USE SubDyn_Output_Params, only: MaxOutPts
    USE SubDyn_Output
    USE SubDyn_Tests
    USE SD_FEM
@@ -1560,7 +1561,7 @@ END IF
 ! OutList - list of requested parameters to output to a file
 CALL ReadCom( UnIn, SDInputFile, 'SSOutList',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 
-ALLOCATE(Init%SSOutList(MaxOutChs), STAT=ErrStat2)
+ALLOCATE(Init%SSOutList(MaxOutPts + p%OutAllInt*p%OutAllDims), STAT=ErrStat2)
 If (Check( ErrStat2 /= ErrID_None ,'Error allocating SSOutList arrays')) return
 CALL ReadOutputList ( UnIn, SDInputFile, Init%SSOutList, p%NumOuts, 'SSOutList', 'List of outputs requested', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL CleanUp()
