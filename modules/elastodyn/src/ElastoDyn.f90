@@ -9097,7 +9097,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    ! Create Point Mesh for loads input at Platform Reference Point:
    !.......................................................
-   Position = (/ p%PtfmRefxt, p%PtfmRefyt, p%PtfmRefzt /)
+   Position = [p%PtfmRefxt, p%PtfmRefyt, p%PtfmRefzt]
    call Eye(Orientation, ErrStat2, errMsg2)
    call CreateInputPointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
@@ -9105,7 +9105,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    ! Create Point Mesh for loads input at nacelle:
    !.......................................................
-   Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
+   Position = [p%PtfmRefxt, p%PtfmRefyt, p%TowerHt]
    call Eye(Orientation, ErrStat2, errMsg2)
    call CreateInputPointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
