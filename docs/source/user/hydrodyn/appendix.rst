@@ -120,24 +120,36 @@ structure::
          42    14.43376    25.00000   -19.94000      1            0
          43   -28.86751     0.00000   -19.94000      1            0
          44    14.43376   -25.00000   -19.94000      1            0
-      ---------------------- MEMBER CROSS-SECTION PROPERTIES -------------------------
-                   4   NPropSets      - Number of member property sets (-)
+      ---------------- CYLINDRICAL MEMBER CROSS-SECTION PROPERTIES -------------------
+                   4   NPropSetsCyl    - Number of cylindrical member property sets (-)
       PropSetID    PropD         PropThck
          (-)        (m)            (m)
           1        6.50000        0.03000          ! Main Column
           2       12.00000        0.06000          ! Upper Columns
           3       24.00000        0.06000          ! Base Columns
           4        1.60000        0.01750          ! Pontoons
-      ---------------------- SIMPLE HYDRODYNAMIC COEFFICIENTS (model 1) --------------
+      ---------------- RECTANGULAR MEMBER CROSS-SECTION PROPERTIES -------------------
+                   0   NPropSetsRec    - Number of rectangular member property sets (-)
+      MPropSetID   PropA      PropB    PropThck
+         (-)        (m)        (m)       (m)
+      -------- SIMPLE CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 1) ---------
       SimplCd    SimplCdMG    SimplCa    SimplCaMG    SimplCp    SimplCpMG   SimplAxCd  SimplAxCdMG   SimplAxCa  SimplAxCaMG  SimplAxCp   SimplAxCpMG    SimplCb    SimplCbMG
          (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)            (-)         (-)
          0.00        0.00        0.00        0.00        1.00        1.00        0.00        0.00        0.00        0.00        1.00        1.00           1.00        1.00
-      ---------------------- DEPTH-BASED HYDRODYNAMIC COEFFICIENTS (model 2) ---------
-                   0   NCoefDpth       - Number of depth-dependent coefficients (-)
+      -------- SIMPLE RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 1) ---------
+      SimplCdA    SimplCdAMG    SimplCdB    SimplCdBMG    SimplCaA    SimplCaAMG    SimplCaB    SimplCaBMG    SimplCp    SimplCpMG   SimplAxCd  SimplAxCdMG   SimplAxCa  SimplAxCaMG  SimplAxCp   SimplAxCpMG  SimplCb  SimplCbMG
+        (-)         (-)           (-)         (-)           (-)         (-)           (-)         (-)           (-)         (-)         (-)         (-)          (-)         (-)         (-)         (-)          (-)       (-)
+        0.0         0.0           0.0         0.0           0.0         0.0           0.0         0.0           0.0         0.0         0.0         0.0          0.0         0.0         0.0         0.0          1.0       1.0
+      ------ DEPTH-BASED CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 2) -------
+                   0   NCoefDpthCyl    - Number of depth-dependent cylindrical member coefficients (-)
       Dpth      DpthCd   DpthCdMG   DpthCa   DpthCaMG       DpthCp   DpthCpMG   DpthAxCd   DpthAxCdMG   DpthAxCa   DpthAxCaMG   DpthAxCp   DpthAxCpMG   DpthCb   DpthCbMG
       (m)       (-)      (-)        (-)      (-)            (-)      (-)        (-)        (-)          (-)        (-)          (-)        (-)           (-)      (-)
-      ---------------------- MEMBER-BASED HYDRODYNAMIC COEFFICIENTS (model 3) --------
-                  25   NCoefMembers       - Number of member-based coefficients (-)
+      ------ DEPTH-BASED RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 2) -------
+                   0   NCoefDpthRec    - Number of depth-dependent rectangular member coefficients (-)
+      Dpth    DpthCdA   DpthCdAMG    DpthCdB   DpthCdBMG   DpthCaA   DpthCaAMG   DpthCaB   DpthCaBMG     DpthCp   DpthCpMG   DpthAxCd   DpthAxCdMG   DpthAxCa   DpthAxCaMG   DpthAxCp   DpthAxCpMG   DpthCb   DpthCbMG
+      (m)       (-)       (-)          (-)       (-)         (-)       (-)        (-)        (-)          (-)        (-)       (-)        (-)          (-)        (-)          (-)        (-)          (-)      (-)
+      ------ MEMBER-BASED CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 3) ------
+                  25   NCoefMembersCyl    - Number of member-based cylindrical member coefficients (-)
       MemberID    MemberCd1     MemberCd2    MemberCdMG1   MemberCdMG2    MemberCa1     MemberCa2    MemberCaMG1   MemberCaMG2    MemberCp1     MemberCp2    MemberCpMG1   MemberCpMG2   MemberAxCd1   MemberAxCd2  MemberAxCdMG1 MemberAxCdMG2  MemberAxCa1   MemberAxCa2  MemberAxCaMG1 MemberAxCaMG2  MemberAxCp1  MemberAxCp2   MemberAxCpMG1   MemberAxCpMG2    MemberCb1     MemberCb2    MemberCbMG1   MemberCbMG2
          (-)         (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)              (-)           (-)           (-)           (-)
           1          0.56          0.56          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00             1.00          1.00          1.00          1.00          ! Main Column
@@ -165,35 +177,39 @@ structure::
          20          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00             1.00          1.00          1.00          1.00          ! Cross Brace 1
          21          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00             1.00          1.00          1.00          1.00          ! Cross Brace 2
          22          0.63          0.63          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00          0.00             1.00          1.00          1.00          1.00          ! Cross Brace 3
+      ------ MEMBER-BASED RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 3) ------
+                  0   NCoefMembersRec - Number of member-based rectangular member coefficients (-)
+      MemberID    MemberCdA1     MemberCdA2    MemberCdAMG1   MemberCdAMG2    MemberCdB1     MemberCdB2    MemberCdBMG1   MemberCdBMG2    MemberCaA1     MemberCaA2    MemberCaAMG1   MemberCaAMG2    MemberCaB1     MemberCaB2    MemberCaBMG1   MemberCaBMG2    MemberCp1     MemberCp2    MemberCpMG1   MemberCpMG2   MemberAxCd1   MemberAxCd2  MemberAxCdMG1 MemberAxCdMG2  MemberAxCa1   MemberAxCa2  MemberAxCaMG1 MemberAxCaMG2  MemberAxCp1  MemberAxCp2   MemberAxCpMG1   MemberAxCpMG2   MemberCb1     MemberCb2    MemberCbMG1   MemberCbMG2
+         (-)         (-)            (-)           (-)            (-)             (-)            (-)           (-)            (-)             (-)            (-)           (-)            (-)             (-)            (-)           (-)            (-)             (-)           (-)          (-)           (-)           (-)           (-)          (-)           (-)            (-)           (-)          (-)           (-)              (-)           (-)          (-)           (-)            (-)           (-)          (-)           (-)
       -------------------- MEMBERS -------------------------------------------------
                   25   NMembers       - Number of members (-)
-      MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MDivSize   MCoefMod   MHstLMod  PropPot   [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]
-        (-)        (-)        (-)         (-)          (-)        (m)      (switch)   (switch)  (flag)
-          1         1          2           1            1         1.0000      3          1       TRUE           ! Main Column
-          2         3          4           2            2         1.0000      3          1       TRUE           ! Upper Column 1
-          3         5          6           2            2         1.0000      3          1       TRUE           ! Upper Column 2
-          4         7          8           2            2         1.0000      3          1       TRUE           ! Upper Column 3
-          5        42          3           3            3         1.0000      3          1       TRUE           ! Base Column 1
-          6        43          5           3            3         1.0000      3          1       TRUE           ! Base Column 2
-          7        44          7           3            3         1.0000      3          1       TRUE           ! Base Column 3
-         23         9         42           3            3         1.0000      3          1       TRUE           ! Base column cap 1
-         24        10         43           3            3         1.0000      3          1       TRUE           ! Base column cap 2
-         25        11         44           3            3         1.0000      3          1       TRUE           ! Base column cap 3
-          8        12         13           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Upper 1
-          9        14         15           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Upper 2
-         10        16         17           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Upper 3
-         11        18         19           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Lower 1
-         12        20         21           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Lower 2
-         13        22         23           4            4         1.0000      3          1       TRUE           ! Delta Pontoon, Lower 3
-         14        24         25           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Upper 1
-         15        26         27           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Upper 2
-         16        28         29           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Upper 3
-         17        30         31           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Lower 1
-         18        32         33           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Lower 2
-         19        34         35           4            4         1.0000      3          1       TRUE           ! Y Pontoon, Lower 3
-         20        36         37           4            4         1.0000      3          1       TRUE           ! Cross Brace 1
-         21        38         39           4            4         1.0000      3          1       TRUE           ! Cross Brace 2
-         22        40         41           4            4         1.0000      3          1       TRUE           ! Cross Brace 3
+      MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MSecGeom    MSpinOrient   MDivSize   MCoefMod  MHstLMod  PropPot   [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]
+        (-)        (-)        (-)         (-)          (-)      (switch)       (deg)        (m)      (switch)  (switch)  (flag)
+         1          1          2           1            1           1            0         1.0000        3         1      TRUE           ! Main Column
+         2          3          4           2            2           1            0         1.0000        3         1      TRUE           ! Upper Column 1
+         3          5          6           2            2           1            0         1.0000        3         1      TRUE           ! Upper Column 2
+         4          7          8           2            2           1            0         1.0000        3         1      TRUE           ! Upper Column 3
+         5         42          3           3            3           1            0         1.0000        3         1      TRUE           ! Base Column 1
+         6         43          5           3            3           1            0         1.0000        3         1      TRUE           ! Base Column 2
+         7         44          7           3            3           1            0         1.0000        3         1      TRUE           ! Base Column 3
+        23          9         42           3            3           1            0         1.0000        3         1      TRUE           ! Base column cap 1
+        24         10         43           3            3           1            0         1.0000        3         1      TRUE           ! Base column cap 2
+        25         11         44           3            3           1            0         1.0000        3         1      TRUE           ! Base column cap 3
+         8         12         13           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Upper 1
+         9         14         15           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Upper 2
+        10         16         17           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Upper 3
+        11         18         19           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Lower 1
+        12         20         21           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Lower 2
+        13         22         23           4            4           1            0         1.0000        3         1      TRUE           ! Delta Pontoon, Lower 3
+        14         24         25           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Upper 1
+        15         26         27           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Upper 2
+        16         28         29           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Upper 3
+        17         30         31           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Lower 1
+        18         32         33           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Lower 2
+        19         34         35           4            4           1            0         1.0000        3         1      TRUE           ! Y Pontoon, Lower 3
+        20         36         37           4            4           1            0         1.0000        3         1      TRUE           ! Cross Brace 1
+        21         38         39           4            4           1            0         1.0000        3         1      TRUE           ! Cross Brace 2
+        22         40         41           4            4           1            0         1.0000        3         1      TRUE           ! Cross Brace 3
       ---------------------- FILLED MEMBERS ------------------------------------------
                    2   NFillGroups     - Number of filled member groups (-) [If FillDens = DEFAULT, then FillDens = WtrDens; FillFSLoc is related to MSL2SWL]
       FillNumM FillMList FillFSLoc     FillDens
