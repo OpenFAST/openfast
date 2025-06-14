@@ -6235,7 +6235,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
             CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-            IF (nodeInWater) THEN
+            IF (nodeInWater .EQ. 1_IntKi) THEN
 
               ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
               ! Side B - +x_hat side
