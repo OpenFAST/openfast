@@ -915,18 +915,36 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       DO I = 1,InputFileData%Morison%NMembers
          ! We can't use the ParseAry here since PropPot is a logical
          Line = FileInfo_In%Lines(CurLine)
+
          READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,    InputFileData%Morison%InpMembers(I)%MJointID1,    &
                                       InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
                                       InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MSecGeom,     &
                                       InputFileData%Morison%InpMembers(I)%MSpinOrient, InputFileData%Morison%InpMembers(I)%MDivSize,     &
                                       InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
-                                      InputFileData%Morison%InpMembers(I)%PropPot
+                                      InputFileData%Morison%InpMembers(I)%PropPot,     InputFileData%Morison%InpMembers(I)%FDMod,        &
+                                      InputFileData%Morison%InpMembers(I)%VnCOffA,     InputFileData%Morison%InpMembers(I)%VnCOffB,      &
+                                      InputFileData%Morison%InpMembers(I)%FDLoFScA,    InputFileData%Morison%InpMembers(I)%FDLoFScB
          IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
-                        //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
-            if (Failed())  return;
+            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,    InputFileData%Morison%InpMembers(I)%MJointID1,    &
+                                         InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
+                                         InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MSecGeom,     &
+                                         InputFileData%Morison%InpMembers(I)%MSpinOrient, InputFileData%Morison%InpMembers(I)%MDivSize,     &
+                                         InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
+                                         InputFileData%Morison%InpMembers(I)%PropPot
+            IF ( ErrStat2 /= 0 ) THEN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
+                           //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
+               if (Failed())  return;
+            ELSE
+               InputFileData%Morison%InpMembers(I)%FDMod    =   0_IntKi
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            END IF
          END IF
+
          InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R
 
          if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
