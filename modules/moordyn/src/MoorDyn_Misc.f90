@@ -1717,7 +1717,7 @@ CONTAINS
             
             CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the IFFTs.'; IF(Failed()) RETURN
       
-      end if ! p%WaveKin == 3
+         END IF ! p%WaveKin > 0
 
 
          ! --------------------------------- now do currents --------------------------------
