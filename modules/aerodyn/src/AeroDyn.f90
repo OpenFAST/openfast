@@ -4180,7 +4180,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
 
                ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
                !       so that I don't have to take the transpose of orientationAnnulus(:,:,j,k)
-            if ( p%MHK == MHK_None ) then
+            if ( p%rotors(iR)%MHK == MHK_None ) then
                y%rotors(iR)%BladeLoad(k)%Force(:,j)  = matmul( force,  m%rotors(iR)%orientationAnnulus(:,:,j,k) ) ! force per unit length of the jth node in the kth blade
                y%rotors(iR)%BladeLoad(k)%Moment(:,j) = matmul( moment, m%rotors(iR)%orientationAnnulus(:,:,j,k) ) ! moment per unit length of the jth node in the kth blade
             else
