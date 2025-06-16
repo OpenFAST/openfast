@@ -191,7 +191,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations (unrotated reference frame) about platform reference point  (2021-01-05: just transposed TransMat, it was incorrect before)
@@ -248,7 +248,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations about ref point in *unrotated* reference frame
@@ -1067,7 +1067,7 @@ CONTAINS
    
       INTEGER(IntKi)                   :: NStepWave    ! 
       INTEGER(IntKi)                   :: NStepWave2   ! 
-      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing lenght for FFT
+      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing length for FFT
       REAL(SiKi)                       :: WaveDOmega   ! frequency step
       REAL(SiKi), ALLOCATABLE          :: SinWaveDir(:)                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
       REAL(SiKi), ALLOCATABLE          :: CosWaveDir(:)                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
@@ -1189,8 +1189,8 @@ CONTAINS
             FileName = trim(WaterKinString)
          END IF
          
-         
-         
+
+
          UnEcho=-1
          CALL GetNewUnit( UnIn )   
          CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); IF(Failed()) RETURN
@@ -1617,10 +1617,10 @@ CONTAINS
                ENDDO
 
                ! Initialize the FFT
-               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
+               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
 
                ! Apply the forward FFT on the wave elevation timeseries to get the real and imaginary parts of the frequency information.      
-               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occured while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
+               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
 
                ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
                DO I=1,NStepWave2-1
@@ -1629,7 +1629,7 @@ CONTAINS
                ENDDO
                WaveElevC0(:,NStepWave2) = 0.0_SiKi
 
-               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the FFTs.'; IF(Failed()) RETURN
+               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the FFTs.'; IF(Failed()) RETURN
 
                IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed0()) RETURN  
                IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed0()) RETURN
@@ -1674,7 +1674,7 @@ CONTAINS
             END DO    
             
             ! set up FFTer for doing IFFTs
-            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
+            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
 
             ! Loop through all points where the incident wave kinematics will be computed      
             DO ix = 1,p%nxWave 
@@ -1715,8 +1715,8 @@ CONTAINS
 
             ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verIFication...
             
-            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the IFFTs.'; IF(Failed()) RETURN
-         
+            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the IFFTs.'; IF(Failed()) RETURN
+      
          END IF ! p%WaveKin > 0
 
 

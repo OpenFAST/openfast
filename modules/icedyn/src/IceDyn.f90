@@ -2516,7 +2516,7 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
       
       FUNCTION BrkLdPar (alpha, lambda, mu) Result (A)
       
-      !BRKLDPAR Calculates Ralston's horizontal force paramters A1, A2, A3, A4 and B1, B2.
+      !BRKLDPAR Calculates Ralston's horizontal force parameters A1, A2, A3, A4 and B1, B2.
       !   Detailed explanation in Ralston's paper: Ice Force Desgin Consideration 
       !  for Conical Offshore Structure and Ice Module Manual
       

@@ -27,7 +27,7 @@ n_substeps: 1            # Number of substeps per timestep of the glue-code
 
 n_checkpoint: 160        # Restart files will be written every so many time steps
 
-set_exp_law_wind: false  # Set velocity at the the turbine using an exponential law profile.
+set_exp_law_wind: false  # Set velocity at the turbine using an exponential law profile.
 
 Turbine0:
 

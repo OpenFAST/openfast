@@ -735,7 +735,7 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: ED_L_2_BStC_P_B      !< Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_ED_P_B      !< Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade [-]
     TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BD_L_2_BStC_P_B      !< Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade [-]
+    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn distributed load mesh on the blade [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SStC_P_P_2_SubStructure      !< Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SubStructure_2_SStC_P_P      !< Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh [-]
     TYPE(MeshMapType)  :: ED_P_2_SrvD_P_P      !< Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller [-]
@@ -807,7 +807,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: BlPitchCom = 0.0_ReKi      !< blade pitch commands from Simulink/Labview [rad]
     REAL(ReKi) , DIMENSION(1:3)  :: BlAirfoilCom = 0.0_ReKi      !< blade airfoil commands from Simulink/Labview [-]
     REAL(ReKi)  :: HSSBrFrac = 0.0_ReKi      !< Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: LidarFocus = 0.0_ReKi      !< lidar focus (relative to lidar location) [m]
     REAL(ReKi) , DIMENSION(1:20)  :: CableDeltaL = 0.0_ReKi      !< Cable control DeltaL [m]
     REAL(ReKi) , DIMENSION(1:20)  :: CableDeltaLdot = 0.0_ReKi      !< Cable control DeltaLdot [m/s]
   END TYPE FAST_ExternInputType
@@ -819,8 +818,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: NextJacCalcTime = 0.0_R8Ki      !< Time between calculating Jacobians in the HD-ED and SD-ED simulations [(s)]
     REAL(ReKi)  :: PrevClockTime = 0.0_ReKi      !< Clock time at start of simulation in seconds [(s)]
     REAL(ReKi)  :: UsrTime1 = 0.0_ReKi      !< User CPU time for simulation initialization [(s)]
-    REAL(ReKi)  :: UsrTime2 = 0.0_ReKi      !< User CPU time for simulation (without intialization) [(s)]
-    INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime = 0_IntKi      !< Start time of simulation (including intialization) [-]
+    REAL(ReKi)  :: UsrTime2 = 0.0_ReKi      !< User CPU time for simulation (without initialization) [(s)]
+    INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime = 0_IntKi      !< Start time of simulation (including initialization) [-]
     INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime = 0_IntKi      !< Start time of simulation (after initialization) [-]
     LOGICAL  :: calcJacobian = .false.      !< Should we calculate Jacobians in Option 1? [(flag)]
     TYPE(FAST_ExternInputType)  :: ExternInput      !< external input values [-]
@@ -14636,7 +14635,6 @@ subroutine FAST_CopyExternInputType(SrcExternInputTypeData, DstExternInputTypeDa
    DstExternInputTypeData%BlPitchCom = SrcExternInputTypeData%BlPitchCom
    DstExternInputTypeData%BlAirfoilCom = SrcExternInputTypeData%BlAirfoilCom
    DstExternInputTypeData%HSSBrFrac = SrcExternInputTypeData%HSSBrFrac
-   DstExternInputTypeData%LidarFocus = SrcExternInputTypeData%LidarFocus
    DstExternInputTypeData%CableDeltaL = SrcExternInputTypeData%CableDeltaL
    DstExternInputTypeData%CableDeltaLdot = SrcExternInputTypeData%CableDeltaLdot
 end subroutine
@@ -14662,7 +14660,6 @@ subroutine FAST_PackExternInputType(RF, Indata)
    call RegPack(RF, InData%BlPitchCom)
    call RegPack(RF, InData%BlAirfoilCom)
    call RegPack(RF, InData%HSSBrFrac)
-   call RegPack(RF, InData%LidarFocus)
    call RegPack(RF, InData%CableDeltaL)
    call RegPack(RF, InData%CableDeltaLdot)
    if (RegCheckErr(RF, RoutineName)) return
@@ -14680,7 +14677,6 @@ subroutine FAST_UnPackExternInputType(RF, OutData)
    call RegUnpack(RF, OutData%BlPitchCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BlAirfoilCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HSSBrFrac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LidarFocus); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CableDeltaL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CableDeltaLdot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine

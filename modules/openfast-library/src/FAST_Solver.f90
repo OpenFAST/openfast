@@ -4602,7 +4602,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, SED, BD, AD, ADsk, ExtLd, HD, SD, ExtP
          RETURN
       END IF
 
-      ! Create the the mesh mapping for mapping between ED and ExtLoad blade root meshes
+      ! Create the mesh mapping for mapping between ED and ExtLoad blade root meshes
       DO K=1,NumBl
          CALL MeshMapCreate( ED%y%BladeRootMotion(K), ExtLd%u%BladeRootMotion(K), MeshMapData%ED_P_2_ExtLd_P_R(K), ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_ExtLd_P_R('//TRIM(Num2LStr(K))//')' )

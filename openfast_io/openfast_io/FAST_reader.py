@@ -236,7 +236,7 @@ class InputReader_OpenFAST(object):
             var = var.replace(' ', '')
             loop_dict(vartree_head, var, [])
 
-    def read_outlist_freeForm(self,f,module):
+    def read_outlist_freeForm(self, f, module):
         '''
         Replacement for set_outlist that doesn't care about whether the channel is in the outlist vartree
         Easier, but riskier because OpenFAST can crash
@@ -244,37 +244,78 @@ class InputReader_OpenFAST(object):
         Inputs: f - file handle
                 module - of OpenFAST, e.g. SubDyn, SeaState (these modules use this)
         '''
+        all_channels = []
         data = f.readline()
-        while data.split()[0] != 'END':
-            pattern = r'"?(.*?)"?'    # grab only the text between quotes
-            data = re.findall(pattern, data)[0]
-            channels = data.split(',')  # split on commas
-            channels = [c.strip() for c in channels]  # strip whitespace
-            for c in channels:
-                self.fst_vt['outlist'][module][c] = True
+        
+        # Handle the case if there are blank lines before actual data
+        while data.strip() == '':
             data = f.readline()
+        
+        while not data.strip().startswith('END'):
+            # Get part before the dash (comment)
+            line = data.split('-')[0]
+            
+            # Replace all delimiters with spaces
+            for delim in ['"', "'", ',', ';', '\t']:
+                line = line.replace(delim, ' ')
+            
+            # Split into words and add non-empty ones to the channel list
+            line_channels = [word.strip() for word in line.split() if word.strip()]
+            if line_channels:
+                all_channels.extend(line_channels)
+            
+            # Read next line
+            data = f.readline()
+            
+            # Handle the case if there are blank lines
+            while data.strip() == '':
+                data = f.readline()
+        
+        # Store all channels in the outlist
+        for channel in all_channels:
+            self.fst_vt['outlist'][module][channel] = True
     
-    def read_outlist(self,f,module):
+    def read_outlist(self, f, module):
         '''
-        Read the outlist section of the FAST input file, genralized for most modules
+        Read the outlist section of the FAST input file, generalized for most modules
 
         Inputs: f - file handle
                 module - of OpenFAST, e.g. ElastoDyn, ServoDyn, AeroDyn, AeroDisk, etc.
 
+        Returns: List of channel names
         '''
-        data = f.readline().split()[0] # to counter if we dont have any quotes
-        while data != 'END':
-            if data.find('"')>=0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string)==1:
-                    channel_list = [row_string[0].split('\n')[0]]
-                else:
-                    channel_list = row_string
-            self.set_outlist(self.fst_vt['outlist'][module], channel_list)
-            data = f.readline().split()[0] # to counter if we dont have any quotes
+        all_channels = []
+        data = f.readline()
+        
+        # Handle the case if there are blank lines before actual data
+        while data.strip() == '':
+            data = f.readline()
+        
+        while not data.strip().startswith('END'):
+            # Get part before the dash (comment)
+            line = data.split('-')[0]
+            
+            # Replace all delimiters with spaces
+            for delim in ['"', "'", ',', ';', '\t']:
+                line = line.replace(delim, ' ')
+            
+            # Split into words and add non-empty ones to the channel list
+            line_channels = [word.strip() for word in line.split() if word.strip()]
+            if line_channels:
+                all_channels.extend(line_channels)
+            
+            # Read next line
+            data = f.readline()
+            
+            # Handle the case if there are blank lines
+            while data.strip() == '':
+                data = f.readline()
+        
+        # Store all channels in the outlist
+        if all_channels:
+            self.set_outlist(self.fst_vt['outlist'][module], all_channels)
+        
+        return all_channels
 
     def read_MainInput(self):
         # Main FAST v8.16-v8.17 Input File
@@ -557,38 +598,10 @@ class InputReader_OpenFAST(object):
             self.fst_vt['ElastoDyn']['BldGagNd'] = read_array(f,self.fst_vt['ElastoDyn']['NBlGages'], array_type=int)
         else:
             self.fst_vt['ElastoDyn']['BldGagNd'] = 0
-            f.readline()
-
-        # Loop through output channel lines
+        
+        
         f.readline()
-        data = f.readline()
-        # if data != '':
-        #     while data.split()[0] != 'END':
-        #         channels = data.split('"')
-        #         channel_list = channels[1].split(',')
-        #         self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
-
-        #         data = f.readline()
-        # else:
-        #     # there is a blank line between the outlist and the END of the file
-        #     f.readline()   
-
-        # Handle the case if there are blank lines before the END statement, check if blank line
-        while data.split().__len__() == 0:
-            data = f.readline()
-
-        while data.split()[0] != 'END':
-            if data.find('"')>=0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string)==1:
-                    channel_list = row_string[0].split('\n')[0]
-                else:
-                    channel_list = row_string
-            self.set_outlist(self.fst_vt['outlist']['ElastoDyn'], channel_list)
-            data = f.readline()
+        self.read_outlist(f,'ElastoDyn')
 
         # ElastoDyn optional outlist
         try:
@@ -597,19 +610,7 @@ class InputReader_OpenFAST(object):
             self.fst_vt['ElastoDyn']['BldNd_BlOutNd']    = f.readline().split()[0]
 
             f.readline()
-            data =  f.readline()
-            while data.split()[0] != 'END':
-                if data.find('"')>=0:
-                    channels = data.split('"')
-                    opt_channel_list = channels[1].split(',')
-                else:
-                    row_string = data.split(',')
-                    if len(row_string)==1:
-                        opt_channel_list = row_string[0].split('\n')[0]
-                    else:
-                        opt_channel_list = row_string
-                self.set_outlist(self.fst_vt['outlist']['ElastoDyn_Nodes'], opt_channel_list)
-                data = f.readline()
+            self.read_outlist(f,'ElastoDyn')
         except:
             # The optinal outlist does not exist.
             None
@@ -736,7 +737,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
 
-        # General Tower Paramters
+        # General Tower Parameters
         f.readline()
         self.fst_vt['ElastoDynTower']['NTwInpSt'] = int(f.readline().split()[0])
         self.fst_vt['ElastoDynTower']['TwrFADmp1'] = float_read(f.readline().split()[0])
@@ -856,13 +857,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['BeamDyn'][BladeNumber]['OutNd']       = [idx.strip() for idx in f.readline().split('OutNd')[0].split(',')]
         # BeamDyn Outlist
         f.readline()
-        data = f.readline()
-        while data.split()[0] != 'END':
-            channels = data.split('"')
-            channel_list = channels[1].split(',')
-            self.set_outlist(self.fst_vt['outlist']['BeamDyn'], channel_list)
-            data = f.readline()
-            
+        
+        self.read_outlist(f,'BeamDyn')
+
         # BeamDyn optional outlist
         try:
             f.readline()
@@ -870,19 +867,8 @@ class InputReader_OpenFAST(object):
             self.fst_vt['BeamDyn'][BladeNumber]['BldNd_BlOutNd']    = f.readline().split()[0]
 
             f.readline()
-            data =  f.readline()
-            while data.split()[0] != 'END':
-                if data.find('"')>=0:
-                    channels = data.split('"')
-                    opt_channel_list = channels[1].split(',')
-                else:
-                    row_string = data.split(',')
-                    if len(row_string)==1:
-                        opt_channel_list = row_string[0].split('\n')[0]
-                    else:
-                        opt_channel_list = row_string
-                self.set_outlist(self.fst_vt['outlist']['BeamDyn_Nodes'], opt_channel_list)
-                data = f.readline()
+
+            self.read_outlist(f,'BeamDyn_Nodes')
         except:
             # The optinal outlist does not exist.
             None
@@ -1025,19 +1011,7 @@ class InputReader_OpenFAST(object):
         
         # InflowWind Outlist
         f.readline()
-        data = f.readline()
-        while data.split()[0] != 'END':
-            if data.find('"')>=0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string)==1:
-                    channel_list = row_string[0].split('\n')[0]
-                else:
-                    channel_list = row_string
-            self.set_outlist(self.fst_vt['outlist']['InflowWind'], channel_list)
-            data = f.readline()
+        self.read_outlist(f,'InflowWind')
 
         f.close()
                 
@@ -1194,25 +1168,9 @@ class InputReader_OpenFAST(object):
 
         # AeroDyn Outlist
         f.readline()
-        data = f.readline()
 
-        # Handle the case if there are blank lines before the END statement, check if blank line
-        while data.split().__len__() == 0:
-            data = f.readline()
+        self.read_outlist(f,'AeroDyn')
 
-
-        while data.split()[0] != 'END':
-            if data.find('"')>=0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string)==1:
-                    channel_list = row_string[0].split('\n')[0]
-                else:
-                    channel_list = row_string
-            self.set_outlist(self.fst_vt['outlist']['AeroDyn'], channel_list)
-            data = f.readline()
 
         # AeroDyn optional outlist
         try:
@@ -1221,19 +1179,7 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn']['BldNd_BlOutNd']    = f.readline().split()[0]
 
             f.readline()
-            data =  f.readline()
-            while data.split()[0] != 'END':
-                if data.find('"')>=0:
-                    channels = data.split('"')
-                    opt_channel_list = channels[1].split(',')
-                else:
-                    row_string = data.split(',')
-                    if len(row_string)==1:
-                        opt_channel_list = row_string[0].split('\n')[0]
-                    else:
-                        opt_channel_list = row_string
-                self.set_outlist(self.fst_vt['outlist']['AeroDyn_Nodes'], opt_channel_list)
-                data = f.readline()
+            self.read_outlist(f,'AeroDyn_Nodes')
         except:
             # The optinal outlist does not exist.
             None
@@ -1702,12 +1648,7 @@ class InputReader_OpenFAST(object):
 
         # ServoDyn Outlist
         f.readline()
-        data = f.readline()
-        while data.split()[0] != 'END':
-            channels = data.split('"')
-            channel_list = channels[1].split(',')
-            self.set_outlist(self.fst_vt['outlist']['ServoDyn'], channel_list)
-            data = f.readline()
+        self.read_outlist(f,'ServoDyn')
 
         f.close()
 
@@ -1717,7 +1658,10 @@ class InputReader_OpenFAST(object):
         '''
         StC_vt = {}
 
-        with open(os.path.join(self.FAST_directory, filename)) as f:
+        # Inputs should be relative to ServoDyn, like in OpenFAST
+        SvD_dir = os.path.dirname(self.fst_vt['Fst']['ServoFile'])
+
+        with open(os.path.join(self.FAST_directory, SvD_dir, filename)) as f:
 
             f.readline()
             f.readline()
@@ -2400,19 +2344,7 @@ class InputReader_OpenFAST(object):
 
         # HydroDyn Outlist
         f.readline()
-        data = f.readline()
-        while data.split()[0] != 'END':
-            if data.find('"')>=0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string)==1:
-                    channel_list = row_string[0].split('\n')[0]
-                else:
-                    channel_list = row_string
-            self.set_outlist(self.fst_vt['outlist']['AeroDyn'], channel_list)
-            data = f.readline()
+        self.read_outlist(f, 'HydroDyn')
 
         f.close()
 
@@ -3397,7 +3329,8 @@ class InputReader_OpenFAST(object):
                     if option_name.upper() == 'WATERKIN':
                         self.fst_vt['MoorDyn']['WaterKin'] = option_value.strip('"')
                         WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
-                        self.read_WaterKin(WaterKin_file)
+                        if self.fst_vt['MoorDyn']['WaterKin'].upper() not in ['0','UNUSED']:
+                            self.read_WaterKin(WaterKin_file)
 
                     self.fst_vt['MoorDyn']['option_values'].append(float_read(option_value.strip('"'))) # some options values can be strings or floats
                     self.fst_vt['MoorDyn']['option_names'].append(option_name)
@@ -3582,7 +3515,7 @@ class InputReader_OpenFAST(object):
         bd_file1 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
         bd_file2 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(2)']))
         bd_file3 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(3)']))
-        if os.path.exists(bd_file1):
+        if os.path.isfile(bd_file1):
             # if the files are the same then we only need to read it once, need to handle the cases where we have a 2 or 1 bladed rotor
             # Check unique BeamDyn blade files and read only once if identical
             if bd_file1 == bd_file2 and bd_file1 == bd_file3:
