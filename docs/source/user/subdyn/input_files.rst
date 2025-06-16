@@ -404,33 +404,35 @@ specifies the ending joint, corresponding to an identifier
 **MPropSetID1** corresponds to the identifier **PropSetID** from the
 MEMBER X-SECTION PROPERTY table (discussed next) for starting
 cross-section properties and **MPropSetID2** specifies the identifier
-for ending cross-section properties, allowing for tapered members.
+for ending cross-section properties, allowing for tapered members. 
+Note that tapering is not allowed with user-defined generic beams (*MType=4*) below. 
+Therefore, **MPropSetID1** and **MPropSetID2** must be the same for this beam type.
 The sixth column specify the member type  **MType**.
 A member is one of the four following types (see :numref:`SD_FEM`):
 
-- Beams (*MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
+- Beams with circular cross sections (*MType=1c* or *MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
+
+- Beams with rectangular cross sections (*MType=1r*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
 
 - Pretension cables (*MType=2*)
 
 - Rigid link (*MType=3*)
 
+- Beam with arbitrary user-defined cross-section properties (*MType=4*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
+
 - Spring element (*MType=5*)
 
-**COSMID** refers to the IDs of the members' cosine matrices for noncircular
-members and spring elements; the current release uses SubDyn's default direction cosine convention
-if it's not present or when COSMID values are -1. Spring elements are defined between joints that 
-are coincident in the space and the direction cosine must be provided.
-
+The required input for **MSpin/COSMID** depends on the member type. For all beam types (*MType=1c*, *1r*, or *4*), users can specify a spin angle **MSpin** in degrees. This is a rotation of the beam member about its axis (pointing from the starting joint to the ending joint) following the right-hand convention. When **MSpin** = 0, the default SubDyn member orientation is used with the element local *x_e* axis parallel to the global *XY* plane. (If the beam is perfectly vertical, the element local *x_e* axis is parallel to the global *X* axis.) A nonzero **MSpin** effectively rotates the element local coordinate system about the member axis. For a beam with a rectangular cross section, Side A of the rectangular section is always parallel to the *x_e* axis, and setting **MSpin** allows the rectangular section to be reoriented as needed. Note that this convention is consistent with how HydroDyn defines rectangular members. Using the same member spin angle in SubDyn and HydroDyn ensures consistency across the two modules. With *MType=4*, the user-defined cross-section properties are also about the element local axes. Again, setting **MSpin** allows the cross section to be reoriented as needed. Finally, for beams with cylindrical cross sections, **MSpin** has no physical effect, but it does influence output channels based on the element local coordinate system. Setting **MSpin** allows these outputs to be given in a more convenient coordinate system orientation. For spring elements (*MType=5*), users can provide the IDs of user-defined member cosine matrices (**COSMID**\ ); the current release uses SubDyn's default direction cosine convention if **COSMID** is -1. Spring elements are defined between joints that are coincident in space and the direction cosine must be provided.
 
 An example of member table is given below
 
 .. code::
 
      2   NMembers    - Number of frame members
-  MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID
-    (-)         (-)         (-)          (-)           (-)        (-)      (-)
-     10        101         102            2             2          1
-     11        102         103            2             2          1
+  MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2   MType   MSpin/COSMID
+    (-)         (-)         (-)          (-)           (-)        (-)      (deg/-)
+     10         101         102           2             2          1c         0
+     11         102         103           2             2          1c         0
 
 
 
@@ -438,38 +440,51 @@ An example of member table is given below
 Member Cross-Section Properties
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Members in SubDyn are assumed to be straight, circular, possibly
-tapered, and hollow cylinders. Future releases will allow for generic
-cross-sections to be employed. These special cross-section members will
-be defined in the second of two tables in the input file (Member
-X-Section Property data 2/2), which is currently ignored.
+Beam members in SubDyn are assumed to be straight, possibly
+tapered, and hollow, with circular, rectangular, or user-defined generic
+cross sections. These beam cross-section properties are defined in three
+separate tables.
 
-For the circular cross-section members, properties needed by SubDyn are
+Properties of circular beam cross sections needed by SubDyn are
 material Young’s modulus, **YoungE**, shear modulus, **ShearG**, and
-density, **MatDens**, member outer diameter, **XsecD**, and member
-thickness, **XsecT**. Users will need to create an entry in the first
-table within this section of the input file distinguished by
+density, **MatDens**, member outer diameter, **XsecD**, and member wall 
+thickness, **XsecT**. Note that setting **XsecT** to a value less than 
+or equal to zero implies a solid section. Users will need to create an 
+entry in the first table within this section of the input file identified by
 **PropSetID**, for each unique combination of these five properties.
 The member property-set table contains **NPropSets** rows. The member
 property sets are referred to by their **PropSetID** in the MEMBERS
-table, as described in Section . Note, however, that although diameter
-and thickness will be linearly interpolated within an individual member,
-SubDyn will not allow *material* properties to change within an
-individual member.
+table above. Note, however, that although diameter and thickness will 
+be linearly interpolated within an individual member, SubDyn will not 
+allow *material* properties to change within an individual member.
 
-The second table in this section of the input file (not to be used in
-this release) will have **NXPropSets** rows (assumed to be zero for
-this release), and have additional entries when compared to the previous
+Properties of rectangular beam cross sections needed by SubDyn are the 
+same as those for circular beam cross sections, except that the section 
+diameter **XsecD** is replaced with the lengths of the two sides of the 
+rectangular section **XsecSa** (length of Side A) and **XsecSb** (length of
+Side B). Side A is parallel to the element local *x_e* axis and Side B is 
+parallel to the element local *y_e* axis. Again, setting **XsecT** to a 
+value less than or equal to zero implies a solid section. Note that SubDyn 
+can automatically compute the shear areas and torsion constant for solid 
+rectangular sections and thin-walled rectangular sections. For sections 
+of intermediate wall thickness, the thin-walled approximation will be used, 
+which might not be accurate. This is different from circular sections for 
+which the shear area and torsion constant can be automatically computed by 
+SubDyn for arbitrary wall thickness. The properties of unique rectangular 
+beam sections are entered on separate rows of the second table of this input 
+file section. Again, the table should have **NPropSets** rows.
+
+The third table in this section of the input file have **NXPropSets** 
+rows and have additional entries when compared to the previous
 table, including: cross-sectional area (**XsecA**), cross-sectional
 shear area along the local principal axes *x* and *y* (**XsecAsx**,
 **XsecAsy**), cross-sectional area second moment of inertia about *x*
-and *y* (**XsecJxx**, **XsecJyy**), and cross-sectional area polar
-moment of inertia (**XsecJ0**). The member cosine matrix section (see
-Section ) will help determine the correct orientation of the members
-within the assembly.
-
-
-
+and *y* (**XsecJxx**, **XsecJyy**), cross-sectional polar area 
+moment of inertia (**XsecJ0**), and the cross-sectional torsion constant
+(**XsecJt**). The cross-section properties defined in this section can be 
+used with the arbitrary beam type with *MType=4* in the MEMBERS table. 
+The cross section can be reoriented through the **MSpin** input in the MEMBERS 
+section, similar to rectangular members.
 
 
 Cable Properties
