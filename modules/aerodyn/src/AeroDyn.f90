@@ -4180,8 +4180,8 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
 
                ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
                !       so that I don't have to take the transpose of orientationAnnulus(:,:,j,k)
-            y%rotors(iR)%BladeLoad(k)%Force(:,j)  = matmul( force,  m%rotors(iR)%orientationAnnulus(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
-            y%rotors(iR)%BladeLoad(k)%Moment(:,j) = matmul( moment, m%rotors(iR)%orientationAnnulus(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
+            y%rotors(iR)%BladeLoad(k)%Force(:,j)  = matmul( force,  m%rotors(iR)%orientationAnnulus(:,:,j,k) ) + m%rotors(iR)%BladeBuoyLoad(k)%Force(:,j) + m%rotors(iR)%BlFI(:,j,k) + m%rotors(iR)%BlFA(:,j,k)  ! force per unit length of the jth node in the kth blade
+            y%rotors(iR)%BladeLoad(k)%Moment(:,j) = matmul( moment, m%rotors(iR)%orientationAnnulus(:,:,j,k) ) + m%rotors(iR)%BladeBuoyLoad(k)%Moment(:,j) + m%rotors(iR)%BlMA(:,j,k) ! moment per unit length of the jth node in the kth blade
 
             ! Save results for outputs so we don't have to recalculate them all when we write outputs
             m%FVW%W(iW)%BN_AxInd(j)           = AxInd
