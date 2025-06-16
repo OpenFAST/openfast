@@ -1669,10 +1669,10 @@ CONTAINS
                ENDDO
 
                ! Initialize the FFT
-               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
+               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
 
                ! Apply the forward FFT on the wave elevation timeseries to get the real and imaginary parts of the frequency information.      
-               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occured while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
+               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
 
                ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
                DO I=1,NStepWave2-1
@@ -1681,7 +1681,7 @@ CONTAINS
                ENDDO
                WaveElevC0(:,NStepWave2) = 0.0_SiKi
 
-               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the FFTs.'; IF(Failed()) RETURN
+               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the FFTs.'; IF(Failed()) RETURN
 
                IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed0()) RETURN  
                IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed0()) RETURN
@@ -1726,7 +1726,7 @@ CONTAINS
             END DO    
             
             ! set up FFTer for doing IFFTs
-            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
+            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
 
             ! Loop through all points where the incident wave kinematics will be computed      
             DO ix = 1,p%nxWave 
@@ -1767,7 +1767,7 @@ CONTAINS
 
             ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verIFication...
             
-            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the IFFTs.'; IF(Failed()) RETURN
+            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the IFFTs.'; IF(Failed()) RETURN
       
       end if ! p%WaveKin == 3
 
