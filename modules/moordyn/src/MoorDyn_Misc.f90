@@ -1189,58 +1189,8 @@ CONTAINS
             FileName = trim(WaterKinString)
          END IF
          
-         ! Set the values
-         TmpFFTWaveElev  =  0.0_DbKi
-         WaveElevC0(:,:) =  0.0_DbKi
 
 
-         ! Copy values over
-         DO I=0, MIN(SIZE(WaveElev0), NStepWave)-1
-            TmpFFTWaveElev(I) = WaveElev0(I)
-         ENDDO
-
-         ! Initialize the FFT
-         CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
-
-         ! Apply the forward FFT to get the real and imaginary parts of the frequency information.      
-         CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
-         CALL SetErrStat(ErrStatTmp,'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
-
-         ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
-         DO I=1,NStepWave2-1
-            WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1)
-            WaveElevC0     (2,I) = TmpFFTWaveElev(2*I)
-         ENDDO
-         WaveElevC0(:,NStepWave2) = 0.0_SiKi
-
-         CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
-
-
-         IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
-         IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStatTmp)
-
-
-         
-         ! note: following is a very streamlined adaptation from from Waves.v90 VariousWaves_Init
-         
-         ! allocate all the wave kinematics FFT arrays  
-         ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveNmbr.  ',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate tmpComplex.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveElevC .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveDynPC .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHx.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHy.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCV .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHx.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHy.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCV .',ErrStat,ErrMsg,RoutineName)
-         
-         ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
-         CALL allocateKinematicsArrays() 
-         
-         
          UnEcho=-1
          CALL GetNewUnit( UnIn )   
          CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); IF(Failed()) RETURN
@@ -1431,9 +1381,7 @@ CONTAINS
             
          ! ------------------- start with wave kinematics -----------------------
          
-         ! set up FFTer for doing IFFTs
-         CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.', ErrStat, ErrMsg, routineName); if(Failed()) return
+         IF (p%WaveKin > 0) THEN 
 
             ! Check that all wave grid z values are below the water line, otherwise COSHNumOvrCOSHDen calcs will nan
             DO I=1,p%nzWave
