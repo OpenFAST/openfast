@@ -245,8 +245,6 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
         <File RelativePath="..\..\modules\nwtc-library\src\NWTC_Str.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -274,6 +272,9 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<Filter Name="Random Number">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="SeaState">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\SeaState\src\Current.txt">
