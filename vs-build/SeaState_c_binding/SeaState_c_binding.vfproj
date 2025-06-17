@@ -122,7 +122,6 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
@@ -241,11 +240,12 @@
 		<File RelativePath="..\..\modules\SeaState\src\Current.f90"/>
 		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\SeaState.f90"/>
-		<File RelativePath="..\..\modules\SeaState\src\SeaState_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\SeaState_Input.f90"/>
 		<File RelativePath="..\..\modules\seastate\src\SeaState_Output.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves2.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_C_Binding.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\SeaState_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

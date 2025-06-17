@@ -105,7 +105,6 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\modules\moordyn\src\MoorDyn_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Body.f90"/>
-		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_c_binding.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_IO.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Line.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Misc.f90"/>
@@ -194,19 +193,6 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_C_Binding.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -400,5 +386,7 @@
 		<File RelativePath="..\..\modules\SeaState\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves2.f90"/></Filter>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_C_Binding.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
