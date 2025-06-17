@@ -5,10 +5,10 @@ import numpy as np
 from pathlib import Path
 interface_path = Path(__file__).parent.parent.parent.parent / "glue-codes" / "python"
 sys.path.insert(0, str(interface_path))
-import openfast_library
+import fast
 
 def test_hub_position(library_path, input_file):
-    openfastlib = openfast_library.FastLibAPI(library_path, input_file)
+    openfastlib = fast.FastLibAPI(library_path, input_file)
     openfastlib.fast_init()
     absolute_position, rotational_velocity, orientation_dcm = openfastlib.get_hub_position()
 

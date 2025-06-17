@@ -79,6 +79,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
@@ -136,6 +137,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
@@ -258,6 +260,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -316,6 +319,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -366,6 +370,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -415,6 +420,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -466,6 +472,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -513,6 +520,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -561,6 +569,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
@@ -608,6 +617,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
