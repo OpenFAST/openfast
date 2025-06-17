@@ -565,10 +565,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
                        InputFileData%rotors(iR), InitInp%Linearize, InitInp%CompAeroMaps, ErrStat2, ErrMsg2)
       if (Failed()) return;
    end do
-   if (p%Wake_Mod == WakeMod_FVW) then
-      call AD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      call AD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   endif
+   
+   call AD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call AD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   
    
       !............................................................................................
       ! Print the summary file if requested:
@@ -6256,31 +6256,6 @@ SUBROUTINE AD_JacobianPInput(Vars, iRotor, t, u_AD, p_AD, x_AD, xd_AD, z_AD, Oth
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dXdu(:,:)      !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dXddu(:,:)     !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dZdu(:,:)      !< Partial derivatives of constraint state functions (Z) with
-
-   
-
-
-   ! type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables for packing arrays
-   ! INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   ! REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   ! TYPE(RotInputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   ! TYPE(AD_InputType),                   INTENT(INOUT)           :: u_AD       !< Inputs at operating point (may change to inout if a mesh copy is required)
-   ! TYPE(RotInflowType),                  INTENT(IN   )           :: RotInflow  !< Rotor inflow
-   ! TYPE(RotParameterType),               INTENT(IN   )           :: p          !< Parameters
-   ! TYPE(AD_ParameterType),               INTENT(IN   )           :: p_AD       !< Parameters
-   ! TYPE(RotContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   ! TYPE(RotDiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   ! TYPE(RotConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   ! TYPE(RotOtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   ! TYPE(RotOutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
-   ! TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   ! TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
-   ! INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   ! CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
-   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
-   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
 
    character(*), parameter       :: RoutineName = 'AD_JacobianPInput'
    integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
