@@ -115,77 +115,30 @@ endforeach()
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
 
 # Copy the DISCON controllers to the 5MW turbine directories
-set(src "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/5MW_Baseline/ServoData")
-
 set(of_dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${of_dest}"
-)
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON_ITIBarge.dll"
-  DEPENDS DISCON_ITIBarge
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${of_dest}"
-  )
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON_OC3Hywind.dll"
-  DEPENDS DISCON_OC3Hywind
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${of_dest}"
-)
-
 set(ofpy_dest "${CTEST_BINARY_DIR}/glue-codes/python/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ofpy_dest}"
-)
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON_ITIBarge.dll"
-  DEPENDS DISCON_ITIBarge
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${ofpy_dest}"
-)
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON_OC3Hywind.dll"
-  DEPENDS DISCON_OC3Hywind
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${ofpy_dest}"
-)
-
 set(ff_dest "${CTEST_BINARY_DIR}/glue-codes/fast-farm/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT1.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT1.dll"
-)
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT2.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT2.dll"
-)
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT3.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT3.dll"
-)
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT4.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT4.dll"
-)
-
 add_custom_target(
   regression_test_controllers
   DEPENDS
-    "${of_dest}/DISCON.dll"
-    "${of_dest}/DISCON_ITIBarge.dll"
-    "${of_dest}/DISCON_OC3Hywind.dll"
-    "${ofpy_dest}/DISCON.dll"
-    "${ofpy_dest}/DISCON_ITIBarge.dll"
-    "${ofpy_dest}/DISCON_OC3Hywind.dll"
-    "${ff_dest}/DISCON_WT1.dll"
-    "${ff_dest}/DISCON_WT2.dll"
-    "${ff_dest}/DISCON_WT3.dll"
-    "${ff_dest}/DISCON_WT4.dll"
+    DISCON
+    DISCON_ITIBarge
+    DISCON_OC3Hywind
+  # OpenFAST
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_ITIBarge> ${of_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${of_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${of_dest}/DISCON_OC3Hywind-1.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${of_dest}/DISCON_OC3Hywind-2.dll
+  # Python
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${ofpy_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_ITIBarge> ${ofpy_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${ofpy_dest}
+  # FAST.Farm
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${ff_dest}/DISCON_WT1.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${ff_dest}/DISCON_WT2.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${ff_dest}/DISCON_WT3.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${ff_dest}/DISCON_WT4.dll
 )
 
 add_custom_target(

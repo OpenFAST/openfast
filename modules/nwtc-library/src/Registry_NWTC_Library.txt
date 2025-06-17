@@ -141,6 +141,7 @@ typedef     ^       ModDataType character(ChanLen) Abbr             -   -   -   
 typedef     ^       ^           IntKi           iMod                -   0   -   "Module index in array of modules"  -
 typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
 typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           IntKi           iRotor              -   0   -   "Module rotor number"  -
 typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
 typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
 typedef     ^       ^           ModVarsType     Vars                -   -   -   "Module variables type"  -

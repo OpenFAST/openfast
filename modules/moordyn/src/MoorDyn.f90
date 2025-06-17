@@ -2887,6 +2887,17 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
       endif
 
+      !--------------------------------------------------
+      ! initialize line visualization meshes if needed
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+      endif
+
       ! Initialize module variables
       call MD_InitVars(InitOut%Vars, InitInp, u, p, x, z, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2); if(Failed()) return
       
@@ -2903,19 +2914,6 @@ CONTAINS
       m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
-
-
-      !--------------------------------------------------
-      ! initialize line visualization meshes if needed
-      if (p%VisMeshes) then
-         if (p%NLines > 0) then
-            call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
-         endif
-         if (p%NRods > 0) then
-            call VisRodsMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
-         endif
-      endif
-
 
    CONTAINS
 
