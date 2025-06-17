@@ -572,6 +572,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
     TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState WaveField module [-]
     TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
+    TYPE(AD_InputType)  :: u_perturb      !< input perturbation for linearization [-]
+    TYPE(AD_OutputType)  :: y_lin      !< output perturbation for linearization [-]
   END TYPE AD_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: AD_x_BEMT_UA_element_x           =   1 ! AD%BEMT%UA%element(DL%i1, DL%i2)%x
@@ -6206,6 +6208,12 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   call AD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -6261,6 +6269,10 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%Inflow)
    end if
+   call AD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackMisc(RF, Indata)
@@ -6303,6 +6315,8 @@ subroutine AD_PackMisc(RF, Indata)
          call AD_PackInflowType(RF, InData%Inflow(i1)) 
       end do
    end if
+   call AD_PackInput(RF, InData%u_perturb) 
+   call AD_PackOutput(RF, InData%y_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -6360,6 +6374,8 @@ subroutine AD_UnPackMisc(RF, OutData)
          call AD_UnpackInflowType(RF, OutData%Inflow(i1)) ! Inflow 
       end do
    end if
+   call AD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call AD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine AD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

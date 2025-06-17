@@ -565,6 +565,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
                        InputFileData%rotors(iR), InitInp%Linearize, InitInp%CompAeroMaps, ErrStat2, ErrMsg2)
       if (Failed()) return;
    end do
+   if (p%Wake_Mod == WakeMod_FVW) then
+      call AD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      call AD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   endif
    
       !............................................................................................
       ! Print the summary file if requested:
@@ -6232,63 +6236,51 @@ end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE AD_JacobianPInput(Vars, iRotor, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-!..................................................................................................................................
-
-   type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module vars
-   INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(AD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(AD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(AD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(AD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(AD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(AD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(AD_OutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
-   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
-
-   integer(intKi)  :: StartNode
-
-   StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
-
-   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), p, m, m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
-   call Rot_JacobianPInput(Vars, iRotor, t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-
-END SUBROUTINE AD_JacobianPInput
-
-
-!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, m_AD, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-!..................................................................................................................................
+SUBROUTINE AD_JacobianPInput(Vars, iRotor, t, u_AD, p_AD, x_AD, xd_AD, z_AD, OtherState_AD, y_AD, m_AD, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
    use IfW_FlowField, only: FlowFieldType, UniformField_InterpLinear
-   type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables for packing arrays
-   INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(RotInputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(RotInflowType),                  INTENT(IN   )           :: RotInflow  !< Rotor inflow 
-   TYPE(RotParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(AD_ParameterType),               INTENT(IN   )           :: p_AD       !< Parameters
-   TYPE(RotContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(RotDiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(RotConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(RotOtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(RotOutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
-   TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
+
+   type(ModVarsType),                    INTENT(IN   )   :: Vars           !< Module vars
+   INTEGER(IntKi),                       INTENT(IN   )   :: iRotor         !< Rotor index
+   REAL(DbKi),                           INTENT(IN   )   :: t              !< Time in seconds at operating point
+   TYPE(AD_InputType),                   INTENT(INOUT)   :: u_AD           !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(AD_ParameterType),               INTENT(IN   )   :: p_AD           !< Parameters
+   TYPE(AD_ContinuousStateType),         INTENT(IN   )   :: x_AD           !< Continuous states at operating point
+   TYPE(AD_DiscreteStateType),           INTENT(IN   )   :: xd_AD          !< Discrete states at operating point
+   TYPE(AD_ConstraintStateType),         INTENT(IN   )   :: z_AD           !< Constraint states at operating point
+   TYPE(AD_OtherStateType),              INTENT(IN   )   :: OtherState_AD  !< Other states at operating point
+   TYPE(AD_OutputType),                  INTENT(INOUT)   :: y_AD           !< Output (change to inout if a mesh copy is required);
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)   :: m_AD           !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)   :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)   :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dYdu(:,:)      !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dXdu(:,:)      !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dXddu(:,:)     !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)   :: dZdu(:,:)      !< Partial derivatives of constraint state functions (Z) with
+
+   
+
+
+   ! type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables for packing arrays
+   ! INTEGER(IntKi),                       INTENT(IN   )           :: iRotor     !< Rotor index
+   ! REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   ! TYPE(RotInputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   ! TYPE(AD_InputType),                   INTENT(INOUT)           :: u_AD       !< Inputs at operating point (may change to inout if a mesh copy is required)
+   ! TYPE(RotInflowType),                  INTENT(IN   )           :: RotInflow  !< Rotor inflow
+   ! TYPE(RotParameterType),               INTENT(IN   )           :: p          !< Parameters
+   ! TYPE(AD_ParameterType),               INTENT(IN   )           :: p_AD       !< Parameters
+   ! TYPE(RotContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   ! TYPE(RotDiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   ! TYPE(RotConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   ! TYPE(RotOtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   ! TYPE(RotOutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
+   ! TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   ! TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   ! INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   ! CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
+   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
+   ! REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
 
    character(*), parameter       :: RoutineName = 'AD_JacobianPInput'
    integer, parameter            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
@@ -6305,6 +6297,19 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
+
+   associate(p => p_AD%rotors(iRotor), &
+             u => u_AD%rotors(iRotor), &
+             u_perturb => m_AD%u_perturb%rotors(iRotor), &
+             m => m_AD%rotors(iRotor), &
+             x => x_AD%rotors(iRotor), &
+             xd => xd_AD%rotors(iRotor), &
+             z => z_AD%rotors(iRotor), &
+             OtherState => OtherState_AD%rotors(iRotor), &
+             y_lin => m_AD%y_lin%rotors(iRotor), &
+             RotInflow => m_AD%Inflow(1)%RotInflow(iRotor))
+
    ! Find indices for extended input variables
    iVarHWindSpeed = 0
    iVarPLexp = 0
@@ -6320,6 +6325,9 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
       end select
    end do
 
+   call AD_CalcWind_Rotor(t, u, p_AD%FlowField, p, p_AD, m_AD, RotInflow, StartNode, ErrStat, ErrMsg)
+   if (ErrStat >= AbortErrLev) return
+   
    ! If flow field will need to be perturbed (HWindSpeed, PLexp, or PropagationDir variables)
    if (iVarHWindSpeed > 0 .or. iVarPLexp > 0 .or. iVarPropagationDir > 0) then
       ! Copy the flow field (Uniform type, which as minimal data)
@@ -6343,16 +6351,19 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
    call AD_CopyRotContinuousStateType(x, m%x_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call AD_CopyRotOtherStateType(OtherState, m%OtherState_init, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
+   ! Copy all inputs for perturbation
+   call AD_CopyInput(u_AD, m_AD%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   
    ! Initialize x_init so that we get accurrate values for first step
    ! changes values only if states haven't been initialized
-   if (.not. OtherState%BEMT%nodesInitialized) then
+   if ((p_AD%Wake_Mod /= WakeMod_FVW) .and. (.not. OtherState%BEMT%nodesInitialized)) then
       call SetInputs(t, p, p_AD, u, RotInflow, m, indx, errStat2, errMsg2); if (Failed()) return
       call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, m%x_init%BEMT, xd%BEMT, z%BEMT, &
                            m%OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2); if (Failed()) return 
    end if
    
    ! Copy inputs and pack them for perturbation
-   call AD_CopyRotInputType(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call AD_CopyRotInputType(u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call AD_VarsPackInput(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
@@ -6376,27 +6387,37 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
-            call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call SetInputs(t, p, p_AD, u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
-            call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+            call RotCalcOutput(t, u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
+            if (p_AD%Wake_Mod == WakeMod_FVW) then
+               call SetInputsForFVW(p_AD, m_AD%u_perturb, 1, m_AD, ErrStat2, ErrMsg2); if(Failed()) return
+               call FVW_CalcOutput(t, m_AD%FVW_u(1), p_AD%FVW, x_AD%FVW, xd_AD%FVW, z_AD%FVW, OtherState_AD%FVW, m_AD%FVW_y, m_AD%FVW, ErrStat2, ErrMsg2); if(Failed()) return
+               call SetOutputsFromFVW(t, m_AD%u_perturb, p_AD, OtherState_AD, x_AD, xd_AD, m_AD, m_AD%y_lin, ErrStat2, ErrMsg2); if(Failed()) return
+            endif
+            call AD_VarsPackOutput(Vars, y_lin, m%Jac%y_pos)
          
             ! Calculate negative perturbation
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
-            call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call SetInputs(t, p, p_AD, u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
-            call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+            call RotCalcOutput(t, u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
+            if (p_AD%Wake_Mod == WakeMod_FVW) then
+               call SetInputsForFVW(p_AD, m_AD%u_perturb, 1, m_AD, ErrStat2, ErrMsg2); if(Failed()) return
+               call FVW_CalcOutput(t, m_AD%FVW_u(1), p_AD%FVW, x_AD%FVW, xd_AD%FVW, z_AD%FVW, OtherState_AD%FVW, m_AD%FVW_y, m_AD%FVW, ErrStat2, ErrMsg2); if(Failed()) return
+               call SetOutputsFromFVW(t, m_AD%u_perturb, p_AD, OtherState_AD, x_AD, xd_AD, m_AD, m_AD%y_lin, ErrStat2, ErrMsg2); if(Failed()) return
+            endif
+            call AD_VarsPackOutput(Vars, y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -6416,6 +6437,12 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
          call AllocAry(dXdu, m%Jac%Nx, m%Jac%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
 
+      ! Linearization not supported for FVW
+      if (p_AD%Wake_Mod == WakeMod_FVW) then
+         call SetErrStat(ErrID_Fatal, "dXdu linearization is not supported for FVW model", ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
       ! Loop through input variables
       do i = 1, size(Vars%u)
 
@@ -6424,20 +6451,20 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
-            call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
+            call AD_CalcWind_Rotor(t, u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call RotCalcContStateDeriv(t, u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
-            call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
+            call AD_CalcWind_Rotor(t, u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call RotCalcContStateDeriv(t, u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
@@ -6460,6 +6487,8 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
    end if
    
    call cleanup()
+
+   end associate
 contains
    subroutine PerturbFlowField(Var, BaseFF, PerturbSign, PerturbFF)
       type(ModVarType), intent(in)        :: Var
@@ -6486,9 +6515,9 @@ contains
    end function
 
    subroutine cleanup()
-      m%BEMT%UseFrozenWake = .false.
+      m_AD%rotors(iRotor)%BEMT%UseFrozenWake = .false.
    end subroutine cleanup
-end subroutine Rot_JacobianPInput
+end subroutine
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
