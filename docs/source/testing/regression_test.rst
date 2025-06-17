@@ -13,18 +13,20 @@ tests:
 - :ref:`regression_test_windows`
 
 Each locally computed result is compared to a static set of baseline
-results. To account for system, hardware, and compiler
-differences, the regression test attempts to match the current machine and
-compiler type to the appropriate solution set from these combinations:
+results. The results are computed using the following OS, compiler, and hardware
+combination:
 
 ================== ============== ============================
  Operating System   Compiler       Hardware
 ================== ============== ============================
- macOS 15.5         GNU 14.2.0     2024 MacbookPro (M4)
- Ubuntu 22.04       Intel oneAPI   Docker
- Ubuntu 22.04       GNU 12.3.0     Docker
- Windows 10         Intel oneAPI   Dell Precision 3530
+ Ubuntu 22.04       GNU 12.3.0     GitHub actions
 ================== ============== ============================
+
+Note that if you run the regression tests locally, there may small numerical
+differences due to your compiler and hardware combination that may cause a few
+tests to fail.  If you use the ``bokeh`` package while running the tests, you
+will see a resulting *html* file with plots showing the differences for any
+tests that fail (these differences should be small).
 
 The compiler versions, specific math libraries, and more info on hardware used
 to generate the baseline solutions are documented in the
