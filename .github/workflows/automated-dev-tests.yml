@@ -72,6 +72,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
