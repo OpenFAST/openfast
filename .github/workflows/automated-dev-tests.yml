@@ -76,6 +76,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -110,13 +111,12 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target all
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Save workspace for other jobs
+        uses: actions/upload-artifact@v4
         with:
+          name: build-all-release
           path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
-
-
+          compression-level: 0
 
   ### BUILD AND TEST JOBS
 
@@ -134,6 +134,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -248,15 +249,15 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-all-release
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -307,15 +308,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -358,15 +359,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -408,15 +409,15 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-all-release
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -460,15 +461,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -508,15 +509,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -557,15 +558,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -605,15 +606,15 @@ jobs:
     env:
       OMP_NUM_THREADS: 2
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
+          name: build-all-release
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
