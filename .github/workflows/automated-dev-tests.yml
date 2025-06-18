@@ -116,14 +116,13 @@ jobs:
       - name: Archive files
         run: |
           tar -cvf workspace.tar -C ${{github.workspace}} \
-          --exclude='CMakeFiles' --exclude='*.a' --exclude='build/ftnmods' \
+          --exclude='*.a' --exclude='*.o' --exclude='build/ftnmods' \
           ./build ./reg_tests ./requirements.txt ./glue-codes/python ./.github 
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
         with:
           name: build-all-release
           path: workspace.tar
-          compression-level: 0
 
   #-----------------------------------------------------------------------------
   #  BUILD AND TEST JOBS
