@@ -102,12 +102,12 @@ jobs:
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DOPENMP:BOOL=ON \
+            -DOPENMP:BOOL=OFF \
             -DDOUBLE_PRECISION=ON \
-            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
-            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
-            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
-            -DBUILD_FASTFARM:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_API:BOOL=OFF \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=OFF \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=OFF \
+            -DBUILD_FASTFARM:BOOL=OFF \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{github.workspace}}/build
@@ -116,8 +116,8 @@ jobs:
       - name: Archive files
         run: |
           tar -cvf workspace.tar -C ${{github.workspace}} \
-          ./build ./reg_tests ./requirements.txt ./glue-codes/python ./.github \
-          --exclude='CMakeFiles' --exclude='*.a' --exclude='build/ftnmods'
+          --exclude='CMakeFiles' --exclude='*.a' --exclude='build/ftnmods' \
+          ./build ./reg_tests ./requirements.txt ./glue-codes/python ./.github 
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
         with:
