@@ -943,6 +943,19 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
                InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
                InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
             END IF
+         ELSE
+            IF ( InputFileData%Morison%InpMembers(I)%MSecGeom /= MSecGeom_Rec ) THEN
+               call WrScr('HydroDyn Warning: The optional member inputs FDMod, VnCOffA, VnCOffB, FDLoFScA, and FDLoFScB are only applicable to members with rectangular sections. These will be ignored for Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
+               InputFileData%Morison%InpMembers(I)%FDMod    =   0_IntKi
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            END IF
+         END IF
+
+         IF ( .not. InputFileData%Morison%InpMembers(I)%PropPot .and. InputFileData%Morison%InpMembers(I)%FDMod == 2_IntKi ) THEN
+            call WrScr('HydroDyn Warning: FDMod = 2 (face-based suction-side-only drag) is only recommended for hybrid potential-flow members with PropPot = true. Check Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
          END IF
 
          InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R
@@ -2507,6 +2520,22 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
          IF ( InputFileData%Morison%InpMembers(I)%PropPot .AND. InputFileData%PotMod == 0  ) THEN
             CALL SetErrStat( ErrID_Fatal,'A member cannot have PropPot set to TRUE if PotMod = 0 in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         ! Optional member inputs for rectangular members
+         IF ( InputFileData%Morison%InpMembers(I)%FDMod /= 0_IntKi .AND. InputFileData%Morison%InpMembers(I)%FDMod /= 1_IntKi .AND. InputFileData%Morison%InpMembers(I)%FDMod /= 2_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDMod must be 0 (centerline-based drag), 1 (face-based drag), or 2 (face-based suction-side-only drag) for rectangular members.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%FDLoFScA < 0.0_ReKi .OR. InputFileData%Morison%InpMembers(I)%FDLoFScA > 1.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDLoFScA and FDLoFScB for rectangular members must be between 0 and 1 inclusive.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%FDLoFScB < 0.0_ReKi .OR. InputFileData%Morison%InpMembers(I)%FDLoFScB > 1.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDLoFScA and FDLoFScB for rectangular members must be between 0 and 1 inclusive.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
