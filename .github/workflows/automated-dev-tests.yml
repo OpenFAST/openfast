@@ -96,7 +96,7 @@ jobs:
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DBLA_VENDOR:STRING=OpenBLAS \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
@@ -253,6 +253,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -312,6 +313,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -363,6 +366,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -413,6 +418,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -465,6 +472,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -513,6 +522,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -562,6 +573,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -610,6 +623,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
