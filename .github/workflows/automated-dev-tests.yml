@@ -25,7 +25,9 @@ env:
 
 jobs:
 
-  ### BUILD JOBS
+  #-----------------------------------------------------------------------------
+  #  BUILD JOBS
+  #-----------------------------------------------------------------------------
 
   build-all-debug-single:
     # Tests compiling in debug mode with single precision.
@@ -111,14 +113,18 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
+      - name: Archive files
+        run: tar -cvf workspace.tar ${{github.workspace}}
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
         with:
           name: build-all-release
-          path: ${{github.workspace}}
+          path: workspace.tar
           compression-level: 0
 
-  ### BUILD AND TEST JOBS
+  #-----------------------------------------------------------------------------
+  #  BUILD AND TEST JOBS
+  #-----------------------------------------------------------------------------
 
   build-all-test-modules-debug:
     # Tests compiling in debug mode.
@@ -244,7 +250,9 @@ jobs:
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
 
-  ### TEST JOBS
+  #-----------------------------------------------------------------------------
+  #  TEST JOBS
+  #-----------------------------------------------------------------------------
 
   rtest-module-drivers:
     runs-on: ubuntu-22.04
@@ -254,6 +262,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -314,6 +326,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -368,6 +382,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -421,6 +437,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -476,6 +494,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -527,6 +547,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -579,6 +601,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -630,6 +654,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
+      - name: Untar workspace
+        run: tar -xvf workspace.tar ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
