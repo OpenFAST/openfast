@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyOpenFAST"
-version = "0.1"
+version = "4.1.0"
 description = "Python interface to OpenFAST FAST Library and physics modules."
 readme = "README.md"
 requires-python = ">=3.9"
