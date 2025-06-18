@@ -153,6 +153,80 @@ SUBROUTINE Morison_DirCosMtrx_noSpin( pos0, pos1, DirCos )
 
 END SUBROUTINE Morison_DirCosMtrx_noSpin
 
+
+SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
+   TYPE(Morison_InputType),     INTENT(IN   ) :: u              !< Inputs at Time
+   TYPE(Morison_ParameterType), INTENT(IN   ) :: p              !< Parameters
+   LOGICAL,                     INTENT(IN   ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
+   REAL(ReKi),                  INTENT(  OUT) :: pos(:,:)       ! Displaced node positions
+
+   REAL(ReKi)                                 :: Orient(3,3)
+   INTEGER(IntKi)                             :: ErrStat2
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2
+
+   ! Undisplaced node position
+   pos      = u%Mesh%Position
+   pos(3,:) = pos(3,:) - p%WaveField%MSL2SWL ! Z position measured from the SWL
+   IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN
+      ! Use displaced X and Y position
+      pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
+      pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
+      IF ( (p%WaveField%WaveStMod > 0) .OR. forceDisplaced ) THEN
+         ! Use displaced Z position only when wave stretching is enabled
+         pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
+      END IF
+   ELSE ! p%WaveDisp=0 implies PtfmYMod=0
+      ! Rotate the structure based on PtfmRefY (constant)
+      call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
+      pos = matmul(transpose(Orient),pos)
+   END IF
+
+END SUBROUTINE GetDisplacedNodePosition
+
+
+SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
+   Type(Morison_MemberType), intent(inout) :: member
+   Real(ReKi),               intent(in   ) :: PtfmRefY
+   Integer(IntKi),           intent(  out) :: ErrStat
+   Character(*),             intent(  out) :: ErrMsg
+
+   Real(ReKi)                              :: k(3), x_hat(3), y_hat(3)
+   Real(ReKi)                              :: kkt(3,3)
+   Real(ReKi)                              :: Ak(3,3)
+   Integer(IntKi)                          :: ErrStat2
+   Character(ErrMsgLen)                    :: ErrMsg2
+
+   Character(*), parameter                 :: RoutineName = 'YawMember'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   call hiFrameTransform(h2i,PtfmRefY,member%k,k,ErrStat2,ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   member%k   = k
+
+   call hiFrameTransform(h2i,PtfmRefY,member%kkt,kkt,ErrStat2,ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   member%kkt = kkt
+
+   call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   member%Ak  = Ak
+
+   IF (member%MSecGeom == MSecGeom_Rec) THEN
+
+      call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      member%x_hat   = x_hat
+
+      call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      member%y_hat   = y_hat
+
+   END IF
+
+END SUBROUTINE YawMember
+
 !====================================================================================================
 SUBROUTINE GetDistance ( a, b, l )
 !    This private subroutine computes the distance between points a and b.
@@ -3480,8 +3554,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    !===============================================================================================
    ! Get displaced positions of the hydrodynamic nodes   
-   CALL GetDisplacedNodePosition( .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
-   CALL GetDisplacedNodePosition( .TRUE. , m%DispNodePosHst ) ! For hydrostatic loads;  always use actual displaced position
+   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( u, p, .TRUE. , m%DispNodePosHst ) ! For hydrostatic loads;  always use actual displaced position
 
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
@@ -4839,33 +4913,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    CONTAINS
 
-   SUBROUTINE GetDisplacedNodePosition( forceDisplaced, pos )
-      LOGICAL,         INTENT( IN    ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
-      REAL(ReKi),      INTENT(   OUT ) :: pos(:,:) ! Displaced node positions
-      REAL(ReKi)                       :: Orient(3,3)
-
-      INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(ErrMsgLen)             :: ErrMsg2
-
-      ! Undisplaced node position
-      pos      = u%Mesh%Position
-      pos(3,:) = pos(3,:) - p%WaveField%MSL2SWL ! Z position measured from the SWL
-      IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN 
-         ! Use displaced X and Y position
-         pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
-         pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
-         IF ( (p%WaveField%WaveStMod > 0) .OR. forceDisplaced ) THEN
-            ! Use displaced Z position only when wave stretching is enabled
-            pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
-         END IF
-      ELSE ! p%WaveDisp=0 implies PtfmYMod=0
-         ! Rotate the structure based on PtfmRefY (constant)
-         call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
-         pos = matmul(transpose(Orient),pos)
-      END IF
-
-   END SUBROUTINE GetDisplacedNodePosition
-
    SUBROUTINE GetTotalWaveElev( Time, pos, Zeta, ErrStat, ErrMsg )
       REAL(DbKi),      INTENT( IN    ) :: Time
       REAL(ReKi),      INTENT( IN    ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
@@ -5912,49 +5959,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
    END SUBROUTINE getElementHstLds_Mod1
 
-   SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
-      Type(Morison_MemberType), intent(inout) :: member
-      Real(ReKi),               intent(in   ) :: PtfmRefY
-      Integer(IntKi),           intent(  out) :: ErrStat
-      Character(*),             intent(  out) :: ErrMsg
-
-      Real(ReKi)                              :: k(3), x_hat(3), y_hat(3)
-      Real(ReKi)                              :: kkt(3,3)
-      Real(ReKi)                              :: Ak(3,3)
-      Integer(IntKi)                          :: ErrStat2
-      Character(ErrMsgLen)                    :: ErrMsg2
-
-      Character(*), parameter                 :: RoutineName = 'YawMember'
-
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-
-      call hiFrameTransform(h2i,PtfmRefY,member%k,k,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%k   = k
-
-      call hiFrameTransform(h2i,PtfmRefY,member%kkt,kkt,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%kkt = kkt
-
-      call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%Ak  = Ak
-
-      IF (member%MSecGeom == MSecGeom_Rec) THEN
-
-         call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         member%x_hat   = x_hat
-
-         call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         member%y_hat   = y_hat
-
-      END IF
-
-   END SUBROUTINE YawMember
-
    SUBROUTINE YawJoint(JointNo,PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat,ErrMsg)
       Integer(IntKi),           intent(in   ) :: JointNo
       Real(ReKi),               intent(in   ) :: PtfmRefY
@@ -6193,7 +6197,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    errMsg  = ""               
 
 
-   CALL GetDisplacedNodePosition( .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
 
    ! Update state of the relative normal velocity high-pass filter at each joint
    DO J = 1, p%NJoints
@@ -6290,78 +6294,6 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
          END DO    ! Iterate through member joints
       END IF    ! If rectangular member
    END DO    ! Iterate through members
-
-   CONTAINS
-
-   SUBROUTINE GetDisplacedNodePosition( forceDisplaced, pos )
-      LOGICAL,         INTENT( IN    ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
-      REAL(ReKi),      INTENT(   OUT ) :: pos(:,:) ! Displaced node positions
-      REAL(ReKi)                       :: Orient(3,3)
-
-      INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(ErrMsgLen)             :: ErrMsg2
-
-      ! Undisplaced node position
-      pos      = u%Mesh%Position
-      pos(3,:) = pos(3,:) - p%WaveField%MSL2SWL ! Z position measured from the SWL
-      IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN
-         ! Use displaced X and Y position
-         pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
-         pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
-         IF ( (p%WaveField%WaveStMod > 0) .OR. forceDisplaced ) THEN
-            ! Use displaced Z position only when wave stretching is enabled
-            pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
-         END IF
-      ELSE ! p%WaveDisp=0 implies PtfmYMod=0
-         ! Rotate the structure based on PtfmRefY (constant)
-         call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
-         pos = matmul(transpose(Orient),pos)
-      END IF
-
-   END SUBROUTINE GetDisplacedNodePosition
-
-   SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
-      Type(Morison_MemberType), intent(inout) :: member
-      Real(ReKi),               intent(in   ) :: PtfmRefY
-      Integer(IntKi),           intent(  out) :: ErrStat
-      Character(*),             intent(  out) :: ErrMsg
-
-      Real(ReKi)                              :: k(3), x_hat(3), y_hat(3)
-      Real(ReKi)                              :: kkt(3,3)
-      Real(ReKi)                              :: Ak(3,3)
-      Integer(IntKi)                          :: ErrStat2
-      Character(ErrMsgLen)                    :: ErrMsg2
-
-      Character(*), parameter                 :: RoutineName = 'YawMember'
-
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-
-      call hiFrameTransform(h2i,PtfmRefY,member%k,k,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%k   = k
-
-      call hiFrameTransform(h2i,PtfmRefY,member%kkt,kkt,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%kkt = kkt
-
-      call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%Ak  = Ak
-
-      IF (member%MSecGeom == MSecGeom_Rec) THEN
-
-         call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         member%x_hat   = x_hat
-
-         call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         member%y_hat   = y_hat
-
-      END IF
-
-   END SUBROUTINE YawMember
 
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
