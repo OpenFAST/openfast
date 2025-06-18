@@ -40,12 +40,12 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+        run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
@@ -60,7 +60,7 @@ jobs:
             -DBUILD_FASTFARM:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
 
@@ -72,27 +72,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: List files in workspace
-        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
+      - name: List files in workspace
+        run: ls ${{github.workspace}}
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
         run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+        run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
@@ -111,14 +108,14 @@ jobs:
             -DBUILD_FASTFARM:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
         with:
           name: build-all-release
-          path: ${{runner.workspace}}
+          path: ${{github.workspace}}
           compression-level: 0
 
   ### BUILD AND TEST JOBS
@@ -139,19 +136,19 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+        run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
@@ -165,11 +162,11 @@ jobs:
             ${GITHUB_WORKSPACE}
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
       - name: Run UnsteadyAero tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           ctest -VV -R "^ua_" 
@@ -200,8 +197,8 @@ jobs:
         with:
           name: rtest-modules-debug
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/unit_tests
+            ${{github.workspace}}/build/reg_tests/modules
+            ${{github.workspace}}/build/unit_tests
 
 
   build-test-OF-simulink:
@@ -220,12 +217,12 @@ jobs:
         with:
           products: Simulink
       - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+        run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
@@ -237,13 +234,13 @@ jobs:
             -DVARIABLE_TRACKING:BOOL=OFF \
             ${GITHUB_WORKSPACE}
       - name: Build FAST_SFunc
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target FAST_SFunc
       - name: Run MATLAB tests and generate artifacts
         uses: matlab-actions/run-tests@v2
         with:
-          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
+          source-folder: ${{github.workspace}}/build/glue-codes/simulink; ${{github.workspace}}/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
 
@@ -263,7 +260,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -271,7 +268,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -304,7 +301,7 @@ jobs:
         with:
           name: rtest-module-drivers
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{github.workspace}}/build/reg_tests/modules
 
 
   rtest-interfaces:
@@ -325,7 +322,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -333,7 +330,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -341,7 +338,7 @@ jobs:
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Run Interface / API tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
               -L "cpp|python|fastlib" \
@@ -352,13 +349,13 @@ jobs:
         with:
           name: rtest-interfaces
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/moordyn
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp
+            ${{github.workspace}}/build/reg_tests/glue-codes/python
+            ${{github.workspace}}/build/reg_tests/modules/aerodyn
+            ${{github.workspace}}/build/reg_tests/modules/moordyn
+            ${{github.workspace}}/build/reg_tests/modules/inflowwind
+            ${{github.workspace}}/build/reg_tests/modules/hydrodyn
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
 
 
   rtest-OF:
@@ -379,7 +376,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -387,7 +384,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -396,7 +393,7 @@ jobs:
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
           -L openfast \
@@ -407,13 +404,13 @@ jobs:
         with:
           name: rtest-OF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
 
   rtest-OF-offshore:
@@ -432,7 +429,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -440,7 +437,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -449,7 +446,7 @@ jobs:
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
           -L openfast -L offshore \
@@ -460,13 +457,13 @@ jobs:
         with:
           name: rtest-OF-offshore
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
  
   rtest-OF-linearization:
@@ -487,7 +484,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -495,7 +492,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -503,7 +500,7 @@ jobs:
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Run OpenFAST linearization tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV -L linear
       - name: Failing test artifacts
@@ -512,13 +509,13 @@ jobs:
         with:
           name: rtest-OF-linearization
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   rtest-OF-aeromap:
     runs-on: ubuntu-22.04
@@ -538,7 +535,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -546,7 +543,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -554,7 +551,7 @@ jobs:
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Run aero map tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV -L aeromap -LE "cpp|linear|python"
       - name: Failing test artifacts
@@ -563,13 +560,13 @@ jobs:
         with:
           name: rtest-OF-aeromap
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
 
   rtest-openfast_io:
@@ -590,7 +587,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -598,11 +595,11 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Install openfast_io
-        working-directory: ${{runner.workspace}}/openfast/openfast_io
+        working-directory: ${{github.workspace}}/openfast_io
         run: |
           pip install -e .
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -611,7 +608,7 @@ jobs:
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run openfast_io tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV -L openfast_io 
       - name: Failing test artifacts
@@ -620,7 +617,7 @@ jobs:
         with:
           name: rtest-openfast_io
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/openfast_io
+            ${{github.workspace}}/build/reg_tests/openfast_io
 
 
   rtest-FF:
@@ -641,7 +638,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
-        working-directory: ${{runner.workspace}}/openfast
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -649,7 +646,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
@@ -658,7 +655,7 @@ jobs:
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run FAST.Farm tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           ctest -VV -j1 -L fastfarm --verbose
@@ -668,4 +665,4 @@ jobs:
         with:
           name: rtest-FF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm
+            ${{github.workspace}}/build/reg_tests/glue-codes/fast-farm
