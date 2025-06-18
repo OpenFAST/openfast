@@ -98,16 +98,16 @@ jobs:
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DBLA_VENDOR:STRING=OpenBLAS \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DOPENMP:BOOL=OFF \
+            -DOPENMP:BOOL=ON \
             -DDOUBLE_PRECISION=ON \
-            -DBUILD_OPENFAST_CPP_API:BOOL=OFF \
-            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=OFF \
-            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=OFF \
-            -DBUILD_FASTFARM:BOOL=OFF \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{github.workspace}}/build
@@ -117,6 +117,7 @@ jobs:
         run: |
           tar -cvf workspace.tar -C ${{github.workspace}} \
           --exclude='*.a' --exclude='*.o' --exclude='build/ftnmods' \
+          --exclude='.git' --exclude='docs' --exclude='vs-build'\
           .
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
