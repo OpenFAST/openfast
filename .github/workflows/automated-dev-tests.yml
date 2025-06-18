@@ -80,6 +80,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -138,6 +139,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -255,13 +257,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-all-release
-      
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -323,6 +325,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -376,6 +379,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -428,6 +432,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -482,6 +487,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -532,6 +538,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -583,6 +590,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
@@ -633,6 +641,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
+        working-directory: ${{runner.workspace}}/openfast
         run: |
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
