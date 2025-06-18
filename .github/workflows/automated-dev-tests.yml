@@ -114,7 +114,7 @@ jobs:
         run: |
           cmake --build . --target all
       - name: Archive files
-        run: tar -cvf workspace.tar ${{github.workspace}}
+        run: tar -cf workspace.tar -C ${{github.workspace}} .
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
         with:
@@ -263,7 +263,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C ${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -327,7 +327,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -383,7 +383,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -438,7 +438,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -495,7 +495,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -548,7 +548,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -602,7 +602,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
@@ -655,7 +655,7 @@ jobs:
         with:
           name: build-all-release
       - name: Untar workspace
-        run: tar -xvf workspace.tar ${{github.workspace}}
+        run: tar -xvf workspace.tar -C${{github.workspace}}
       - name: List files in workspace
         run: ls
       - name: Setup Python
