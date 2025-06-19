@@ -124,23 +124,6 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></Filter>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper.f90"/></Filter>
-		<Filter Name="SuperController">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\supercontroller\src\SuperController_Registry.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\supercontroller\src\SuperController_Types.f90"/></Filter>
-		<File RelativePath="..\..\modules\supercontroller\src\SuperController.f90"/></Filter>
 		<Filter Name="WakeDynamics">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics_Registry.txt">

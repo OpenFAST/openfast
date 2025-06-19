@@ -187,7 +187,7 @@ Determines the kind of BEM algorithm to use.
 
 .. warning::
 
-    ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency accross differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
+    ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency across differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
 
 The following inputs in this section are only used when ``Wake_Mod = 1``.
 

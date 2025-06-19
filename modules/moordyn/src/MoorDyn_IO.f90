@@ -785,8 +785,8 @@ CONTAINS
       
       
          ! calculate number of output entries (excluding time) to write for this line
-         LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:6)) &
-                       + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
+         LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:7)) &
+                       + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(8:9)) &
                              + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
    
          ALLOCATE(m%LineList(I)%LineWrOutput( 1 + LineNumOuts), STAT = ErrStat)  
@@ -934,8 +934,8 @@ CONTAINS
 
                         
             ! calculate number of output entries (excluding time) to write for this line
-            LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:6)) &
-                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
+            LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:7)) &
+                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(8:9)) &
                                 + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
                                   
             if (wordy > 2) PRINT *, LineNumOuts, " output channels"
@@ -966,12 +966,17 @@ CONTAINS
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'bx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'by', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'bz', J=0,(m%LineList(I)%N) )
             END IF
-            
+
             IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vz', J=0,(m%LineList(I)%N) ) ! TODO adjust these when force to internal nodes
+            END IF
+            
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Wz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Kurv', J=0,(m%LineList(I)%N) )
             END IF
@@ -1023,12 +1028,16 @@ CONTAINS
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(m%LineList(I)%N) )
             END IF
-            
             IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(m%LineList(I)%N) )
+            END IF
+            
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(Nup)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(1/m)', J=0,(m%LineList(I)%N) )
             END IF
@@ -1296,11 +1305,6 @@ CONTAINS
       IF (ALLOCATED(m%MDWrOutput)) THEN
          DEALLOCATE(m%MDWrOutput)
       ENDIF
-      DO I=1,p%NLines
-         IF (ALLOCATED(m%LineList(I)%LineWrOutput)) THEN
-            DEALLOCATE(m%LineList(I)%LineWrOutput)       ! this may be unnecessary and handled by Line destructor
-         ENDIF
-      END DO
 
    END SUBROUTINE MDIO_CloseOutput
    !----------------------------------------------------------------------------------------============
@@ -1669,22 +1673,31 @@ CONTAINS
               END DO
            END IF
            
+           ! Node VIV force
+           IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+            DO J = 0,m%LineList(I)%N  
+              DO K = 1,3
+                m%LineList(I)%LineWrOutput(L) = m%LineList(I)%Lf(K,J)
+                L = L+1
+              END DO
+            END DO
+         END IF
            
            ! Node weights
-           IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+           IF (m%LineList(I)%OutFlagList(8) == 1) THEN
               DO J = 0,m%LineList(I)%N
                   m%LineList(I)%LineWrOutput(L) = m%LineList(I)%W(3,J)
                   L = L+1
               END DO
            END IF
            
-        !   ! Node curvatures
-        !   IF (m%LineList(I)%OutFlagList(8) == 1) THEN
-        !      DO J = 0,m%LineList(I)%N
-        !          m%LineList(I)%LineWrOutput(L) = m%LineList(I)%W(3,J)
-        !          L = L+1
-        !      END DO
-        !   END IF
+          ! Node curvatures
+          IF (m%LineList(I)%OutFlagList(9) == 1) THEN
+             DO J = 0,m%LineList(I)%N
+                 m%LineList(I)%LineWrOutput(L) = m%LineList(I)%Kurv(J)
+                 L = L+1
+             END DO
+          END IF
            
            
            ! Segment tension force (excludes damping term, just EA)

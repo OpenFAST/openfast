@@ -151,7 +151,7 @@ MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type,
 
   MAP_END_ERROR_LOG;  
   
-  /* the next functions are called in a seperate do-loop to log information to the 
+  /* the next functions are called in a separate do-loop to log information to the 
    * summary file even if a fatal error is encountered. This guarantees the summary 
    * file is written even if garbage is recorded.
    */
@@ -159,7 +159,7 @@ MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type,
   
   free_init_data(init_data, map_msg, ierr); 
   MAP_InitInput_Delete(init_data);
-  if (*ierr!=MAP_SAFE) printf("Intialization: %s\n", map_msg);
+  if (*ierr!=MAP_SAFE) printf("Initialization: %s\n", map_msg);
 
   // checkpoint();
   // printf("In initialization: %p\n",z_type);

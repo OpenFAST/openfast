@@ -2999,7 +2999,7 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg2, RoutineName)
@@ -5211,7 +5211,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
 END SUBROUTINE Coeff
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates the initial blade deflections.
-!! Base the intial values of the blade DOFs, INITQF1, INITQF2, and
+!! Base the initial values of the blade DOFs, INITQF1, INITQF2, and
 !!   INITQE1, on OoPDefl and IPDefl.
 !! Write messages to the screen if the specified initial tip displacements
 !!  are incompatible with the enabled DOFs.

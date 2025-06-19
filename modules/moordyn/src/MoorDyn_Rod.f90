@@ -88,7 +88,7 @@ CONTAINS
      
       ! allocate segment scalar quantities
       if (Rod%N == 0) then                                ! special case of zero-length Rod
-         ALLOCATE(Rod%l(1), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
+         ALLOCATE(Rod%l(1), Rod%V(1), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       else                                                ! normal case
          ALLOCATE(Rod%l(N), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       end if
@@ -148,7 +148,7 @@ CONTAINS
       Rod%OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
       
             
-      IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
+      IF (wordy > 0) CALL WrScr("Set up Rod "//trim(num2lstr(Rod%IdNum))//", type "//trim(num2lstr(Rod%typeNum)))
 
       ! need to add cleanup sub <<<
 
@@ -184,7 +184,7 @@ CONTAINS
 !      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
 !      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
    
-      IF (wordy > 0) print *, "initializing Rod ", Rod%idNum
+      IF (wordy > 0) CALL WrScr("initializing Rod "//trim(num2lstr(Rod%idNum)))
 
       ! the r6 and v6 vectors should have already been set
       ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
@@ -587,6 +587,9 @@ CONTAINS
       Real(DbKi)                 :: depth                  ! local interpolated depth from bathymetry grid [m]
       Real(DbKi)                 :: nvec(3)        ! local seabed surface normal vector (positive out)
 
+      INTEGER(IntKi)                   :: ErrStat2
+      CHARACTER(ErrMsgLen)             :: ErrMsg2   
+
 
       N = Rod%N
 
@@ -619,7 +622,9 @@ CONTAINS
       ! apply wave kinematics (if there are any)
 
       DO i=0,N
-         CALL getWaterKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
+         CALL getWaterKin(p, m, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i), ErrStat2, ErrMsg2)
+         ! TODO: Handle error messages. Roads broadly needs error flags to be supported
+         
          !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
          ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
       END DO
@@ -634,7 +639,7 @@ CONTAINS
       else if ((Rod%r(3,N) < zeta) .and. (Rod%r(3,0) > zeta)) then   ! check if it's crossing the water plane but upside down
          Rod%h0 = -(zeta - Rod%r(3,0))/Rod%q(3)                       ! negative distance along rod centerline from end A to the waterplane
       else 
-         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
+         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?). (Rod%r(3,0) > zeta) .and. (Rod%r(3,N) > zeta)
       end if
 
    
@@ -879,6 +884,22 @@ CONTAINS
          Rod%Fnet(:,I) = Rod%W(:,I) + Rod%Bo(:,I) + Rod%Dp(:,I) + Rod%Dq(:,I) &
                          + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I) + Rod%Bp(:,I) + Rod%Bq(:,I)
          
+         DO J=1,3
+            IF (Is_NaN(Rod%Fnet(J,I)) .AND. wordy>1) THEN
+               CALL WrScr("NaN detected in Rod%Fnet at node "//trim(num2lstr(I)))
+               CALL WrScr("Rod%IDNum: "//trim(Int2LStr(Rod%IdNum)))
+               CALL WrScr("Rod%W("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%W(J,I))))
+               CALL WrScr("Rod%Bo("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Bo(J,I))))
+               CALL WrScr("Rod%Dp("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Dp(J,I))))
+               CALL WrScr("Rod%Dq("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Dq(J,I))))
+               CALL WrScr("Rod%Ap("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Ap(J,I))))
+               CALL WrScr("Rod%Aq("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Aq(J,I))))
+               CALL WrScr("Rod%Pd("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Pd(J,I))))
+               CALL WrScr("Rod%B("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%B(J,I))))
+               CALL WrScr("Rod%Bp("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Bp(J,I))))
+               CALL WrScr("Rod%Bq("//trim(num2lstr(J))//","//trim(num2lstr(I))//"): "//trim(num2lstr(Rod%Bq(J,I))))
+            END IF
+         ENDDO
 
       END DO  ! I  - done looping through nodes
 
@@ -985,8 +1006,25 @@ CONTAINS
       Rod%F6net(1:3) = Rod%F6net(1:3) + Fcentripetal 
       Rod%F6net(4:6) = Rod%F6net(4:6) + Mcentripetal + Rod%Mext
 
+      DO J=1,3
+         IF ((Is_NaN(Rod%F6net(J)) .OR. Is_NaN(Rod%F6net(J+3))) .AND. wordy>1) THEN ! convoluted logic to check 1:6 with a 1:3 loop
+            CALL WrScr("NaN detected in Rod%F6net("//trim(num2lstr(J))//") after adding centripetal force/moment")
+            CALL WrScr("Rod%IDNum: "//trim(num2lstr(Rod%IdNum)))
+            CALL WrScr("Fcentripetal("//trim(num2lstr(J))//"): "//trim(num2lstr(Fcentripetal(J))))
+            CALL WrScr("Mcentripetal("//trim(num2lstr(J))//"): "//trim(num2lstr(Mcentripetal(J))))
+            CALL WrScr("Rod%Mext("//trim(num2lstr(J))//"): "//trim(num2lstr(Rod%Mext(J))))
+         END IF
+      ENDDO
+
       ! add in user defined external forces to end A
       Rod%F6net(1:3) = Rod%F6net(1:3) + Rod%FextU
+      DO J=1,3
+         IF (Is_NaN(Rod%F6net(J)) .AND. wordy>1) THEN
+            CALL WrScr("NaN detected in Rod%F6net("//trim(num2lstr(J))//") after adding Rod%FextU")
+            CALL WrScr("Rod%IDNum: "//trim(num2lstr(Rod%IdNum)))
+            CALL WrScr("Rod%FextU("//trim(num2lstr(J))//"): "//trim(num2lstr(Rod%FextU(J))))
+         END IF
+      ENDDO
             
       ! Note: F6net saves the Rod's net forces and moments (excluding inertial ones) for use in later output
       !       (this is what the rod will apply to whatever it's attached to, so should be zero moments if pinned).
@@ -1119,7 +1157,7 @@ CONTAINS
 
       if (endB==1) then   ! attaching to end B
 
-         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "b"
+         IF (wordy > 0) CALL WrScr("L"//trim(num2lstr(lineID))//"->R"//trim(num2lstr(Rod%IdNum))//"b")
          
          IF (Rod%nAttachedB <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
             Rod%nAttachedB = Rod%nAttachedB + 1  ! add the line to the number connected
@@ -1131,7 +1169,7 @@ CONTAINS
 
       else              ! attaching to end A
       
-         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "a"
+         IF (wordy > 0) CALL WrScr("L"//trim(num2lstr(lineID))//"->R"//trim(num2lstr(Rod%IdNum))//"a")
          
          IF (Rod%nAttachedA <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
             Rod%nAttachedA = Rod%nAttachedA + 1  ! add the line to the number connected
@@ -1298,7 +1336,7 @@ CONTAINS
       ! check for failed where /= 0 is fatal
       logical function Failed0(txt)
          character(*), intent(in) :: txt
-         if (errStat /= 0) then
+         if (ErrStat2 /= 0) then
             ErrStat2 = ErrID_Fatal
             ErrMsg2  = "Could not allocate "//trim(txt)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

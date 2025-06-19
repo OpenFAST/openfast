@@ -618,103 +618,52 @@ water depth results in static pressure loads being applied.
 
 Member Cross-Sections
 ---------------------
-Members in HydroDyn are assumed to be straight circular (and possibly
-tapered) cylinders. Apart from the hydrodynamic coefficients, the
-circular cross-section properties needed for the hydrodynamic load
-calculations are member outer diameter, **PropD**, and member thickness,
-**PropThck**. You will need to create an entry in this table,
-distinguished by **PropSetID**, for each unique combination of these two
-properties. The member property-set table contains **NPropSets** rows.
-The member property sets are referred to by their **PropSetID** in the
-MEMBERS table, as described in :numref:`hd-members` below. **PropD**
-determines the static buoyancy loads exterior to a member, as well as
-the area used in the viscous-drag calculation and the volume used in the
-added-mass and fluid-inertia calculations. **PropThck** determines the
-interior volume for fluid-filled (flooded/ballasted) members.
+Members in HydroDyn are assumed to be straight with either a circular cross section or a rectangular cross section. In either case, tapering is allowed, including independent tapering of the two sides of a member with rectangular cross sections. However, twisting of rectangular members is not allowed, and the four side walls of the member must remain planar.
+
+The HydroDyn primary input file contains two separate sections for member cross-section properties. The first section is for circular sections, and the second one is for rectangular sections.
+
+In the first section labeled CYLINDRICAL MEMBER CROSS-SECTION PROPERTIES, **NPropSetsCyl** different section defintions can be entered, with each section definition on a separate line identified by its **PropSetID**. The **PropSetID** is used in the MEMBERS table, as described in :numref:`hd-members` below. For each section definition, the user needs to provide the member outer diameter, **PropD**, and member wall thickness, **PropThck**. **PropD** determines the static buoyancy loads exterior to a member, as well as the area used in the viscous-drag calculation and the volume used in the added-mass and fluid-inertia load calculations. **PropThck** determines the interior volume for fluid-filled (flooded/ballasted) members.
+
+In the second section labeled RECTANGULAR MEMBER CROSS-SECTION PROPERTIES, **NPropSetsRec** different section definitions can be entered, with each section definition on a separate line identified by its **PropSetID**. The **PropSetID** is referenced in the MEMBERS table, as described in :numref:`hd-members` below. For each section definition, the user needs to provide the member outer side lengths of the rectangular section. **PropA** is the outer length of Side A, and **PropB** is the outer length of Side B (see :numref:`hd-members` on how the two sides are identified). **PropThck** is again the section wall thickness. Currently, we assume the four side walls of each rectangular section have the same uniform wall thickness, so only one **PropThck** can be specified for each rectangular section.
+
+Note that the **PropSetID** for circular and rectangular sections are independent. For instance, it is allowed to have a circular section and a rectangular section both having the same **PropSetID**. Depending on the section shape specified for each member, HydroDyn will look up the correct section properties.
 
 Hydrodynamic Coefficients
 -------------------------
-HydroDyn computes distributed viscous-drag, added-mass, fluid-inertia,
-and static buoyancy loads along members.
+HydroDyn computes distributed viscous-drag, added-mass, fluid-inertia, and static buoyancy loads along members.
 
-The hydrodynamic coefficients for the distributed strip-theory loads are
-specified using any of three models, which we refer to as the simple
-model, a depth-based model, and a member-based model. All of these
-models require the specification of both transverse and axial
-hydrodynamic coefficients for viscous drag, added mass, and dynamic
-pressure. The added-mass
-coefficient influences both the added-mass loads and the scattering
-component of the fluid-inertia loads. There are separate set of
-hydrodynamic coefficients both with and without marine growth. A given
-element will either use the marine growth or the standard version of a
-coefficient, but never both. Note that input members are split into
-elements, one of the splitting rules guarantees the
-previous statement is true. Which members have marine growth is defined
-by the MARINE GROWTH table of :numref:`hd-marine-growth`. You can specify only one
-model type, **MCoefMod**, for any given member in the MEMBERS table.
-However, different members can specify different coefficient models.
+The hydrodynamic coefficients for the distributed strip-theory loads are specified using any of the three available models, which we refer to as the simple model (model 1), a depth-based model (model 2), and a member-based model (model 3). All of these models require the specification of both transverse and axial hydrodynamic coefficients for viscous drag, added mass, and dynamic pressure. The added-mass coefficient influences both the added-mass loads and the scattering component of the fluid-inertia loads. There are two separate sets of hydrodynamic coefficients with one set for the part of a member with marine growth and the other for the part without. Which members have marine growth is defined by the MARINE GROWTH table of :numref:`hd-marine-growth`. You can specify only one model type (**MCoefMod** = 1, 2, or 3) for any given member in the MEMBERS table. However, different members can use different coefficient models.
 
 .. elements per Section 7.5.2, one of the splitting rules guarantees the
 .. TODO 7.5.2 is the theory section which does not yet exist.
 
-In the hydrodynamic coefficient input parameters, **Cd**, **Ca**, and
-**Cp** refer to the viscous-drag, added-mass, and dynamic-pressure
-coefficients, respectively. **MG** identifies the coefficients to be
-applied for members with marine growth (the standard values are
-identified without **MG**), and **Ax** identifies the axial coefficients
-to be applied for tapered members (the transverse coefficients are
-identified without **Ax**). The **Cb** coefficients allow the user to 
-scale the hydrostatic load for, e.g., non-circular member cross sections. 
-To avoid unphysical hydrostatic loads, the **Cb** coefficients are not 
-used to directly scale the distributed hydrostatic load. Instead, the 
-local member diameter (with marine growth if specified) is scaled by 
-the square root of **Cb** when computing the hydrostatic load. This 
-scaling also affects the hydrostatic load on member endplates for 
-consistency. 
+In the hydrodynamic coefficient tables, **Cd**, **Ca**, and **Cp** refer to the viscous-drag, added-mass, and dynamic-pressure coefficients, respectively. For circular sections, these coefficients apply to loads in any radial direction due to axisymmetry. For rectangular sections, two sets of transverse **Cd** and **Ca** coefficients must be provided, with one set having the letter "A" appended for load components normal to Side A of the section (e.g., **CdA**) and the other with the letter "B" appended for load components normal to Side B of the section (e.g., **CaB**). Note that only the transverse **Cd** and **Ca** (with and without marine growth) make a distinction between the two transverse directions of rectangular sections. None of the other coefficients make this distinction. **MG** identifies the coefficients to be applied on member sections with marine growth (the standard values are identified without **MG**), and **Ax** identifies the axial coefficients to be applied for tapered members (the transverse coefficients are identified without **Ax**). The **Cb** coefficients allow the user to scale the hydrostatic load for, e.g., non-circular and non-rectangular member cross sections. To avoid unphysical hydrostatic loads, the **Cb** coefficients are not used to directly scale the distributed hydrostatic load. Instead, the local member diameter or side lengths (with marine growth if specified) are scaled by the square root of **Cb** when computing the hydrostatic loads. This scaling also affects the hydrostatic loads on member endplates for consistency. While the strip-theory solution assumes either a circular or a rectangular cross section, the hydrodynamic coefficients can include shape corrections.
 
-While the strip-theory solution assumes circular cross sections, the
-hydrodynamic coefficients can include shape corrections; however, there
-is no distinction made in HydroDyn between different transverse
-directions.
+For each of the three available coefficient models, there are two separate input sections with the first one for circular sections and the second for rectangular sections. These are explained below.
 
-Simple Model
-++++++++++++
-This table consists of a single complete set of hydrodynamic
-coefficients as follows: **SimplCd**, **SimplCdMG**, **SimplCa**,
-**SimplCaMG**, **SimplCp**, **SimplCpMG**, **SimplAxCa**,
-**SimplAxCaMG**, **SimplAxCp**, and **SimplAxCpMG**. These hydrodynamic
-coefficients are referenced in the members table of :numref:`hd-members` by
-selecting **MCoefMod** = 1.
+Simple Model for Circular Sections
+++++++++++++++++++++++++++++++++++
+This table consists of a single complete set of hydrodynamic coefficients for circular sections as follows: **SimplCd**, **SimplCdMG**, **SimplCa**, **SimplCaMG**, **SimplCp**, **SimplCpMG**, **SimplAxCd**, **SimplAxCdMG**, **SimplAxCa**, **SimplAxCaMG**, **SimplAxCp**, **SimplAxCpMG**, **SimplCb**, and **SimplCbMG**. These hydrodynamic coefficients are referenced in the MEMBERS table of :numref:`hd-members` by selecting **MCoefMod** = 1.
 
-Depth-Based Model
-+++++++++++++++++
-The depth-based coefficient model allows you to specify a series of
-depth-dependent coefficients. **NCoefDpth** is the user-specified number
-of depths and determines the number of rows in the subsequent table.
-Currently, this table requires that the rows are ordered by increasing
-depth, **Dpth**; this is equivalent to a decreasing global
-*Z*-coordinate. The hydrodynamic coefficients at each depth are as
-follows: **DpthCd**, **DpthCdMG**, **DpthCa**, **DpthCaMG**, **DpthCp**,
-**DpthCpMG**, **DpthAxCa**, **DpthAxCaMG**, **DpthAxCp**, and
-**DpthAxCpMG**. Members use these hydrodynamic coefficients by setting
-**MCoefMod** = 2. The HydroDyn module will interpolate coefficients for
-a node whose *Z*-coordinate lies between table *Z*-coordinates.
+Simple Model for Rectangular Sections
++++++++++++++++++++++++++++++++++++++
+This table consists of a single complete set of hydrodynamic coefficients for rectangular sections as follows: **SimplCdA**, **SimplCdAMG**, **SimplCdB**, **SimplCdBMG**, **SimplCaA**, **SimplCaAMG**, **SimplCaB**, **SimplCaBMG**, **SimplCp**, **SimplCpMG**, **SimplAxCd**, **SimplAxCdMG**, **SimplAxCa**, **SimplAxCaMG**, **SimplAxCp**, **SimplAxCpMG**, **SimplCb**, and **SimplCbMG**. These hydrodynamic coefficients are referenced in the MEMBERS table of :numref:`hd-members` by selecting **MCoefMod** = 1.
 
-Member-Based Model
-++++++++++++++++++
-The member-based coefficient model allows you to specify a hydrodynamic
-coefficients for each particular member. **NCoefMembers** is the
-user-specified number of members with member-based coefficients and
-determines the number of rows in the subsequent table. The hydrodynamic
-coefficients for a member distinguished by **MemberID** are as follows:
-**MemberCd1**, **MemberCd2**, **MemberCdMG1**, **MemberCdMG2**,
-**MemberCa1**, **MemberCa2**, **MemberCaMG1**, **MemberCaMG2**,
-**MemberCp1**, **MemberCp2**, **MemberCpMG1**, **MemberCpMG2**,
-**MemberAxCa1**, **MemberAxCa2**, **MemberAxCaMG1**, **MemberAxCaMG2**,
-**MemberAxCp1**, **MemberAxCp2**, **MemberAxCpMG1**, and
-**MemberAxCpMG2**, where *1* and *2* identify the starting and ending
-joint of the member, respectively. Members use these hydrodynamic
-coefficients by setting **MCoefMod** = 3.
+Depth-Based Model for Circular Sections
++++++++++++++++++++++++++++++++++++++++
+The depth-based coefficient model allows you to specify a series of depth-dependent coefficients for circular sections. **NCoefDpthCyl** is the user-specified number of depths and determines the number of rows in the subsequent table. Currently, this table requires that the rows are ordered by increasing depth, **Dpth**; this is equivalent to a decreasing global *Z*-coordinate. The hydrodynamic coefficients at each depth are as follows: **DpthCd**, **DpthCdMG**, **DpthCa**, **DpthCaMG**, **DpthCp**, **DpthCpMG**, **DpthAxCd**, **DpthAxCdMG**, **DpthAxCa**, **DpthAxCaMG**, **DpthAxCp**, **DpthAxCpMG**, **DpthCb**, and **DpthCbMG**. Members use these hydrodynamic coefficients by setting **MCoefMod** = 2. The HydroDyn module will linearly interpolate coefficients for a node whose *Z*-coordinate lies between table *Z*-coordinates.
+
+Depth-Based Model for Rectangular Sections
+++++++++++++++++++++++++++++++++++++++++++
+The depth-based coefficient model allows you to specify a series of depth-dependent coefficients for rectangular sections. **NCoefDpthRec** is the user-specified number of depths and determines the number of rows in the subsequent table. Currently, this table requires that the rows are ordered by increasing depth, **Dpth**; this is equivalent to a decreasing global *Z*-coordinate. The hydrodynamic coefficients at each depth are as follows: **DpthCdA**, **DpthCdAMG**, **DpthCdB**, **DpthCdBMG**, **DpthCaA**, **DpthCaAMG**, **DpthCaB**, **DpthCaBMG**, **DpthCp**, **DpthCpMG**, **DpthAxCd**, **DpthAxCdMG**, **DpthAxCa**, **DpthAxCaMG**, **DpthAxCp**, **DpthAxCpMG**, **DpthCb**, and **DpthCbMG**. Members use these hydrodynamic coefficients by setting **MCoefMod** = 2. The HydroDyn module will linearly interpolate coefficients for a node whose *Z*-coordinate lies between table *Z*-coordinates.
+
+Member-Based Model for Circular Sections
+++++++++++++++++++++++++++++++++++++++++
+The member-based coefficient model allows you to specify a set of hydrodynamic coefficients for each member. **NCoefMembersCyl** is the user-specified number of members with member-based coefficients and determines the number of rows in the subsequent table. The hydrodynamic coefficients for a member distinguished by **MemberID** are as follows: **MemberCd1**, **MemberCd2**, **MemberCdMG1**, **MemberCdMG2**, **MemberCa1**, **MemberCa2**, **MemberCaMG1**, **MemberCaMG2**, **MemberCp1**, **MemberCp2**, **MemberCpMG1**, **MemberCpMG2**, **MemberAxCd1**, **MemberAxCd2**, **MemberAxCdMG1**, **MemberAxCdMG2**, **MemberAxCa1**, **MemberAxCa2**, **MemberAxCaMG1**, **MemberAxCaMG2**, **MemberAxCp1**, **MemberAxCp2**, **MemberAxCpMG1**, **MemberAxCpMG2**, **MemberCb1**, **MemberCb2**, **MemberCbMG1**, and **MemberCbMG2**, where *1* and *2* identify the starting and ending joint of the member, respectively. Members use these hydrodynamic coefficients by setting **MCoefMod** = 3.
+
+Member-Based Model for Rectangular Sections
++++++++++++++++++++++++++++++++++++++++++++
+The member-based coefficient model allows you to specify a set of hydrodynamic coefficients for each member. **NCoefMembersRec** is the user-specified number of members with member-based coefficients and determines the number of rows in the subsequent table. The hydrodynamic coefficients for a member distinguished by **MemberID** are as follows: **MemberCdA1**, **MemberCdA2**, **MemberCdAMG1**, **MemberCdAMG2**, **MemberCdB1**, **MemberCdB2**, **MemberCdBMG1**, **MemberCdBMG2**, **MemberCaA1**, **MemberCaA2**, **MemberCaAMG1**, **MemberCaAMG2**, **MemberCaB1**, **MemberCaB2**, **MemberCaBMG1**, **MemberCaBMG2**, **MemberCp1**, **MemberCp2**, **MemberCpMG1**, **MemberCpMG2**, **MemberAxCd1**, **MemberAxCd2**, **MemberAxCdMG1**, **MemberAxCdMG2**, **MemberAxCa1**, **MemberAxCa2**, **MemberAxCaMG1**, **MemberAxCaMG2**, **MemberAxCp1**, **MemberAxCp2**, **MemberAxCpMG1**, **MemberAxCpMG2**, **MemberCb1**, **MemberCb2**, **MemberCbMG1**, and **MemberCbMG2**, where *1* and *2* identify the starting and ending joint of the member, respectively. Members use these hydrodynamic coefficients by setting **MCoefMod** = 3.
 
 MacCamy-Fuchs diffraction load model
 ++++++++++++++++++++++++++++++++++++
@@ -741,6 +690,8 @@ diameter. To ensure it is approximately applicable while still allowing for some
 flexibility, some constraints are placed on members when applying the MacCamy-Fuchs 
 model:
 
+* The member must have a circular cross section.
+
 * The member must be surface-piercing at least when the structure is undisplaced in calm water.
 
 * The member must be nearly vertical with an inclination from vertical less than 10 deg.
@@ -760,61 +711,22 @@ the available wave-stretching models.
 Members
 -------
 
-**NMembers** is the user-specified number of members and determines the
-number of rows in the subsequent table. For each member distinguished by
-**MemberID**, **MJointID1** specifies the starting joint and
-**MJointID2** specifies the ending joint, corresponding to an identifier
-(**JointID**) from the MEMBER JOINTS table. Likewise, **MPropSetID1**
-corresponds to the starting cross-section properties and **MProSetID2**
-specify the ending cross-section properties, allowing for tapered
-members. **MDivSize** determines the maximum spacing (in meters) between
-simulation nodes where the distributed loads are actually computed; the
-smaller the number, the finer the resolution and longer the
-computational time. Each member in your model will have hydrodynamic 
-coefficients, which are specified using one of the three models (**MCoefMod**). 
-Model 1 uses a single set of coefficients found in the SIMPLE HYDRODYNAMIC 
-COEFFICIENTS section. Model 2 is depth-based, and is determined via the table found
-in the DEPTH-BASED HYDRODYNAMIC COEFFICIENTS section. Model 3 specifies
-coefficients for a particular member, by referring to the MEMBER-BASED
-HYDRODYNAMIC COEFFICIENTS section. The **MHstLMod** switch controls the 
-computation of hydrostatic loads on strip-theory members when **PropPot** 
-= FALSE. Setting **MHstLMod** to 0 disables hydrostatic load. If set to 1,
-hydrostatic loads will be computed analytically. This approach is efficient, 
-but it only works for fully submerged or surface-piercing members 
-that are far from horizontal without partially wetted endplates. 
-For nearly horizontal members close to the free surface or members that experience  
-partially wetted endplates, a semi-numerical approach for hydrostatic load 
-can be selected by setting **MHstLMod** to 2. This approach works with any 
-member positioning in relation to the free surface at the cost of slightly 
-longer computing time. The **PropPot** flag indicates whether the corresponding 
-member coincides with the body represented by the potential-flow solution. 
-When **PropPot** = TRUE, only viscous-drag loads and ballasting loads will 
-be computed for that member.
+**NMembers** is the user-specified number of members and determines the number of rows in the subsequent table. For each member distinguished by **MemberID**, **MJointID1** specifies the starting joint, and **MJointID2** specifies the ending joint, corresponding to an identifier (**JointID**) from the MEMBER JOINTS table. Likewise, **MPropSetID1** corresponds to the starting cross-section properties, and **MProSetID2** specify the ending cross-section properties, allowing for tapered members. **MSecGeom** indicates the cross-section shape of the member. It can be set to either 1 for circular cross section or 2 for rectangular cross section. Depending on **MSecGeom**, **MPropSetID1** and **MPropSetID2** either refer to entries in the CYLINDRICAL MEMBER CROSS-SECTION PROPERTIES table or the RECTANGULAR MEMBER CROSS-SECTION PROPERTIES table. **MSpinOrient** is an angle in degrees that specifies the spin orientation of each member, i.e., the rotation about the member axis. When **MSpinOrient** = 0, Side A of a rectangular section referenced in previous sections is parallel to the horizontal plane. If the member is perfectly vertical, Side A is parallel to the global *X*-axis when **MSpinOrient** = 0. Setting **MSpinOrient** to a nonzero value will rotate the member about its axis (pointing from the starting joint to the ending joint) following the right-hand convention by the prescribed angle. **MSpinOrient** should be specified for both members with rectangular cross sections and members with circular cross sections; however, it has no effect on the latter. **MDivSize** determines the maximum spacing (in meters) between simulation nodes where the distributed loads are actually computed; the smaller the number, the finer the resolution and longer the computational time.
+
+Each member in your model will have hydrodynamic coefficients, which are specified using one of the three models (**MCoefMod**). Model 1 uses a single set of coefficients found in the SIMPLE HYDRODYNAMIC COEFFICIENTS sections. Model 2 is depth-based, and is determined via the table found in the DEPTH-BASED HYDRODYNAMIC COEFFICIENTS sections. Model 3 specifies coefficients for a particular member, by referring to the MEMBER-BASED HYDRODYNAMIC COEFFICIENTS sections. Depending on **MSecGeom**, HydroDyn will either use the hydrodynamic coefficients from the input tables for circular sections or rectangular sections as appropriate. The **MHstLMod** switch controls the computation of hydrostatic loads on strip-theory members when **PropPot** = FALSE. Setting **MHstLMod** to 0 disables hydrostatic load. If set to 1, hydrostatic loads will be computed analytically. This approach is efficient, but it only works for fully submerged or surface-piercing members that are far from horizontal without partially wetted endplates. For nearly horizontal members close to the free surface or members that experience partially wetted endplates, a semi-numerical approach for hydrostatic load can be selected by setting **MHstLMod** to 2. This approach works with any member positioning in relation to the free surface at the cost of slightly longer computing time. Note that for members with rectangular cross sections, **MHstLMod** must be either 0 or 2. The analytical approach with **MHstLMod** set to 1 is not available for rectangular members. The **PropPot** flag indicates whether the corresponding member is included in the potential-flow solution. When **PropPot** = TRUE, only viscous-drag loads and ballasting loads will be computed for that member, with the assumption that all other load components are already included in the potential-flow solution.
 
 .. TODO 7.5.2 is the theory section which does not yet exist.
 .. Section 7.5.2 discusses the difference between the user-supplied discretization and the simulation discretization.
 
 Filled Members
 --------------
-Members—whether they are also modeled with potential-flow or not—may be
-fluid-filled, meaning that they are flooded and/or ballasted.
-Fluid-filled members introduce interior buoyancy that subtracts from the
-exterior buoyancy and a mass. Both distributed loads along a member and
-lumped loads at joints are applied. The volume of fluid in the member is
-derived from the outer diameter and thickness of the member and a
-fluid-filled free-surface level. The fluid in the member is assumed to
-be compartmentalized such that it does not slosh. Rotational inertia of
-the fluid in the member is ignored. A member’s filled configuration is
-defined by the filled-fluid density and the free-surface level. Filled
-members that have the same configuration are collected into fill groups.
+Members—whether they are also modeled with potential-flow or not—may be fluid-filled, meaning that they are flooded and/or ballasted. The internal fluid introduces hydrostatic pressure on the inner wall(s) of a flooded/ballasted member. It also adds mass and moment of inertia to the member. Both distributed loads along a member and lumped loads at joints/endplates are applied.
 
-**NFillGroups** specifies the number of fluid-filled member groups and
-determines the number of rows in the subsequent table. **FillNumM**
-specifies the number of members in the fill group. **FillMList** is a
-list of **FillNumM** whitespace-separated **MemberID**\ s. **FillFSLoc**
-specifies the *Z*-height of the free-surface (0 for MSL). **FillDens**
-is the density of the fluid. If **FillDens** = DEFAULT, then
-**FillDens** = **WtrDens**.
+The volume of fluid in a flooded member is derived from the outer diameter/side lengths and the wall thickness of the member and a fluid-filled level. The member is either partially flooded from the lower end joint to the fluid-filled level, if the fluid-filled level is in the middle of the member, or fully flooded, if the fluid-filled level is above the top end joint of the member. In either case, a watertight bulkhead normal to the member centerline is assumed to bound the filled section of a member on either end, so there is no internal free surface nor sloshing. Furthermore, the fluid in the member is assumed to be compartmentalized such that it moves with the member in a rigid-body fashion for the purpose of computing inertial loads on the member. However, when computing the internal hydrostatic pressure, we do not assume the compartmentalization to be watertight. Therefore, the entire filled volume of a member share a single contiguous hydrostatic pressure field. As an example, a consequence of this modeling assumption is that the weight of all ballast water inside a perfectly vertical untapered spar will rest solely on the bottom endplate of the spar instead of being distributed along the spar.
+
+Furthermore, we introduce the concept of filled member groups with each group potentially containing multiple members. The internal flooded volumes of all members belonging to the same filled member group are treated as interconnected and, therefore, share the same contiguous hydrostatic pressure field. Each filled member groups is classed as either open or closed. If at least one member in a given filled member group is partially buried in the seabed, such as a monopile, we treat this group as open to the external body of sea water through the bottom opening of the partially buried member and the porous seabed. In this case, the hydrostatic pressure of the internal fluid is in equilibrium with the external body of water with zero hydrostatic pressure at the external still water level. Furthermore, the filled level of an open filled member group cannot be higher than the external still water level, and the density of the internal fluid must exactly match the external water density. Note that any member partially buried in the seabed is considered to have an open bottom, so that there is neither external nor internal hydrostatic pressure on the bottom end of the member. If none of the members of a filled member group crosses the seabed, the filled member group is considered to be closed off from the external body of water, such as the ballast chamber of a floating platform. In this case, the internal hydrostatic pressure is zero at the instantaneous highest point of the internal fluid-filled volumes of all members belonging to this group at each time step.
+
+In this input section, **NFillGroups** specifies the number of fluid-filled member groups and determines the number of rows in the subsequent table. **FillNumM** specifies the number of members in the filled group. **FillMList** is a list of **FillNumM** whitespace-separated **MemberID**\ s. **FillFSLoc** specifies the *Z*-height of the filled level (0 for MSL). **FillDens** is the density of the fluid. If **FillDens** = DEFAULT, then **FillDens** = **WtrDens**. This option is convenient for open filled member groups, which requires the internal fluid density to match the external water density exactly.
 
 .. _hd-marine-growth:
 

@@ -392,6 +392,11 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       ! the average values for the entire wind profile must be calculated and stored (we don't know if OLAF
       ! is used until after AD_Init below).
       InitInData%BoxExceedAllow = .true.
+      
+      !bjj: what about these initialization inputs?
+      !   InitInData%HubPosition
+      !   InitInData%RadAvg 
+      
       CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )

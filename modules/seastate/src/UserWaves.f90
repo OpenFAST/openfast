@@ -367,7 +367,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
 
    ! Initialize the FFT
    CALL InitFFT ( WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-   CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+   CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
@@ -375,7 +375,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
 
    ! Apply the forward FFT to get the real and imaginary parts of the frequency information.      
    CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
-   CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName)
+   CALL SetErrStat(ErrStatTmp,'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
@@ -389,7 +389,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
    WaveField%WaveElevC0(:,WaveField%NStepWave2) = 0.0_SiKi
 
    CALL  ExitFFT(FFT_Data, ErrStatTmp)
-   CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
+   CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN

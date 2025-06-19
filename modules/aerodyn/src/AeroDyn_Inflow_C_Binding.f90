@@ -369,13 +369,16 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -417,12 +420,12 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_Init
 #endif
    ! Input file info
-   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
-   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< length of the input file string
+   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
+   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
    ! Environmental
@@ -787,7 +790,7 @@ CONTAINS
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat2 /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1532,13 +1535,16 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -2104,7 +2110,7 @@ end subroutine ADI_C_GetDiskAvgVel
 !===================================================================================================================================
 
 !> This routine is operating on module level data.  Error handling here in case checks added
-!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the position info here
 subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    integer(IntKi),            intent(in   )  :: iWT         !< current rotor/turbine
    integer(IntKi),            intent(  out)  :: ErrStat3
@@ -2132,7 +2138,7 @@ end subroutine Set_MotionMesh
 
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
-!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the position info here
 subroutine AD_SetInputMotion( iWT, u_local,        &
          HubPos_C, HubOri_C, HubVel_C, HubAcc_C,   &
          NacPos_C, NacOri_C, NacVel_C, NacAcc_C,   &

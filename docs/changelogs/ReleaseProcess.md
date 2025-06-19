@@ -13,6 +13,7 @@
 3. Update the versions in docs/source/user/api_change.rst
 4. Verify readthedocs builds correctly
 5. Update `openfast_io/pyproject.toml`
+6. Update `glue-codes/python/pyproject.toml` (for `pyOpenFAST`)
 
 ****
 
@@ -45,7 +46,7 @@ After posting and tagging release
    git update-index --assume-unchanged vs-build/MAPlib/MAP_dll.vcxproj vs-uild/Registry/FAST_Registry.vcxproj
    ```
 
-4. Compile executables for Windows builds
+4. Compile executables for Windows builds (manual process - use GH actions `deploy` if possible)
    * Run one of the executables and check the version info. Muck about with VS if there is an issue.
    * Also run `dumpbin.exe /dependents <exe>.exe` to check static linking
    * NOTE: build the simulink last -- it messes up some things otherwise
@@ -58,7 +59,6 @@ After posting and tagging release
     - [ ] `DISCON.dll` (x64)
     - [ ] `DISCON_ITIBarge.dll` (x64)
     - [ ] `DISCON_OC3Hywind.dll` (x64)
-    - [ ] `DISCON_SC.dll` (x64)
     - [ ] `FAST.Farm_x64.exe`
     - [ ] `FAST.Farm_x64_OMP.exe`
     - [ ] `FAST_SFunc.mexw64` -- build from MATLAB
@@ -72,6 +72,7 @@ After posting and tagging release
     - [ ] `OpenFAST-Simulink_x64.dll` -- change `additional dependencies` in the `OpenFAST-Simulink` project in `FAST` to point to correct install of MATLAB
     - [ ] `openfast_x64.exe`
     - [ ] `SeaStateDriver_x64.exe`
+    - [ ] `SeaState_c_binding_x64.dll`
     - [ ] `SimpleElastoDyn_x64.exe`
     - [ ] `SubDyn_x64.exe`
     - [ ] `Turbsim_x64.exe`
@@ -83,6 +84,6 @@ After posting and tagging release
    ```
 ## Post-release
 ### Docker Image push to ghcr.io
-1. Build latest `OpenFAST/main` image locally.
+1. Build latest `OpenFAST/main` image locally (GH actions fails due to memory usage)
 2. Push image to ghcr.io/openfast/openfast using tags `latest` and `<version>`
 

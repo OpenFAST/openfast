@@ -152,8 +152,6 @@ PROGRAM SrvD_Driver
       InitInData%AirDens       = 1.225 !kg/m^3
       InitInData%AvgWindSpeed  = 10.0 !m/s
       InitInData%Linearize     = .false.
-      InitInData%NumSC2Ctrl    = 0     ! SuperController
-      InitInData%NumCtrl2SC    = 0     ! SuperController
             
       CALL AllocAry(InitInData%BlPitchInit, InitInData%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
          IF ( ErrStat /= ErrID_None ) THEN

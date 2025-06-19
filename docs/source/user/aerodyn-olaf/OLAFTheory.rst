@@ -94,7 +94,7 @@ a line of varying circulation. The line follows the motion of the blade and is
 referred to as “bound” circulation. The bound circulation does not follow the
 same dynamic equation as the free vorticity of the wake. Instead, the intensity
 is linked to airfoil lift via the Kutta-Joukowski theorem. Spanwise variation of
-the bound circulation results in vorticity being emitted into the the wake. This
+the bound circulation results in vorticity being emitted into the wake. This
 is referred to as “trailed vorticity”. Time changes of the bound circulation are
 also emitted in the wake, referred to as “shed” vorticity. The subsequent
 paragraphs describe the representation of the bound vorticity.

@@ -21,6 +21,8 @@
 MODULE MoorDyn_Misc
 
    USE MoorDyn_Types
+   USE SeaSt_WaveField
+   USE Current
    USE NWTC_Library
    USE NWTC_FFTPACK
    
@@ -75,7 +77,7 @@ CONTAINS
       u = r2 - r1
       length = TwoNorm(u)
 
-      if ( .NOT. EqualRealNos(length, 0.0_DbKi ) ) THEN
+      IF ( .NOT. EqualRealNos(length, 0.0_DbKi ) ) THEN
         u = u / Length
       END IF
 
@@ -98,11 +100,11 @@ CONTAINS
          length_squared = length_squared + u_in(J)*u_in(J)
       END DO
       
-      if (length_squared > 0) then
+      IF (length_squared > 0) THEN
          scaler = newlength/sqrt(length_squared)
-      else                   ! if original vector is zero, return zero
+      ELSE                   ! if original vector is zero, return zero
          scaler = 0.0_DbKi
-      end if
+      END IF
       
       DO J=1,3
          u_out(J) = u_in(J) * scaler 
@@ -115,63 +117,63 @@ CONTAINS
    ! convenience function to calculate curvature based on adjacent segments' direction vectors and their combined length
    function GetCurvature(length, q1, q2)
    
-      real(DbKi),   intent(in   ) :: length
-      real(DbKi),   intent(in   ) :: q1(3)
-      real(DbKi),   intent(in   ) :: q2(3)
-      real(DbKi)                  :: GetCurvature
+      Real(DbKi),   intent(in   ) :: length
+      Real(DbKi),   intent(in   ) :: q1(3)
+      Real(DbKi),   intent(in   ) :: q2(3)
+      Real(DbKi)                  :: GetCurvature
       
       
-      real(DbKi)                  :: q1_dot_q2
+      Real(DbKi)                  :: q1_dot_q2
       
       ! note "length" here is combined from both segments
       
       q1_dot_q2 = dot_product( q1, q2 )
       
-      if (q1_dot_q2 > 1.0) then           ! this is just a small numerical error, so set q1_dot_q2 to 1
+      IF (q1_dot_q2 > 1.0) THEN           ! this is just a small numerical error, so set q1_dot_q2 to 1
          GetCurvature = 0.0_DbKi          ! this occurs when there's no curvature, so return zero curvature
          
-      !else if (q1_dot_q2 < 0)   ! this is a bend of more than 90 degrees, too much, call an error!
+      !ELSE IF (q1_dot_q2 < 0)   ! this is a bend of more than 90 degrees, too much, call an error!
 
-      else                                                        ! normal case
+      ELSE                                                        ! normal case
          GetCurvature = 4.0/length * sqrt(0.5*(1.0 - q1_dot_q2))    ! this is the normal curvature calculation
-      end if
+      END IF
       
-      return
-   end function GetCurvature
+      RETURN
+   END function GetCurvature
    
 
    ! calculate orientation angles of a direction vector
    !-----------------------------------------------------------------------
    subroutine GetOrientationAngles(vec, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
-      real(DbKi),   intent(in   ) :: vec(3) !p1(3),p2(3)
-      real(DbKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat(3)
+      Real(DbKi),   intent(in   ) :: vec(3) !p1(3),p2(3)
+      Real(DbKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat(3)
             
-      real(DbKi)                  ::  vecLen, vecLen2D
+      Real(DbKi)                  ::  vecLen, vecLen2D
  
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
-      if ( vecLen < 0.000001 ) then
-         if (wordy > 0) then
+      IF ( vecLen < 0.000001 ) THEN
+         IF (wordy > 0) THEN
             print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
             print *, vec
-         endif
+         ENDIF
          k_hat = NaN ! 1.0/0.0
-      else
+      ELSE
          k_hat = vec / vecLen 
          phi   = atan2(vecLen2D, vec(3))  ! incline angle   
-      end if
-      if ( phi < 0.000001) then
+      END IF
+      IF ( phi < 0.000001) THEN
          beta = 0.0_ReKi
-      else
+      ELSE
          beta = atan2(vec(2), vec(1))                    ! heading of incline     
-      endif
+      ENDIF
       sinPhi  = sin(phi)
       cosPhi  = cos(phi)  
       tanPhi  = tan(phi)     
       sinBeta = sin(beta)
       cosBeta = cos(beta)
             
-   end subroutine GetOrientationAngles
+   END subroutine GetOrientationAngles
    !-----------------------------------------------------------------------
    
 
@@ -189,7 +191,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations (unrotated reference frame) about platform reference point  (2021-01-05: just transposed TransMat, it was incorrect before)
@@ -246,7 +248,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations about ref point in *unrotated* reference frame
@@ -541,11 +543,11 @@ CONTAINS
                sum = sum + LU(k,p)*LU(p,j)
             END DO
             
-            if ( EqualRealNos( LU(k,k), 0.0_DbKi) ) then
-               LU(k,j) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check if this is safe <<<
-            else
+            IF ( EqualRealNos( LU(k,k), 0.0_DbKi) ) THEN
+               LU(k,j) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check IF this is safe <<<
+            ELSE
                LU(k,j) = (A(k,j)-sum)/LU(k,k)
-            end if
+            END IF
          END DO !j
          
       END DO !K
@@ -558,11 +560,11 @@ CONTAINS
             sum = sum + LU(i,k)*y(k);
          END DO
          
-         if ( EqualRealNos( LU(i,i), 0.0_DbKi) ) then
-            y(i) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check if this is safe <<<
-         else
+         IF ( EqualRealNos( LU(i,i), 0.0_DbKi) ) THEN
+            y(i) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check IF this is safe <<<
+         ELSE
             y(i) = (b(i)-sum)/LU(i,i)
-         end if
+         END IF
       END DO
       
       DO j=1,n       ! this is actually for looping through i in reverse
@@ -600,15 +602,15 @@ CONTAINS
 
       nx = SIZE(xlist)
       
-      if (xin <= xlist(1)) THEN                !  below lowest data point
+      IF (xin <= xlist(1)) THEN                !  below lowest data point
          i = 1_IntKi
          fout = 0.0_DbKi
       
-      else if (xlist(nx) <= xin) THEN          ! above highest data point
+      ELSE IF (xlist(nx) <= xin) THEN          ! above highest data point
          i = nx
          fout = 0.0_DbKi
       
-      else                                     ! within the data range
+      ELSE                                     ! within the data range
      
          IF (xlist(min(istart,nx)) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time, but make sure it doesn't overstep the array
       
@@ -638,15 +640,15 @@ CONTAINS
 
       nx = SIZE(xlist)
       
-      if (xin <= xlist(1)) THEN                !  below lowest data point
+      IF (xin <= xlist(1)) THEN                !  below lowest data point
          i = 1_IntKi
          fout = 0.0_SiKi
       
-      else if (xlist(nx) <= xin) THEN          ! above highest data point
+      ELSE IF (xlist(nx) <= xin) THEN          ! above highest data point
          i = nx
          fout = 0.0_SiKi
       
-      else                                     ! within the data range
+      ELSE                                     ! within the data range
      
          IF (xlist(min(istart,nx)) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time, but make sure it doesn't overstep the array
       
@@ -672,29 +674,29 @@ CONTAINS
       REAL(SiKi)                            :: c00, c01, c10, c11, c0, c1  
       
       ! handle end case conditions
-      if (fx == 0) then 
+      IF (fx == 0) THEN 
          ix1 = ix0
-      else  
+      ELSE  
          ix1 = min(ix0+1,size(f,4))    ! don't overstep bounds
-      end if
+      END IF
       
-      if (fy == 0) then
+      IF (fy == 0) THEN
          iy1 = iy0
-      else
+      ELSE
          iy1 = min(iy0+1,size(f,3))    ! don't overstep bounds
-      end if
+      END IF
       
-      if (fz == 0) then
+      IF (fz == 0) THEN
          iz1 = iz0
-      else         
+      ELSE         
          iz1 = min(iz0+1,size(f,2))    ! don't overstep bounds
-      end if
+      END IF
       
-      if (ft == 0) then
+      IF (ft == 0) THEN
          it1 = it0
-      else  
+      ELSE  
          it1 = min(it0+1,size(f,1))    ! don't overstep bounds
-      end if
+      END IF
       
       c000 = f(it0,iz0,iy0,ix0)*(1.0-ft) + f(it1,iz0,iy0,ix0)*ft
       c001 = f(it0,iz1,iy0,ix0)*(1.0-ft) + f(it1,iz1,iy0,ix0)*ft
@@ -732,23 +734,23 @@ CONTAINS
       ! note that "z" could also be "t" - dimension names are arbitrary
 
       ! handle end case conditions
-      if (fx == 0) then 
+      IF (fx == 0) THEN 
          ix1 = ix0
-      else  
+      ELSE  
          ix1 = min(ix0+1,size(f,3))    ! don't overstep bounds
-      end if
+      END IF
       
-      if (fy == 0) then
+      IF (fy == 0) THEN
          iy1 = iy0
-      else
+      ELSE
          iy1 = min(iy0+1,size(f,2))    ! don't overstep bounds
-      end if
+      END IF
       
-      if (fz == 0) then
+      IF (fz == 0) THEN
          iz1 = iz0
-      else         
+      ELSE         
          iz1 = min(iz0+1,size(f,1))    ! don't overstep bounds
-      end if
+      END IF
       
       c000 = f(iz0,iy0,ix0)
       c001 = f(iz1,iy0,ix0)
@@ -880,16 +882,16 @@ CONTAINS
       ! get local slope
       dx = BathGrid_Xs(ix1) - BathGrid_Xs(ix0)
       dy = BathGrid_Ys(iy1) - BathGrid_Ys(iy0)
-      if ( dx > 0.0 ) then
+      IF ( dx > 0.0 ) THEN
          dc_dx = (c1y-c0y)/dx
-      else
+      ELSE
          dc_dx = 0.0_DbKi   ! maybe this should raise an error
-      end if
-      if ( dy > 0.0 ) then
+      END IF
+      IF ( dy > 0.0 ) THEN
          dc_dy = (cx1-cx0)/dy
-      else
+      ELSE
          dc_dy = 0.0_DbKi   ! maybe this should raise an error
-      end if
+      END IF
       
       tempVector(1) = dc_dx
       tempVector(2) = dc_dy
@@ -902,377 +904,134 @@ CONTAINS
    ! :::::::::::::::::::::::::: wave and current subroutines :::::::::::::::::::::::::::::::
    
    
-   ! master function to get wave/water kinematics at a given point -- called by each object from grid-based data
-   SUBROUTINE getWaterKin(p, x, y, z, t, tindex, U, Ud, zeta, PDyn)
+   ! master function to get wave/water kinematics at a given point -- called by each object 
+   SUBROUTINE getWaterKin(p, m, x, y, z, t, U, Ud, zeta, PDyn, ErrStat, ErrMsg)
    
       ! This whole approach assuems that px, py, and pz are in increasing order.
-      ! Wheeler stretching is now built in.
+      ! Wheeler stretching is built in for WaterKin 1 and 2.
    
-      TYPE(MD_ParameterType),INTENT (IN   )       :: p       ! MoorDyn parameters (contains the wave info for now)
-      Real(DbKi),            INTENT (IN   )       :: x
-      Real(DbKi),            INTENT (IN   )       :: y
-      Real(DbKi),            INTENT (IN   )       :: z
-      Real(DbKi),            INTENT (IN   )       :: t
-      INTEGER(IntKi),        INTENT (INOUT)       :: tindex  ! pass time index to try starting from, returns identified time index
-      Real(DbKi),            INTENT (INOUT)       :: U(3)
-      Real(DbKi),            INTENT (INOUT)       :: Ud(3)
-      Real(DbKi),            INTENT (INOUT)       :: zeta
-      Real(DbKi),            INTENT (INOUT)       :: PDyn
+      TYPE(MD_ParameterType),           INTENT (IN   )       :: p           ! MoorDyn parameters
+      TYPE(MD_MiscVarType),             INTENT (INOUT)       :: m           ! MoorDyn misc data
+      Real(DbKi),                       INTENT (IN   )       :: x           ! node position
+      Real(DbKi),                       INTENT (IN   )       :: y           ! node position
+      Real(DbKi),                       INTENT (IN   )       :: z           ! node position
+      Real(DbKi),                       INTENT (IN   )       :: t           ! time
+      Real(DbKi),                       INTENT (INOUT)       :: U(3)        ! fluid speed
+      Real(DbKi),                       INTENT (INOUT)       :: Ud(3)       ! fluid acceleration 
+      Real(DbKi),                       INTENT (INOUT)       :: zeta        ! water height above node 
+      Real(DbKi),                       INTENT (INOUT)       :: PDyn        ! dynamic fluid pressure
+      INTEGER(IntKi),                   INTENT(  OUT)        :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)        :: ErrMsg      ! Error message IF ErrStat /= ErrID_None
 
-
+      ! outputs of WaveField_GetNodeWaveKin not in above list (single precision required by wave grid)
+      Real(ReKi)                 :: xyz_sp(3) ! single precision
+      Real(SiKi)                 :: WaveElev1 ! Unused by MD. per SeaSt_WaveField:  zeta = WaveElev  = WaveElev1 + WaveElev2
+      Real(SiKi)                 :: WaveElev2 ! Unused by MD. per SeaSt_WaveField:  zeta = WaveElev  = WaveElev1 + WaveElev2
+      Real(SiKi)                 :: zeta_sp  ! single precison
+      Real(SiKi)                 :: U_sp(3)  ! single precision
+      Real(SiKi)                 :: Ud_sp(3) ! single precision 
+      Real(SiKi)                 :: FAMCF(3) ! Unused by MD
+      Real(SiKi)                 :: PDyn_sp  ! single precision
+      INTEGER(IntKi)             :: nodeInWater ! Unused by MD
+      INTEGER(IntKi)             :: ErrStat2
+      CHARACTER(ErrMsgLen)       :: ErrMsg2   
+      
+      ! interpolation variables for Waterkin = 1, 2
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
-!      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
-   
-   
-      ! if wave kinematics enabled, get interpolated values from grid
-      if (p%WaveKin > 0) then      
-      
-         ! find time interpolation indices and coefficients
-         !CALL getInterpNums(p%tWave, t, tindex, it, ft)
-         it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
-         ft = (t - (it-1)*p%dtWave)/p%dtWave
-         tindex = it                  
-      
-         ! find x-y interpolation indices and coefficients
-         CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx)
-         CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy)
-         
-         ! interpolate wave elevation
-         CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)   
-         
-         ! compute modified z coordinate to be used for interpolating velocities and accelerations with Wheeler stretching
-         zp = ( z - zeta ) * p%WtrDpth/( p%WtrDpth + zeta )
-         
-         CALL getInterpNumsSiKi(p%pzWave   , REAL(zp,SiKi),  1, iz, fz)
 
-         ! interpolate everything else
-         CALL calculate4Dinterpolation(p%PDyn  , ix, iy, iz, it, fx, fy, fz, ft, PDyn)         
-         CALL calculate4Dinterpolation(p%uxWave, ix, iy, iz, it, fx, fy, fz, ft, U(1)  )
-         CALL calculate4Dinterpolation(p%uyWave, ix, iy, iz, it, fx, fy, fz, ft, U(2)  )
-         CALL calculate4Dinterpolation(p%uzWave, ix, iy, iz, it, fx, fy, fz, ft, U(3)  )      
-         CALL calculate4Dinterpolation(p%axWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(1) )
-         CALL calculate4Dinterpolation(p%ayWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(2) )
-         CALL calculate4Dinterpolation(p%azWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(3) )
-      else
+      ! local 
+      CHARACTER(120)             :: RoutineName = 'getWaterKin'   
+   
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find steady state (becasue of waves)
+         
+         ! SeaState throws warning when queried location is out of bounds from the SeaState grid, so no need to handle here
+
+         ! Pack all MD inputs to WaveGrid input data types (double to single)
+         !   (only pos needed becasue time is double in wave field, all other are outputs that will be set by WaveField_GetNodeWaveKin)
+         xyz_sp = REAL((/ x, y, z /),SiKi)
+
+         ! for now we will force the node to be in the water (forceNodeInWater = True). Rods handle partial submergence seperately so they need to get information from SeaState 
+         CALL WaveField_GetNodeWaveKin(p%WaveField, m%WaveField_m, t, xyz_sp, .TRUE., nodeInWater, WaveElev1, WaveElev2, zeta_sp, PDyn_sp, U_sp, Ud_sp, FAMCF, ErrStat2, ErrMsg2 ) ! outputs: nodeInWater, WaveElev1, WaveElev2, FAMCF all unused
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+         ! Unpack all WaveGrid outputs to MD output data types (single to double)
+         U = REAL(U_sp,DbKi)
+         Ud = REAL(Ud_sp,DbKi)
+         zeta = REAL(zeta_sp,DbKi)
+         PDyn = REAL(PDyn_sp,DbKi)
+
+      ELSEIF (p%WaterKin == 1 .OR. p%WaterKin == 2) THEN ! old or hybrid approach. SeaState contributions handeled in setupWaterKin, just proceed using old method
+
+         ! If wave kinematics enabled, get interpolated values from grid
+         IF (p%WaveKin > 0) THEN      
+
+            ! find time interpolation indices and coefficients
+            it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
+            ft = (t - (it-1)*p%dtWave)/p%dtWave
+            m%WaveTi = it                  
+         
+            ! find x-y interpolation indices and coefficients
+            CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx) ! wave grid
+            CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy) ! wave grid
+            
+            ! interpolate wave elevation
+            CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)   
+            
+            ! compute modified z coordinate to be used for interpolating velocities and accelerations with Wheeler stretching
+            zp = ( z - zeta ) * p%WtrDpth/( p%WtrDpth + zeta )
+            
+            CALL getInterpNumsSiKi(p%pzWave   , REAL(zp,SiKi),  1, iz, fz) ! wave grid
+
+            ! interpolate everything else
+            CALL calculate4Dinterpolation(p%PDyn  , ix, iy, iz, it, fx, fy, fz, ft, PDyn)         
+            CALL calculate4Dinterpolation(p%uxWave, ix, iy, iz, it, fx, fy, fz, ft, U(1)  )
+            CALL calculate4Dinterpolation(p%uyWave, ix, iy, iz, it, fx, fy, fz, ft, U(2)  )
+            CALL calculate4Dinterpolation(p%uzWave, ix, iy, iz, it, fx, fy, fz, ft, U(3)  )      
+            CALL calculate4Dinterpolation(p%axWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(1) )
+            CALL calculate4Dinterpolation(p%ayWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(2) )
+            CALL calculate4Dinterpolation(p%azWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(3) )
+         
+         ELSE ! set things to zero if wave kinematics not enabled
+            U  = 0.0_DbKi
+            Ud = 0.0_DbKi
+            zeta = 0.0_DbKi
+            PDyn = 0.0_DbKi
+
+         ENDIF
+
+         ! If current kinematics enabled, add interpolated current values from profile
+         IF (p%Current > 0) THEN 
+         
+            CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
+                     
+            IF (fz == 0) THEN  ! handle end case conditions
+               iz1 = iz0
+            ELSE
+               iz1 = min(iz0+1,size(p%pzCurrent))  ! don't overstep bounds
+            END IF
+            
+            ! Add the current velocities to the wave velocities (if any)
+            U(1) = U(1) + (1.0-fz)*p%uxCurrent(iz0) + fz*p%uxCurrent(iz1)
+            U(2) = U(2) + (1.0-fz)*p%uyCurrent(iz0) + fz*p%uyCurrent(iz1)
+         END IF
+
+      ELSEIF (p%WaterKin > 3) THEN 
+         CALL SetErrStat(ErrID_Fatal, "Invalid p%WaterKin value found in getWaterKin", ErrStat, ErrMsg, RoutineName)
+      
+      ELSE ! set things to zero if Water Kinematics not enabled
          U  = 0.0_DbKi
          Ud = 0.0_DbKi
          zeta = 0.0_DbKi
          PDyn = 0.0_DbKi
-      end if
-      
-      
-      ! if current kinematics enabled, add interpolated current values from profile
-      if (p%Current > 0) then      
-      
-         CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
-                  
-         IF (fz == 0) THEN  ! handle end case conditions
-            iz1 = iz0
-         ELSE
-            iz1 = min(iz0+1,size(p%pzCurrent))  ! don't overstep bounds
-         END IF
-         
-         U(1) = U(1) + (1.0-fz)*p%uxCurrent(iz0) + fz*p%uxCurrent(iz1)
-         U(2) = U(2) + (1.0-fz)*p%uyCurrent(iz0) + fz*p%uyCurrent(iz1)
-      end if
-      
+      ENDIF
+
    END SUBROUTINE getWaterKin
-
-
-  !! ! unused routine with old code for taking wave kinematic grid inputs from HydroDyn
-  !! SUBROUTINE CopyWaterKinFromHydroDyn(p, InitInp)
-  !!
-  !!    TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
-  !!    TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
-  !!    
-  !!    INTEGER(IntKi)                               :: I, J, K, Itemp
-  !!
-  !!
-  !!    ! ----------------------------- Arrays for wave kinematics -----------------------------
-  !!    
-  !!    
-  !!!   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
-  !!!   ! The rAll array contains all nodes or reference points in the system 
-  !!!   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
-  !!!   
-  !!!   ! count the number of nodes to use for passing wave kinematics
-  !!!   J=0 
-  !!!   ! Body reference point coordinates
-  !!!   J = J + p%nBodies
-  !!!   ! Rod node coordinates (including ends)
-  !!!   DO l = 1, p%nRods
-  !!!      J = J + (m%RodList(l)%N + 1)
-  !!!   END DO
-  !!!   ! Point reference point coordinates
-  !!!   J = J + p%nConnects
-  !!!   ! Line internal node coordinates
-  !!!   DO l = 1, p%nLines
-  !!!      J = J + (m%LineList(l)%N - 1)
-  !!!   END DO
-  !!!
-  !!!   ! allocate all relevant arrays
-  !!!   ! allocate state vector and temporary state vectors based on size just calculated
-  !!!   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
-  !!!   IF ( ErrStat /= ErrID_None ) THEN
-  !!!     ErrMsg  = ' Error allocating wave kinematics vectors.'
-  !!!     RETURN
-  !!!   END IF
-  !!!
-  !!!
-  !!!   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
-  !!!   J=0 
-  !!!   ! Body reference point coordinates
-  !!!   DO I = 1, p%nBodies
-  !!!      J = J + 1                     
-  !!!      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
-  !!!   END DO
-  !!!   ! Rod node coordinates
-  !!!   DO I = 1, p%nRods
-  !!!      DO K = 0,m%RodList(I)%N  
-  !!!         J = J + 1             
-  !!!         y%rAll(:,J) = m%RodList(I)%r(:,K)
-  !!!      END DO
-  !!!   END DO
-  !!!   ! Point reference point coordinates
-  !!!   DO I = 1, p%nConnects
-  !!!      J = J + 1
-  !!!      y%rAll(:,J) = m%ConnectList(I)%r
-  !!!   END DO      
-  !!!   ! Line internal node coordinates
-  !!!   DO I = 1, p%nLines
-  !!!      DO K = 1,m%LineList(I)%N-1
-  !!!         J = J + 1               
-  !!!         y%rAll(:,J) = m%LineList(I)%r(:,K)
-  !!!      END DO
-  !!!   END DO        
-  !!   ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
-  !!   
-  !!   
-  !!   ! ----- copy wave grid data over from HydroDyn (as was done in USFLOWT branch) -----
-  !!   
-  !!   ! get grid and time info (currently this is hard-coded to match what's in HydroDyn_Input
-  !!   ! DO I=1,p%nzWave
-  !!   !    p%pz(I) =  1.0 - 2.0**(p%nzWave-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-  !!   ! END DO
-  !!   ! DO J = 1,p%nyWave
-  !!   !    p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
-  !!   ! END DO
-  !!   ! DO K = 1,p%nxWave
-  !!   !    p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
-  !!   ! END DO
-  !!   ! 
-  !!   ! p%tWave = InitInp%WaveTime
-  !!   
-  !!   DO I=1,p%nzWave
-  !!      DO J = 1,p%nyWave
-  !!         DO K = 1,p%nxWave 
-  !!            Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node on 3D grid
-  !!            
-  !!            p%uxWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
-  !!            p%uyWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
-  !!            p%uzWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
-  !!            p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
-  !!            p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
-  !!            p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
-  !!            p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
-  !!         END DO
-  !!      END DO
-  !!   END DO
-  !!      
-  !!   DO J = 1,p%nyWave
-  !!      DO K = 1,p%nxWave
-  !!         Itemp = (J-1)*p%nxWave + K    ! index of actual node on surface 2D grid   
-  !!         p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
-  !!      END DO
-  !!   END DO
-  !!   
-  !! END SUBROUTINE CopyWaterKinFromHydroDyn
-   
-     
-   ! ----- write wave grid spacing to output file -----
-   SUBROUTINE WriteWaveGrid(p, ErrStat, ErrMsg)
-   
-    TYPE(MD_ParameterType),       INTENT(INOUT)  :: p     ! Parameters
-    
-    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            ! Error status of the operation
-    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
-
-    INTEGER(IntKi)                   :: ErrStat2
-!    CHARACTER(120)                   :: ErrMsg2   
- 
-    CHARACTER(120)                   :: Frmt       
-    INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
-    INTEGER(IntKi)   :: I
-        
-     
-     CALL GetNewUnit( UnOut)
-  
-     CALL OpenFOutFile ( UnOut, "waves.txt", ErrStat, ErrMsg )
-     IF ( ErrStat > ErrID_None ) THEN
-        ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
-        ErrStat = ErrID_Fatal
-        RETURN
-     END IF
-  
-     WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'MoorDyn v2 wave/current kinematics grid file' )
-     WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( '---------------------------------------------' )
-     WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'The following 6 lines (4-9) specify the input type then the inputs for x, then, y, then z coordinates.' )
-     
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - X input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-     Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pxWave(I))), I=1,p%nxWave )
-     
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Y input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-     Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pyWave(I))), I=1,p%nyWave )
-     
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Z input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-     Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
-     WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pzWave(I))), I=1,p%nzWave )
-     
-     CLOSE(UnOut, IOSTAT = ErrStat2 )
-     IF ( ErrStat2 /= 0 ) THEN
-        ErrStat = ErrID_Severe
-        ErrMsg = 'Error closing wave grid file'
-     END IF
-     
-   END SUBROUTINE WriteWaveGrid       
-     
-     
-   ! ----- write wave kinematics grid data to output file -----
-   SUBROUTINE WriteWaveData(p, ErrStat, ErrMsg)
-   
-    TYPE(MD_ParameterType),       INTENT(INOUT)  :: p     ! Parameters
-    
-    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            ! Error status of the operation
-    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
-
-    INTEGER(IntKi)                   :: ErrStat2
-!    CHARACTER(120)                   :: ErrMsg2   
-    
-    INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
-    INTEGER(IntKi)   :: I,J,K, l, Itemp
-    
-    CALL GetNewUnit( UnOut)
-  
-     CALL OpenFOutFile ( UnOut, "wave data.txt", ErrStat, ErrMsg )
-     IF ( ErrStat > ErrID_None ) THEN
-        ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
-        ErrStat = ErrID_Fatal
-        RETURN
-     END IF
-     
-     ! write channel labels
-     
-     
-     ! time
-     WRITE(UnOut,"(A10)", IOSTAT=ErrStat2, advance="no") "Time"
-  
-     DO J = 1,p%nyWave     !y
-        DO K = 1,p%nxWave  !x 
-           WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ze0", Num2Lstr(J+10*K)
-        END DO
-     END DO
-     DO I=1,p%nzWave          !z
-        DO J = 1,p%nyWave     !y
-           DO K = 1,p%nxWave  !x 
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ux", Num2Lstr(I+10*J+100*K)
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uy", Num2Lstr(I+10*J+100*K)
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uz", Num2Lstr(I+10*J+100*K)
-           END DO
-        END DO
-     END DO
-     DO I=1,p%nzWave          !z
-        DO J = 1,p%nyWave     !y
-           DO K = 1,p%nxWave  !x 
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ax", Num2Lstr(I+10*J+100*K)
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ay", Num2Lstr(I+10*J+100*K)
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " az", Num2Lstr(I+10*J+100*K)
-           END DO
-        END DO
-     END DO
-     DO I=1,p%nzWave          !z
-        DO J = 1,p%nyWave     !y
-           DO K = 1,p%nxWave  !x 
-              WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " pd", Num2Lstr(I+10*J+100*K)
-           END DO
-        END DO
-     END DO
-  
-     ! end the line
-     WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
-     
-     
-     
-     DO l=1, p%ntWave  ! loop through all time steps
-     
-        ! time
-        WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") p%dtWave*(l-1)
-        !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
-     
-        ! wave elevation (all slices for now, to check)
-        DO J = 1,p%nyWave     !y
-           DO K = 1,p%nxWave  !x 
-              Itemp = (J-1)*p%nxWave + K    ! index of actual node
-              
-              WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%zeta(l,J,K)
-           END DO
-        END DO
-     
-        ! wave velocities
-        DO I=1,p%nzWave          !z
-           DO J = 1,p%nyWave     !y
-              DO K = 1,p%nxWave  !x 
-                 Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
-                 
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uxWave(l,I,J,K)
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uyWave(l,I,J,K)
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uzWave(l,I,J,K)
-              END DO
-           END DO
-        END DO
-        
-        ! wave accelerations
-        DO I=1,p%nzWave          !z
-           DO J = 1,p%nyWave     !y
-              DO K = 1,p%nxWave  !x 
-                 Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
-                 
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%axWave(l,I,J,K)
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ayWave(l,I,J,K)
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%azWave(l,I,J,K)
-              END DO
-           END DO
-        END DO
-     
-        ! dynamic pressure
-        DO I=1,p%nzWave          !z
-           DO J = 1,p%nyWave     !y
-              DO K = 1,p%nxWave  !x 
-                 Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
-                 
-                 WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%PDyn(l,I,J,K)
-              END DO
-           END DO
-        END DO
-     
-        ! end the line
-        WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
-     
-     
-     END DO
-     
-     
-     CLOSE(UnOut, IOSTAT = ErrStat )
-     IF ( ErrStat /= 0 ) THEN
-        ErrMsg = 'Error closing wave grid file'
-     END IF
-  
-   END SUBROUTINE WriteWaveData  
-
 
    ! ----- process WaterKin input value, potentially reading wave inputs and generating wave field -----
    SUBROUTINE setupWaterKin(WaterKinString, p, Tmax, ErrStat, ErrMsg)
@@ -1287,10 +1046,12 @@ CONTAINS
       INTEGER(IntKi)                   :: ntIn   ! number of time series inputs from file      
       INTEGER(IntKi)                   :: UnIn   ! unit number for coefficient input file
       INTEGER(IntKi)                   :: UnEcho       
-      REAL(SiKi)                       :: pzCurrentTemp(100)   ! current depth increments read in from input file (positive-down at this stage)
+      REAL(SiKi), ALLOCATABLE          :: pzCurrentTemp(:)   ! current depth increments read in from input file (positive-down at this stage)
       REAL(SiKi)                       :: uxCurrentTemp(100)
       REAL(SiKi)                       :: uyCurrentTemp(100)
+      TYPE(Current_InitOutputType)     :: Current_InitOutput     ! Current outputs from SS subroutine Current_Init (for current mod = 2)
       
+      CHARACTER(120)                   :: tmpString   
       CHARACTER(120)                   :: WaveKinFile   
       INTEGER(IntKi)                   :: UnElev  ! unit number for coefficient input file
       REAL(SiKi), ALLOCATABLE          :: WaveTimeIn(:)  ! temporarily holds wave input time series
@@ -1306,10 +1067,11 @@ CONTAINS
    
       INTEGER(IntKi)                   :: NStepWave    ! 
       INTEGER(IntKi)                   :: NStepWave2   ! 
-      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing lenght for FFT
-      REAL(SiKi)                       :: WaveDOmega   
-      REAL(SiKi)                       :: SinWaveDir                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
-      REAL(SiKi)                       :: CosWaveDir                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing length for FFT
+      REAL(SiKi)                       :: WaveDOmega   ! frequency step
+      REAL(SiKi), ALLOCATABLE          :: SinWaveDir(:)                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      REAL(SiKi), ALLOCATABLE          :: CosWaveDir(:)                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      LOGICAL                          :: WaveMultiDir = .FALSE. ! Indicates the waves are multidirectional -- set by WaveField pointer if enabled
 
       REAL(SiKi),  ALLOCATABLE         :: TmpFFTWaveElev(:)     ! Data for the FFT calculation
       TYPE(FFT_DataType)               :: FFT_Data              ! the instance of the FFT module we're using
@@ -1321,390 +1083,712 @@ CONTAINS
       COMPLEX(SiKi), PARAMETER         :: ImagNmbr = (0.0,1.0)  ! The imaginary number, SQRT(-1.0)
       COMPLEX(SiKi)                    :: ImagOmega             ! = ImagNmbr*Omega (rad/s)
       REAL(DbKi), ALLOCATABLE          :: WaveNmbr(:)           ! wave number for frequency array
-      REAL(SiKi), ALLOCATABLE          :: WaveElevC0(:,:)        ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveElevC( :)        ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCV( :)        ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveDynPC( :)        ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      REAL(SiKi),  ALLOCATABLE         :: WaveDirArr(:)         ! Wave direction array. Each frequency has a unique direction of WaveNDir > 1 (degrees). 0's for WaveKin = 1 or if disabled in SeaState.
+      REAL(SiKi), ALLOCATABLE          :: WaveElevC0(:,:)       ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveElevC( :)         ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHx(:)         ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHy(:)         ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCV( :)         ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveDynPC( :)         ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)         ! Discrete Fourier transform of the instantaneous horizontal velocity  in x-direction    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)         ! Discrete Fourier transform of the instantaneous horizontal velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)         ! Discrete Fourier transform of the instantaneous vertical   velocity      of incident waves before applying stretching at the zi-coordinates for points (m/s)
 !      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
-      INTEGER(IntKi)                   :: ErrStatTmp
       INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(120)                   :: ErrMsg2   
+      CHARACTER(ErrMsgLen)             :: ErrMsg2
       CHARACTER(120)                   :: RoutineName = 'SetupWaveKin'   
 
-
-      ErrStatTmp = ErrID_None  ! TODO: get rid of redundancy <<<
       ErrStat2 = ErrID_None
       ErrMsg2  = ""
 
       IF (LEN_TRIM(WaterKinString) == 0) THEN
          ! If the input is empty (not provided), there are no water kinematics to be included
-         p%WaveKin = 0
-         p%Current = 0
-         return
+         p%WaveKin  = 0
+         p%Current  = 0
+         p%WaterKin = 0
+         RETURN
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         call WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
-         p%WaveKin = 0
-         p%Current = 0
-         return
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKin option does not currently support numeric entries. It must be a filename."
+         ENDIF
+         p%WaveKin  = 0
+         p%Current  = 0
+         p%WaterKin = 0
+         CALL SetErrStat( ErrID_Fatal, "ERROR WaveKin option does not currently support numeric entries. It must be a filename.", ErrStat, ErrMsg, RoutineName); RETURN
       END IF
 
+      tmpString = WaterKinString
+      CALL Conv2UC(tmpString)
 
-      ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      call WrScr( "   The waterKin input contains letters so will load a water kinematics input file" )
-      
-      
-      ! -------- load water kinematics input file -------------
-      
-      IF ( PathIsRelative( WaterKinString ) ) THEN   ! properly handle relative path <<<
-         !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-         FileName = TRIM(p%PriPath)//TRIM(WaterKinString)
-      ELSE
-         FileName = trim(WaterKinString)
-      END IF
-      
-      
-      
-      UnEcho=-1
-      CALL GetNewUnit( UnIn )   
-      CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Error check for SeaState rhoW and MoorDyn rhoW, SeaState gravity and MoorDyn gravity
 
+      IF (tmpString == "SEASTATE") THEN ! if its the SeaState Keyword, then we are using the SeaState method (WaterKin = 3)
 
-      CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      ! ----- waves -----
-      CALL ReadCom( UnIn, FileName,                               'waves header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadVar( UnIn, FileName, p%WaveKin  , 'WaveKinMod' ,  'WaveKinMod'   , ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadVar( UnIn, FileName, WaveKinFile, 'WaveKinFile',  'WaveKinFile'  , ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      ! X grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
-      CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
-      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
-      ! Y grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
-      CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
-      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
-      ! Z grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
-      CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
-      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
-      ! ----- current -----
-      CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
-      ! current profile table... (read through to end of file or ---)
-      DO I=1,100
-         READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(i), uxCurrentTemp(i), uyCurrentTemp(i)     ! read into a line      
-         if (ErrStat2 /= 0) then
-            p%nzCurrent = i-1 ! save number of valid current depth points in profile
-            EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
-         end if
-         if (i == 100) then
-            call WrScr("WARNING: MD can handle a maximum of 100 current profile points")
-            exit
-         end if
-      END DO
-      
-
-      CLOSE(UnIn)
-
-         
-      ! ------------------- start with wave kinematics -----------------------
-
-      ! WaveKin options: 0 - none or set externally during the sim (Waves object not needed unless there's current) [default]
-      !                  1 - set externally for each node in each object (Waves object not needed unless there's current) (TBD)
-      !                  2 - set from inputted wave elevation FFT, grid approach* (TBD)
-      !                  3 - set from inputted wave elevation time series, grid approach* [supported]
-      !                  4 - set from inputted wave elevation FFT, node approach (TBD)
-      !                  5 - set from inputted wave elevation time series, node approach (TBD)
-      !                  6 - set from inputted velocity, acceleration, and wave elevation grid data (TBD)**
-
-      ! Current options: 0 - no currents or set externally (as part of WaveKin =0 or 1 approach) [default]
-      !                  1 - read in steady current profile, grid approach (current_profile.txt)** [supported]
-      !                  2 - read in dynamic current profile, grid approach (current_profile_dynamic.txt)** (TBD)
-      !                  3 - read in steady current profile, node approach (current_profile.txt) (TBD)
-      !                  4 - read in dynamic current profile, node approach (current_profile_dynamic.txt) (TBD)
-       
-      ! * the first call to any of these will attempt to load water_grid.txt to define the grid to put things on
-      ! ** if a grid has already been set, these will interpolate onto it, otherwise they'll make a new grid based on their provided coordinates
-
-      ! NOTE: lots of partial code is available from MD-C for supporting various wave kinematics input options
-   
-      ! WaveKin and Current compatibility check could go here in future
-      
-      
-      ! --------------------- set from inputted wave elevation time series, grid approach -------------------
-      if (p%WaveKin == 3) then
-
-         call WrScr( 'Setting up WaveKin 3 option: read wave elevation time series from file' )
-
-         IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
-            CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
-            RETURN
+         ! Error check to make sure we are not running in FAST.Farm
+         IF (p%nTurbines > 1) THEN ! if running in FAST.Farm, cannot use the SeaState coupling method because of multiple SeaState instances and only a single MoorDyn instance
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   MoorDyn fully coupled with SeaState is not compatible with FAST.Farm. Please use the WaterKin 1 or 2 methods."
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "MoorDyn fully coupled with SeaState is not compatible with FAST.Farm. Please use the WaterKin 1 or 2 methods.", ErrStat, ErrMsg, RoutineName); RETURN
          END IF
 
-         IF ( PathIsRelative( WaveKinFile ) ) THEN   ! properly handle relative path <<<
-            !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-            WaveKinFile = TRIM(p%PriPath)//TRIM(WaveKinFile)
+         ! Error check to make sure the wave field pointer is not null
+         IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. SeaState method requires SeaState to be enabled. Please check input files."
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. SeaState method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
          END IF
-         
-         ! note: following is adapted from MoorDyn_Driver
-         
-         CALL GetNewUnit( UnElev ) 
-      
-         CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); if(Failed()) return
-        
-         call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
-         
-         ! Read through length of file to find its length
-         i         = 0 ! start line counter
-         numHdrLn  = 0 ! start header-line counter
-         dataBegin = .FALSE. ! started reading the data section
-         DO
-            READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !read into a line
-            IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
-            i = i+1
-            READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
-            IF (ErrStatTmp/=0) THEN  ! Not a number
-               IF (dataBegin) THEN
-                  CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
-               END IF
-               numHdrLn = numHdrLn + 1
-            ELSE
-               dataBegin = .TRUE.
-            END IF
-         END DO
 
-         ! rewind to start of input file to re-read things now that we know how long it is
-         REWIND(UnElev)      
+         ! Warning check to make sure SeaState and MoorDyn have the same water depth
+         IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState water depth does not match MoorDyn water depth. Using SeaState values for water kinematics."
+            ENDIF
+            CALL SetErrStat(ErrID_Warn, "SeaState water depth does not match MoorDyn water depth. Using SeaState values for water kinematics.", ErrStat, ErrMsg, RoutineName)
+         END IF
 
-         ntIn = i-numHdrLn     ! save number of lines of file
-         
+         ! Error check to make sure SeaState and MoorDyn have the same water density and gravity. This also checks that the pointer is valid
+         IF (p%WaveField%RhoXg /= REAL((p%rhoW * p%g), SiKi)) THEN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted."
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted.", ErrStat, ErrMsg, RoutineName)
+         END IF
 
-         ! allocate space for input wave elevation array (including time column)
-         CALL AllocAry(WaveTimeIn,  ntIn, 'WaveTimeIn', ErrStat2, ErrMsg2 ); if(Failed()) return
-         CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); if(Failed()) return
+         ! Check for if SeaState grid does not match water depth
+         IF (p%WaveField%GridParams%Z_Depth /= p%WtrDpth) THEN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   INFO SeaState grid depth does not match MoorDyn water depth."
+            ENDIF
+         END IF
 
-         ! read the data in from the file
-         DO i = 1, numHdrLn
-            READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip header lines
-         END DO
-         
-         DO i = 1, ntIn
-            READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i)
-               
-            IF ( ErrStat2 /= 0 ) THEN
-              CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); return
-            END IF 
-         END DO  
+         ! turn on flags, for getWaterKin to know to just pull data from the WaveField pointer. Nothing more is needed for setup
+         p%WaveKin  = 3
+         p%Current  = 3
+         p%WaterKin = 3
 
-         ! Close the inputs file 
-         CLOSE ( UnElev ) 
+      ELSE ! we must be using the old or hybrid methods. Start setting up the user grids by reading the WaveKin File
 
-         IF (WaveTimeIn(1) .NE. 0.0) THEN
-            CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); return
+         ! otherwise interpret the input as a file name to load the bathymetry lookup data from
+         CALL WrScr( "   The waterKin input contains a filename so will load a water kinematics input file" )
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "   The waterKin input contains a filename so will load a water kinematics input file"
          ENDIF
          
-         call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
-
-         ! if (WaveTimeIn(ntIn) < TMax) then <<<< need to handle if time series is too short?
-           
-         ! specify stepping details 
-         p%ntWave = CEILING(Tmax/p%dtWave)          ! number of wave time steps
-
          
-         ! allocate space for processed reference wave elevation time series
-         ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStatTmp )  ! this has an extra entry of zero in case it needs to be padded to be even
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',ErrStat,ErrMsg,RoutineName)
-         WaveElev0 = 0.0_SiKi
+         ! -------- load water kinematics input file -------------
          
-         ! go through and interpolate (should replace with standard function)
-         DO i = 1, p%ntWave       
-            t = p%dtWave*(i-1)
-            
-            ! interpolation routine 
-            DO iIn = 1,ntIn-1      
-               IF (WaveTimeIn(iIn+1) > t) THEN   ! find the right two points to interpolate between (remember that the first column of PtfmMotIn is time)
-                  frac = (t - WaveTimeIn(iIn) )/( WaveTimeIn(iIn+1) - WaveTimeIn(iIn) )  ! interpolation fraction (0-1) between two interpolation points
-                  WaveElev0(i-1) = WaveElevIn(iIn) + frac*(WaveElevIn(iIn+1) - WaveElevIn(iIn))  ! get interpolated wave elevation
-                  EXIT   ! break out of the loop for this time step once we've done its interpolation
-               END IF
-            END DO      
-         END DO
-         
-         ! note: following is adapted from UserWaves.v90 UserWaveElevations_Init
-         
-         
-         
-         ! Set new value for NStepWave so that the FFT algorithms are efficient. We will use the values passed in rather than what is read from the file
-         
-         IF ( MOD(p%ntWave,2) == 1 )  p%ntWave = p%ntWave + 1              ! Set NStepWave to an even integer   
-         NStepWave2 = MAX( p%ntWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
-         NStepWave  = 2*PSF ( NStepWave2, 9 )                        !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
-         NStepWave2 = NStepWave/2                                    ! Update the value of NStepWave2 based on the value needed for NStepWave.
-         WaveTMax   = NStepWave*p%dtWave                               ! Update the value of WaveTMax   based on the value needed for NStepWave.
-         WaveDOmega = TwoPi/TMax                                     ! Compute the frequency step for incident wave calculations.
-         p%ntWave = NStepWave
-         
-          
-         
-
-         ! Allocate array to hold the wave elevations for calculation of FFT.
-         ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1 ), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFFTWaveElev.',ErrStat,ErrMsg,RoutineName)
-
-         ! Allocate frequency array for the wave elevation information in frequency space
-         ALLOCATE ( WaveElevC0(2, 0:NStepWave2                ), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0.',ErrStat,ErrMsg,RoutineName)
-         
-
-         ! Now check if all the allocations worked properly
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
+         IF ( PathIsRelative( WaterKinString ) ) THEN   ! properly handle relative path <<<
+            !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+            FileName = TRIM(p%PriPath)//TRIM(WaterKinString)
+         ELSE
+            FileName = trim(WaterKinString)
          END IF
          
-         ! Set the values
-         TmpFFTWaveElev  =  0.0_DbKi
-         WaveElevC0(:,:) =  0.0_DbKi
 
 
-         ! Copy values over
-         DO I=0, MIN(SIZE(WaveElev0), NStepWave)-1
-            TmpFFTWaveElev(I) = WaveElev0(I)
-         ENDDO
-
-         ! Initialize the FFT
-         CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
-
-         ! Apply the forward FFT to get the real and imaginary parts of the frequency information.      
-         CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
-         CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
-
-         ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
-         DO I=1,NStepWave2-1
-            WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1)
-            WaveElevC0     (2,I) = TmpFFTWaveElev(2*I)
-         ENDDO
-         WaveElevC0(:,NStepWave2) = 0.0_SiKi
-
-         CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
+         UnEcho=-1
+         CALL GetNewUnit( UnIn )   
+         CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); IF(Failed()) RETURN
 
 
-         IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
-         IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStatTmp)
+         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         ! ----- waves -----
+         CALL ReadCom( UnIn, FileName,                               'waves header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%WaveKin  , 'WaveKinMod' ,  'WaveKinMod'   , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         ! log the method being used
+         IF (p%writeLog > 0) THEN
+            IF (p%WaveKin == 2) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 2. Reading in the user provided wave grid and using SeaState for frequency calculation."
+            ELSE IF (p%WaveKin == 1) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 1. Reading in the user provided wave grid and frequency information."
+            ELSE IF (p%WaveKin == 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 0. No wave kinematics enabled."
+            ELSE 
+               WRITE(p%UnLog, '(A)'        ) "    Invalid value for WaveKinMod"
+               Call SetErrStat(ErrID_Fatal, "Invalid value for WaveKinMod", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
+         ENDIF
+         CALL ReadVar( UnIn, FileName, WaveKinFile, 'WaveKinFile',  'WaveKinFile'  , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         ! X grid points
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
+         CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave); IF(Failed()) RETURN 
+         ! Y grid points
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
+         CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave); IF(Failed()) RETURN 
+         ! Z grid points
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
+         CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave); IF(Failed()) RETURN 
+         ! ----- current -----
+         CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         ! read in the current profile
+         IF (p%Current == 2) THEN
 
+            ! log the method being used
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation."
+            ENDIF
 
+            ! Z grid points
+            CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get the entry type
+            READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
+            CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent); IF(Failed()) RETURN  ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
+            uxCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
+            uyCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
+
+         ELSE IF (p%Current == 1) THEN 
+
+            ! read two header lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
+            CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
+            CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
+            
+            CALL AllocAry(pzCurrentTemp, 100, 'pzCurrentTemp', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN ! allocate pzCurrentTemp if reading in user provided current table
+            
+            DO I=1,4 ! ignore lines until table is found, or exit after 3 lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
+               READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(1), uxCurrentTemp(1), uyCurrentTemp(1)     ! try to read into a line to first elements in the array     
+               IF (ErrStat2 == 0) THEN
+                  EXIT      ! break out of the loop if successfully reads first table line
+               END IF
+            ENDDO
+
+            IF (I == 4) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR: Could not read the current profile table from the input file. Check the file format."
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Could not read the current profile table from the input file. Check the file format.", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
+
+            ! log the first line read
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 1. Reading in the user provided current profile."
+               IF (p%writeLog > 1) THEN
+                  WRITE(p%UnLog, '(A)'        ) "     The first line read from the current table is:"
+                  WRITE(p%UnLog, '(A)'        ) "     "//trim(num2lstr(pzCurrentTemp(1)))//"     "//trim(num2lstr(uxCurrentTemp(1)))//"     "//trim(num2lstr(uyCurrentTemp(1)))
+               ENDIF
+            ENDIF
+
+            ! current profile table... (read until no more rows in table)
+            DO I=2,100 ! start at second row because first is already read
+               READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(i), uxCurrentTemp(i), uyCurrentTemp(i)     ! read into a line      
+               IF (ErrStat2 /= ErrID_None) THEN
+                  p%nzCurrent = i-1 ! save number of valid current depth points in profile
+                  EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
+               END IF
+               IF (i == 100) THEN
+                  p%nzCurrent = 100
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "    WARNING: MD can handle a maximum of 100 current profile points"
+                  ENDIF      
+                  CALL SetErrStat(ErrID_Warn, "MD can handle a maximum of 100 current profile points", ErrStat, ErrMsg, RoutineName)
+                  EXIT
+               END IF
+            END DO
+
+            ! Check that all z values are below the water line
+            DO I=1,p%nzCurrent
+               IF (pzCurrentTemp(I) > 0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "    WARNING: MoorDyn current profile z values are above the water line."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Warn, "Mooring current profile z values are above the water line.", ErrStat, ErrMsg, RoutineName)
+               END IF
+            END DO
+
+            ! Check that order is valid (deepest to shallowest depths), flip array if necessary 
+            IF (pzCurrentTemp(1) > pzCurrentTemp(p%nzCurrent)) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    INFO: Current profile is decreasing depths. MoorDyn needs increasing depths. Flipping arrays"
+               ENDIF
+               DO I=1,p%nzCurrent/2
+                  tmpReal = pzCurrentTemp(I)
+                  pzCurrentTemp(I) = pzCurrentTemp(p%nzCurrent-I+1)
+                  pzCurrentTemp(p%nzCurrent-I+1) = tmpReal
+                  tmpReal = uxCurrentTemp(I)
+                  uxCurrentTemp(I) = uxCurrentTemp(p%nzCurrent-I+1)
+                  uxCurrentTemp(p%nzCurrent-I+1) = tmpReal
+                  tmpReal = uyCurrentTemp(I)
+                  uyCurrentTemp(I) = uyCurrentTemp(p%nzCurrent-I+1)
+                  uyCurrentTemp(p%nzCurrent-I+1) = tmpReal
+               END DO
+            END IF
+
+            ! Check for valid array (strictly increasing z values)
+            DO I=1,p%nzCurrent-1
+               IF (pzCurrentTemp(I) > pzCurrentTemp(I+1)) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR: Current profile z values are not strictly increasing. Check the file format."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Current profile z values are not strictly increasing. Check the file format.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+            END DO
+
+         ELSE IF (p%Current == 0) THEN
+            ! log the method being used
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 0. No currents will be simulated."
+            ENDIF
+         ELSE 
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    Invalid value for CurrentMod"
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "Invalid value for CurrentMod", ErrStat, ErrMsg, RoutineName); RETURN
+         ENDIF ! if p%Current != 1 or 2, then no current
          
-         ! note: following is a very streamlined adaptation from from Waves.v90 VariousWaves_Init
-         
-         ! allocate all the wave kinematics FFT arrays  
-         ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveNmbr.  ',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate tmpComplex.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveElevC .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveDynPC .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHx.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHy.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCV .',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHx.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHy.',ErrStat,ErrMsg,RoutineName)
-         ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCV .',ErrStat,ErrMsg,RoutineName)
-         
-         ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
-         CALL allocateKinematicsArrays() 
-         
-         
-         ! Set the CosWaveDir and SinWaveDir values
-         CosWaveDir=COS(D2R*WaveDir)
-         SinWaveDir=SIN(D2R*WaveDir)
-         
-         ! get wave number array once
-         DO I = 0, NStepWave2 
-            WaveNmbr(i)   = WaveNumber ( REAL(I*WaveDOmega, R8Ki), p%g, p%WtrDpth )
-            tmpComplex(I)    =  CMPLX(WaveElevC0(1,I), WaveElevC0(2,I))
-         END DO    
-         
-         ! set up FFTer for doing IFFTs
-         CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.', ErrStat, ErrMsg, routineName); if(Failed()) return
 
-         ! Loop through all points where the incident wave kinematics will be computed      
-         do ix = 1,p%nxWave 
-            do iy = 1,p%nyWave
-               do iz = 1,p%nzWave
-                 
-                  ! Compute the discrete Fourier transform of the incident wave kinematics
-                  do i = 0, NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+         CLOSE(UnIn)
 
-                     Omega = i*WaveDOmega
-                     ImagOmega = ImagNmbr*Omega
+         IF (p%Current > 2 .OR. p%WaveKin > 2) THEN
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be less than 3 if using user defined MoorDyn grid',ErrStat, ErrMsg, RoutineName); RETURN
+            RETURN
+         END IF
 
-                     WaveElevC (i) = tmpComplex(i) * EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir + p%pyWave(iy)*SinWaveDir ))                                                                 
-                     WaveDynPC (i) = p%rhoW*p%g* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )       
-                     WaveVelCHx(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *CosWaveDir
-                     WaveVelCHy(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *SinWaveDir             
-                     WaveVelCV (i) =   ImagOmega*WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )
-                     WaveAccCHx(i) =   ImagOmega*WaveVelCHx(i)
-                     WaveAccCHy(i) =   ImagOmega*WaveVelCHy(i)
-                     WaveAccCV (i) =   ImagOmega*WaveVelCV (i)
-                  end do  ! I, frequencies
+         ! Error check to make sure the wave field pointer is not null if CurrentMod = 2 or WaveKinMod = 2
+         IF (p%WaveKin == 2 .OR. p%Current == 2) THEN
+            IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF
+         END IF
+
+         ! set p%WaterKin, note that p%WaterKin is not used in this routine, but is necessary for getWaterKin
+         IF (p%Current == p%WaveKin) THEN ! if they are the same, set WaveKin as that value
+            p%WaterKin = p%WaveKin
+         ELSEIF (p%Current == 0) THEN ! if one is zero, use the other for water kin
+            p%WaterKin = p%WaveKin
+         ELSEIF (p%WaveKin == 0) THEN ! if one is zero, use the other for water kin
+            p%WaterKin = p%Current
+         ELSEIF (p%WaveKin == 2 .AND. p%Current == 1 .AND. p%WaveField%Current_InitInput%CurrMod == 0) THEN ! if WaveKin = 2 and SeaState has no currents, allow users to provide custom current profile. WaterKin = 2 becasue of waves
+            p%WaterKin = p%WaveKin
+         ELSE
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled."
+            ENDIF
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled',ErrStat, ErrMsg, RoutineName); RETURN
+         ENDIF
+            
+         ! ------------------- start with wave kinematics -----------------------
+         
+         IF (p%WaveKin > 0) THEN 
+
+            ! Check that all wave grid z values are below the water line, otherwise COSHNumOvrCOSHDen calcs will nan
+            DO I=1,p%nzWave
+               IF (p%pzWave(I) > 0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "    ERROR: MoorDyn wave grid z values are above the water line. The wave grid cannot contain values greater than 0. This may be caused by interpolation over integer z-grid spacing."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Mooring wave grid z values are above the water line. The wave grid cannot contain values greater than 0.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+            END DO
+            
+            IF (p%WaveKin == 2) THEN ! must be using the hybrid approach
+      
+               ! Warning check to make sure SeaState and MoorDyn have the same water depth
+               IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState water depth does not match MoorDyn water depth. Using MoorDyn values for interpolating SeaState data to MoorDyn grid."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Warn, "SeaState water depth does not match MoorDyn water depth. Using MoorDyn values for interpolating SeaState data to MoorDyn grid.", ErrStat, ErrMsg, RoutineName)
+               END IF
+      
+               ! Error check to make sure SeaState and MoorDyn have the same water density and gravity. This also checks the pointer is valid.
+               IF (p%WaveField%RhoXg /= REAL((p%rhoW * p%g), SiKi)) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted.", ErrStat, ErrMsg, RoutineName)
+               END IF
+
+               ! Warning check to make sure SeaState and MoorDyn have the same wave dir. For now, no wave spreading. This can be updated
+               IF (p%WaveField%WaveDir /= WaveDir) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState WaveDir does not match MoorDyn WaveDir. Using MoorDyn values for interpolating SeaState data to MoorDyn grid."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Warn, "SeaState WaveDir does not match MoorDyn WaveDir.Using MoorDyn values for interpolating SeaState data to MoorDyn grid.", ErrStat, ErrMsg, RoutineName)
+               END IF
+
+               ! Info check for if MoorDyn dtWave is non-zero. Users may set this accidentially, or could be left over in an input file
+               IF (p%dtWave > 0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   MoorDyn dtWave is ignored when using WaveKinMod = 2 becasue wave frequency information is supplied by SeaState"
+                  ENDIF
+               END IF
+
+               ! check SS only is being run w/ first order waves, because MoorDyn is not compatiable with those(for now)
+               IF (ALLOCATED(p%WaveField%WaveElev2)) THEN 
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR MoorDyn WaveKinMod2 does not support second order waves. Please use disable in SeaState."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "MoorDyn WaveKinMod2 does not support second order waves. Please use disable in SeaState.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+
+               ! set dtWave to WaveField dtWave (for interpolation use in getWaterKin)
+               p%dtWave = p%WaveField%WaveTime(2)-p%WaveField%WaveTime(1) ! from Waves.f90 (line 1040),  DO I = 0,WaveField%NStepWave; WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
+
+               ! Interpolations need the following from SeaState: WaveElevC0, NStepWave2, NStepWave, WaveDOmega. In p%WaveKin = 1, these values are extracted from the wave elevation time series
+               ! Note: allocations not needed here because they are already allocated in SeaState
+               WaveElevC0 = p%WaveField%WaveElevC0
+               WaveDOmega = p%WaveField%WaveDOmega
+               NStepWave2 = p%WaveField%NStepWave2
+               NStepWave  = p%WaveField%NStepWave
+
+               ! Pull some other things out of the WaveField pointer
+               WaveMultiDir = p%WaveField%WaveMultiDir
+               p%ntWave = NStepWave ! set ntWave to NStepWave
+
+               ! Set wave spreading array if enabled in SeaState, otherwise set to zero
+               If (WaveMultiDir) THEN
+                  ! Note: allocations not needed here because they are already allocated in SeaState
+                  WaveDirArr = p%WaveField%WaveDirArr
+               ENDIF
+
+            ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore read wave elevations from timeseries
+
+               ! NOTE: there is a decent ammount of code duplication (intentional for now) with what is in SeaState that eventually 
+               ! we will want to synchronize with a standard library at some point
+
+               ! --------------------- set from inputted wave elevation time series, grid approach -------------------
+               CALL WrScr( '    WaveKinMod = 1. Reading wave elevation time series from file' )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 1. Reading wave elevation time series from file"
+               ENDIF
+               
+               IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinFile must not be an empty string."
+                  ENDIF
+                  CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); RETURN
+                  RETURN
+               END IF
+
+               IF ( PathIsRelative( WaveKinFile ) ) THEN   ! properly handle relative path <<<
+                  !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+                  WaveKinFile = TRIM(p%PriPath)//TRIM(WaveKinFile)
+               END IF
+               
+               ! note: following is adapted from MoorDyn_Driver
+               
+               CALL GetNewUnit( UnElev ) 
+            
+               CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            
+               CALL WrScr( '    Reading wave elevation data from '//trim(WaveKinFile) )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) '    Reading wave elevation data from '//trim(WaveKinFile)
+               ENDIF
+               
+               ! Read through length of file to find its length
+               i         = 0 ! start line counter
+               numHdrLn  = 0 ! start header-line counter
+               dataBegin = .FALSE. ! started reading the data section
+               DO
+                  READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !read into a line
+                  IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
+                  i = i+1
+                  READ(Line,*,IOSTAT=ErrStat2) tmpReal
+                  IF (ErrStat2/=0) THEN  ! Not a number
+                     IF (dataBegin) THEN
+                        IF (p%writeLog > 0) THEN
+                           WRITE(p%UnLog, '(A)'        ) "   ERROR Non-data line detected in WaveKinFile past the header lines."
+                        ENDIF
+                        CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); RETURN
+                     END IF
+                     numHdrLn = numHdrLn + 1
+                  ELSE
+                     dataBegin = .TRUE.
+                  END IF
+               END DO
+
+               ! rewind to start of input file to re-read things now that we know how long it is
+               REWIND(UnElev)      
+
+               ntIn = i-numHdrLn     ! save number of lines of file
+               
+
+               ! allocate space for input wave elevation array (including time column)
+               CALL AllocAry(WaveTimeIn,  ntIn, 'WaveTimeIn', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+               CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+
+               ! read the data in from the file
+               DO i = 1, numHdrLn
+                  READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip header lines
+               END DO
+               
+               DO i = 1, ntIn
+                  READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i) ! read wave elevation time series
+                     
+                  IF ( ErrStat2 /= 0 ) THEN
+                     IF (p%writeLog > 0) THEN
+                        WRITE(p%UnLog, '(A)'        ) "   ERROR reading WaveElev input file."
+                     ENDIF
+                     CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); RETURN
+                  END IF 
+               END DO  
+
+               ! Close the inputs file 
+               CLOSE ( UnElev ) 
+
+               IF (WaveTimeIn(1) .NE. 0.0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)') "ERROR MoorDyn WaveElev time series should start at t = 0 seconds."
+                  ENDIF
+                  CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); RETURN
+               ENDIF
+               
+               CALL WrScr( "    Read "//trim(num2lstr(ntIn))//" time steps from input file." )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    Read "//trim(num2lstr(ntIn))//" time steps from input file."
+               ENDIF
+
+               ! IF (WaveTimeIn(ntIn) < TMax) THEN <<<< need to handle if time series is too short?
+               
+               ! specify stepping details 
+               p%ntWave = CEILING(Tmax/p%dtWave)          ! number of wave time steps
+
+               
+               ! allocate space for processed reference wave elevation time series
+               ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate array WaveElev0.'; IF(Failed0()) RETURN  ! this has an extra entry of zero in case it needs to be padded to be even
+               WaveElev0 = 0.0_SiKi
+               
+               ! go through and interpolate (should replace with standard function)
+               DO i = 1, p%ntWave       
+                  t = p%dtWave*(i-1)
                   
-                  ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
-                  CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveDynP.', ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHx.',ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHy.',ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%uzWave(:,iz,iy,ix), WaveVelCV , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelV.', ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%axWave(:,iz,iy,ix), WaveAccCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccHx.',ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%ayWave(:,iz,iy,ix), WaveAccCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccHy.',ErrStat,ErrMsg,RoutineName)
-                  CALL ApplyFFT_cx( p%azWave(:,iz,iy,ix), WaveAccCV , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccV.', ErrStat,ErrMsg,RoutineName)
+                  ! interpolation routine to dtWave spacing
+                  DO iIn = 1,ntIn-1      
+                     IF (WaveTimeIn(iIn+1) > t) THEN   ! find the right two points to interpolate between (remember that the first column of PtfmMotIn is time)
+                        frac = (t - WaveTimeIn(iIn) )/( WaveTimeIn(iIn+1) - WaveTimeIn(iIn) )  ! interpolation fraction (0-1) between two interpolation points
+                        WaveElev0(i-1) = WaveElevIn(iIn) + frac*(WaveElevIn(iIn+1) - WaveElevIn(iIn))  ! get interpolated wave elevation
+                        EXIT   ! break out of the loop for this time step once we've DOne its interpolation
+                     END IF
+                  END DO      
+               END DO
+               
+               ! note: following is adapted from UserWaves.v90 UserWaveElevations_Init
+               
+               
+               
+               ! Set new value for NStepWave so that the FFT algorithms are efficient. We will use the values passed in rather than what is read from the file
+               
+               IF ( MOD(p%ntWave,2) == 1 )  p%ntWave = p%ntWave + 1              ! Set NStepWave to an even integer   
+               NStepWave2 = MAX( p%ntWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
+               NStepWave  = 2*PSF ( NStepWave2, 9 )                        !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
+               NStepWave2 = NStepWave/2                                    ! Update the value of NStepWave2 based on the value needed for NStepWave.
+               WaveTMax   = NStepWave*p%dtWave                               ! Update the value of WaveTMax   based on the value needed for NStepWave.
+               WaveDOmega = TwoPi/TMax                                     ! Compute the frequency step for incident wave calculations.
+               p%ntWave = NStepWave
+               
+               
+               
 
-               end do ! iz
-                 
-               ! IFFT wave elevation here because it's only at the surface
-               CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveElev.', ErrStat,ErrMsg,RoutineName)
-            end do ! iy
-         end do ! ix
+               ! Allocate array to hold the wave elevations for calculation of FFT.
+               ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array TmpFFTWaveElev.'; IF (Failed0()) RETURN
 
-         ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verification...
+               ! Allocate frequency array for the wave elevation information in frequency space
+               ALLOCATE ( WaveElevC0(2, 0:NStepWave2), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array WaveElevC0.'; IF (Failed0()) RETURN
+               
+
+               ! Now check if all the allocations worked properly
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL CleanUp()
+                  RETURN
+               END IF
+               
+               ! Set the values
+               TmpFFTWaveElev  =  0.0_DbKi
+               WaveElevC0(:,:) =  0.0_DbKi
+
+
+               ! Copy values over
+               DO I=0, MIN(SIZE(WaveElev0), NStepWave)-1
+                  TmpFFTWaveElev(I) = WaveElev0(I)
+               ENDDO
+
+               ! Initialize the FFT
+               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
+
+               ! Apply the forward FFT on the wave elevation timeseries to get the real and imaginary parts of the frequency information.      
+               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
+
+               ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
+               DO I=1,NStepWave2-1
+                  WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1) ! all the odd indicies in array (real part ?)
+                  WaveElevC0     (2,I) = TmpFFTWaveElev(2*I) ! all the even indicies in array (imaginary part ?)
+               ENDDO
+               WaveElevC0(:,NStepWave2) = 0.0_SiKi
+
+               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the FFTs.'; IF(Failed()) RETURN
+
+               IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed0()) RETURN  
+               IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed0()) RETURN
+
+            ENDIF ! End getting frequency data either from time series or WaveField. The below needs to happen for both old and hybrid approach
+            
+            ! NOTE: there is a decent ammount of code duplication (intentional for now) with what is in SeaState that eventually 
+            ! we will want to synchronize with a standard library at some point
+
+            ! allocate all the wave kinematics FFT arrays  
+            ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveNmbr.'  ; IF (Failed0()) RETURN
+            ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate tmpComplex.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveElevC.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveDynPC.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHx.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHy.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCV.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHx.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHy.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCV .'; IF (Failed0()) RETURN
+            
+            ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
+            CALL allocateKinematicsArrays() 
+            
+            ! allocate the wave direction arrays
+            ALLOCATE ( CosWaveDir(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate CosWaveDir.'; IF (Failed0()) RETURN
+            ALLOCATE ( SinWaveDir(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate SinWaveDir.'; IF (Failed0()) RETURN       
+
+            ! Set the CosWaveDir and SinWaveDir values. 
+            IF (WaveMultiDir) THEN ! This is only possible with WaveKinMod = 2
+               CosWaveDir=COS(D2R*WaveDirArr)
+               SinWaveDir=SIN(D2R*WaveDirArr)
+            ELSE
+               CosWaveDir=COS(D2R*WaveDir)
+               SinWaveDir=SIN(D2R*WaveDir)
+            ENDIF
+            
+            ! get wave number array once
+            DO I = 0, NStepWave2 
+               WaveNmbr(i)   = WaveNumber ( REAL(I*WaveDOmega, R8Ki), p%g, p%WtrDpth )
+               tmpComplex(I)    =  CMPLX(WaveElevC0(1,I), WaveElevC0(2,I)) ! 1 are real, 2 are imaginary 
+            END DO    
+            
+            ! set up FFTer for doing IFFTs
+            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occurred while initializing the FFT.'; IF(Failed()) RETURN
+
+            ! Loop through all points where the incident wave kinematics will be computed      
+            DO ix = 1,p%nxWave 
+               DO iy = 1,p%nyWave
+                  DO iz = 1,p%nzWave
+                  
+                     ! Compute the discrete Fourier transform of the incident wave kinematics
+                     DO i = 0, NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+
+                        Omega = i*WaveDOmega
+                        ImagOmega = ImagNmbr*Omega
+
+                        WaveElevC (i) = tmpComplex(i) * EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir(i) + p%pyWave(iy)*SinWaveDir(i) ))         ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)                                                             
+                        WaveDynPC (i) = p%rhoW*p%g* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )                ! Discrete Fourier transform of the instantaneous dynamic pressure of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+                        WaveVelCHx(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *CosWaveDir(i) ! Discrete Fourier transform of the instantaneous horizontal velocity     in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveVelCHy(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *SinWaveDir(i) ! Discrete Fourier transform of the instantaneous horizontal velocity     in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)           
+                        WaveVelCV (i) =   ImagOmega*WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )                ! Discrete Fourier transform of the instantaneous vertical   velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+                        WaveAccCHx(i) =   ImagOmega*WaveVelCHx(i)                                                                                       ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveAccCHy(i) =   ImagOmega*WaveVelCHy(i)                                                                                       ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveAccCV (i) =   ImagOmega*WaveVelCV (i)                                                                                       ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                     END DO  ! I, frequencies
+                     
+                     ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
+                     CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveDynPC.'; IF (Failed()) RETURN 
+                     CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelHx.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelHy.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%uzWave(:,iz,iy,ix), WaveVelCV , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelV.' ; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%axWave(:,iz,iy,ix), WaveAccCHx, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccHx.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%ayWave(:,iz,iy,ix), WaveAccCHy, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccHy.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%azWave(:,iz,iy,ix), WaveAccCV , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccV.' ; IF (Failed()) RETURN
+
+                  END DO ! iz
+                  
+                  ! IFFT wave elevation here because it's only at the surface
+                  CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveElev.'; IF (Failed()) RETURN
+               END DO ! iy
+            END DO ! ix
+
+            ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verIFication...
+            
+            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occurred while cleaning up after the IFFTs.'; IF(Failed()) RETURN
+      
+         END IF ! p%WaveKin > 0
+
+
+         ! --------------------------------- now do currents --------------------------------
+            
+         IF (p%Current > 0) THEN
          
-         CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
-      
-      end if ! p%WaveKin == 3
+            IF (p%Current == 2) THEN
 
+               ! Overwrite the SeaState current grid to use the MoorDyn grid
+               p%WaveField%Current_InitInput%WaveKinGridzi = pzCurrentTemp
+               p%WaveField%Current_InitInput%NGridPts = p%nzCurrent
 
-      ! --------------------------------- now do currents --------------------------------
-      if (p%Current == 1) then
-      
-         ! allocate current profile arrays to correct size
-         CALL AllocAry( p%pzCurrent, p%nzCurrent, 'pzCurrent', ErrStat2, ErrMsg2 ); if(Failed()) return
-         CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); if(Failed()) return
-         CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); if(Failed()) return
-         
-         ! copy over data, flipping sign of depth values (to be positive-up) and reversing order
-         do i = 1,p%nzCurrent
-            p%pzCurrent(i) = -pzCurrentTemp(p%nzCurrent + 1 - i)  ! flip sign so depth is positive-up
-            p%uxCurrent(i) =  uxCurrentTemp(p%nzCurrent + 1 - i) 
-            p%uyCurrent(i) =  uyCurrentTemp(p%nzCurrent + 1 - i)
-         end do
-      
-      end if  ! p%Current == 1
+               ! Calculate the current profile in the MD grid with SS inputs
+               CALL Current_Init(p%WaveField%Current_InitInput, Current_InitOutput, ErrStat2, ErrMsg2); IF(Failed()) RETURN
 
+               ! Check output current arrays are the right size
+               IF (SIZE(Current_InitOutput%CurrVxi) /= p%nzCurrent) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR Current_Init output size does not match the MoorDyn grid size. "//trim(num2lstr(SIZE(Current_InitOutput%CurrVxi)))//" vs "//trim(num2lstr(REAL(p%nzCurrent, SiKi)))
+                  ENDIF
+                  CALL SetErrStat( ErrID_Fatal,'Current_Init output size does not match the MoorDyn grid size.',ErrStat, ErrMsg, RoutineName); RETURN
+               ENDIF
+
+               ! extract the currents from outputs
+               DO I = 1, p%nzCurrent
+                  uxCurrentTemp(I) = Current_InitOutput%CurrVxi(I)
+                  uyCurrentTemp(I) = Current_InitOutput%CurrVyi(I)
+               END DO
+
+            ENDIF
+
+            ! allocate current profile arrays to correct size
+            CALL AllocAry( p%pzCurrent, p%nzCurrent, 'pzCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            
+            ! copy over data
+            DO i = 1,p%nzCurrent
+               p%pzCurrent(i) = pzCurrentTemp(i)
+               p%uxCurrent(i) = uxCurrentTemp(i)
+               p%uyCurrent(i) = uyCurrentTemp(i)
+            END DO
+
+         ENDIF ! p%Current >0
+
+      ENDIF ! (tmpString == "SEASTATE")
+
+      ! some status messages:
+      IF (p%WaterKin == 0) THEN
+         CALL WrScr("    No water kinematics set up")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    No water kinematics set up"
+         ENDIF
+      ELSEIF (p%WaterKin == 1) THEN
+         CALL WrScr("    Water kinematics will be simulated using the old method (user provided grid and water kinematic data)")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the old method (user provided grid and water kinematic data)"
+         ENDIF
+      ELSEIF (p%WaterKin == 2) THEN
+         CALL WrScr("    Water kinematics will be simulated using the hybrid method (user provided grid with SeaState water kinematics data)")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the hybrid method (user provided grid with SeaState water kinematics data)"
+         ENDIF
+      ELSEIF (p%WaterKin == 3) THEN
+         CALL WrScr("    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data). These will be disabled during IC solve.")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data). These will be disabled during IC solve."
+         ENDIF
+      ELSE
+         CALL SetErrStat( ErrID_Fatal,"Invalid value for WaterKin",ErrStat, ErrMsg, RoutineName); RETURN
+      ENDIF
 
       ! ------------------------------ clean up and finished ---------------------------
       CALL cleanup()
@@ -1714,76 +1798,91 @@ CONTAINS
    
    
       ! get grid axis coordinates, initialize/record in array, and return size
-      SUBROUTINE gridAxisCoords(coordtype, entries, coordarray, n, ErrStat, ErrMsg)
+      SUBROUTINE gridAxisCoords(coordtype, entries, coordarray, n)
          
          INTEGER(IntKi),          INTENT(IN   )  :: coordtype
          CHARACTER(*),            INTENT(INOUT)  :: entries
          REAL(SiKi), ALLOCATABLE,  INTENT(INOUT)  :: coordarray(:)
          INTEGER(IntKi),          INTENT(  OUT)  :: n
-      
-      
-         INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat             ! Error status of the operation
-         CHARACTER(*),            INTENT(  OUT)  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
-      
+            
          REAL(ReKi) :: tempArray (100)
          REAL(ReKi) :: dx
          INTEGER(IntKi)                   :: nEntries, I
 
          IF (len(trim(entries)) == len(entries)) THEN
-            call WrScr("Warning: Only 120 characters read from wave grid coordinates")
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   WARNING in gridAxisCoords: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates"
+            ENDIF
+            CALL SetErrStat(ErrID_Warn, "Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates", ErrStat, ErrMsg, RoutineName)
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = 'Last character of wave grid coordinate list cannot be comma'
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: Last character of wave grid coordinate list cannot be comma"
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "Last character of wave grid coordinate list cannot be comma", ErrStat, ErrMsg, RoutineName); RETURN
          ELSE
             ! get array of coordinate entries 
-            CALL stringToArray(entries, nEntries, tempArray)
+            CALL stringToArray(entries, nEntries, tempArray); IF(Failed()) RETURN 
             
             ! set number of coordinates
-            if (     coordtype==0) then   ! 0: not used - make one grid point at zero
+            IF (     coordtype==0) THEN   ! 0: not used - make one grid point at zero
                n = 1;
-            else if (coordtype==1) then   ! 1: list values in ascending order
+            ELSE IF (coordtype==1) THEN   ! 1: list values in ascending order
                n = nEntries
-            else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
+            ELSE IF (coordtype==2) THEN   ! 2: uniform specified by -xlim, xlim, num
                n = int(tempArray(3))
-            else
-               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
-            end if
+
+               ! Check that tmpArray range / n is not an integer value, warn in log file if so
+               IF (MOD((tempArray(2)-tempArray(1)),REAL(n,ReKi)) == 0.0_ReKi) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   WARNING in gridAxisCoords: grid range / num grid points is an integer. This may cause interpolation issues. For integer grid spacing, add 1 to num grid points."
+                  ENDIF
+               ENDIF
+               
+            ELSE
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Invalid coordinate type. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF
             
             ! allocate coordinate array
             CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
             !ALLOCATE ( coordarray(n), STAT=ErrStat) 
             
             ! fill in coordinates
-            if (     coordtype==0) then
+            IF (     coordtype==0) THEN
                coordarray(1) = 0.0_ReKi
             
-            else if (coordtype==1) then
+            ELSE IF (coordtype==1) THEN
                coordarray(1:n) = tempArray(1:n)
             
-            else if (coordtype==2) then  
+            ELSE IF (coordtype==2) THEN  
                coordarray(1) = tempArray(1)
                coordarray(n) = tempArray(2)
                dx = (coordarray(n)-coordarray(1))/REAL(n-1)
-               do i=2,n
+               DO i=2,n
                   coordarray(i) = coordarray(i-1) + dx
-               end do
+               END DO
             
-            else
-               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
-            end if
+            ELSE
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF
             
             ! print *, "Set water grid coordinates to :"
             ! DO i=1,n
             !    print *, " ", coordarray(i)
-            ! end do
+            ! END DO
          END IF
 
       END SUBROUTINE gridAxisCoords
    
    
-      ! Extract an array of numbers out of a string with comma-separated numbers (this could go in a more general location)
+      ! Extract an array of numbers out of a string with comma-separated numbers (cannot use NWTC function ReadArr for now becasue len not known)
       SUBROUTINE stringToArray(instring, n, outarray)
    
          CHARACTER(*),          INTENT(INOUT)  :: instring
@@ -1802,14 +1901,29 @@ CONTAINS
             pos2 = INDEX(instring(pos1:), ",")  ! find index of next comma
             IF (pos2 == 0) THEN                 ! if there isn't another comma, read the last entry and call it done (this could be the only entry if no commas)
                n = n + 1
-               READ(instring(pos1:), *) outarray(n)
+               READ(instring(pos1:), *, IOSTAT=ErrStat2) outarray(n)
+               IF (ErrStat2 /= ErrID_None) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: invalid value in string"
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+               ENDIF
                EXIT
             END IF
             n = n + 1
-            if (n > 100) then
-               call WrScr( "ERROR - stringToArray cannot do more than 100 entries")
-            end if            
-            READ(instring(pos1:pos1+pos2-2), *) outarray(n)
+            IF (n > 100) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: cannot do more than 100 entries"
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF            
+            READ(instring(pos1:pos1+pos2-2), *, IOSTAT=ErrStat2) outarray(n)
+            IF (ErrStat2 /= ErrID_None) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: invalid value in string"
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
 
             pos1 = pos2+pos1
          END DO
@@ -1821,45 +1935,57 @@ CONTAINS
       SUBROUTINE allocateKinematicsArrays()
         !  error check print *, "Error in Waves::makeGrid, a time or space array is size zero." << endl;
 
-        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave), STAT = ErrStatTmp )    ! 2D grid over x and y only
+        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uxWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uyWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uzWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate axWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate ayWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate azWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate PDyn'  ; IF (Failed0()) RETURN
+        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave)         , STAT=ErrStat2); ErrMsg2 = 'Cannot allocate zeta'  ; IF (Failed0()) RETURN    ! 2D grid over x and y only
         
       END SUBROUTINE allocateKinematicsArrays
 
       
       ! compact way to set the right error status and check if an abort is needed (and do cleanup if so)
       LOGICAL FUNCTION Failed()
-           call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetupWaterKin') 
+           CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetupWaterKin') 
            Failed =  ErrStat >= AbortErrLev
-           if (Failed) call CleanUp()
+           IF (Failed) CALL CleanUp()
+           CALL SetErrStat(ErrStat2, 'Cleanup was not succcessful', ErrStat, ErrMsg, 'SetupWaterKin') ! check that deallocation was successful
       END FUNCTION Failed
+
+      ! check for failed where /= 0 is fatal
+      LOGICAL FUNCTION Failed0()
+         IF (ErrStat2 /= ErrID_None) THEN
+            ErrStat2 = ErrID_Fatal
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ENDIF
+         Failed0 = ErrStat >= AbortErrLev
+         IF (Failed0) CALL CleanUp()
+         CALL SetErrStat(ErrStat2, 'Cleanup was not succcessful', ErrStat, ErrMsg, 'SetupWaterKin') ! check that deallocation was successful
+      END FUNCTION Failed0
    
 
       SUBROUTINE CleanUp
 
-         !IF (ALLOCATED( WaveElev   ))         DEALLOCATE( WaveElev,          STAT=ErrStatTmp)
-         !IF (ALLOCATED( WaveTime   ))         DEALLOCATE( WaveTime,          STAT=ErrStatTmp)
-         IF (ALLOCATED( TmpFFTWaveElev  ))    DEALLOCATE( TmpFFTWaveElev,    STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveElevC0      ))    DEALLOCATE( WaveElevC0,        STAT=ErrStatTmp)
+         !IF (ALLOCATED( WaveElev   ))         DEALLOCATE( WaveElev,          STAT=ErrStat2)
+         !IF (ALLOCATED( WaveTime   ))         DEALLOCATE( WaveTime,          STAT=ErrStat2)
+         IF (ALLOCATED( TmpFFTWaveElev  ))    DEALLOCATE( TmpFFTWaveElev,    STAT=ErrStat2)
+         IF (ALLOCATED( WaveElevC0      ))    DEALLOCATE( WaveElevC0,        STAT=ErrStat2)
          
          ! >>> missing some things <<<
          
-         IF (ALLOCATED( WaveNmbr   )) DEALLOCATE( WaveNmbr   , STAT=ErrStatTmp)
-         IF (ALLOCATED( tmpComplex )) DEALLOCATE( tmpComplex , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveElevC  )) DEALLOCATE( WaveElevC  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveDynPC  )) DEALLOCATE( WaveDynPC  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCHx )) DEALLOCATE( WaveVelCHx , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCHy )) DEALLOCATE( WaveVelCHy , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCV  )) DEALLOCATE( WaveVelCV  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCHx )) DEALLOCATE( WaveAccCHx , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCHy )) DEALLOCATE( WaveAccCHy , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCV  )) DEALLOCATE( WaveAccCV  , STAT=ErrStatTmp)
+         IF (ALLOCATED( WaveNmbr   )) DEALLOCATE( WaveNmbr   , STAT=ErrStat2)
+         IF (ALLOCATED( tmpComplex )) DEALLOCATE( tmpComplex , STAT=ErrStat2)
+         IF (ALLOCATED( WaveElevC  )) DEALLOCATE( WaveElevC  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveDynPC  )) DEALLOCATE( WaveDynPC  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCHx )) DEALLOCATE( WaveVelCHx , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCHy )) DEALLOCATE( WaveVelCHy , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCV  )) DEALLOCATE( WaveVelCV  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCHx )) DEALLOCATE( WaveAccCHx , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCHy )) DEALLOCATE( WaveAccCHy , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCV  )) DEALLOCATE( WaveAccCV  , STAT=ErrStat2)
 
       END SUBROUTINE CleanUp
       
@@ -2133,9 +2259,188 @@ CONTAINS
       END FUNCTION SINHNumOvrSINHDen
 
    END SUBROUTINE setupWaterKin
-   
-   
 
-
+   ! Unused water kinematics file writing subroutines:
+        
+   ! ----- write wave grid spacing to output file -----
+   SUBROUTINE WriteWaveGrid(p, ErrStat, ErrMsg)
+   
+      TYPE(MD_ParameterType),       INTENT(INOUT)  :: p     ! Parameters
+      
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            ! Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
+  
+      INTEGER(IntKi)                   :: ErrStat2
+  !    CHARACTER(ErrMsgLen)             :: ErrMsg2   
+   
+      CHARACTER(120)                   :: Frmt       
+      INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
+      INTEGER(IntKi)   :: I
+          
+       
+       CALL GetNewUnit( UnOut)
+    
+       CALL OpenFOutFile ( UnOut, "waves.txt", ErrStat, ErrMsg )
+       IF ( ErrStat > ErrID_None ) THEN
+          ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
+          ErrStat = ErrID_Fatal
+          RETURN
+       END IF
+    
+       WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'MoorDyn v2 wave/current kinematics grid file' )
+       WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( '---------------------------------------------' )
+       WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'The following 6 lines (4-9) specify the input type then the inputs for x, then, y, then z coordinates.' )
+       
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - X input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
+       Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pxWave(I))), I=1,p%nxWave )
+       
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Y input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
+       Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pyWave(I))), I=1,p%nyWave )
+       
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Z input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
+       Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
+       WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pzWave(I))), I=1,p%nzWave )
+       
+       CLOSE(UnOut, IOSTAT = ErrStat2 )
+       IF ( ErrStat2 /= 0 ) THEN
+          ErrStat = ErrID_Severe
+          ErrMsg = 'Error closing wave grid file'
+       END IF
+       
+     END SUBROUTINE WriteWaveGrid       
+       
+       
+     ! ----- write wave kinematics grid data to output file -----
+     SUBROUTINE WriteWaveData(p, ErrStat, ErrMsg)
+     
+      TYPE(MD_ParameterType),       INTENT(INOUT)  :: p     ! Parameters
+      
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            ! Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
+  
+      INTEGER(IntKi)                   :: ErrStat2
+  !    CHARACTER(ErrMsgLen)             :: ErrMsg2   
+      
+      INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
+      INTEGER(IntKi)   :: I,J,K, l, Itemp
+      
+      CALL GetNewUnit( UnOut)
+    
+       CALL OpenFOutFile ( UnOut, "wave data.txt", ErrStat, ErrMsg )
+       IF ( ErrStat > ErrID_None ) THEN
+          ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
+          ErrStat = ErrID_Fatal
+          RETURN
+       END IF
+       
+       ! write channel labels
+       
+       
+       ! time
+       WRITE(UnOut,"(A10)", IOSTAT=ErrStat2, advance="no") "Time"
+    
+       DO J = 1,p%nyWave     !y
+          DO K = 1,p%nxWave  !x 
+             WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ze0", Num2Lstr(J+10*K)
+          END DO
+       END DO
+       DO I=1,p%nzWave          !z
+          DO J = 1,p%nyWave     !y
+             DO K = 1,p%nxWave  !x 
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ux", Num2Lstr(I+10*J+100*K)
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uy", Num2Lstr(I+10*J+100*K)
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uz", Num2Lstr(I+10*J+100*K)
+             END DO
+          END DO
+       END DO
+       DO I=1,p%nzWave          !z
+          DO J = 1,p%nyWave     !y
+             DO K = 1,p%nxWave  !x 
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ax", Num2Lstr(I+10*J+100*K)
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ay", Num2Lstr(I+10*J+100*K)
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " az", Num2Lstr(I+10*J+100*K)
+             END DO
+          END DO
+       END DO
+       DO I=1,p%nzWave          !z
+          DO J = 1,p%nyWave     !y
+             DO K = 1,p%nxWave  !x 
+                WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " pd", Num2Lstr(I+10*J+100*K)
+             END DO
+          END DO
+       END DO
+    
+       ! end the line
+       WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
+       
+       
+       
+       DO l=1, p%ntWave  ! loop through all time steps
+       
+          ! time
+          WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") p%dtWave*(l-1)
+          !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
+       
+          ! wave elevation (all slices for now, to check)
+          DO J = 1,p%nyWave     !y
+             DO K = 1,p%nxWave  !x 
+                Itemp = (J-1)*p%nxWave + K    ! index of actual node
+                
+                WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%zeta(l,J,K)
+             END DO
+          END DO
+       
+          ! wave velocities
+          DO I=1,p%nzWave          !z
+             DO J = 1,p%nyWave     !y
+                DO K = 1,p%nxWave  !x 
+                   Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
+                   
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uxWave(l,I,J,K)
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uyWave(l,I,J,K)
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uzWave(l,I,J,K)
+                END DO
+             END DO
+          END DO
+          
+          ! wave accelerations
+          DO I=1,p%nzWave          !z
+             DO J = 1,p%nyWave     !y
+                DO K = 1,p%nxWave  !x 
+                   Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
+                   
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%axWave(l,I,J,K)
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ayWave(l,I,J,K)
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%azWave(l,I,J,K)
+                END DO
+             END DO
+          END DO
+       
+          ! dynamic pressure
+          DO I=1,p%nzWave          !z
+             DO J = 1,p%nyWave     !y
+                DO K = 1,p%nxWave  !x 
+                   Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node
+                   
+                   WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%PDyn(l,I,J,K)
+                END DO
+             END DO
+          END DO
+       
+          ! end the line
+          WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
+       
+       
+       END DO
+       
+       
+       CLOSE(UnOut, IOSTAT = ErrStat )
+       IF ( ErrStat /= 0 ) THEN
+          ErrMsg = 'Error closing wave grid file'
+       END IF
+    
+     END SUBROUTINE WriteWaveData    
 
 END MODULE MoorDyn_Misc

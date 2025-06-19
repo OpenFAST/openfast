@@ -214,7 +214,6 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Input.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Output.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Morison.f90"/>
@@ -263,11 +262,12 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Str.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<Filter Name="Random Number">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="SeaState">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\SeaState\src\Current.txt">
@@ -382,5 +382,6 @@
 		<File RelativePath="..\..\modules\SeaState\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves2.f90"/></Filter>
+		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
