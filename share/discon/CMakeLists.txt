@@ -81,7 +81,7 @@ if(APPLE OR UNIX)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DIMPLICIT_DLLEXPORT")
 endif()
 
-# supress the mac runtime path warnings
+# suppress the mac runtime path warnings
 if(APPLE)
   set(CMAKE_MACOSX_RPATH 1)
 endif()
@@ -89,7 +89,7 @@ endif()
 add_library(DISCON SHARED ${SOURCE_PATH})
 set_target_properties(DISCON PROPERTIES PREFIX "" SUFFIX ".dll")
 
-# if this project is built standlone
+# if this project is built standalone
 if (${CMAKE_CURRENT_LIST_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   set(INSTALL_DEST "${CMAKE_SOURCE_DIR}/..")
 # otherwise
