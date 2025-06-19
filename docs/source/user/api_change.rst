@@ -54,6 +54,7 @@ HydroDyn                                      Added     na                 Membe
 HydroDyn                                      Added     na                 (-)      (-)        (-)        (-)          (-)          (-)        (-)        (-)          (-)          (-)        (-)        (-)          (-)          (-)        (-)        (-)          (-)          (-)       (-)       (-)         (-)         (-)         (-)         (-)           (-)           (-)         (-)         (-)           (-)           (-)         (-)         (-)           (-)           (-)       (-)       (-)         (-)
 HydroDyn                                      Modified  na                 MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MSecGeom MSpinOrient MDivSize MCoefMod MHstLMod PropPot [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [PropPot/=0 if member is modeled with potential-flow theory]
 HydroDyn                                      Modified  na                 (-)      (-)       (-)       (-)         (-)         (switch) (deg)       (m)      (switch) (switch) (flag)
+MoorDyn                                       Optional  na                 <Several new optional sections have been added. See note below>
 SubDyn                                        Modified  na                 MemberID MJointID1 MJointID2 MPropSetID1 MPropSetID2 MType MSpin/COSMID ![MType={1c:beam circ., 1r:beam rect., 2:cable, 3:rigid, 4:beam arb., 5:spring}. COMSID={-1:none}]
 SubDyn                                        Modified  na                 (-)      (-)       (-)       (-)         (-)         (-)   (deg/-)
 SubDyn                                        Added     na                 ----------------- RECTANGULAR BEAM CROSS-SECTION PROPERTIES ---------------------------
@@ -63,6 +64,19 @@ SubDyn                                        Added     na                 (-)  
 SubDyn                                        Modified  na                 PropSetID YoungE ShearG MatDens XsecA XsecAsx XsecAsy XsecJxx XsecJyy XsecJ0 XsecJt
 SubDyn                                        Modified  na                 (-)       (N/m2) (N/m2) (kg/m3) (m2)  (m2)    (m2)    (m4)    (m4)    (m4)   (m4)
 ============================================= ========= ================== ===============================================================================================================================================================================================================================================================================================================================================================================================================================================================
+
+MoorDyn changes
+~~~~~~~~~~~~~~~
+
+The *MoorDyn* input file now includes additional optional inputs, but is fully
+backwards compatible.  For further information on the new inputs:
+
+- coupling with the *SeaState* module for wave information, see example files:
+
+   - `https://github.com/OpenFAST/r-test/tree/main/modules/moordyn/md_waterkin3 <https://github.com/OpenFAST/r-test/tree/main/modules/moordyn/md_waterkin3>`_ - full wave information from *SeaState* module
+   - `https://github.com/OpenFAST/r-test/tree/main/modules/moordyn/md_waterkin2  <https://github.com/OpenFAST/r-test/tree/main/modules/moordyn/md_waterkin2>`_ - hybrid wave kinematics coupling with *SeaState* module
+
+- vortex-induced vibration (VIV) - see `https://moordyn.readthedocs.io/en/latest/inputs.html#id2 <https://moordyn.readthedocs.io/en/latest/inputs.html#id2>`_
 
 
 OpenFAST v4.0.4 to OpenFAST v4.0.5
