@@ -78,7 +78,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: List files in workspace
         run: ls ${{github.workspace}}
       - name: Install dependencies
@@ -143,7 +142,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -275,7 +273,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -341,7 +338,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -399,7 +395,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -456,7 +451,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -515,7 +509,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -570,7 +563,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -626,7 +618,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
@@ -681,7 +672,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
       - name: Install dependencies
         working-directory: ${{github.workspace}}
         run: |
