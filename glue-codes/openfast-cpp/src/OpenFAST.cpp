@@ -1291,7 +1291,10 @@ void fast::OpenFAST::advance_to_next_driver_time_step(bool writeFiles) {
           int tStepRatio = time_step_ratio(dtFAST, dtDriver);
           if ( (restartFreq_*tStepRatio > 0) && (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
               turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
-              FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
+              char tmpRstFileRoot[INTERFACE_STRING_LENGTH];
+              strncpy(tmpRstFileRoot, turbineData[iTurb].FASTRestartFileName.c_str(), turbineData[iTurb].FASTRestartFileName.size());
+              tmpRstFileRoot[turbineData[iTurb].FASTRestartFileName.size()] = '\0';
+              FAST_CreateCheckpoint(&iTurb, tmpRstFileRoot, &ErrStat, ErrMsg);
               checkError(ErrStat, ErrMsg);
               writeRestartFile(iTurb, nt_global);
           }
@@ -1432,7 +1435,10 @@ void fast::OpenFAST::step(bool writeFiles) {
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
             if ( (((nt_global - ntStart) % (restartFreq_ * tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
                 turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
-                FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
+                char tmpRstFileRoot[INTERFACE_STRING_LENGTH];
+                strncpy(tmpRstFileRoot, turbineData[iTurb].FASTRestartFileName.c_str(), turbineData[iTurb].FASTRestartFileName.size());
+                tmpRstFileRoot[turbineData[iTurb].FASTRestartFileName.size()] = '\0';
+                FAST_CreateCheckpoint(&iTurb, tmpRstFileRoot, &ErrStat, ErrMsg);
                 checkError(ErrStat, ErrMsg);
                 writeRestartFile(iTurb, nt_global);
             }
