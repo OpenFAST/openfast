@@ -3538,13 +3538,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(SiKi)               :: WaveElev1, WaveElev2, WaveElev, FDynP, FV(3), FA(3), FAMCF(3)
    LOGICAL                  :: Is1stElement, Is1stFloodedMember
 
-   ! Local variables for alternative rectangular member transverse drag calculation
-   INTEGER(IntKi)           :: tmpNodeInWater
-   REAL(ReKi)               :: posFC(3)         ! Position of face center
-   REAL(ReKi)               :: SVFC(3)          ! Structure velocity at face center
-   REAL(SiKi)               :: FVFC(3)          ! Flow velocity at face center
-   REAL(ReKi)               :: vrelFC           ! Relative (flow-structure) velocity at face centers
-   REAL(ReKi)               :: vrelFCf          ! High-pass filtered relative (flow-structure) velocity at face centers
+   LOGICAL, SAVE            :: FrstWarn_RctMmbrFSX = .TRUE.     ! First warning flag for rectangular member with FDMod>0 crossing the free surface
 
    ! Initialize errStat
    errStat = ErrID_None
@@ -4046,89 +4040,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         0.5*mem%AxCd(i)*p%WaveField%WtrDens * pi*mem%RMG(i)*dRdl_p * &                                               ! axial part
                         abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
            ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
-              f_hydro = 0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &                       ! axial part
-                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
-              IF (mem%FDMod == 0_IntKi) THEN
-                 f_hydro = f_hydro +                                                                                            &
-                           0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
-                           0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat             ! local y-direction
-              ELSE IF (m%NodeInWater(mem%NodeIndx(i)) .EQ. 1_IntKi .and. mem%FDMod == 1_IntKi) THEN
-                 ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
-                 ! Side B - +x_hat side
-                 posFC = pos1 + mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(1,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*vrelFCf *  mem%x_hat &
-                                     + mem%DragLoFScB  * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*vrelFC  *  mem%x_hat
-                 ! Side B - -x_hat side
-                 posFC = pos1 - mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(2,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*vrelFCf * -mem%x_hat &
-                                     + mem%DragLoFScB  * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*vrelFC  * -mem%x_hat
-                 ! Side A - +y_hat side
-                 posFC = pos1 + mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(3,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*vrelFCf *  mem%y_hat &
-                                     + mem%DragLoFScA  * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*vrelFC  *  mem%y_hat
-                 ! Side A - -y_hat side
-                 posFC = pos1 - mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(4,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*vrelFCf * -mem%y_hat &
-                                     + mem%DragLoFScA  * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*vrelFC  * -mem%y_hat
-              ELSE IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 1_IntKi ) THEN ! mem%FDMod == 2_IntKi
-                 ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
-                 ! Side B - +x_hat side
-                 posFC = pos1 + mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(1,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) *  mem%x_hat &
-                                     + mem%DragLoFScB  * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) *  mem%x_hat
-                 ! Side B - -x_hat side
-                 posFC = pos1 - mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(2,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) * -mem%x_hat &
-                                     + mem%DragLoFScB  * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) * -mem%x_hat
-                 ! Side A - +y_hat side
-                 posFC = pos1 + mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(3,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) *  mem%y_hat &
-                                     + mem%DragLoFScA  * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) *  mem%y_hat
-                 ! Side A - -y_hat side
-                 posFC = pos1 - mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(4,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) * -mem%y_hat &
-                                     + mem%DragLoFScA  * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) * -mem%y_hat
-              END IF
+              Call GetDistDrag_Rec(Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
@@ -4270,6 +4182,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            dSbdl_pp =     mem%dSbdl_mg(FSElem)
            SaMGFSInt = SubRatio * mem%SaMG(FSElem+1) + (1.0-SubRatio) * mem%SaMG(FSElem)
            SbMGFSInt = SubRatio * mem%SbMG(FSElem+1) + (1.0-SubRatio) * mem%SbMG(FSElem)
+
+           IF ( FrstWarn_RctMmbrFSX .and. mem%FDMod>0_IntKi ) THEN
+              CALL SetErrStat(ErrID_Warn, 'A rectangular member (Member ID '//trim(num2lstr(mem%MemberID))//') with FDMod > 0 is surface piercing. Drag force is not guaranteed to be smooth.', errStat, errMsg, RoutineName )
+              FrstWarn_RctMmbrFSX = .FALSE.
+           END IF
 
            vec = matmul( mem%Ak,vrelFSInt )
            F_DS = 0.5*mem%CdB(FSElem)*p%WaveField%WtrDens*SbMGFSInt*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
@@ -4486,89 +4403,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         0.5*mem%AxCd(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*dRdl_p * &                                                 ! axial part
                         abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
            ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
-              f_hydro = 0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &                       ! axial part
-                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
-              IF (mem%FDMod == 0_IntKi) THEN
-                 f_hydro = f_hydro +                                                                                            &
-                           0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
-                           0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat             ! local y-direction
-              ELSE IF (m%NodeInWater(mem%NodeIndx(i)) .EQ. 1_IntKi .and. mem%FDMod == 1_IntKi) THEN
-                 ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
-                 ! Side B - +x_hat side
-                 posFC = pos1 + mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(1,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*vrelFCf *  mem%x_hat &
-                                     + mem%DragLoFScB  * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*vrelFC  *  mem%x_hat
-                 ! Side B - -x_hat side
-                 posFC = pos1 - mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(2,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*vrelFCf * -mem%x_hat &
-                                     + mem%DragLoFScB  * 0.25*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*vrelFC  * -mem%x_hat
-                 ! Side A - +y_hat side
-                 posFC = pos1 + mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(3,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*vrelFCf *  mem%y_hat &
-                                     + mem%DragLoFScA  * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*vrelFC  *  mem%y_hat
-                 ! Side A - -y_hat side
-                 posFC = pos1 - mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(4,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                       &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*vrelFCf * -mem%y_hat &
-                                     + mem%DragLoFScA  * 0.25*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*vrelFC  * -mem%y_hat
-              ELSE IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 1_IntKi ) THEN ! mem%FDMod == 2_IntKi
-                 ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
-                 ! Side B - +x_hat side
-                 posFC = pos1 + mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(1,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) *  mem%x_hat &
-                                     + mem%DragLoFScB  * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) *  mem%x_hat
-                 ! Side B - -x_hat side
-                 posFC = pos1 - mem%x_hat * 0.5 * mem%SaMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%x_hat )
-                 vrelFCf = mem%VRelNFiltConstB * (vrelFC + xd%MV_rel_n_FiltStat(2,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScB) * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) * -mem%x_hat &
-                                     + mem%DragLoFScB  * 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) * -mem%x_hat
-                 ! Side A - +y_hat side
-                 posFC = pos1 + mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC,  mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(3,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) *  mem%y_hat &
-                                     + mem%DragLoFScA  * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) *  mem%y_hat
-                 ! Side A - -y_hat side
-                 posFC = pos1 - mem%y_hat * 0.5 * mem%SbMG(i)
-                 SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
-                 call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 vrelFC  = dot_product( REAL(FVFC,ReKi) - SVFC, -mem%y_hat )
-                 vrelFCf = mem%VRelNFiltConstA * (vrelFC + xd%MV_rel_n_FiltStat(4,mem%NodeIndx(i)))
-                 f_hydro = f_hydro +                                                                                                                    &
-                           (1.0_ReKi - mem%DragLoFScA) * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi) * -mem%y_hat &
-                                     + mem%DragLoFScA  * 0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) * -mem%y_hat
-              END IF
+              Call GetDistDrag_Rec(Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
@@ -6093,6 +5928,134 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
       END IF
    END SUBROUTINE getMemBallastHiPt
+
+
+   SUBROUTINE GetDistDrag_Rec(Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat,ErrMsg)
+      ! Compute the distributed (axial and transverse) drag per unit length for rectangular sections
+      Real(DbKi)              , intent(in   ) :: Time        !< Current simulation time in seconds
+      Type(Morison_MemberType), intent(in   ) :: mem         !< Current member
+      Integer(IntKi)          , intent(in   ) :: i           !< Node number within the member (not the global node index)
+      Real(ReKi)              , intent(in   ) :: dSadl_p     !< Slope of Side A due to tapering (absolute value)
+      Real(ReKi)              , intent(in   ) :: dSbdl_p     !< Slope of Side B due to tapering (absolute value)
+      Real(ReKi)              , intent(  out) :: f_hydro(3)  !< Sectional drag force (per unit length)
+      Integer(IntKi)          , intent(  out) :: ErrStat
+      Character(*)            , intent(  out) :: ErrMsg
+
+      ! Local variables for alternative rectangular member transverse drag calculation
+      Integer(IntKi)                          :: NodeID           ! Global node id of the ith node of the current member
+      Integer(IntKi)                          :: fNo              ! Face number
+      Integer(IntKi)                          :: tmpNodeInWater
+      Real(ReKi)                              :: pos(3)           ! Node (on member axis) position
+      Real(ReKi)                              :: rToFC(3,4)       ! Vectors from node on member axis to the four face centers
+      Real(ReKi)                              :: n_hat(3,4)       ! Normal vectors of the four faces
+      Real(ReKi)                              :: filtConst(4)     ! Velocity high-pass filter constants for the four faces
+      Real(ReKi)                              :: DragLoFSc(4)     ! Drag weighting factors for the four faces
+      Real(ReKi)                              :: Cd(4)            ! Dimensional drag coefficients for the four faces
+      Real(ReKi)                              :: vec(3)           ! Relative velocity vector (flow-structure) without the axial component
+      Real(ReKi)                              :: posFC(3)         ! Position of face center
+      Real(ReKi)                              :: SVFC(3)          ! Structure velocity at face center
+      Real(SiKi)                              :: FVFC(3)          ! Flow velocity at face center
+      Real(ReKi)                              :: vrelFC           ! Relative (flow-structure) velocity at face centers
+      Real(ReKi)                              :: vrelFCf          ! High-pass filtered relative (flow-structure) velocity at face centers
+
+      Integer(IntKi)                          :: ErrStat2
+      Character(ErrMsgLen)                    :: ErrMsg2
+      Character(*), parameter                 :: RoutineName = 'GetDistDrag_Rec'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      NodeID = mem%NodeIndx(i)
+
+      f_hydro = 0.0_ReKi
+      IF ( m%NodeInWater(NodeID) .EQ. 0_IntKi ) THEN ! Node out of water
+         Return
+      END IF
+
+      ! Node in water
+
+      ! Axial drag
+      f_hydro = 0.25 * mem%AxCd(i) * p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &  ! axial part
+                abs(dot_product( mem%k, m%vrel(:,NodeID) )) * matmul( mem%kkt, m%vrel(:,NodeID) )           ! axial part cont'd
+
+      ! Transverse drag
+      IF (mem%FDMod == 0_IntKi) THEN    ! Centerline-based formulation
+
+         vec = matmul( mem%Ak,m%vrel(:,NodeID) )
+         f_hydro = f_hydro +                                                                                            &
+                   0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  & ! local x-direction
+                   0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat       ! local y-direction
+
+      ELSE   ! Face-based formulation
+
+         ! Position of node on member axis
+         pos = m%DispNodePosHdn(:,NodeID)
+
+         ! Vector from node on member axis to face centers
+         rToFC(1:3,1) =   mem%x_hat * 0.5 * mem%SaMG(i)  ! Side B +x_hat side
+         rToFC(1:3,2) = - mem%x_hat * 0.5 * mem%SaMG(i)  ! Side B -x_hat side
+         rToFC(1:3,3) =   mem%y_hat * 0.5 * mem%SbMG(i)  ! Side A +y_hat side
+         rToFC(1:3,4) = - mem%y_hat * 0.5 * mem%SbMG(i)  ! Side A -y_hat side
+
+         ! Face normal vectors
+         n_hat(1:3,1) =   mem%x_hat
+         n_hat(1:3,2) = - mem%x_hat
+         n_hat(1:3,3) =   mem%y_hat
+         n_hat(1:3,4) = - mem%y_hat
+
+         ! High-pass filter constant for each face
+         filtConst(1) = mem%VRelNFiltConstB
+         filtConst(2) = mem%VRelNFiltConstB
+         filtConst(3) = mem%VRelNFiltConstA
+         filtConst(4) = mem%VRelNFiltConstA
+
+         ! Weighting factor for each face
+         DragLoFSc(1) = mem%DragLoFScB
+         DragLoFSc(2) = mem%DragLoFScB
+         DragLoFSc(3) = mem%DragLoFScA
+         DragLoFSc(4) = mem%DragLoFScA
+
+         ! Dimensional drag coefficient for each face
+         Cd(1) = mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)
+         Cd(2) = Cd(1)
+         Cd(3) = mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)
+         Cd(4) = Cd(3)
+
+         ! Compute and sum the drag force on all four faces
+         DO fNo = 1,4
+
+            ! Positions of face center
+            posFC = pos + rToFC(1:3,fNo)
+
+            ! Compute structure velocity at face center
+            SVFC  = u%Mesh%TranslationVel(:,NodeID) + cross_product( u%Mesh%RotationVel(:,NodeID), rToFC(1:3,fNo) )
+
+            ! Compute fluid velocity at face center
+            Call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
+
+            ! Compute the face-normal component of the relative fluid velocity (fluid-structure) at face center
+            vrelFC  = dot_product( Real(FVFC,ReKi)-SVFC , n_hat(1:3,fNo) )
+            ! High-pass-filtered face-center normal relative velocity
+            vrelFCf = filtConst(fNo) * (vrelFC + xd%MV_rel_n_FiltStat(fNo,NodeID))
+
+            ! Compute drag force based on selected formulation
+            IF ( mem%FDMod == 1_IntKi ) THEN    ! Without suction-side-only formulation
+               f_hydro = f_hydro + n_hat(1:3,fNo) * (                                      &
+                         (1.0_ReKi - DragLoFSc(fNo)) * 0.25*Cd(fNo)*abs(vrelFCf)*vrelFCf   &
+                                   + DragLoFSc(fNo)  * 0.25*Cd(fNo)*abs(vrelFC )*vrelFC  )
+            ELSE ! mem%FDMod == 2_IntKi With suction-side-only formulation
+               f_hydro = f_hydro + n_hat(1:3,fNo) * (                                                    &
+                         (1.0_ReKi - DragLoFSc(fNo)) * 0.50*Cd(fNo)*abs(vrelFCf)*max(vrelFCf,0.0_ReKi)   &
+                                   + DragLoFSc(fNo)  * 0.50*Cd(fNo)*abs(vrelFC )*max(vrelFC ,0.0_ReKi) )
+            END IF
+
+         END DO
+
+      END IF
+
+   END SUBROUTINE GetDistDrag_Rec
+
 
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
