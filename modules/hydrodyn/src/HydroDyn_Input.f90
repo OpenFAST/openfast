@@ -2513,8 +2513,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             RETURN
          END IF
 
-         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 0 or 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
