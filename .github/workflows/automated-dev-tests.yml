@@ -330,7 +330,7 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
       - name: List files in workspace
         run: ls
