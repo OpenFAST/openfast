@@ -261,6 +261,7 @@ SUBROUTINE HydroDyn_C_Init(                                                     
    integer(IntKi)                                                       :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                                 :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                       :: i,j,k             !< generic counters
+   integer(IntKi)                                                       :: NChanSS, NChanHD  !< number of output channels in SeaSt and HD
    character(*), parameter                                              :: RoutineName = 'HydroDyn_C_Init'  !< for error handling
 
    ! Initialize error handling
@@ -506,26 +507,32 @@ SUBROUTINE HydroDyn_C_Init(                                                     
    !-------------------------------------------------------------
    !  Set output channel information for driver code
    ! Number of channels
-   NumChannels_C = size(SeaSt%InitOutData%WriteOutputHdr) + size(HD%InitOutData%WriteOutputHdr)
+   if (allocated(SeaSt%InitOutData%WriteOutputHdr))   NChanSS = size(SeaSt%InitOutData%WriteOutputHdr)
+   if (allocated(HD%InitOutData%WriteOutputHdr))      NChanHD = size(HD%InitOutData%WriteOutputHdr)
+   NumChannels_C = NChanSS + NChanHD
 
    ! transfer the output channel names and units to c_char arrays for returning
    !     Upgrade idea:  use C_NULL_CHAR as delimiters.  Requires rework of Python
    !                    side of code.
    k=1
-   do i=1,size(SeaSt%InitOutData%WriteOutputHdr)
-      do j=1,ChanLen    ! max length of channel name.  Same for units
-         OutputChannelNames_C(k)=SeaSt%InitOutData%WriteOutputHdr(i)(j:j)
-         OutputChannelUnits_C(k)=SeaSt%InitOutData%WriteOutputUnt(i)(j:j)
-         k=k+1
+   if (allocated(SeaSt%InitOutData%WriteOutputHdr)) then
+      do i=1,size(SeaSt%InitOutData%WriteOutputHdr)
+         do j=1,ChanLen    ! max length of channel name.  Same for units
+            OutputChannelNames_C(k)=SeaSt%InitOutData%WriteOutputHdr(i)(j:j)
+            OutputChannelUnits_C(k)=SeaSt%InitOutData%WriteOutputUnt(i)(j:j)
+            k=k+1
+         enddo
       enddo
-   enddo
-   do i=1,size(HD%InitOutData%WriteOutputHdr)
-      do j=1,ChanLen    ! max length of channel name.  Same for units
-         OutputChannelNames_C(k)=HD%InitOutData%WriteOutputHdr(i)(j:j)
-         OutputChannelUnits_C(k)=HD%InitOutData%WriteOutputUnt(i)(j:j)
-         k=k+1
+   endif
+   if (allocated(HD%InitOutData%WriteOutputHdr)) then
+      do i=1,size(HD%InitOutData%WriteOutputHdr)
+         do j=1,ChanLen    ! max length of channel name.  Same for units
+            OutputChannelNames_C(k)=HD%InitOutData%WriteOutputHdr(i)(j:j)
+            OutputChannelUnits_C(k)=HD%InitOutData%WriteOutputUnt(i)(j:j)
+            k=k+1
+         enddo
       enddo
-   enddo
+   endif
 
    ! null terminate the string
    OutputChannelNames_C(k) = C_NULL_CHAR
@@ -811,14 +818,18 @@ SUBROUTINE HydroDyn_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
 
    ! Get the output channel info out of y
    k=1
-   do i=1,size(SeaSt%y%WriteOutput)
-      OutputChannelValues_C(k) = REAL(SeaSt%y%WriteOutput(i), C_FLOAT)
-      k=k+1
-   enddo
-   do i=1,size(HD%y%WriteOutput)
-      OutputChannelValues_C(k) = REAL(HD%y%WriteOutput(i), C_FLOAT)
-      k=k+1
-   enddo
+   if (allocated(SeaSt%y%WriteOutput)) then
+      do i=1,size(SeaSt%y%WriteOutput)
+         OutputChannelValues_C(k) = REAL(SeaSt%y%WriteOutput(i), C_FLOAT)
+         k=k+1
+      enddo
+   endif
+   if (allocated(HD%y%WriteOutput)) then
+      do i=1,size(HD%y%WriteOutput)
+         OutputChannelValues_C(k) = REAL(HD%y%WriteOutput(i), C_FLOAT)
+         k=k+1
+      enddo
+   endif
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1011,14 +1022,18 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
 
    ! Get the output channel info out of y
    k=1
-   do i=1,size(SeaSt%y%WriteOutput)
-      OutputChannelValues_C(k) = REAL(SeaSt%y%WriteOutput(i), C_FLOAT)
-      k=k+1
-   enddo
-   do i=1,size(HD%y%WriteOutput)
-      OutputChannelValues_C(k) = REAL(HD%y%WriteOutput(i), C_FLOAT)
-      k=k+1
-   enddo
+   if (allocated(SeaSt%y%WriteOutput)) then
+      do i=1,size(SeaSt%y%WriteOutput)
+         OutputChannelValues_C(k) = REAL(SeaSt%y%WriteOutput(i), C_FLOAT)
+         k=k+1
+      enddo
+   endif
+   if (allocated(HD%y%WriteOutput)) then
+      do i=1,size(HD%y%WriteOutput)
+         OutputChannelValues_C(k) = REAL(HD%y%WriteOutput(i), C_FLOAT)
+         k=k+1
+      enddo
+   endif
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
