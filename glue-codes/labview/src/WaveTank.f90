@@ -51,9 +51,6 @@ SUBROUTINE WaveTank_Init(   &
     ErrStat_c,              &
     ErrMsg_c                &
 ) BIND (C, NAME='WaveTank_Init')
-
-IMPLICIT NONE
- 
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
@@ -189,9 +186,6 @@ SUBROUTINE WaveTank_CalcOutput( &
     ErrStat_c,                  &
     ErrMsg_c                    &
 ) BIND (C, NAME='WaveTank_CalcOutput')
-
-IMPLICIT NONE
-
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
