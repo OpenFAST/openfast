@@ -305,3 +305,37 @@ if(BUILD_DOCUMENTATION)
   add_subdirectory(docs)
 endif()
 
+#-------------------------------------------------------------------------------
+# ARMeX reader inclusion in FAST.Farm
+#-------------------------------------------------------------------------------
+# Included as an external project, cloned to `dependencies` directory
+
+option(AMREX_READER "Include AMReX reader in FAST.Farm" off)
+if (AMREX_READER AND BUILD_FASTFARM)
+  include(ExternalProject)
+  ExternalProject_Add(amrex
+    GIT_REPOSITORY    https://github.com/AMReX-Codes/amrex.git
+    GIT_TAG           25.06
+    GIT_SHALLOW       On
+    GIT_PROGRESS      On
+    SOURCE_DIR        "${CMAKE_SOURCE_DIR}/dependencies/amrex"
+    BINARY_DIR        "${CMAKE_BINARY_DIR}/dependencies/amrex"
+    PREFIX            "${CMAKE_BINARY_DIR}/dependencies/amrex"
+    INSTALL_DIR       "${CMAKE_BINARY_DIR}/dependencies/amrex/install"    # this doesn't work
+    CMAKE_ARGS
+      -DAMReX_AMRLEVEL=Off
+      -DAMReX_EXPORT_DYNAMIC=Off
+      -DAMReX_INSTALL=On
+      -DAMReX_LINEAR_SOLVERS=Off
+      -DAMReX_LINEAR_SOLVERS_EM=Off
+      -DAMReX_LINEAR_SOLVERS_INCLFO=Off
+      -DAMReX_MPI=Off
+      -DAMReX_PARTICLES=Off
+      -DAMReX_FORTRAN=On
+      -DAMReX_FORTRAN_INTERFACES=On
+      -DAMReX_PRECISION=DOUBLE
+      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    INSTALL_COMMAND   ""
+    BUILD_BYPRODUCTS  "${CMAKE_BINARY_DIR}/dependencies/amrex/Src/libamrex.a"
+  )
+endif()

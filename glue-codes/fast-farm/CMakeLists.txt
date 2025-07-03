@@ -19,6 +19,17 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FAST_Farm_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Farm_Types.f90 -noextrap)
 endif()
 
+if (AMREX_READER)
+  add_library(amrex_reader
+    src/amrex_reader/read_amrex_subdomain_module.F90
+    src/amrex_reader/read_amrex_subdomain.cpp
+  )
+  add_dependencies(amrex_reader amrex)
+  # I can't figure out how to get these set directly by the ExternalProject_Add
+  target_link_libraries(amrex_reader ${CMAKE_BINARY_DIR}/dependencies/amrex/Src/libamrex.a)
+  target_include_directories(amrex_reader PUBLIC  ${CMAKE_BINARY_DIR}/dependencies/amrex/mod_files_3d/)
+endif()
+
 add_executable(FAST.Farm
   src/FAST_Farm_IO.f90
   src/FAST_Farm_IO_Params.f90
@@ -29,6 +40,9 @@ add_executable(FAST.Farm
   src/FASTWrapper_Types.f90
 ) 
 target_link_libraries(FAST.Farm openfastlib_static wdlib awaelib)
+if (AMREX_READER)
+  target_link_Libraries(FAST.Farm amrex_reader)
+endif()
 set_property(TARGET FAST.Farm PROPERTY LINKER_LANGUAGE Fortran)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)

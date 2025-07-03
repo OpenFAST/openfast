@@ -1,0 +1,6 @@
+# This directory will contain build time downloaded dependencies, like AMReX
+#
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
