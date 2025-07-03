@@ -85,9 +85,10 @@ add_test(NAME versioninfo_utest COMMAND versioninfo_utest)
 if (AMREX_READER AND BUILD_FASTFARM)
   # FAST.Farm AMReX reader test
   add_executable(amrex_reader_utest
-    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/AMReX_reader_test.F90
+    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/AMReX_reader_utest.F90
+    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/test_AMReX_reader.F90
   )
-  target_link_libraries(amrex_reader_utest amrex_reader)
+  target_link_libraries(amrex_reader_utest amrex_reader nwtclibs testdrivelib)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
 endif()
 
