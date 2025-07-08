@@ -670,7 +670,7 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
          if (p%TP1IsRBRefPt) then ! More than one transition piece
 
-            call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+            call GetExtForceOnInterfaceDOF(p, m, F_I)
 
             F_TP1 =   matmul(            F_I, p%TI(:,1:6) ) &
                     - matmul(p%D1_142(1:6,:),      m%F_L  )      ! p%D1_142 is -matmul( T_I^T, Phi_Rb^T )
@@ -875,7 +875,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! - We only apply the lever arm for       (fixed-bottom case + GuyanLoadCorrection)
       ! - We only rotate the external loads for (floating case + GuyanLoadCorrection)
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(.not.p%Floating), RotateLoads=(p%Floating)); if(Failed()) return
-      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+      call GetExtForceOnInterfaceDOF(p, m, F_I)
       m%Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
       m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
       ! Total contribution
@@ -3922,16 +3922,22 @@ END SUBROUTINE GetExtForceOnInternalDOF
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on interface DOF (I) 
 !! NOTE: This function should only be called after GetExtForceOnInternalDOF, which populates Fext
-SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
+SUBROUTINE GetExtForceOnInterfaceDOF( p, m, F_I )
    type(SD_ParameterType),   intent(in  ) :: p ! Parameters
-   real(ReKi), dimension(:), intent(in  ) :: Fext !< Vector of external forces on un-reduced DOF
+   type(SD_MiscVarType),     intent(in  ) :: m ! Misc, for storage optimization of Fext and Fext_red
    real(ReKi)            ,   intent(out ) :: F_I(6*p%nNodes_I)          !< External force on interface DOF
    integer :: iSDNode, startDOF, I
-   DO I = 1, p%nNodes_I 
-      iSDNode = p%Nodes_I(I,1)
-      startDOF = (I-1)*6 + 1 ! NOTE: for now we have 6 DOF per interface nodes
-      F_I(startDOF:startDOF+5) = Fext(p%NodesDOF(iSDNode)%List(1:6)) !TODO try to use Fext_red
-   ENDDO
+
+   IF (p%reduced) THEN
+      F_I = m%Fext_red(p%IDI_Rb)
+   ELSE
+      DO I = 1, p%nNodes_I
+         iSDNode  = p%Nodes_I(I,1)
+         startDOF = (I-1)*6 + 1 ! NOTE: for now we have 6 DOF per interface nodes
+         F_I(startDOF:startDOF+5) = m%Fext(p%NodesDOF(iSDNode)%List(1:6))
+      ENDDO
+   END IF
+
 END SUBROUTINE GetExtForceOnInterfaceDOF
 
 
