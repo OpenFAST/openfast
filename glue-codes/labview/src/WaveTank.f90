@@ -56,8 +56,6 @@ SUBROUTINE WaveTank_Init(   &
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
 #endif
 
-IMPLICIT NONE
-
 CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: MD_InputFile_c(IntfStrLen)
 CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: SS_InputFile_c(IntfStrLen)
 CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: AD_InputFile_c(IntfStrLen)
@@ -192,8 +190,6 @@ SUBROUTINE WaveTank_CalcOutput( &
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 #endif
-
-IMPLICIT NONE
 
 ! INTEGER(C_INT)                        :: delta_time
 INTEGER(C_INT)                        :: frame_number

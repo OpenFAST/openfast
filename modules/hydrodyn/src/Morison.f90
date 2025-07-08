@@ -4756,7 +4756,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       b  = R * dot_product(z_hat,n_hat)
       c  = dot_product(FSPt-pos0,n_hat)
       d2 = a*a+b*b
-      IF ( d2 >= c*c ) THEN ! Has intersection
+      ! Note: if d2=0, the current section is perfectly parallel to the free surface
+      IF ( (d2 >= c*c) .and. (.not. EqualRealNos(d2,0.0_DbKi)) ) THEN ! Has intersection
          d = SQRT(d2)
          IF (b>=0.0) THEN
             alpha =  ACOS(a/d)
