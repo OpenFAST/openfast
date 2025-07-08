@@ -85,6 +85,9 @@ typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputHdr {:}  - -   "Na
 typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputUnt {:}  - -   "Units of the output-to-file channels" -
 typedef  ^  InitOutputType  ProgDesc               Ver             -   - -   "This module's name, version, and date" -
 typedef	 ^  InitOutputType  ModVarsType            Vars            -   - -   "Module Variables"
+typedef  ^  InitOutputType  logical                IsFloating      -   - -   "Flag indicating if the substructure is floating"
+typedef  ^  InitOutputType  logical                SDHasRBDoF      -   - -   "Flag indicating if SubDyn is tracking rigid-body motion internally; only true if floating with multiple transition pieces"
+typedef  ^  InitOutputType  R8Ki                   PlatformPos    {6}  - -   "Initial rigid-body displacement at the PRP (only if SDHasRBDoF=true)"
 typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for active cable tensioning is requested"   -
 
 # ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
@@ -168,12 +171,6 @@ typedef  ^          ^      IntKi                   n           -  -  -  "tracks 
 
 # ============================== Parameters ============================================================================================================================================
 typedef	 ^  ParameterType   ModVarsType    Vars          -  -  -  "Module Variables"
-typedef  ^  ParameterType   IntKi          iVarTPMesh    -  0  -  "Variable index for TPMesh"
-typedef  ^  ParameterType   IntKi          iVarLMesh     -  0  -  "Variable index for LMesh"
-typedef  ^  ParameterType   IntKi          iVarY1Mesh    -  0  -  "Variable index for Y1Mesh"
-typedef  ^  ParameterType   IntKi          iVarY2Mesh    -  0  -  "Variable index for Y2Mesh"
-typedef  ^  ParameterType   IntKi          iVarY3Mesh    -  0  -  "Variable index for Y3Mesh"
-typedef  ^  ParameterType   IntKi          iVarWriteOutput  -  0  -  "Variable index for WriteOutput"
 # --- Parameters - Algo
 typedef  ^  ParameterType   ReKi           g             -  -  -  "Gravity acceleration"  m/s^2
 typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds
@@ -307,6 +304,7 @@ typedef  ^  InputType   MeshType    LMesh          -       -   - "Point mesh for
 typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
+typedef  ^  OutputType  MeshType    Y0Mesh         -  - - "Motion mesh for the rigid-body reference point"
 typedef  ^  OutputType  MeshType    Y1Mesh        {:} - - "Transition piece outputs on a point mesh"
 typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
 typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"

@@ -302,6 +302,7 @@ class InputReader_OpenFAST(object):
 
         # Feature Switches and Flags (ftr_swtchs_flgs)
         f.readline()
+        self.fst_vt['Fst']['NRotors'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompElast'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompInflow'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompAero'] = int(f.readline().split()[0])
@@ -312,6 +313,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['CompMooring'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompIce'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['MHK'] = int(f.readline().split()[0])
+        self.fst_vt['Fst']['RotorDir'] = read_array(f, self.fst_vt['Fst']['NRotors'], array_type=int)
 
         # Environmental conditions
         f.readline()
@@ -339,6 +341,18 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['SubFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['MooringFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['IceFile'] = quoted_read(f.readline().split()[0])
+        # self.fst_vt['Fst']['EDFiles'] = [self.fst_vt['Fst']['EDFile']]
+        # self.fst_vt['Fst']['BDBldFiles(1)'] = [self.fst_vt['Fst']['BDBldFile(1)']]
+        # self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
+        # self.fst_vt['Fst']['BDBldFiles(3)'] = [self.fst_vt['Fst']['BDBldFile(3)']]
+        # self.fst_vt['Fst']['ServoFiles'] = [self.fst_vt['Fst']['ServoFile']]
+        # for i in range(1, self.fst_vt['Fst']['NRotors']):
+        #     f.readline()
+        #     self.fst_vt['Fst']['EDFiles'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(1)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(2)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(3)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['ServoFiles'].append(quoted_read(f.readline().split()[0]))
 
         # FAST Output Parameters (fst_output_params)
         f.readline()

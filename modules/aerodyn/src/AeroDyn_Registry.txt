@@ -528,3 +528,5 @@ typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
 typedef ^   MiscVarType SeaSt_WaveField_MiscVarType WaveField_m - - - "misc var information from the SeaState WaveField module"   -
 typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
+typedef	^	MiscVarType	AD_InputType	u_perturb	-	-	-	"input perturbation for linearization"	-
+typedef	^	MiscVarType	AD_OutputType	y_lin	-	-	-	"output perturbation for linearization"	-

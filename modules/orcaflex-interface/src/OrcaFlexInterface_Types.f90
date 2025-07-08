@@ -74,8 +74,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_ParameterType  =======
   TYPE, PUBLIC :: Orca_ParameterType
-    INTEGER(IntKi)  :: iVarPtfmMeshU = 0_IntKi      !< Index of platform mesh input variable [-]
-    INTEGER(IntKi)  :: iVarPtfmMeshY = 0_IntKi      !< Index of platform mesh output variable [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     TYPE(DLL_Type)  :: DLL_Orca      !< Info for the OrcaFlex DLL [-]
     CHARACTER(1024)  :: SimNamePath      !< Path with simulation rootname with null end character for passing to C [-]
@@ -432,8 +430,6 @@ subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Orca_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstParamData%iVarPtfmMeshU = SrcParamData%iVarPtfmMeshU
-   DstParamData%iVarPtfmMeshY = SrcParamData%iVarPtfmMeshY
    DstParamData%DT = SrcParamData%DT
    DstParamData%DLL_Orca = SrcParamData%DLL_Orca
    DstParamData%SimNamePath = SrcParamData%SimNamePath
@@ -488,8 +484,6 @@ subroutine Orca_PackParam(RF, Indata)
    integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%iVarPtfmMeshU)
-   call RegPack(RF, InData%iVarPtfmMeshY)
    call RegPack(RF, InData%DT)
    call DLLTypePack(RF, InData%DLL_Orca) 
    call RegPack(RF, InData%SimNamePath)
@@ -516,8 +510,6 @@ subroutine Orca_UnPackParam(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%iVarPtfmMeshU); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarPtfmMeshY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call DLLTypeUnpack(RF, OutData%DLL_Orca) ! DLL_Orca 
    call RegUnpack(RF, OutData%SimNamePath); if (RegCheckErr(RF, RoutineName)) return

@@ -553,6 +553,8 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
                   if (all(xVars(k)%Field /= TransFields)) cycle
                case (FieldOrientation, FieldAngularDisp, FieldAngularVel, FieldAngularAcc)
                   if (all(xVars(k)%Field /= AngularFields)) cycle
+               case (FieldScalar)
+                  if (xVars(k)%Field /= FieldScalar) cycle
                case (FieldForce, FieldMoment)
                   cycle
                end select
@@ -886,6 +888,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
    call FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, &
                                    ConvIter, ConvError, IsConverged, ErrStat2, ErrMsg2, UpdateJacobian=.true.)
+   if (Failed()) return
 
    ! Print warning if not converged
    if (.not. IsConverged) then
@@ -1093,7 +1096,8 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j, k
    integer(IntKi)             :: iMod
-   logical                    :: ConvUJac          ! Jacobian updated for convergence
+   integer(IntKi)             :: ConvUJac          ! Jacobian updated for convergence
+   integer(IntKi)             :: MaxConvUJac       ! Max times Jacobian can be updated for convergence
    real(R8Ki)                 :: RotDiff(3, 3)
 
    ErrStat = ErrID_None
@@ -1110,8 +1114,13 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    ! Decrement number of time steps before updating the Jacobian
    m%UJacStepsRemain = m%UJacStepsRemain - 1
 
+   ! Maximum number of times Jacobian can be updated for convergence.
+   ! Allow more updates on first step
+   MaxConvUJac = 1
+   if (n_t_global == 0) MaxConvUJac = 3
+
    ! Set Jacobian updated for convergence flag to false
-   ConvUJac = .false.
+   ConvUJac = 0
 
    ! Init counters for number of Jacobian updates and number of convergence iterations
    NumUJac = 0
@@ -1293,7 +1302,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          if (ConvIter >= p%MaxConvIter) then
 
             ! If Jacobian has not been updated for convergence
-            if (.not. ConvUJac) then
+            if (ConvUJac < MaxConvUJac) then
 
                ! Set counter to trigger a Jacobian update on next convergence iteration
                m%UJacIterRemain = 0
@@ -1303,7 +1312,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
                if (CorrIter == NumCorrections) NumCorrections = NumCorrections + 1
 
                ! Set flag indicating that the jacobian has been updated for convergence
-               ConvUJac = .true.
+               ConvUJac = ConvUJac + 1
 
             else
 
@@ -1491,6 +1500,9 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
 
    !----------------------------------------------------------------------------
    ! Initialization
@@ -2127,7 +2139,7 @@ subroutine Solver_Init_Debug(p, m, GlueModData, GlueModMaps)
       write (DebugUn, *) "Var = X "//trim(m%Mod%Vars%x(j)%Name)// &
          " ("//trim(MV_FieldString(m%Mod%Vars%x(j)%Field))//")"
       write (DebugUn, '(A,*(I6))') "  X iLoc = ", m%Mod%Vars%x(j)%iLoc
-      write (DebugUn, '(A,*(I6))') "  X iq   = ", m%Mod%Vars%x(j)%iGlu
+      write (DebugUn, '(A,*(I6))') "  X iq   = ", m%Mod%Vars%x(j)%iq
    end do
    do j = 1, size(m%Mod%Vars%u)
       write (DebugUn, *) "Var = U "//trim(m%Mod%Vars%u(j)%Name)// &

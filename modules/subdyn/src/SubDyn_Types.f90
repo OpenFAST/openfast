@@ -124,6 +124,9 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
+    LOGICAL  :: IsFloating = .false.      !< Flag indicating if the substructure is floating [-]
+    LOGICAL  :: SDHasRBDoF = .false.      !< Flag indicating if SubDyn is tracking rigid-body motion internally; only true if floating with multiple transition pieces [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: PlatformPos = 0.0_R8Ki      !< Initial rigid-body displacement at the PRP (only if SDHasRBDoF=true) [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for active cable tensioning is requested [-]
   END TYPE SD_InitOutputType
 ! =======================
@@ -223,12 +226,6 @@ IMPLICIT NONE
 ! =========  SD_ParameterType  =======
   TYPE, PUBLIC :: SD_ParameterType
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarTPMesh = 0      !< Variable index for TPMesh [-]
-    INTEGER(IntKi)  :: iVarLMesh = 0      !< Variable index for LMesh [-]
-    INTEGER(IntKi)  :: iVarY1Mesh = 0      !< Variable index for Y1Mesh [-]
-    INTEGER(IntKi)  :: iVarY2Mesh = 0      !< Variable index for Y2Mesh [-]
-    INTEGER(IntKi)  :: iVarY3Mesh = 0      !< Variable index for Y3Mesh [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0      !< Variable index for WriteOutput [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [m/s^2]
     REAL(DbKi)  :: SDDeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1/2/3)Length of y2 array [-]
@@ -359,6 +356,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_OutputType  =======
   TYPE, PUBLIC :: SD_OutputType
+    TYPE(MeshType)  :: Y0Mesh      !< Motion mesh for the rigid-body reference point [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Y1Mesh      !< Transition piece outputs on a point mesh [-]
     TYPE(MeshType)  :: Y2Mesh      !< Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh [-]
     TYPE(MeshType)  :: Y3Mesh      !< Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh [-]
@@ -420,10 +418,11 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SD_u_TPMesh                      =   5 ! SD%TPMesh(DL%i1)
    integer(IntKi), public, parameter :: SD_u_LMesh                       =   6 ! SD%LMesh
    integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   7 ! SD%CableDeltaL
-   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   8 ! SD%Y1Mesh(DL%i1)
-   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   9 ! SD%Y2Mesh
-   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =  10 ! SD%Y3Mesh
-   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  11 ! SD%WriteOutput
+   integer(IntKi), public, parameter :: SD_y_Y0Mesh                      =   8 ! SD%Y0Mesh
+   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   9 ! SD%Y1Mesh(DL%i1)
+   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =  10 ! SD%Y2Mesh
+   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =  11 ! SD%Y3Mesh
+   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  12 ! SD%WriteOutput
 
 contains
 
@@ -1090,6 +1089,9 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%IsFloating = SrcInitOutputData%IsFloating
+   DstInitOutputData%SDHasRBDoF = SrcInitOutputData%SDHasRBDoF
+   DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
    if (allocated(SrcInitOutputData%CableCChanRqst)) then
       LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
       UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst)
@@ -1137,6 +1139,9 @@ subroutine SD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+   call RegPack(RF, InData%IsFloating)
+   call RegPack(RF, InData%SDHasRBDoF)
+   call RegPack(RF, InData%PlatformPos)
    call RegPackAlloc(RF, InData%CableCChanRqst)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1153,6 +1158,9 @@ subroutine SD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+   call RegUnpack(RF, OutData%IsFloating); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SDHasRBDoF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PlatformPos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableCChanRqst); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2152,12 +2160,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstParamData%iVarTPMesh = SrcParamData%iVarTPMesh
-   DstParamData%iVarLMesh = SrcParamData%iVarLMesh
-   DstParamData%iVarY1Mesh = SrcParamData%iVarY1Mesh
-   DstParamData%iVarY2Mesh = SrcParamData%iVarY2Mesh
-   DstParamData%iVarY3Mesh = SrcParamData%iVarY3Mesh
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%g = SrcParamData%g
    DstParamData%SDDeltaT = SrcParamData%SDDeltaT
    DstParamData%IntMethod = SrcParamData%IntMethod
@@ -3408,12 +3410,6 @@ subroutine SD_PackParam(RF, Indata)
    integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-   call RegPack(RF, InData%iVarTPMesh)
-   call RegPack(RF, InData%iVarLMesh)
-   call RegPack(RF, InData%iVarY1Mesh)
-   call RegPack(RF, InData%iVarY2Mesh)
-   call RegPack(RF, InData%iVarY3Mesh)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%SDDeltaT)
    call RegPack(RF, InData%IntMethod)
@@ -3602,12 +3598,6 @@ subroutine SD_UnPackParam(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-   call RegUnpack(RF, OutData%iVarTPMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarLMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY1Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY2Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY3Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SDDeltaT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
@@ -3946,6 +3936,9 @@ subroutine SD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'SD_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshCopy(SrcOutputData%Y0Mesh, DstOutputData%Y0Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%Y1Mesh)) then
       LB(1:1) = lbound(SrcOutputData%Y1Mesh)
       UB(1:1) = ubound(SrcOutputData%Y1Mesh)
@@ -3993,6 +3986,8 @@ subroutine SD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%Y0Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%Y1Mesh)) then
       LB(1:1) = lbound(OutputData%Y1Mesh)
       UB(1:1) = ubound(OutputData%Y1Mesh)
@@ -4018,6 +4013,7 @@ subroutine SD_PackOutput(RF, Indata)
    integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%Y0Mesh) 
    call RegPack(RF, allocated(InData%Y1Mesh))
    if (allocated(InData%Y1Mesh)) then
       call RegPackBounds(RF, 1, lbound(InData%Y1Mesh), ubound(InData%Y1Mesh))
@@ -4042,6 +4038,7 @@ subroutine SD_UnPackOutput(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%Y0Mesh) ! Y0Mesh 
    if (allocated(OutData%Y1Mesh)) deallocate(OutData%Y1Mesh)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -5048,6 +5045,8 @@ SUBROUTINE SD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
    a1 = -(t_out - t(2))/t(2)
    a2 = t_out/t(2)
    
+   CALL MeshExtrapInterp1(y1%Y0Mesh, y2%Y0Mesh, tin, y_out%Y0Mesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%Y1Mesh) .AND. ALLOCATED(y1%Y1Mesh)) THEN
       do i1 = lbound(y_out%Y1Mesh,1),ubound(y_out%Y1Mesh,1)
          CALL MeshExtrapInterp1(y1%Y1Mesh(i1), y2%Y1Mesh(i1), tin, y_out%Y1Mesh(i1), tin_out, ErrStat2, ErrMsg2)
@@ -5118,6 +5117,8 @@ SUBROUTINE SD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   CALL MeshExtrapInterp2(y1%Y0Mesh, y2%Y0Mesh, y3%Y0Mesh, tin, y_out%Y0Mesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%Y1Mesh) .AND. ALLOCATED(y1%Y1Mesh)) THEN
       do i1 = lbound(y_out%Y1Mesh,1),ubound(y_out%Y1Mesh,1)
          CALL MeshExtrapInterp2(y1%Y1Mesh(i1), y2%Y1Mesh(i1), y3%Y1Mesh(i1), tin, y_out%Y1Mesh(i1), tin_out, ErrStat2, ErrMsg2)
@@ -5152,6 +5153,8 @@ function SD_OutputMeshPointer(y, DL) result(Mesh)
    type(MeshType), pointer                :: Mesh
    nullify(Mesh)
    select case (DL%Num)
+   case (SD_y_Y0Mesh)
+       Mesh => y%Y0Mesh
    case (SD_y_Y1Mesh)
        Mesh => y%Y1Mesh(DL%i1)
    case (SD_y_Y2Mesh)
@@ -5351,6 +5354,8 @@ subroutine SD_VarPackOutput(V, y, ValAry)
    real(R8Ki), intent(inout)               :: ValAry(:)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
+      case (SD_y_Y0Mesh)
+         call MV_PackMesh(V, y%Y0Mesh, ValAry)                                ! Mesh
       case (SD_y_Y1Mesh)
          call MV_PackMesh(V, y%Y1Mesh(DL%i1), ValAry)                         ! Mesh
       case (SD_y_Y2Mesh)
@@ -5381,6 +5386,8 @@ subroutine SD_VarUnpackOutput(V, ValAry, y)
    type(SD_OutputType), intent(inout)      :: y
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
+      case (SD_y_Y0Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Y0Mesh)                              ! Mesh
       case (SD_y_Y1Mesh)
          call MV_UnpackMesh(V, ValAry, y%Y1Mesh(DL%i1))                       ! Mesh
       case (SD_y_Y2Mesh)
@@ -5397,6 +5404,8 @@ function SD_OutputFieldName(DL) result(Name)
    type(DatLoc), intent(in)      :: DL
    character(32)                 :: Name
    select case (DL%Num)
+   case (SD_y_Y0Mesh)
+       Name = "y%Y0Mesh"
    case (SD_y_Y1Mesh)
        Name = "y%Y1Mesh("//trim(Num2LStr(DL%i1))//")"
    case (SD_y_Y2Mesh)
