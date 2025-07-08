@@ -1146,7 +1146,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Srv
 
       do j=1,SrvD_p%NumNStC
          StC_InitInp%InputFile      =  InputFileData%NStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1274,7 +1274,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
 
       do j=1,SrvD_p%NumTStC
          StC_InitInp%InputFile      =  InputFileData%TStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1400,7 +1400,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
 
       do j=1,SrvD_p%NumBStC
          StC_InitInp%InputFile      =  InputFileData%BStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1533,7 +1533,7 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Sr
 
       do j=1,SrvD_p%NumSStC
          StC_InitInp%InputFile      =  InputFileData%SStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.SStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.SStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
