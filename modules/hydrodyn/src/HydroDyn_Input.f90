@@ -951,11 +951,13 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
                InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
                InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
                InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            ELSE IF ( InputFileData%Morison%InpMembers(I)%FDMod == 0_IntKi ) THEN
+               call WrScr('HydroDyn Warning: Velocity filtering for rectangular-member transverse drag force is only available with FDMod = 1 or 2. The optional member inputs VnCOffA, VnCOffB, FDLoFScA, and FDLoFScB will be ignored for Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
             END IF
-         END IF
-
-         IF ( .not. InputFileData%Morison%InpMembers(I)%PropPot .and. InputFileData%Morison%InpMembers(I)%FDMod == 2_IntKi ) THEN
-            call WrScr('HydroDyn Warning: FDMod = 2 (face-based suction-side-only drag) is only recommended for hybrid potential-flow members with PropPot = true. Check Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
          END IF
 
          InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R

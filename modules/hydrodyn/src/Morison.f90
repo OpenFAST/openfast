@@ -6234,7 +6234,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
    ! Update state of the relative normal velocity high-pass filter for each rectangular member
    DO im = 1, p%NMembers
-      IF ( p%Members(im)%MSecGeom == MSecGeom_Rec ) THEN
+      IF ( (p%Members(im)%MSecGeom == MSecGeom_Rec) .and. (p%Members(im)%FDMod > 0_IntKi) ) THEN
 
          N   = p%Members(im)%NElements
          mem = p%Members(im)
@@ -6299,7 +6299,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
               xd%MV_rel_n_FiltStat(4,mem%NodeIndx(I)) = vrelFCf - vrelFC
 
             END IF
-         END DO    ! Iterate through member joints
+         END DO    ! Iterate through member nodes
       END IF    ! If rectangular member
    END DO    ! Iterate through members
 
