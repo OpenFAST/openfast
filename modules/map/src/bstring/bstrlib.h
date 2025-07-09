@@ -1506,7 +1506,7 @@ bseof(const struct bStream *s);
 /* Static constant block parameter pair */
 
 /**
- * The bsStaticBlkParms macro emits a pair of comma seperated parameters
+ * The bsStaticBlkParms macro emits a pair of comma separated parameters
  * corresponding to the block parameters for the block functions in Bstrlib
  * (i.e., blk2bstr, bcatblk, blk2tbstr, bisstemeqblk, bisstemeqcaselessblk).
  *
@@ -1521,7 +1521,7 @@ bseof(const struct bStream *s);
  *
  * These are faster than using bfromcstr() and bcatcstr() respectively
  * because the length of the inline string is known as a compile time
- * constant. Also note that seperate struct tagbstring declarations for
+ * constant. Also note that separate struct tagbstring declarations for
  */
 #define bsStaticBlkParms(q) \
 	((void *)("" q "")), ((int)sizeof(q) -1)

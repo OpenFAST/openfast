@@ -158,7 +158,7 @@ if len(errors)==0:
     sys.exit(0)
 else:
     print('---------- UNSTEADY AERODYNAMICS DRIVER TEST: {} --------'.format(caseName))
-    print('The following errors occured:')
+    print('The following errors occurred:')
     for e in errors:
         print(e)
     sys.exit(1)

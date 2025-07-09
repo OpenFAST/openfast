@@ -82,7 +82,7 @@ Local blade coordinate system
 
 The local blade coordinate system is used for some input and output
 quantities, for example, the cross-sectional mass and stiffness matrices
-and the the sectional force and moment resultants. This coordinate
+and the sectional force and moment resultants. This coordinate
 system is different from the blade reference coordinate system in that
 its :math:`Z_l` axis is always tangent to the blade axis as the blade
 deflects. Note that a subscript :math:`l` denotes the local blade

@@ -367,7 +367,7 @@ class TurbSimFile(File):
     def vertProfile(self, y_span='full'):
         """ Vertical profile of the box
         INPUTS:
-         - y_span: if 'full', average the vertical profile accross all y-values
+         - y_span: if 'full', average the vertical profile across all y-values
                    if 'mid', average the vertical profile at the middle y value
         """
         if y_span=='full':
@@ -1053,7 +1053,7 @@ class TurbSimFile(File):
         Fit power law to vertical profile
         INPUTS:
          - z_ref: reference height used to define the "U_ref"
-         - y_span: if 'full', average the vertical profile accross all y-values
+         - y_span: if 'full', average the vertical profile across all y-values
                    if 'mid', average the vertical profile at the middle y value
         """
         if z_ref is None:

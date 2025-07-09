@@ -1391,8 +1391,8 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       !------------------------------------------------
       call Compute_iLoweriUpper(p, iLower, iUpper)
 
-      p%UA_BL%alphaLower = p%alpha(iLower) ! note we are overwritting values here to make them consistent in the linear equation
-      p%UA_BL%alphaUpper = p%alpha(iUpper) ! note we are overwritting values here to make them consistent in the linear equation
+      p%UA_BL%alphaLower = p%alpha(iLower) ! note we are overwriting values here to make them consistent in the linear equation
+      p%UA_BL%alphaUpper = p%alpha(iUpper) ! note we are overwriting values here to make them consistent in the linear equation
       
       p%UA_BL%c_alphaLower = cn_cl(iLower) ! for vortex calculations (x5, HGMV model)
       p%UA_BL%c_alphaUpper = cn_cl(iUpper) ! for vortex calculations (x5, HGMV model)

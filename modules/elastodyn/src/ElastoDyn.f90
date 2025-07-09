@@ -5211,7 +5211,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
 END SUBROUTINE Coeff
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates the initial blade deflections.
-!! Base the intial values of the blade DOFs, INITQF1, INITQF2, and
+!! Base the initial values of the blade DOFs, INITQF1, INITQF2, and
 !!   INITQE1, on OoPDefl and IPDefl.
 !! Write messages to the screen if the specified initial tip displacements
 !!  are incompatible with the enabled DOFs.

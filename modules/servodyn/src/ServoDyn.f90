@@ -134,13 +134,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
+   INTEGER(IntKi)                                 :: nPts           ! number of linear wind-speed points
    INTEGER(IntKi)                                 :: UnSum          ! Summary file unit
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
    character(*), parameter                        :: RoutineName = 'SrvD_Init'
-
-
 
       ! Initialize variables
 
@@ -322,6 +321,19 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (Failed())  return;
         
 
+   nPts = InitInp%NumBeam * InitInp%NumPulseGate
+   if (nPts > 0  .and. p%UseBladedInterface) then
+      CALL AllocAry( u%LidSpeed,      nPts, 'u%LidSpeed',      ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsX, nPts, 'u%MsrPositionsX', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsY, nPts, 'u%MsrPositionsY', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsZ, nPts, 'u%MsrPositionsZ', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      
+      u%LidSpeed = 0.0_SiKi
+      u%MsrPositionsX = 0.0_ReKi
+      u%MsrPositionsY = 0.0_ReKi
+      u%MsrPositionsZ = 0.0_ReKi
+   end if
+   
    u%BlPitch = p%BlPitchInit(1:p%NumBl)
    
    u%Yaw = p%YawNeut
@@ -362,22 +374,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%RotPwr = 0.
    u%HorWindV = 0.
    u%YawAngle = 0.
-   if (allocated(InitInp%LidSpeed)) then   ! Must allocate
-      allocate(u%LidSpeed(size(InitInp%LidSpeed)))
-      u%LidSpeed  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsX)) then
-      allocate(u%MsrPositionsX(size(InitInp%MsrPositionsX)))
-      u%MsrPositionsX  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsY)) then
-      allocate(u%MsrPositionsY(size(InitInp%MsrPositionsY)))
-      u%MsrPositionsY  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsZ)) then
-      allocate(u%MsrPositionsZ(size(InitInp%MsrPositionsZ)))
-      u%MsrPositionsZ  = 0.
-   endif
+
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 
@@ -474,8 +471,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%SensorType   = InitInp%SensorType
       p%NumBeam      = InitInp%NumBeam
       p%NumPulseGate = InitInp%NumPulseGate
-      p%PulseSpacing = InitInp%PulseSpacing
-      p%URefLid      = InitInp%URefLid
       
       CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;
@@ -1151,7 +1146,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Srv
 
       do j=1,SrvD_p%NumNStC
          StC_InitInp%InputFile      =  InputFileData%NStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.NStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1279,7 +1274,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
 
       do j=1,SrvD_p%NumTStC
          StC_InitInp%InputFile      =  InputFileData%TStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.TStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1405,7 +1400,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
 
       do j=1,SrvD_p%NumBStC
          StC_InitInp%InputFile      =  InputFileData%BStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.BStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1538,7 +1533,7 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Sr
 
       do j=1,SrvD_p%NumSStC
          StC_InitInp%InputFile      =  InputFileData%SStCfiles(j)
-         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.SStC'
+         StC_InitInp%RootName       =  TRIM(SrvD_p%RootName)//'.SStC'//trim(Num2LStr(j))
          StC_InitInp%Gravity        =  SrvD_InitInp%gravity
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
@@ -1634,7 +1629,7 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,UnSum,ErrStat,ErrMsg)
    ErrMsg   = ""
 
    ! NOTE:  For now we only have the option of the StC requesting the bladed interface
-   !        at the the ServoDyn level.  If we later add a Simulink interface, the logic
+   !        at the ServoDyn level.  If we later add a Simulink interface, the logic
    !        below for checking if the DLL interface was requested will need updating.
    !        At that point it might be necessary to set an array for the p%StCCMode so
    !        it is possible to tell which channel is from Simulink and which is from
@@ -2153,7 +2148,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   REAL(ReKi)                                     :: AllOuts(0:MaxOutPts)   ! All the the available output channels
+   REAL(ReKi)                                     :: AllOuts(0:MaxOutPts)   ! All the available output channels
    INTEGER(IntKi)                                 :: I                      ! Generic loop index
    INTEGER(IntKi)                                 :: K                      ! Blade index
    INTEGER(IntKi)                                 :: J                      ! Structural control instance at location
@@ -2823,7 +2818,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_u_indx(n,4)   ! this blade
@@ -2867,7 +2862,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2911,7 +2906,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2955,7 +2950,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -3737,7 +3732,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j,k                ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -3774,7 +3769,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3810,7 +3805,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3846,7 +3841,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance

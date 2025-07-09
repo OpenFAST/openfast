@@ -350,7 +350,7 @@ MAP_ERROR_CODE line_solve_sequence(Domain* domain, MAP_ParameterType_t* p_type, 
   success = set_line_variables_pre_solve(domain, map_msg, ierr);
   success = reset_node_force_to_zero(domain, map_msg, ierr);    
   success = solve_line(domain, t, map_msg, ierr); CHECKERRQ(MAP_FATAL_88);
-  // /* prematurely terminating the the line solve routine to return back to the
+  // /* prematurely terminating the line solve routine to return back to the
   //    caller function. Do a back tracking on the solution and attempt recovery */
   // if (success==MAP_FATAL) {
   //   return MAP_FATAL_59;

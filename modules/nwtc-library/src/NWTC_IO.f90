@@ -7456,7 +7456,7 @@ end subroutine ReadR8AryWDefault
    END SUBROUTINE WrMatrix2R8
 !=======================================================================  
 !> Based on nwtc_io::wrmatrix, this routine writes a matrix to an already-open text file. It allows
-!! the user to omit rows and columns of A in the the file.
+!! the user to omit rows and columns of A in the file.
 !! Use WrPartialMatrix (nwtc_io::wrpartialmatrix) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE WrPartialMatrix1R8( A, Un, ReFmt, MatName, UseCol, UseAllCols, ExtCol )
    

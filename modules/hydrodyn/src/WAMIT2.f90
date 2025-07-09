@@ -1339,7 +1339,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Initialize the FFT library
       CALL InitCFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )      ! Complex result FFT initialize
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -1620,7 +1620,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Done with the FFT library routines, so end them.
       CALL  ExitCFFT(FFT_Data, ErrStatTmp)
-      CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
+      CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -1803,7 +1803,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Initialize the FFT library.  Do not apply normalization.
       CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          call cleanup()
          RETURN
@@ -1990,7 +1990,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now we apply the FFT to the result of the sum
             CALL ApplyFFT_cx(  TmpDiffQTFForce(:),  TmpComplexArr(:,ThisDim), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
+            CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT to the second term of the difference QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                call cleanup()
@@ -2015,7 +2015,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Done with the FFT library routines, so end them.
       CALL  ExitFFT(FFT_Data, ErrStatTmp)
-      CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
+      CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          call cleanup()
          RETURN
@@ -2234,7 +2234,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Initialize the FFT library.  Normalization not required in this formulation.
       CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )        ! FIXME:
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(SumQTFForce))      DEALLOCATE(SumQTFForce,STAT=ErrStatTmp)
@@ -2516,7 +2516,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now we apply the FFT to the result of the sum.
             CALL ApplyFFT_cx(  Term1Array(:),  Term1ArrayC(:,ThisDim), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the first term of the Sum QTF.', &
+            CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT to the first term of the Sum QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2525,7 +2525,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now we apply the FFT to the result of the sum.
             CALL ApplyFFT_cx(  Term2Array(:), Term2ArrayC(:,ThisDim), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the Sum QTF.', &
+            CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT to the second term of the Sum QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2548,7 +2548,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Done with the FFT library routines, so end them.
       CALL  ExitFFT(FFT_Data, ErrStatTmp)
-      CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
+      CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
          RETURN

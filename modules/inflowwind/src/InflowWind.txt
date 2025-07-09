@@ -76,7 +76,7 @@ typedef  ^                       ^                 ReKi              PulseSpacin
 typedef  ^                       ^                 ReKi              MeasurementInterval -   -    -      "Time between each measurement" s
 typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar" m/s 
 typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate" - 
-typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes]" -
+typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "whether or not the hub motion's impact on the Lidar measurement will be considered" -
 typedef  ^                       ^                 Grid3D_InitInputType     FF     -     -     -     "scaling data" -
 
 
@@ -92,7 +92,6 @@ typedef  ^                       ^                 IntKi             FilePassing
 typedef  ^                       ^                 FileInfoType      PassedFileInfo    -     -     -     "If we don't use the input file, pass everything through this [FilePassingMethod = 1]" -
 typedef  ^                       ^                 InflowWind_InputFile PassedFileData -     -     -     "If we don't use the input file, pass everything through this [FilePassingMethod = 2]" -
 typedef  ^                       ^                 LOGICAL           OutputAccel       -     .FALSE.     -      "Flag to output wind acceleration"                                    -
-typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^              Grid4D_InitInputType FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg            -     -     -     "Radius (from hub) used for averaging wind speed" -
 typedef  ^                       ^                 IntKi             MHK               -     -     -     "MHK turbine type switch"   -
@@ -100,6 +99,7 @@ typedef  ^                       ^                 ReKi              WtrDpth    
 typedef  ^                       ^                 ReKi              MSL2SWL           -     -     -     "Mean sea level to still water level" m
 typedef  ^                       ^                 LOGICAL           BoxExceedAllow    -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 typedef  ^                       ^                 LOGICAL           LidarEnabled      -  .false.  -     "Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible)" -
+typedef  ^                       ^                 ReKi              HubPosition      {3}     -    -     "initial position of the hub (lidar mounted on hub) [0,0,HubHeight]" "m"
 
 
 # Init Output

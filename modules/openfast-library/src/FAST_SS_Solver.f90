@@ -586,8 +586,11 @@ SUBROUTINE SteadyStateSolve_Residual(caseData, p_FAST, y_FAST, m_FAST, ED, BD, A
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
    
+   REAL(R8Ki)                                        :: Orientation(3,3)
+   INTEGER(IntKi)                                    :: k, node
    INTEGER(IntKi)                                    :: ErrStat2
    INTEGER(IntKi)                                    :: Indx_u_start
+   INTEGER(IntKi)                                    :: Indx_u_angle_start(p_FAST%NumBl_Lin)
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'SteadyStateSolve_Residual'
 
@@ -608,11 +611,22 @@ SUBROUTINE SteadyStateSolve_Residual(caseData, p_FAST, y_FAST, m_FAST, ED, BD, A
    !..................
    ! Pack the output "residual vector" with these state derivatives and new inputs:
    !..................                  
-   CALL Create_SS_Vector( p_FAST, y_FAST, U_Resid, AD, ED, BD, InputIndex, STATE_PRED )
+   CALL Create_SS_Vector( p_FAST, y_FAST, U_Resid, AD, ED, BD, InputIndex, STATE_PRED, Indx_u_angle_start )
          
       ! Make the inputs a residual (subtract from previous inputs)
    Indx_u_start = y_FAST%Lin%Glue%SizeLin(LIN_ContSTATE_COL) + 1
    U_Resid(Indx_u_start : ) = u_in(Indx_u_start : ) - U_Resid(Indx_u_start : )
+   
+   ! we need to make a special case for the orientation matrices
+   do k=1,p_FAST%NumBl_Lin
+      Indx_u_start = Indx_u_angle_start(k)
+      do node=1, AD%Input(InputIndex)%rotors(1)%BladeMotion(k)%NNodes
+         Orientation = EulerConstruct( u_in( Indx_u_start:Indx_u_start+2 ) )
+         Orientation = MATMUL(TRANSPOSE( AD%Input(InputIndex)%rotors(1)%BladeMotion(k)%Orientation(:,:,node)), Orientation)
+         U_Resid(Indx_u_start:Indx_u_start+2) = EulerExtract(Orientation)
+         Indx_u_start = Indx_u_start + 3
+      end do
+   end do
    
 END SUBROUTINE SteadyStateSolve_Residual
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -794,7 +808,7 @@ END SUBROUTINE Precondition_Jmat
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine basically packs the relevant parts of the modules' inputs and states for use in the steady-state solver.
-SUBROUTINE Create_SS_Vector( p_FAST, y_FAST, u, AD, ED, BD, InputIndex, StateIndex )
+SUBROUTINE Create_SS_Vector( p_FAST, y_FAST, u, AD, ED, BD, InputIndex, StateIndex, IndxOrientStart )
 !..................................................................................................................................
    TYPE(FAST_ParameterType)            , INTENT(IN   ) :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),            INTENT(IN   ) :: y_FAST           !< Output variables for the glue code
@@ -804,6 +818,7 @@ SUBROUTINE Create_SS_Vector( p_FAST, y_FAST, u, AD, ED, BD, InputIndex, StateInd
    TYPE(AeroDyn_Data),                   INTENT(INOUT) :: AD               !< AeroDyn data
    INTEGER(IntKi),                       INTENT(IN   ) :: InputIndex
    INTEGER(IntKi),                       INTENT(IN   ) :: StateIndex
+   INTEGER(IntKi),  optional,            INTENT(  OUT) :: IndxOrientStart(p_FAST%NumBl_Lin)
    
       ! local variables:
    INTEGER                                             :: n
@@ -904,8 +919,9 @@ SUBROUTINE Create_SS_Vector( p_FAST, y_FAST, u, AD, ED, BD, InputIndex, StateInd
          end do
       end do
       
+      if (PRESENT(IndxOrientStart)) IndxOrientStart(k) = n  ! keep track of index for AD orientation
       do node = 1, AD%Input(InputIndex)%rotors(1)%BladeMotion(k)%NNodes
-         CALL DCM_LogMap( AD%Input(InputIndex)%rotors(1)%BladeMotion(k)%Orientation(:,:,node), u(n:n+2), ErrStat2, ErrMsg2 )
+         u(n:n+2) = EulerExtract( AD%Input(InputIndex)%rotors(1)%BladeMotion(k)%Orientation(:,:,node) )
          n = n+3
       end do
       

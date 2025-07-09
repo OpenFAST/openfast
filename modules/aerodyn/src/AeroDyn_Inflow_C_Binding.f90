@@ -2115,7 +2115,7 @@ end subroutine ADI_C_GetDiskAvgVel
 !===================================================================================================================================
 
 !> This routine is operating on module level data.  Error handling here in case checks added
-!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the position info here
 subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    integer(IntKi),            intent(in   )  :: iWT         !< current rotor/turbine
    integer(IntKi),            intent(  out)  :: ErrStat3
@@ -2143,7 +2143,7 @@ end subroutine Set_MotionMesh
 
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
-!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the position info here
 subroutine AD_SetInputMotion( iWT, u_local,        &
          HubPos_C, HubOri_C, HubVel_C, HubAcc_C,   &
          NacPos_C, NacOri_C, NacVel_C, NacAcc_C,   &

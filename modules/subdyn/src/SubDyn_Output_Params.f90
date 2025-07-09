@@ -21757,7 +21757,7 @@ module SubDyn_Output_Params
 
 
      ! The maximum number of output channels which can be output by the code.
-   !INTEGER(IntKi), PARAMETER      :: MaxOutPts  = 21705
+   INTEGER(IntKi), PARAMETER      :: MaxOutPts  = 21705
 
 
    INTEGER(IntKi), PARAMETER ::MNfmKe(6,9,99) = reshape((/ &

@@ -395,7 +395,7 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
       CALL InitFFT ( WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
          RETURN
@@ -495,7 +495,7 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -639,21 +639,21 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                !> ### Apply the inverse FFT to each of the components to get the time domain result ###
                !> *   \f$ V(t) = 2 \operatorname{IFFT}\left[H^-\right] \f$
             CALL ApplyFFT_cx(  WaveVel2xDiff(:),  WaveVel2xCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2yDiff(:),  WaveVel2yCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zDiff(:),  WaveVel2zCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xDiff(:),  WaveAcc2xCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2yDiff(:),  WaveAcc2yCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zDiff(:),  WaveAcc2zCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2Diff(:),  WaveDynP2CDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
 
 
@@ -858,7 +858,7 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -1124,38 +1124,38 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                !> *   \f$ V^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
                !!                      + 2\operatorname{IFFT}\left[H^+\right]     \f$
             CALL ApplyFFT_cx(  WaveVel2xSumT1(:),  WaveVel2xCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2ySumT1(:),  WaveVel2yCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zSumT1(:),  WaveVel2zCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xSumT1(:),  WaveAcc2xCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2ySumT1(:),  WaveAcc2yCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zSumT1(:),  WaveAcc2zCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2SumT1(:),  WaveDynP2CSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveVel2xSumT2(:),  WaveVel2xCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2ySumT2(:),  WaveVel2yCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zSumT2(:),  WaveVel2zCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xSumT2(:),  WaveAcc2xCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2ySumT2(:),  WaveAcc2yCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zSumT2(:),  WaveAcc2zCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2SumT2(:),  WaveDynP2CSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStatTmp,'Error occurred while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -1236,7 +1236,7 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
 
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
+         CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
@@ -1376,7 +1376,7 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             !> ### Apply the inverse FFT to each of the components to get the time domain result ###
             !> *   \f$ \eta(t) = \operatorname{IFFT}\left[2 H^-\right] \f$
          CALL ApplyFFT_cx( WaveElevSeriesAtXY(:), TmpFreqSeries(:), FFT_Data, ErrStatLcl2 )
-         CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Diff')
+         CALL SetErrStat(ErrStatLcl2,'Error occurred while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Diff')
  
             ! Append first datapoint as the last as aid for repeated wave data
          WaveElevSeriesAtXY(WaveField%NStepWave) = WaveElevSeriesAtXY(0)
@@ -1563,9 +1563,9 @@ SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             !> *   \f$ \eta^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
             !!                         + 2\operatorname{IFFT}\left[H^+\right]     \f$
          CALL ApplyFFT_cx( WaveElevSeriesAtXY(:),  TmpFreqSeries(:), FFT_Data, ErrStatLcl2 )
-         CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Sum')
+         CALL SetErrStat(ErrStatLcl2,'Error occurred while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Sum')
          CALL ApplyFFT_cx( TmpTimeSeries2(:),      TmpFreqSeries2(:), FFT_Data, ErrStatLcl2 )
-         CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Sum')
+         CALL SetErrStat(ErrStatLcl2,'Error occurred while applying the FFT on WaveElevSeriesAtXY.',ErrStatLcl,ErrMsgLcl,'WaveElevSeriesAtXY_Sum')
 
             ! Add the two terms together
          DO Ctr=0,WaveField%NStepWave

@@ -1879,7 +1879,7 @@ This applies e.g.: to :math:`F_{R,e}, F_{L,e}, F_{R,g}, F_{L,g}`, where the foll
 
 
 The dependency of the load vectors on :math:`U_{TP}` introduces some complications for the state space representation, where for instance the :math:`B` and  :math:`F_X` matrices should be modified to account for the dependency in :math:`U_{TP}` in Eq. :eq:`ABFx`.
-The equation remains valid even if :math:`F_{L,e}` and :math:`F_{L,g}` contains a dependency in :math:`U_{TP}`, but the matrix :math:`B` shouldn't be used for the linearization (numerical differentiation is then prefered for simplicity).
+The equation remains valid even if :math:`F_{L,e}` and :math:`F_{L,g}` contains a dependency in :math:`U_{TP}`, but the matrix :math:`B` shouldn't be used for the linearization (numerical differentiation is then preferred for simplicity).
 Similar considerations apply for Eq. :eq:`bigY2`.
 
 

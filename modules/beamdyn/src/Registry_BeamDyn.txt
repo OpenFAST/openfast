@@ -250,6 +250,7 @@ typedef   ^        ParameterType    Integer     Jac_nx                  -       
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
+typedef   ^        ParameterType    LOGICAL     CompAppliedLdAtRoot     -   .FALSE.    - "flag to determine if BeamDyn should compute the applied loads at root"	-
 
 
 # ..... Inputs
@@ -330,8 +331,10 @@ typedef   ^        EqMotionQP      ^           Yd         :::: - - "Dissipative 
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^        MiscVarType    MeshType    u_DistrLoad_at_y     - - - "input loads at output node locations" -
 typedef   ^        MiscVarType    MeshType    y_BldMotion_at_u     - - - "output motions at input node locations (displacements necessary for mapping loads)" -
+typedef   ^        MiscVarType    MeshType    LoadsAtRoot          - - - "Applied loads mapped to root" -
 typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
 typedef   ^        MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
+typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_R - - - "mapping of input loads to root location" -
 typedef   ^        MiscVarType    IntKi       Un_Sum               - - - "unit number of summary file"	-
 typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadrature point calculation info" -
 typedef   ^        MiscVarType    R8Ki        lin_A            {:}{:}  - - "A (dXdx) matrix used in linearization (before RotState is applied)" -

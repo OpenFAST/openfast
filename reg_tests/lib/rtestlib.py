@@ -64,7 +64,7 @@ def validateExeOrExit(path):
 
 def copyTree(src, dst, excludeExt=None, renameDict=None, renameExtDict=None, includeExt=None):
     """ 
-    Copy a directory to another one, overwritting files if necessary.
+    Copy a directory to another one, overwriting files if necessary.
     copy_tree from distutils and copytree from shutil fail on Windows (in particular on git files)
     INPUTS:
      - src: source directory

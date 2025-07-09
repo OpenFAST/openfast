@@ -3179,7 +3179,7 @@ SUBROUTINE UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat,
       ! save copy of x(t):
       x_in     = x%element(i,j)
       
-         ! predict: (note that we are overwritting x%element(i,j) here):
+         ! predict: (note that we are overwriting x%element(i,j) here):
       CALL UA_AB4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN

@@ -126,12 +126,12 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          
       
          ! These are dummy variables to satisfy the framework, but are not used 
-      TYPE(Conv_Rdtn_InitInputType)            :: Conv_Rdtn_InitInp                     ! Local version of the intialization data for the radiation module
+      TYPE(Conv_Rdtn_InitInputType)            :: Conv_Rdtn_InitInp                     ! Local version of the initialization data for the radiation module
       TYPE(Conv_Rdtn_InitOutputType)           :: Conv_Rdtn_InitOut                     ! Initialization Outputs from the Conv_Rdtn module initialization
       !TYPE(Conv_Rdtn_InitOutputType)          :: Conv_RdtnInitOutData                     
-      TYPE(SS_Rad_InitInputType)               :: SS_Rdtn_InitInp                       ! Local version of the intialization data for the radiation module
+      TYPE(SS_Rad_InitInputType)               :: SS_Rdtn_InitInp                       ! Local version of the initialization data for the radiation module
       TYPE(SS_Rad_InitOutputType)              :: SS_Rdtn_InitOut                       ! Initialization Outputs from the SS_Rdtn module initialization
-      TYPE(SS_Exc_InitInputType)               :: SS_Exctn_InitInp                       ! Local version of the intialization data for the SS wave excitation module
+      TYPE(SS_Exc_InitInputType)               :: SS_Exctn_InitInp                       ! Local version of the initialization data for the SS wave excitation module
       TYPE(SS_Exc_InitOutputType)              :: SS_Exctn_InitOut                       ! Initialization Outputs from the SS wave excitation module initialization
      
        
@@ -1163,7 +1163,7 @@ end if
                DO iHdg = 1,p%NExctnHdg+1
                   DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                      CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,1_IntKi,1_IntKi,iHdg,J), WaveExctnC(:,iHdg,J), FFT_Data, ErrStat2 )
-                     CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
+                     CALL SetErrStat( ErrStat2, ' An error occurred while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                      IF ( ErrStat >= AbortErrLev) THEN
                         CALL Cleanup()
                         RETURN
@@ -1249,7 +1249,7 @@ end if
                      iY = (iGrid-1) / p%ExctnGridParams%n(2) + 1
                      DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments   
                         CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,iX,iY,iHdg,J), WaveExctnCGrid(:,iGrid,iHdg,J), FFT_Data, ErrStat2 )
-                        CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
+                        CALL SetErrStat( ErrStat2, ' An error occurred while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev) THEN
                            CALL Cleanup()
                            RETURN
@@ -1332,7 +1332,7 @@ end if
                         !   representations of the wave kinematics without stretching:
 
                         CALL InitFFT ( p%WaveField%NStepWave, FFT_Data, .TRUE., ErrStat2 )
-                        CALL SetErrStat(ErrStat2,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+                        CALL SetErrStat(ErrStat2,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
                            CALL CleanUp()
                            RETURN
@@ -1341,7 +1341,7 @@ end if
                            ! We'll need the following for wave stretching once we implement it.
                         ! NOTE THIS IS OVERWRITING THE WAVEFIELD WaveElev0 PARAMETER DATA
                         CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveField%WaveElev0(0:p%WaveField%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
-                        CALL SetErrStat(ErrStat2,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
+                        CALL SetErrStat(ErrStat2,'Error occurred while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
                            CALL CleanUp()
                            RETURN
