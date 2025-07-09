@@ -255,7 +255,7 @@ GOTO checkError
 :MoorDyn
 SET CURR_LOC=%MD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -I "%SEAST_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
 :IceFloe
