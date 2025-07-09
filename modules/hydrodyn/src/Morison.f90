@@ -3539,8 +3539,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(SiKi)               :: WaveElev1, WaveElev2, WaveElev, FDynP, FV(3), FA(3), FAMCF(3)
    LOGICAL                  :: Is1stElement, Is1stFloodedMember
 
-   LOGICAL, SAVE            :: FrstWarn_RctMmbrFSX = .TRUE.     ! First warning flag for rectangular member with FDMod>0 crossing the free surface
-
    ! Initialize errStat
    errStat = ErrID_None
    errMsg  = ""
@@ -4187,25 +4185,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            dSbdl_pp =     mem%dSbdl_mg(FSElem)
            SaMGFSInt = SubRatio * mem%SaMG(FSElem+1) + (1.0-SubRatio) * mem%SaMG(FSElem)
            SbMGFSInt = SubRatio * mem%SbMG(FSElem+1) + (1.0-SubRatio) * mem%SbMG(FSElem)
-           CdAFSInt  = SubRatio * mem%CdA( FSElem+1) + (1.0-SubRatio) * mem%CdA( FSElem)
-           CdBFSInt  = SubRatio * mem%CdB( FSElem+1) + (1.0-SubRatio) * mem%CdB( FSElem)
-           AxCdFSInt = SubRatio * mem%AxCd(FSElem+1) + (1.0-SubRatio) * mem%AxCd(FSElem)
+           ! CdAFSInt  = SubRatio * mem%CdA( FSElem+1) + (1.0-SubRatio) * mem%CdA( FSElem)
+           ! CdBFSInt  = SubRatio * mem%CdB( FSElem+1) + (1.0-SubRatio) * mem%CdB( FSElem)
+           ! AxCdFSInt = SubRatio * mem%AxCd(FSElem+1) + (1.0-SubRatio) * mem%AxCd(FSElem)
            CaAFSInt  = SubRatio * mem%CaA( FSElem+1) + (1.0-SubRatio) * mem%CaA( FSElem)
            CaBFSInt  = SubRatio * mem%CaB( FSElem+1) + (1.0-SubRatio) * mem%CaB( FSElem)
            AxCaFSInt = SubRatio * mem%AxCa(FSElem+1) + (1.0-SubRatio) * mem%AxCa(FSElem)
            CpFSInt   = SubRatio * mem%Cp(  FSElem+1) + (1.0-SubRatio) * mem%Cp(  FSElem)
            AxCpFSInt = SubRatio * mem%AxCp(FSElem+1) + (1.0-SubRatio) * mem%AxCp(FSElem)
 
-           IF ( FrstWarn_RctMmbrFSX .and. mem%FDMod>0_IntKi ) THEN
-              CALL SetErrStat(ErrID_Warn, 'A rectangular member (Member ID '//trim(num2lstr(mem%MemberID))//') with FDMod > 0 is surface piercing. Drag force is not guaranteed to be smooth.', errStat, errMsg, RoutineName )
-              FrstWarn_RctMmbrFSX = .FALSE.
-           END IF
-
-           vec = matmul( mem%Ak,vrelFSInt )
-           F_DS = 0.5*CdBFSInt*p%WaveField%WtrDens*SbMGFSInt*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
-                  0.5*CdAFSInt*p%WaveField%WtrDens*SaMGFSInt*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat  +  &       ! local z-direction
-                  0.25*AxCdFSInt*p%WaveField%WtrDens * (dSadl_p*SbMGFSInt + dSbdl_p*SaMGFSInt) * &                         ! axial part
-                  abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )                                      ! axial part cont'd
+           Call GetDistDrag_Rec(Time,mem,FSElem,dSadl_p,dSbdl_p,F_DS,ErrStat2,ErrMsg2,SubRatio,vrelFSInt); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
            ! Hydrodynamic added mass and inertia loads
            IF ( .NOT. mem%PropPot ) THEN
@@ -5943,19 +5932,24 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    END SUBROUTINE getMemBallastHiPt
 
 
-   SUBROUTINE GetDistDrag_Rec(Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat,ErrMsg)
+   SUBROUTINE GetDistDrag_Rec(Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat,ErrMsg,SubRatio,vrelFSInt)
       ! Compute the distributed (axial and transverse) drag per unit length for rectangular sections
-      Real(DbKi)              , intent(in   ) :: Time        !< Current simulation time in seconds
-      Type(Morison_MemberType), intent(in   ) :: mem         !< Current member
-      Integer(IntKi)          , intent(in   ) :: i           !< Node number within the member (not the global node index)
-      Real(ReKi)              , intent(in   ) :: dSadl_p     !< Slope of Side A due to tapering (absolute value)
-      Real(ReKi)              , intent(in   ) :: dSbdl_p     !< Slope of Side B due to tapering (absolute value)
-      Real(ReKi)              , intent(  out) :: f_hydro(3)  !< Sectional drag force (per unit length)
+      Real(DbKi)              , intent(in   ) :: Time         !< Current simulation time in seconds
+      Type(Morison_MemberType), intent(in   ) :: mem          !< Current member
+      Integer(IntKi)          , intent(in   ) :: i            !< Node number within the member (not the global node index)
+      Real(ReKi)              , intent(in   ) :: dSadl_p      !< Slope of Side A due to tapering (absolute value)
+      Real(ReKi)              , intent(in   ) :: dSbdl_p      !< Slope of Side B due to tapering (absolute value)
+      Real(ReKi), optional    , intent(in   ) :: SubRatio     !< Optional input. If provided, drag force will be evaluated at the free-surface intersection.
+                                                              !  SubRatio is the fraction of element i (between node i and node i+1) submerged in water.
+      Real(ReKi), optional    , intent(in   ) :: vrelFSInt(3) !< Optional input. Must be provided if SubRatio is specified.
+                                                              !  vrelFSInt is the fluid velocity relative to the structure at the free-surface intersection.
+      Real(ReKi)              , intent(  out) :: f_hydro(3)   !< Sectional drag force (per unit length)
       Integer(IntKi)          , intent(  out) :: ErrStat
       Character(*)            , intent(  out) :: ErrMsg
 
       ! Local variables for alternative rectangular member transverse drag calculation
       Integer(IntKi)                          :: NodeID           ! Global node id of the ith node of the current member
+      Integer(IntKi)                          :: NextNodeID       ! Global node id of the (i+1)th node of the current member
       Integer(IntKi)                          :: fNo              ! Face number
       Integer(IntKi)                          :: tmpNodeInWater
       Real(ReKi)                              :: pos(3)           ! Node (on member axis) position
@@ -5970,6 +5964,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       Real(SiKi)                              :: FVFC(3)          ! Flow velocity at face center
       Real(ReKi)                              :: vrelFC           ! Relative (flow-structure) velocity at face centers
       Real(ReKi)                              :: vrelFCf          ! High-pass filtered relative (flow-structure) velocity at face centers
+      Real(ReKi)                              :: STV(3)           ! Structure translational velocity at the current node/free-surface intersection
+      Real(ReKi)                              :: STV1(3)          ! STV at free surface intersection computed from Node i   velocity
+      Real(ReKi)                              :: STV2(3)          ! STV at free surface intersection computed from Node i+1 velocity
+      Real(ReKi)                              :: SRV(3)           ! Structure rotational velocity at the current node/free-surface intersection
+      Real(ReKi)                              :: FiltStat(4)      ! High-pass filter states for the four faces
+      Real(ReKi)                              :: SaMG, SbMG       ! Section side lengths at the current node/free-surface intersection
+      Real(ReKi)                              :: CdA, CdB, AxCd   ! Drag coefficients at the current node/free-surface intersection
+      Real(ReKi)                              :: vrel(3)          ! Relative flow velocity at the current node/free-surface intersection
 
       Integer(IntKi)                          :: ErrStat2
       Character(ErrMsgLen)                    :: ErrMsg2
@@ -5986,29 +5988,59 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
 
       ! Node in water
+      IF ( PRESENT(SubRatio) ) THEN
+         ! Linearly interpolate the relevant parameters at the free-surface intersection
+         NextNodeID = mem%NodeIndx(i+1)
+         SaMG = SubRatio * mem%SaMG(i+1) + (1.0-SubRatio) * mem%SaMG(i)
+         SbMG = SubRatio * mem%SbMG(i+1) + (1.0-SubRatio) * mem%SbMG(i)
+         CdA  = SubRatio * mem%CdA( i+1) + (1.0-SubRatio) * mem%CdA( i)
+         CdB  = SubRatio * mem%CdB( i+1) + (1.0-SubRatio) * mem%CdB( i)
+         AxCd = SubRatio * mem%AxCd(i+1) + (1.0-SubRatio) * mem%AxCd(i)
+         vrel = vrelFSInt
+      ELSE
+         ! Use the relevant parameters at node i
+         SaMG = mem%SaMG(i)
+         SbMG = mem%SbMG(i)
+         CdA  = mem%CdA( i)
+         CdB  = mem%CdB( i)
+         AxCd = mem%AxCd(i)
+         vrel = m%vrel(:,NodeID)
+      END IF
 
       ! Axial drag
-      f_hydro = 0.25 * mem%AxCd(i) * p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &  ! axial part
-                abs(dot_product( mem%k, m%vrel(:,NodeID) )) * matmul( mem%kkt, m%vrel(:,NodeID) )           ! axial part cont'd
+      f_hydro = 0.25 * AxCd * p%WaveField%WtrDens * (dSadl_p*SbMG + dSbdl_p*SaMG) * &  ! axial part
+                   abs(dot_product( mem%k, vrel )) * matmul( mem%kkt, vrel )           ! axial part cont'd
 
       ! Transverse drag
       IF (mem%FDMod == 0_IntKi) THEN    ! Centerline-based formulation
 
-         vec = matmul( mem%Ak,m%vrel(:,NodeID) )
-         f_hydro = f_hydro +                                                                                            &
-                   0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  & ! local x-direction
-                   0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat       ! local y-direction
+         vec = matmul( mem%Ak,vrel )
+         f_hydro = f_hydro +                                                                              &
+                   0.5*CdB*p%WaveField%WtrDens*SbMG*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  & ! local x-direction
+                   0.5*CdA*p%WaveField%WtrDens*SaMG*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat       ! local y-direction
 
       ELSE   ! Face-based formulation
 
          ! Position of node on member axis
-         pos = m%DispNodePosHdn(:,NodeID)
+         IF ( PRESENT(SubRatio) ) THEN
+            pos      = SubRatio * m%DispNodePosHdn(    :,NextNodeID) + (1.0-SubRatio) * m%DispNodePosHdn(    :,NodeID)
+            STV1     = u%Mesh%TranslationVel(:,    NodeID) + CROSS_PRODUCT( u%Mesh%RotationVel(:,    NodeID) ,   mem%dl *      SubRatio  * mem%k )
+            STV2     = u%Mesh%TranslationVel(:,NextNodeID) + CROSS_PRODUCT( u%Mesh%RotationVel(:,NextNodeID) , - mem%dl * (1.0-SubRatio) * mem%k )
+            STV      = SubRatio * STV2                               + (1.0-SubRatio) * STV1
+            SRV      = SubRatio * u%Mesh%RotationVel(  :,NextNodeID) + (1.0-SubRatio) * u%Mesh%RotationVel(  :,NodeID)
+            FiltStat = SubRatio * xd%MV_rel_n_FiltStat(:,NextNodeID) + (1.0-SubRatio) * xd%MV_rel_n_FiltStat(:,NodeID)
+         ELSE
+            pos      = m%DispNodePosHdn(     :,NodeID)
+            STV      = u%Mesh%TranslationVel(:,NodeID)
+            SRV      = u%Mesh%RotationVel(   :,NodeID)
+            FiltStat = xd%MV_rel_n_FiltStat( :,NodeID)
+         END IF
 
          ! Vector from node on member axis to face centers
-         rToFC(1:3,1) =   mem%x_hat * 0.5 * mem%SaMG(i)  ! Side B +x_hat side
-         rToFC(1:3,2) = - mem%x_hat * 0.5 * mem%SaMG(i)  ! Side B -x_hat side
-         rToFC(1:3,3) =   mem%y_hat * 0.5 * mem%SbMG(i)  ! Side A +y_hat side
-         rToFC(1:3,4) = - mem%y_hat * 0.5 * mem%SbMG(i)  ! Side A -y_hat side
+         rToFC(1:3,1) =   mem%x_hat * 0.5 * SaMG  ! Side B +x_hat side
+         rToFC(1:3,2) = - mem%x_hat * 0.5 * SaMG  ! Side B -x_hat side
+         rToFC(1:3,3) =   mem%y_hat * 0.5 * SbMG  ! Side A +y_hat side
+         rToFC(1:3,4) = - mem%y_hat * 0.5 * SbMG  ! Side A -y_hat side
 
          ! Face normal vectors
          n_hat(1:3,1) =   mem%x_hat
@@ -6029,9 +6061,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          DragLoFSc(4) = mem%DragLoFScA
 
          ! Dimensional drag coefficient for each face
-         Cd(1) = mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)
+         Cd(1) = CdB*p%WaveField%WtrDens*SbMG
          Cd(2) = Cd(1)
-         Cd(3) = mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)
+         Cd(3) = CdA*p%WaveField%WtrDens*SaMG
          Cd(4) = Cd(3)
 
          ! Compute and sum the drag force on all four faces
@@ -6041,7 +6073,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             posFC = pos + rToFC(1:3,fNo)
 
             ! Compute structure velocity at face center
-            SVFC  = u%Mesh%TranslationVel(:,NodeID) + cross_product( u%Mesh%RotationVel(:,NodeID), rToFC(1:3,fNo) )
+            SVFC  = STV + cross_product( SRV, rToFC(1:3,fNo) )
 
             ! Compute fluid velocity at face center
             Call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., tmpNodeInWater, FVFC, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -6050,7 +6082,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! Compute the face-normal component of the relative fluid velocity (fluid-structure) at face center
             vrelFC  = dot_product( Real(FVFC,ReKi)-SVFC , n_hat(1:3,fNo) )
             ! High-pass-filtered face-center normal relative velocity
-            vrelFCf = filtConst(fNo) * (vrelFC + xd%MV_rel_n_FiltStat(fNo,NodeID))
+            vrelFCf = filtConst(fNo) * (vrelFC + FiltStat(fNo))
 
             ! Compute drag force based on selected formulation
             IF ( mem%FDMod == 1_IntKi ) THEN    ! Without suction-side-only formulation
