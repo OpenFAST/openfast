@@ -1042,54 +1042,6 @@ CONTAINS
 
 END SUBROUTINE ADI_C_Init
 
-
-!!===============================================================================================================
-!!--------------------------------------------- AeroDyn ReInit---------------------------------------------------
-!!===============================================================================================================
-!!TODO: finish this routine so it is usable if we need re-init capability for coupling
-!SUBROUTINE ADI_C_ReInit( DT_C, TMax_C,                     &
-!               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_ReInit')
-!   implicit none
-!#ifndef IMPLICIT_DLLEXPORT
-!!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_ReInit
-!!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_ReInit
-!#endif
-!
-!   real(c_double),            intent(in   )  :: DT_C              !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
-!   real(c_double),            intent(in   )  :: TMax_C            !< Maximum time for simulation (used to set arrays for wave kinematics)
-!   integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
-!   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
-!
-!   integer(IntKi)                            :: ErrStat           !< aggregated error message
-!   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
-!   integer(IntKi)                            :: ErrStat_F2          !< temporary error status  from a call
-!   character(ErrMsgLen)                      :: ErrMsg_F2           !< temporary error message from a call
-!   character(*), parameter                   :: RoutineName = 'ADI_C_ReInit'  !< for error handling
-!
-!   ! Initialize error handling
-!   ErrStat  =  ErrID_None
-!   ErrMsg   =  ""
-!
-!ErrStat  =  ErrID_Fatal
-!ErrMsg   =  "AeroDyn_Inflo_C_ReInit is not currently functional. Aborting."
-!call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-!
-!   call ADI_ReInit(ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%m, Sim%dT, ErrStat_F2, ErrMsg_F2)
-!      if (Failed())  return
-!
-!   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-!
-!CONTAINS
-!   logical function Failed()
-!      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat, ErrMsg, RoutineName )
-!      Failed = ErrStat >= AbortErrLev
-!      if (Failed) then
-!         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-!      endif
-!   end function Failed
-!END SUBROUTINE ADI_C_ReInit
-
-
 !===============================================================================================================
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
