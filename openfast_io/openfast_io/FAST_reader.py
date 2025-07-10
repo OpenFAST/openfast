@@ -320,7 +320,8 @@ class InputReader_OpenFAST(object):
     def read_MainInput(self):
         # Main FAST v8.16-v8.17 Input File
         # Currently no differences between FASTv8.16 and OpenFAST.
-        fst_file = os.path.join(self.FAST_directory, self.FAST_InputFile)
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        fst_file = os.path.join(fastdir, self.FAST_InputFile)
         f = open(fst_file)
 
         # Header of .fst file
@@ -572,7 +573,8 @@ class InputReader_OpenFAST(object):
         # Furling (furling)
         f.readline()
         self.fst_vt['ElastoDyn']['Furling'] = bool_read(f.readline().split()[0])
-        self.fst_vt['ElastoDyn']['FurlFile'] = os.path.join(self.FAST_directory, quoted_read(f.readline().split()[0])) # TODO: add furl file data to fst_vt, pointing to absolute path for now
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        self.fst_vt['ElastoDyn']['FurlFile'] = os.path.join(fastdir, quoted_read(f.readline().split()[0])) # TODO: add furl file data to fst_vt, pointing to absolute path for now
 
         # Tower (tower)
         f.readline()
@@ -921,7 +923,8 @@ class InputReader_OpenFAST(object):
     def read_InflowWind(self):
         # InflowWind v3.01
         # Currently no differences between FASTv8.16 and OpenFAST.
-        inflow_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['InflowFile']))
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        inflow_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['InflowFile']))
         f = open(inflow_file)
         
         f.readline()
@@ -1018,7 +1021,8 @@ class InputReader_OpenFAST(object):
     def read_AeroDyn(self):
         # AeroDyn v15.03
 
-        ad_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile'])
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        ad_file = os.path.join(fastdir, self.fst_vt['Fst']['AeroFile'])
         f = open(ad_file)
 
         # General Option
@@ -1112,9 +1116,10 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['InCol_Cpmin']      = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['NumAFfiles']       = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['AFNames']          = [None] * self.fst_vt['AeroDyn']['NumAFfiles']
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
         for i in range(self.fst_vt['AeroDyn']['NumAFfiles']):
             af_filename = fix_path(f.readline().split()[0])[1:-1]
-            self.fst_vt['AeroDyn']['AFNames'][i]   = os.path.abspath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], af_filename))
+            self.fst_vt['AeroDyn']['AFNames'][i]   = os.path.abspath(os.path.join(fastdir, self.fst_vt['Fst']['AeroFile_path'], af_filename))
 
         # Rotor/Blade Properties
         f.readline()
@@ -1138,7 +1143,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['AeroDyn']['TFinAero'] = bool_read(f.readline().split()[0])
         tfa_filename = fix_path(f.readline().split()[0])[1:-1]
-        self.fst_vt['AeroDyn']['TFinFile'] = os.path.abspath(os.path.join(self.FAST_directory, tfa_filename))
+        self.fst_vt['AeroDyn']['TFinFile'] = os.path.abspath(os.path.join(fastdir, tfa_filename))
 
         # Tower Influence and Aerodynamics
         f.readline()
@@ -1187,9 +1192,9 @@ class InputReader_OpenFAST(object):
         f.close()
 
         # Improved handling for multiple AeroDyn blade files
-        ad_bld_file1 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
-        ad_bld_file2 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile2'])
-        ad_bld_file3 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile3'])
+        ad_bld_file1 = os.path.join(fastdir, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
+        ad_bld_file2 = os.path.join(fastdir, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile2'])
+        ad_bld_file3 = os.path.join(fastdir, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile3'])
 
         if ad_bld_file1 == ad_bld_file2 and ad_bld_file1 == ad_bld_file3:
             # all blades are identical
@@ -1213,7 +1218,7 @@ class InputReader_OpenFAST(object):
 
         self.read_AeroDynPolar()
         self.read_AeroDynCoord()
-        olaf_filename = os.path.join(self.FAST_directory, self.fst_vt['AeroDyn']['OLAFInputFileName'])
+        olaf_filename = os.path.join(fastdir, self.fst_vt['AeroDyn']['OLAFInputFileName'])
         if os.path.isfile(olaf_filename):
             self.read_AeroDynOLAF(olaf_filename)
 
@@ -1381,6 +1386,7 @@ class InputReader_OpenFAST(object):
 
     def read_AeroDynOLAF(self, olaf_filename):
         
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
         self.fst_vt['AeroDyn']['OLAF'] = {}
         f = open(olaf_filename)
         f.readline()
@@ -1395,7 +1401,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['OLAF']['CircSolvConvCrit']    = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['CircSolvRelaxation']  = float_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['CircSolvMaxIter']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, quoted_read(f.readline().split()[0])) # unmodified by this script, hence pointing to absolute location
+        self.fst_vt['AeroDyn']['OLAF']['PrescribedCircFile']  = os.path.join(fastdir, quoted_read(f.readline().split()[0])) # unmodified by this script, hence pointing to absolute location
         f.readline()
         f.readline()
         f.readline()
@@ -1434,7 +1440,8 @@ class InputReader_OpenFAST(object):
         Reading the AeroDisk input file.
         '''
 
-        aDisk_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile'])
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        aDisk_file = os.path.join(fastdir, self.fst_vt['Fst']['AeroFile'])
         f = open(aDisk_file)
         f.readline()
         f.readline()
@@ -1463,7 +1470,7 @@ class InputReader_OpenFAST(object):
         # if the next line starts with an @, then it is a file reference
         line = f.readline()
         if line[0] == '@':
-            self.fst_vt['AeroDisk']['actuatorDiskFile'] = os.path.join(self.FAST_directory, line[1:].strip())
+            self.fst_vt['AeroDisk']['actuatorDiskFile'] = os.path.join(fastdir, line[1:].strip())
 
             # using the load_ascii_output function to read the CSV file, ;)
             data, info = load_ascii_output(self.fst_vt['AeroDisk']['actuatorDiskFile'], headerLines=3,
@@ -1489,7 +1496,8 @@ class InputReader_OpenFAST(object):
         # Currently no differences between FASTv8.16 and OpenFAST.
 
 
-        sd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['ServoFile']))
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        sd_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['ServoFile']))
         f = open(sd_file)
 
         f.readline()
@@ -1659,9 +1667,10 @@ class InputReader_OpenFAST(object):
         StC_vt = {}
 
         # Inputs should be relative to ServoDyn, like in OpenFAST
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
         SvD_dir = os.path.dirname(self.fst_vt['Fst']['ServoFile'])
 
-        with open(os.path.join(self.FAST_directory, SvD_dir, filename)) as f:
+        with open(os.path.join(fastdir, SvD_dir, filename)) as f:
 
             f.readline()
             f.readline()
@@ -1766,7 +1775,7 @@ class InputReader_OpenFAST(object):
             f.readline()    # PRESCRIBED TIME SERIES 
             StC_vt['PrescribedForcesCoord'] = int_read(f.readline().split()[0]) #        2   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
             # TODO: read in prescribed force time series, for now we just point to absolute path of input file
-            StC_vt['PrescribedForcesFile'] = os.path.join(self.FAST_directory, quoted_read(f.readline().split()[0])) # "Bld-TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
+            StC_vt['PrescribedForcesFile'] = os.path.join(fastdir, quoted_read(f.readline().split()[0])) # "Bld-TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
             f.readline()
 
         return StC_vt
@@ -1774,7 +1783,8 @@ class InputReader_OpenFAST(object):
     def read_DISCON_in(self):
         # Read the Bladed style Interface controller input file, intended for ROSCO https://github.com/NREL/ROSCO_toolbox
 
-        discon_in_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['ServoDyn']['DLL_InFile']))
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        discon_in_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['ServoDyn']['DLL_InFile']))
 
         if os.path.exists(discon_in_file):
 
@@ -1817,7 +1827,8 @@ class InputReader_OpenFAST(object):
         '''
         spd_trq = {}
 
-        f = open(os.path.normpath(os.path.join(self.FAST_directory, file)))
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
+        f = open(os.path.normpath(os.path.join(fastdir, file)))
 
         spd_trq['header'] = f.readline()
 
@@ -3385,14 +3396,19 @@ class InputReader_OpenFAST(object):
         self.fst_vt['WaterKin']['Z_Grid']  = read_array(f,None,split_val='-',array_type=float)
         f.readline()
         self.fst_vt['WaterKin']['CurrentMod']  = int_read(f.readline().split()[0])
-        f.readline()
-        f.readline()
-        data_line = readline_filterComments(f).split()
-        while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
-            self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
-            self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
-            self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
-            data_line = readline_filterComments(f).split()   
+        # depending on CurrentMod, the rest of the WaterKin input file changes
+        if self.fst_vt['WaterKin']['CurrentMod'] == 2: # user provided depths 
+            self.fst_vt['WaterKin']['current_Z_type'] = int_read(f.readline().split()[0])
+            self.fst_vt['WaterKin']['current_Z_Grid']  = read_array(f,None,split_val='-',array_type=float)
+        elif self.fst_vt['WaterKin']['CurrentMod'] == 1: # user provided depths and current speeds
+            f.readline()
+            f.readline()
+            data_line = readline_filterComments(f).split()
+            while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
+                self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
+                self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
+                data_line = readline_filterComments(f).split() 
         f.close()
 
     def read_NonLinearEA(self,Stiffness_file): # read and return the nonlinear line stiffness lookup table for a given line
@@ -3412,8 +3428,9 @@ class InputReader_OpenFAST(object):
 
     def execute(self):
           
+        fastdir = '' if self.FAST_directory is None else self.FAST_directory
         self.read_MainInput()
-        ed_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['EDFile'])
+        ed_file = os.path.join(fastdir, self.fst_vt['Fst']['EDFile'])
 
         if self.fst_vt['Fst']['CompElast'] == 3: # SimpleElastoDyn
             self.read_SimpleElastoDyn(ed_file)
@@ -3486,30 +3503,30 @@ class InputReader_OpenFAST(object):
                 self.read_DISCON_in()
             if self.fst_vt['ServoDyn']['VSContrl'] == 3: # user-defined from routine UserVSCont refered
                 self.read_spd_trq('spd_trq.dat')
-        hd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['HydroFile']))
+        hd_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['HydroFile']))
         if self.fst_vt['Fst']['CompHydro'] == 1: 
             self.read_HydroDyn(hd_file)
-        ss_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SeaStFile']))
+        ss_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['SeaStFile']))
         if self.fst_vt['Fst']['CompSeaSt'] == 1:
             self.read_SeaState(ss_file)
-        sd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SubFile']))
+        sd_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['SubFile']))
         # if os.path.isfile(sd_file): 
         if self.fst_vt['Fst']['CompSub'] == 1:
             self.read_SubDyn(sd_file)
         elif self.fst_vt['Fst']['CompSub'] == 2:
             self.read_ExtPtfm(sd_file)
         if self.fst_vt['Fst']['CompMooring'] == 1: # only MAP++ implemented for mooring models
-            map_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['MooringFile']))
+            map_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['MooringFile']))
             if os.path.isfile(map_file):
                 self.read_MAP(map_file)
         if self.fst_vt['Fst']['CompMooring'] == 3: # MoorDyn implimented
-            moordyn_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['MooringFile']))
+            moordyn_file = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['MooringFile']))
             if os.path.isfile(moordyn_file):
                 self.read_MoorDyn(moordyn_file)
 
-        bd_file1 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
-        bd_file2 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(2)']))
-        bd_file3 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(3)']))
+        bd_file1 = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['BDBldFile(1)']))
+        bd_file2 = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['BDBldFile(2)']))
+        bd_file3 = os.path.normpath(os.path.join(fastdir, self.fst_vt['Fst']['BDBldFile(3)']))
         if os.path.isfile(bd_file1):
             # if the files are the same then we only need to read it once, need to handle the cases where we have a 2 or 1 bladed rotor
             # Check unique BeamDyn blade files and read only once if identical

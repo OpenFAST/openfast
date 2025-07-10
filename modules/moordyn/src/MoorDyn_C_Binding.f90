@@ -24,6 +24,7 @@ MODULE MoorDyn_C
    USE MoorDyn
    USE MoorDyn_Types
    USE NWTC_Library
+   USE NWTC_C_Binding
    USE VersionInfo
 
 IMPLICIT NONE
@@ -32,14 +33,6 @@ PUBLIC :: MD_C_Init
 PUBLIC :: MD_C_UpdateStates
 PUBLIC :: MD_C_CalcOutput
 PUBLIC :: MD_C_End
-
-!------------------------------------------------------------------------------------
-!  Error handling
-!     This must exactly match the value in the python-lib. If ErrMsgLen changes at
-!     some point in the nwtc-library, this should be updated, but the logic exists
-!     to correctly handle different lengths of the strings
-integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
-integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
 
 !------------------------------------------------------------------------------------
@@ -113,10 +106,13 @@ INTEGER(IntKi),   PARAMETER             :: INPUT_PRED = 1      !< Index for pred
 !------------------------------
 !  Meshes for external nodes
 !     These point meshes are merely used to simplify the mapping of motions/loads
-!     to/from MD using the library mesh mapping routines.  These meshes may contain
-!     one or multiple points.
-!        - 1 point   -- rigid floating body assumption
-!        - N points  -- flexible structure (either floating or fixed bottom)
+!     to/from MD using the library mesh mapping routines.  The input mesh into the
+!     library can only contain one point at present and is rigidly mapped to multiple
+!     MoorDyn mesh points. This means all MoorDyn coupled objects as defined in the
+!     input file will be rigidly attached to the input mesh
+!
+!     In the future, we may wish modify this interface to allow for N mesh points
+!     for coupling to N MoorDyn mesh points for modeling things likeflexible structures.
 TYPE(MeshType)                          :: MD_MotionMesh       !< mesh for motions of external nodes
 TYPE(MeshType)                          :: MD_LoadMesh         !< mesh for loads  for external nodes
 TYPE(MeshMapType)                       :: Map_Motion_2_MD     !< Mesh mapping between input motion mesh and MD
@@ -130,39 +126,28 @@ REAL(ReKi)                              :: tmpForces(6,1)      !< temp array.  P
 
 CONTAINS
 
-!> This routine sets the error status in C_CHAR for export to calling code.
-!! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-!! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-!! inadvertant buffer overrun -- that can lead to bad things.
-subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
-   integer,                intent(in   )  :: ErrStat                 !< aggregated error message (fortran type)
-   character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
-   integer(c_int),         intent(  out)  :: ErrStat_C
-   character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
-   integer                                :: i
-   ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-   if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
-   else
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-   endif
-end subroutine SetErr
-
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_Init')
+SUBROUTINE MD_C_Init(                                             &
+   InputFilePassed, InputFileString_C, InputFileStringLength_C,   &
+   DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C,                         &
+   InterpOrder_C,                                                 &
+   NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,     &
+   ErrStat_C, ErrMsg_C                                            &
+) BIND (C, NAME='MD_C_Init')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: MD_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: MD_C_Init
 #endif
+   INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFilePassed        !< Whether to load the file from the filesystem - 1: InputFileString_C contains the contents of the input file; otherwise, InputFileString_C contains the path to the input file
    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: G_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: RHO_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: DEPTH_C
-   REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
+   REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6) ! TODO: make this more flexible, can we not have 6 DOF only coupling?
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
@@ -194,8 +179,15 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
    CALL C_F_pointer(InputFileString_C, InputFileString)
 
-   ! Convert string inputs to FileInfoType
-   CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed()) return
+   ! Format input file contents
+   if (InputFilePassed==1_c_int) then
+      InitInp%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
+      InitInp%FileName              = ""                 ! not actually used
+      CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed()) return
+   else
+      InitInp%UsePrimaryInputFile   = .TRUE.             ! Read input info from a primary input file
+      InitInp%FileName = FileNameFromCString(InputFileString, InputFileStringLength_C)
+   endif
 
    ! Set other inputs for calling MD_Init
    !----------------------------------------------------------------------------------------------------------------------------------------------
@@ -212,9 +204,7 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
 
    dT_Global                = REAL(DT_C, DbKi)
    N_Global                 = 0_IntKi                     ! Assume we are on timestep 0 at start
-   InitInp%FileName         = 'notUsed'
    InitInp%RootName         = 'MDroot'
-   InitInp%UsePrimaryInputFile = .FALSE.
 
    ! Environment variables -- These should be passed in from C.
    InitInp%g                = REAL(G_C, ReKi)
@@ -225,7 +215,7 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
    CALL AllocAry (InitInp%PtfmInit, 6, 1, 'InitInp%PtfmInit', ErrStat2, ErrMsg2 ); if (Failed()) return
    DO I = 1,6
-       InitInp%PtfmInit(I,1)  = REAL(PtfmInit_C(I),ReKi)
+      InitInp%PtfmInit(I,1)  = REAL(PtfmInit_C(I),ReKi)
    END DO
 
    ALLOCATE(u(InterpOrder+1), STAT=ErrStat2)
@@ -613,7 +603,7 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
    !     this to the input mesh.
    CALL MeshCreate(  MD_MotionMesh                       ,  &
                      IOS              = COMPONENT_INPUT  ,  &
-                     Nnodes           = 1                ,  &
+                     Nnodes           = 1                ,  &     ! Single node for now -- rigid body mapping to MD mesh points
                      ErrStat          = ErrStat          ,  &
                      ErrMess          = ErrMsg           ,  &
                      TranslationDisp  = .TRUE.,    Orientation = .TRUE., &

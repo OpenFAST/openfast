@@ -41,10 +41,10 @@ contains
       real(ReKi)     :: fallTime, maxLoad
       integer(IntKi) :: nL ! err, 
 
-!  initialize the common parmeters
+!  initialize the common parameters
       call initIceCrushISO(iceInput, inParams, myIceParams, iceLog)
 
-      call logMessage(iceLog, newLine//' Setting ice crushing loads with frequency lock-in parameteres per ISO')
+      call logMessage(iceLog, newLine//' Setting ice crushing loads with frequency lock-in parameters per ISO')
 
       call getIceInput(iceInput, 'towerFrequency', inParams%twr%freq, iceLog, 0.01_ReKi, 10.0_ReKi)
       call logMessage(iceLog, ' Tower fundamental frequency = '//TRIM(Num2LStr(inParams%twr%freq))//' Hz')

@@ -37,37 +37,19 @@ from ctypes import (
 import numpy as np
 import datetime
 
-class MoorDynLib(CDLL):
+from .interface_abc import OpenFASTInterfaceType
 
-    # Human readable error levels
-    error_levels = {
-        0: "None",
-        1: "Info",
-        2: "Warning",
-        3: "Severe Error",
-        4: "Fatal Error"
-    }
+class MoorDynLib(OpenFASTInterfaceType):
 
-    #   NOTE:   the error message length in Fortran is controlled by the
-    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
-    #           changes, it may be necessary to update the corresponding size
-    #           here.
-    error_msg_c_len = 1025
-
-    #   NOTE:   the length of the name used for any output file written by the
-    #           HD Fortran code is 1025.
-    default_str_c_len = 1025
 
     def __init__(self, library_path):
         super().__init__(library_path)
-        self.library_path = library_path
 
         self._initialize_routines()
 
         # Create buffers for class data
-        self.abort_error_level = 4
         self.error_status_c = c_int(0)
-        self.error_message_c = create_string_buffer(self.error_msg_c_len)
+        self.error_message_c = create_string_buffer(self.ERROR_MSG_C_LEN)
         self.error_message     = create_string_buffer(1025)
         self.ended             = False   # For error handling at end
 
@@ -81,6 +63,7 @@ class MoorDynLib(CDLL):
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.MD_C_Init.argtypes = [
+            POINTER(c_int),                       # IN: input file passed
             POINTER(c_char_p),                    # IN: input file string
             POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
@@ -127,7 +110,7 @@ class MoorDynLib(CDLL):
         self.MD_C_End.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
-    def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
+    def md_init(self, input_file_passed, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
 
         # Convert the string into a c_char byte array
         input_string = '\x00'.join(input_string_array)
@@ -142,6 +125,7 @@ class MoorDynLib(CDLL):
         self._numChannels = c_int(0)
 
         self.MD_C_Init(
+            byref(c_int(input_file_passed)),       # IN: input file passed
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
@@ -246,7 +230,7 @@ class MoorDynLib(CDLL):
     def check_error(self):
         if self.error_status_c.value == 0:
             return
-        elif self.error_status_c.value < self.abort_error_level:
+        elif self.error_status_c.value < self.abort_error_level.value:
             print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
         else:
             print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")

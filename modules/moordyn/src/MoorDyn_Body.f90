@@ -82,7 +82,7 @@ CONTAINS
       Body%BquadL = 0.0_DbKi
 
       !also set number of attached rods and points to zero initially
-      Body%nAttachedC = 0
+      Body%nAttachedP = 0
       Body%nAttachedR = 0
 
       ! set up body initial mass matrix (excluding any rods or attachements)
@@ -327,7 +327,7 @@ CONTAINS
       Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) ) ! full Euler angle approach <<<< need to check order 
   
       ! set kinematics of any dependent points
-      do l = 1,Body%nAttachedC
+      do l = 1,Body%nAttachedP
       
          CALL transformKinematics(Body%rPointRel(:,l), Body%r6, Body%OrMat, Body%v6, rPoint, rdPoint) !<<< should double check this function
                   
@@ -522,7 +522,7 @@ CONTAINS
    
    
       ! Get contributions from any dependent points
-      do l = 1,Body%nAttachedC
+      do l = 1,Body%nAttachedP
       
          ! get net force and mass from Point on body ref point (global orientation)
          CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), Body%v6(4:6), F6_i, M6_i, m, p)
@@ -622,10 +622,10 @@ CONTAINS
 
       IF (wordy > 0) Print*, "P", pointID, "->B", Body%IdNum
       
-      IF(Body%nAttachedC < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Body%nAttachedC = Body%nAttachedC + 1     ! increment the number pointed
-         Body%AttachedC(Body%nAttachedC) = pointID
-         Body%rPointRel(:,Body%nAttachedC) = coords  ! store relative position of point on body
+      IF(Body%nAttachedP < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
+         Body%nAttachedP = Body%nAttachedP + 1     ! increment the number pointed
+         Body%AttachedC(Body%nAttachedP) = pointID
+         Body%rPointRel(:,Body%nAttachedP) = coords  ! store relative position of point on body
       ELSE
          call WrScr("too many Points attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn!")
       END IF

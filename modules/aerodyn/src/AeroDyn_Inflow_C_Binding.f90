@@ -420,10 +420,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_Init
 #endif
    ! Input file info
-   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< length of the input file string
-   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other

@@ -28,7 +28,7 @@ add_library(moordynlib STATIC
   src/MoorDyn_Rod.f90
   src/MoorDyn_Types.f90
 )
-target_link_libraries(moordynlib nwtclibs)
+target_link_libraries(moordynlib seastlib nwtclibs)
 
 # Driver
 add_executable(moordyn_driver 
@@ -40,7 +40,7 @@ target_link_libraries(moordyn_driver moordynlib versioninfolib)
 add_library(moordyn_c_binding SHARED 
   src/MoorDyn_C_Binding.f90
 )
-target_link_libraries(moordyn_c_binding moordynlib versioninfolib)
+target_link_libraries(moordyn_c_binding moordynlib seastlib versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(moordyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()

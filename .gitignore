@@ -28,7 +28,9 @@
 *.out
 *.app
 __pycache__/*
+__init__.py
 *.pyc
+*.egg-info
 
 # Build specific files
 build*/

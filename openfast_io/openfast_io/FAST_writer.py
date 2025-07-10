@@ -2471,7 +2471,7 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_MoorDyn(self): # TODO: see TODO's in FAST_reader/read_MoorDyn.py and make corresponding changes here
+    def write_MoorDyn(self):
 
         self.fst_vt['Fst']['MooringFile'] = self.FAST_namingOut + '_MoorDyn.dat'
         moordyn_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['MooringFile'])
@@ -2661,10 +2661,10 @@ class InputWriter_OpenFAST(object):
         f.write('MoorDyn v2 Waves and Currents input file set up\n')
         f.write('This file was written by FAST_writer.py, comments from seed file have been dropped.\n')
         f.write('--------------------------- WAVES -------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinMod'], 'WaveKinMod', '- type of wave input {0 no waves; 3 set up grid of wave data based on time series}\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinFile'], 'WaveKinFile', '- file containing wave elevation time series at 0,0,0\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['dtWave'], 'dtWave', '- time step to use in setting up wave kinematics grid (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveDir'], 'WaveDir', '- wave heading (deg)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinMod'], 'WaveKinMod', '- flag for waves (0 no waves; 1 compute waves using provided elevation timeseries; 2 use wave elevation data from seastate)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinFile'], 'WaveKinFile', '- file containing wave elevation time series at 0,0,0. This is ignored if WaveKinMod is not 1\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['dtWave'], 'dtWave', '- time step to use in setting up wave kinematics grid (s). This is ignored if WaveKinMod is not 1\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveDir'], 'WaveDir', '- wave heading (deg). This is ignored if WaveKinMod is not 1\n'))
         f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['X_Type'], '- X wave input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)\n'))
         f.write('{:<22} {:}'.format(', '.join(['{:.3f}'.format(i) for i in self.fst_vt['WaterKin']['X_Grid']]), '- X wave grid point data separated by commas\n'))
         f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['Y_Type'], '- Y wave input type (0: not used; 1: list values in ascending order; 2: uniform specified by -Ylim, Ylim, num)\n'))
@@ -2672,12 +2672,17 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['Z_Type'], '- Z wave input type (0: not used; 1: list values in ascending order; 2: uniform specified by -Zlim, Zlim, num)\n'))
         f.write('{:<22} {:}'.format(', '.join(['{:.3f}'.format(i) for i in self.fst_vt['WaterKin']['Z_Grid']]), '- Z wave grid point data separated by commas\n'))
         f.write('--------------------------- CURRENT -------------------------------------\n')
-        f.write('{:}                    CurrentMod  - type of current input (0 no current; 1 steady current profile described below) \n'.format(self.fst_vt['WaterKin']['CurrentMod']))
-        f.write('z-depth     x-current      y-current\n')
-        f.write('(m)           (m/s)         (m/s)\n')
-        if self.fst_vt['WaterKin']['z-depth']:
-            for i in range(len(self.fst_vt['WaterKin']['z-depth'])):
-                f.write('{:.3f} {:.3f} {:.3f}'.format(self.fst_vt['WaterKin']['z-depth'][i], self.fst_vt['WaterKin']['x-current'][i], self.fst_vt['WaterKin']['y-current'][i]))
+        f.write('{:}                    CurrentMod  - flag for currents (0 no current; 1 use depth and current described below; 2 use current speed data from SeaState and depth spacing defined below) \n'.format(self.fst_vt['WaterKin']['CurrentMod']))
+        # depending on CurrentMod, the rest of the WaterKin input file changes
+        if self.fst_vt['WaterKin']['CurrentMod'] == 2: # user provided depths 
+            f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['current_Z_Type'], '- Z current input type (0: not used; 1: list values in ascending order; 2: uniform specified by -Zlim, Zlim, num). This is ignored unless CurrentMod = 2\n'))
+            f.write('{:<22} {:}'.format(', '.join(['{:.3f}'.format(i) for i in self.fst_vt['WaterKin']['current_Z_Grid']]), '- Z current grid point data separated by commas. This is ignored unless CurrentMod = 2\n'))
+        elif self.fst_vt['WaterKin']['CurrentMod'] == 1: # user provided depths and current speeds
+            f.write('z-depth     x-current      y-current  - This table is ignored unless CurrentMod = 1\n')
+            f.write('(m)           (m/s)         (m/s)\n')
+            if self.fst_vt['WaterKin']['z-depth']:
+                for i in range(len(self.fst_vt['WaterKin']['z-depth'])):
+                    f.write('{:.3f} {:.3f} {:.3f}'.format(self.fst_vt['WaterKin']['z-depth'][i], self.fst_vt['WaterKin']['x-current'][i], self.fst_vt['WaterKin']['y-current'][i]))
         f.write('--------------------- need this line ------------------\n')
 
         f.flush()

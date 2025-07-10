@@ -46,7 +46,7 @@ contains
       real(ReKi)     :: freq     ! frequency of sinusoidal load
       integer(IntKi) :: nL !err, 
 
-!  initialize the common parmeters for flexural ice failure
+!  initialize the common parameters for flexural ice failure
       call initIceFlex(iceInput, inParams, myIceParams, iceLog)
 
       call logMessage(iceLog, newLine//' Setting up flexural failure by Ralston method ')

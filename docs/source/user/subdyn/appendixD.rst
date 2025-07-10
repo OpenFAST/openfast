@@ -51,54 +51,54 @@ Table C-1. List of Output Channels.
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
 | *Node Kinematics*                     |                                                                                                                                                                                                    |           
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` TDxss,     | (m)                                                          | Nodal translational displacements of :math:`M \alpha N \beta`							                     |
-|					|							       | 																     |
-| :math:`M \alpha N \beta` TDyss, 	|							       |  									                                                             |
-|					|							       | (up to 81 designated locations) in SS coordinate system									     |
-| :math:`M \alpha N \beta` TDzss,	|							       |																     |
+| :math:`{M \alpha N \beta}` TDxss,     | (m)                                                          | Nodal total translational displacements of :math:`M \alpha N \beta`                                                                 |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`M \alpha N \beta` TDyss,       |                                                              |                                                                                                                                     |
+|                                       |                                                              | (up to 81 designated locations) in SS coordinate system                                                                             |
+| :math:`M \alpha N \beta` TDzss,       |                                                              |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` RDxe,      | (rad)  						       | Nodal rotational displacements of :math:`M \alpha N \beta`                                                                          |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` RDye,	|							       |																     |
+| :math:`{M \alpha N \beta}` RDxe,      | (rad)                                                        | Nodal rotational elastic deflection of :math:`M \alpha N \beta` relative to the rigid-body configuration                            |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` RDye,      |                                                              |                                                                                                                                     |
 |                                       |                                                              | (up to 81 designated locations) in member local coordinate system                                                                   |
-| :math:`{M \alpha N \beta}` RDze	|							       |																     |
+| :math:`{M \alpha N \beta}` RDze       |                                                              |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` TAxe,	| (:math:`{m/s^2}`)					       | Nodal translational accelerations  of :math:`M \alpha N \beta`                                                                      |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` TAye,	|							       |																     |
-|					|							       | (up to 81 designated locations) in member local coordinate system                                                                   |
-| :math:`{M \alpha N \beta}` TAze       |                                                              |																     |
+| :math:`{M \alpha N \beta}` TAxe,      | (:math:`{m/s^2}`)                                            | Nodal translational accelerations  of :math:`M \alpha N \beta`                                                                      |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` TAye,      |                                                              |                                                                                                                                     |
+|                                       |                                                              | (up to 81 designated locations) in member local coordinate system                                                                   |
+| :math:`{M \alpha N \beta}` TAze       |                                                              |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` RAxe,	| (:math:`{rad/s^2}`)					       | Nodal rotational accelerations  of :math:`M \alpha N \beta`                                                                         |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` RAye,	|							       |																     |
-|					|							       | (up to 81 designated locations) in member local coordinate system                                                                   |
-| :math:`{M \alpha N \beta}` RAze       |                                                              |																     |
+| :math:`{M \alpha N \beta}` RAxe,      | (:math:`{rad/s^2}`)                                          | Nodal rotational accelerations  of :math:`M \alpha N \beta`                                                                         |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` RAye,      |                                                              |                                                                                                                                     |
+|                                       |                                                              | (up to 81 designated locations) in member local coordinate system                                                                   |
+| :math:`{M \alpha N \beta}` RAze       |                                                              |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
 | *Node Forces and Moments*             |                                                                                                                                                                                                    |           
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` FKxe,	| (N),                                                         |  Static (elastic) component of reaction forces and moments                                               			     |
-|					|                                                              |                                                                                                     				     |
-| :math:`{M \alpha N \beta}` FKye,	| (N),                                                         |  at :math:`M \alpha N \beta`  along local member coordinate system                                                                  |               
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` FKze       | (N),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MKxe,	| (Nm),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MKye,	| (Nm),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MKze       | (Nm)							       | 																     |
+| :math:`{M \alpha N \beta}` FKxe,      | (N),                                                         |  Static (elastic) component of reaction forces and moments                                                                          |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` FKye,      | (N),                                                         |  at :math:`M \alpha N \beta`  along local member coordinate system                                                                  |               
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` FKze       | (N),                                                         |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MKxe,      | (Nm),                                                        |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MKye,      | (Nm),                                                        |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MKze       | (Nm)                                                         |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
-| :math:`{M \alpha N \beta}` FMxe,	| (N),                                                         |  Dynamic (inertial) component of reaction forces and moments                                               			     |
-|					|                                                              |                                                                                                     				     |
-| :math:`{M \alpha N \beta}` FMye,	| (N),                                                         |  at :math:`M \alpha N \beta`  along local member coordinate system                                                                  |               
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` FMze       | (N),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MMxe,	| (Nm),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MMye,	| (Nm),							       | 																     |
-|					|							       |																     |
-| :math:`{M \alpha N \beta}` MMze       | (Nm)							       | 																     |
+| :math:`{M \alpha N \beta}` FMxe,      | (N),                                                         |  Dynamic (inertial) component of reaction forces and moments                                                                        |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` FMye,      | (N),                                                         |  at :math:`M \alpha N \beta`  along local member coordinate system                                                                  |               
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` FMze       | (N),                                                         |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MMxe,      | (Nm),                                                        |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MMye,      | (Nm),                                                        |                                                                                                                                     |
+|                                       |                                                              |                                                                                                                                     |
+| :math:`{M \alpha N \beta}` MMze       | (Nm)                                                         |                                                                                                                                     |
 +---------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
 

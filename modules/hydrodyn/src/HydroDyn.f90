@@ -268,11 +268,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       END IF
       
          ! Copy Additional preload, stiffness, and damping to the parameters
-      p%AddF0        = InputFileData%AddF0
-      p%AddCLin      = InputFileData%AddCLin
-      p%AddBLin      = InputFileData%AddBLin
-      p%AddBQuad     = InputFileData%AddBQuad
-      
+      call move_alloc(InputFileData%AddF0,   p%AddF0   )
+      call move_alloc(InputFileData%AddCLin, p%AddCLin )
+      call move_alloc(InputFileData%AddBLin, p%AddBLin )
+      call move_alloc(InputFileData%AddBQuad,p%AddBQuad)
       
          ! Set summary unit number in Morison initialization input data
       InputFileData%Morison%UnSum         = InputFileData%UnSum
