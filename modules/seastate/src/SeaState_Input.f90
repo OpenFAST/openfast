@@ -601,7 +601,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
    IF ( InputFileData%WaveMod == WaveMod_None ) THEN
-      InputFileData%WaveStMod = 0_IntKi
+      IF ( (InputFileData%WaveStMod /= 0) .AND. (InputFileData%WaveStMod /= 1) ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0 or 1 when WaveMod = 0.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
    ELSEIF ( InputFileData%WaveMod == WaveMod_ExtFull ) THEN
       IF ( (InputFileData%WaveStMod /= 0) .AND. (InputFileData%WaveStMod /= 1) .AND. &
                                                 (InputFileData%WaveStMod /= 3) ) THEN
