@@ -148,6 +148,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MmbrFilledIDIndx = 0_IntKi      !< Index into the filled group table if this is a filled member [-]
     LOGICAL  :: PropPot = .false.      !< Flag T/F for whether the member is modeled with potential flow theory [-]
     LOGICAL  :: PropMCF = .false.      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
+    INTEGER(IntKi)  :: FDMod = 0_IntKi      !< Rectangular member transverse drag model (0: simple centerline based; 1: face based; 2: face based with suction-side-only formulation [-]
+    REAL(ReKi)  :: VnCOffA = 0.0_ReKi      !< Rectangular member transverse drag relative velocity high-pass filter cutoff frequency - normal to Side A [Hz]
+    REAL(ReKi)  :: VnCOffB = 0.0_ReKi      !< Rectangular member transverse drag relative velocity high-pass filter cutoff frequency - normal to Side B [Hz]
+    REAL(ReKi)  :: FDLoFScA = 0.0_ReKi      !< Rectangular member transverse drag weighting factor - normal to Side A [-]
+    REAL(ReKi)  :: FDLoFScB = 0.0_ReKi      !< Rectangular member transverse drag weighting factor - normal to Side B [-]
     INTEGER(IntKi)  :: NElements = 0_IntKi      !< number of elements in this member [-]
     REAL(ReKi)  :: RefLength = 0.0_ReKi      !< the reference total length for this member [m]
     REAL(ReKi)  :: dl = 0.0_ReKi      !< the reference element length for this member (may be less than MDivSize to achieve uniform element lengths) [m]
@@ -235,6 +240,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCa      !< Member axial Ca at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCp      !< Member axial Cp at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cb      !< Member Cb at each node [-]
+    INTEGER(IntKi)  :: FDMod = 0_IntKi      !< Rectangular member transverse drag model (0: simple centerline based; 1: face based; 2: face based with suction-side-only formulation [-]
+    REAL(ReKi)  :: VRelNFiltConstA = 0.0_ReKi      !< Rectangular member transverse drag relative velocity high-pass filter constant - normal to Side A [-]
+    REAL(ReKi)  :: VRelNFiltConstB = 0.0_ReKi      !< Rectangular member transverse drag relative velocity high-pass filter constant - normal to Side B [-]
+    REAL(ReKi)  :: DragLoFScA = 0.0_ReKi      !< Rectangular member transverse drag weighting factor - normal to Side A [-]
+    REAL(ReKi)  :: DragLoFScB = 0.0_ReKi      !< Rectangular member transverse drag weighting factor - normal to Side B [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_fb_l      !< mass of flooded ballast in lower portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_fb_u      !< mass of flooded ballast in upper portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: h_cfb_l      !< distance to flooded ballast centroid from node point in lower portion of each element [m]
@@ -483,6 +493,7 @@ IMPLICIT NONE
 ! =========  Morison_DiscreteStateType  =======
   TYPE, PUBLIC :: Morison_DiscreteStateType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_FiltStat      !< State of the high-pass filter for the joint relative normal velocity [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MV_rel_n_FiltStat      !< State of the high-pass filter for the rectangular member relative normal velocity [m/s]
   END TYPE Morison_DiscreteStateType
 ! =======================
 ! =========  Morison_ConstraintStateType  =======
@@ -1064,6 +1075,11 @@ subroutine Morison_CopyMemberInputType(SrcMemberInputTypeData, DstMemberInputTyp
    DstMemberInputTypeData%MmbrFilledIDIndx = SrcMemberInputTypeData%MmbrFilledIDIndx
    DstMemberInputTypeData%PropPot = SrcMemberInputTypeData%PropPot
    DstMemberInputTypeData%PropMCF = SrcMemberInputTypeData%PropMCF
+   DstMemberInputTypeData%FDMod = SrcMemberInputTypeData%FDMod
+   DstMemberInputTypeData%VnCOffA = SrcMemberInputTypeData%VnCOffA
+   DstMemberInputTypeData%VnCOffB = SrcMemberInputTypeData%VnCOffB
+   DstMemberInputTypeData%FDLoFScA = SrcMemberInputTypeData%FDLoFScA
+   DstMemberInputTypeData%FDLoFScB = SrcMemberInputTypeData%FDLoFScB
    DstMemberInputTypeData%NElements = SrcMemberInputTypeData%NElements
    DstMemberInputTypeData%RefLength = SrcMemberInputTypeData%RefLength
    DstMemberInputTypeData%dl = SrcMemberInputTypeData%dl
@@ -1105,6 +1121,11 @@ subroutine Morison_PackMemberInputType(RF, Indata)
    call RegPack(RF, InData%MmbrFilledIDIndx)
    call RegPack(RF, InData%PropPot)
    call RegPack(RF, InData%PropMCF)
+   call RegPack(RF, InData%FDMod)
+   call RegPack(RF, InData%VnCOffA)
+   call RegPack(RF, InData%VnCOffB)
+   call RegPack(RF, InData%FDLoFScA)
+   call RegPack(RF, InData%FDLoFScB)
    call RegPack(RF, InData%NElements)
    call RegPack(RF, InData%RefLength)
    call RegPack(RF, InData%dl)
@@ -1138,6 +1159,11 @@ subroutine Morison_UnPackMemberInputType(RF, OutData)
    call RegUnpack(RF, OutData%MmbrFilledIDIndx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PropPot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PropMCF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FDMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VnCOffA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VnCOffB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FDLoFScA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FDLoFScB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NElements); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dl); if (RegCheckErr(RF, RoutineName)) return
@@ -1724,6 +1750,11 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%Cb = SrcMemberTypeData%Cb
    end if
+   DstMemberTypeData%FDMod = SrcMemberTypeData%FDMod
+   DstMemberTypeData%VRelNFiltConstA = SrcMemberTypeData%VRelNFiltConstA
+   DstMemberTypeData%VRelNFiltConstB = SrcMemberTypeData%VRelNFiltConstB
+   DstMemberTypeData%DragLoFScA = SrcMemberTypeData%DragLoFScA
+   DstMemberTypeData%DragLoFScB = SrcMemberTypeData%DragLoFScB
    if (allocated(SrcMemberTypeData%m_fb_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_fb_l)
       UB(1:1) = ubound(SrcMemberTypeData%m_fb_l)
@@ -2291,6 +2322,11 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%AxCa)
    call RegPackAlloc(RF, InData%AxCp)
    call RegPackAlloc(RF, InData%Cb)
+   call RegPack(RF, InData%FDMod)
+   call RegPack(RF, InData%VRelNFiltConstA)
+   call RegPack(RF, InData%VRelNFiltConstB)
+   call RegPack(RF, InData%DragLoFScA)
+   call RegPack(RF, InData%DragLoFScB)
    call RegPackAlloc(RF, InData%m_fb_l)
    call RegPackAlloc(RF, InData%m_fb_u)
    call RegPackAlloc(RF, InData%h_cfb_l)
@@ -2400,6 +2436,11 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%AxCa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AxCp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FDMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VRelNFiltConstA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VRelNFiltConstB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DragLoFScA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DragLoFScB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%m_fb_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%m_fb_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%h_cfb_l); if (RegCheckErr(RF, RoutineName)) return
@@ -4236,7 +4277,7 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Morison_CopyDiscState'
    ErrStat = ErrID_None
@@ -4253,6 +4294,18 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
       end if
       DstDiscStateData%V_rel_n_FiltStat = SrcDiscStateData%V_rel_n_FiltStat
    end if
+   if (allocated(SrcDiscStateData%MV_rel_n_FiltStat)) then
+      LB(1:2) = lbound(SrcDiscStateData%MV_rel_n_FiltStat)
+      UB(1:2) = ubound(SrcDiscStateData%MV_rel_n_FiltStat)
+      if (.not. allocated(DstDiscStateData%MV_rel_n_FiltStat)) then
+         allocate(DstDiscStateData%MV_rel_n_FiltStat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%MV_rel_n_FiltStat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%MV_rel_n_FiltStat = SrcDiscStateData%MV_rel_n_FiltStat
+   end if
 end subroutine
 
 subroutine Morison_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
@@ -4265,6 +4318,9 @@ subroutine Morison_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    if (allocated(DiscStateData%V_rel_n_FiltStat)) then
       deallocate(DiscStateData%V_rel_n_FiltStat)
    end if
+   if (allocated(DiscStateData%MV_rel_n_FiltStat)) then
+      deallocate(DiscStateData%MV_rel_n_FiltStat)
+   end if
 end subroutine
 
 subroutine Morison_PackDiscState(RF, Indata)
@@ -4273,6 +4329,7 @@ subroutine Morison_PackDiscState(RF, Indata)
    character(*), parameter         :: RoutineName = 'Morison_PackDiscState'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%V_rel_n_FiltStat)
+   call RegPackAlloc(RF, InData%MV_rel_n_FiltStat)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4280,11 +4337,12 @@ subroutine Morison_UnPackDiscState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Morison_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Morison_UnPackDiscState'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%V_rel_n_FiltStat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MV_rel_n_FiltStat); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
