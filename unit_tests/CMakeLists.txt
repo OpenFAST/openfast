@@ -82,16 +82,6 @@ add_executable(versioninfo_utest
 target_link_libraries(versioninfo_utest versioninfolib testdrivelib)
 add_test(NAME versioninfo_utest COMMAND versioninfo_utest)
 
-if (AMREX_READER AND BUILD_FASTFARM)
-  # FAST.Farm AMReX reader test
-  add_executable(amrex_reader_utest
-    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/AMReX_reader_utest.F90
-    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/test_AMReX_reader.F90
-  )
-  target_link_libraries(amrex_reader_utest amrex_reader nwtclibs testdrivelib)
-  add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
-endif()
-
 # Custom target combining all the unit tests
 add_custom_target(
   unit_tests
@@ -102,3 +92,20 @@ add_custom_target(
     aerodyn_utest 
     inflowwind_utest 
 )
+
+if (AMREX_READER AND BUILD_FASTFARM)
+  # Need input files
+  add_custom_target(copy_amrex_reader_utest_files ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/glue-codes/fast-farm/tests/my_subvol00006 ${CMAKE_BINARY_DIR}/unit_tests/my_subvol00006
+  )
+  # FAST.Farm AMReX reader test
+  add_executable(amrex_reader_utest
+    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/AMReX_reader_utest.F90
+    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/test_AMReX_reader.F90
+  )
+  target_link_libraries(amrex_reader_utest amrex_reader nwtclibs testdrivelib)
+  add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
+  add_dependencies(amrex_reader_utest copy_amrex_reader_utest_files)     # copy input files needed for this test
+  add_dependencies(unit_tests amrex_reader_utest)     # add to the unit_tests target
+endif()
+
