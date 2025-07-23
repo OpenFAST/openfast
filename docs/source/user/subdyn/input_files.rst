@@ -63,61 +63,101 @@ will be generated in that folder. If this output is left empty,
 the driver filename is used (without the extension) is used.
 **NSteps** specifies the number of
 simulation time steps, and **TimeStep** specifies the time between
-steps. Next, the user must specify the location of the TP reference
-point **TP\_RefPoint** (in the global reference system). This is
-normally set by FAST through the ElastoDyn input file, and it is the
-so-called *platform* reference point location. When coupled to FAST, the
-*platform* reference point location is identified by only one (*Z*)
-coordinate. The interface joints, defined in SubDyn’s main input file,
-are rigidly connected to this reference point. To utilize the same
-geometry definition within SubDyn’s main input file, while still
-allowing for different substructure orientations about the vertical, the
-user can set **SubRotateZ** to a prescribed angle in degrees with
-respect to the global *Z*-axis. The entire substructure will be rotated
-by that angle. (This feature is only available in stand-alone mode.)
+steps. Next, the user must specify the locations of the transition piece (TP) 
+reference points. These are normally set by OpenFAST through the ElastoDyn 
+input files, and they are the so-called *platform* reference points 
+given by **PtfmRefxt**, **PtfmRefyt**, and **PtfmRefzt** in ElastoDyn. 
+The interface joints, defined in SubDyn’s main input file,
+are rigidly connected to these ElastoDyn platform reference points. 
+When running the SubDyn standalone driver, the positions of these TP 
+reference points must be defined in the driver input file instead, 
+and prescribed motions can be defined for these transition pieces below. 
+**NTPs** is the number of actual transition pieces, excluding the 
+rigid-body reference point for a floating structure (see the **Interface Joints** 
+section of the SubDyn's main input file below). The next three lines are 
+**TP\_RefPoint\_X**, **TP\_RefPoint\_Y**, and **TP\_RefPoint\_Z**, which should 
+respectively contain the **X**, **Y**, and **Z** coordinates of each transition 
+pieces in the global coordinate system. Each line should contain exactly 
+**NTPs** entries. To utilize the same geometry definition within SubDyn’s main 
+input file, while still allowing for different substructure orientations about 
+the vertical, the user can set **SubRotateZ** to a prescribed angle in degrees 
+with respect to the global *Z*-axis. The entire substructure will be rotated
+by that angle. (This feature is only available in standalone mode.)
 
 
 Input motion 
 ~~~~~~~~~~~~
 
-Setting **InputsMod** = 0 sets all TP reference-point input motions to
+Setting **InputsMod** = 0 sets all TP reference-point motions to
 zero for all time steps. Setting **InputsMod** = 1 allows the user to
 provide steady (fixed) inputs for the TP motion in the STEADY INPUTS
 section of the file—\ **uTPInSteady**, **uDotTPInSteady**, and
-**uDotDotTPInSteady** following the same convention as Table 1
-(without time). Setting **InputsMod** = 2 allows the user to input a
-time-series file whose name is specified via the **InputsFile**
-parameter. The time-series input file is a text-formatted file. This
-file has no header lines, **NSteps** rows, and each *i*\ :sup:`th` row
-has the first column showing time as *t* = ( *i* – 1 )\*\ **TimeStep**
-(the data will not be interpolated to other times). The remainder of
-each row is made of white-space-separated columns of floating point
-values representing the necessary motion inputs as shown in Table 1. All
-motions are specified in the global, inertial-frame coordinate system.
-SubDyn does not check for physical consistency between the displacement,
-velocity, and acceleration motions specified for the TP reference point
-in the driver file.
+**uDotDotTPInSteady**. Each line should contain 6 x **NTPs** inputs with 
+the first six entries for the first transition piece, the next six entries 
+for the second transition piece, and so on. The details of these inputs 
+are consistent with those for **InputsMod** = 2 below.
 
-Table 1. TP Reference Point Inputs Time-Series Data File Contents
+Setting **InputsMod** = 2 allows the user to provide a time-series file 
+whose name is specified via the **InputsFile** parameter. The time-series 
+input file is a text-formatted file. This file has no header lines, 
+**NSteps** rows, and each *i*\ :sup:`th` row has the first column showing 
+the time *t*. SubDyn driver will linearly interpolate the input time series 
+as needed. The remainder of each row is made of white-space-separated 
+columns of floating point values representing the necessary motion inputs 
+as shown in Table 1. All motions are specified in the global, inertial-frame 
+coordinate system. The roll, pitch, and yaw angles are Tait-Bryan angles 
+following the intrinsic yaw first, pitch second, and roll last convention. 
+The angular velocity and acceleration components are those about the global 
+earth-fixed axes. Note that these are different from the time derivatives 
+of the Tait-Bryan angles in general. 
+
+SubDyn does not check for physical consistency between the displacement, 
+velocity, and acceleration time series specified for the TP reference points 
+in the driver file and could provide unphysical results if the input motion 
+is not self-consistent. Note that if a rigid-body reference point is set for 
+a floating substructure in the main SubDyn input file (see the **Interface 
+Joints** section of the main input file below), SubDyn will solve for the 
+rigid-body motion internally based on the prescribed motion at the transition 
+pieces. In this case, the results can be highly sensitive to small 
+inconsistencies in the input motion. To obtain accurate results in this case, 
+it is suggested that the time step in the input file should match the SubDyn 
+solver time step exactly, so no time interpolation is required. Furthermore, 
+the input displacement, velocity, and acceleration should contain enough 
+digits to minimize inconsistencies due to truncation errors.
+
+Table 1. Formatting of the Motion Time-Series Input File for TP Reference Points 
 
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 | Column Number   | Input                                                                                                 | Units                                    |
 +=================+=======================================================================================================+==========================================+
 | 1               | Time step value                                                                                       |  `s`                                     |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 2-4             | TP reference point translational displacements along *X*, *Y*, and *Z*                                |  `m`                                     |
+| 2-4             | TP 1 reference point translational displacements along *X*, *Y*, and *Z*                              |  `m`                                     |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 5-7             | TP reference point rotational displacements about *X*, *Y*, and *Z* (small angle assumptions apply)   | `rad/s`                                  |
+| 5-7             | TP 1 reference point rotational displacements (Tait-Bryan roll, pitch, and yaw angles)                | `rad`                                    |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 8-10            | TP reference point translational velocities along *X*, *Y*, and *Z*                                   | `m/s`                                    |
+| 8-10            | TP 1 reference point translational velocities along *X*, *Y*, and *Z*                                 | `m/s`                                    |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 11-13           | TP reference point rotational velocities about *X*, *Y*, and *Z*                                      | `rad/s`                                  |
+| 11-13           | TP 1 reference point rotational velocities about *X*, *Y*, and *Z*                                    | `rad/s`                                  |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 14-16           | TP reference point translational accelerations along *X*, *Y*, and *Z*                                | `m/s^2`                                  |
+| 14-16           | TP 1 reference point translational accelerations along *X*, *Y*, and *Z*                              | `m/s^2`                                  |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 17-19           | TP reference point rotational accelerations about *X*, *Y*, and *Z*                                   | `rad/s^2`                                |
+| 17-19           | TP 1 reference point rotational accelerations about *X*, *Y*, and *Z*                                 | `rad/s^2`                                |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-
+| 20-22           | TP 2 reference point translational displacements along *X*, *Y*, and *Z*                              |  `m`                                     |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 23-25           | TP 2 reference point rotational displacements (Tait-Bryan roll, pitch, and yaw angles)                | `rad`                                    |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 26-28           | TP 2 reference point translational velocities along *X*, *Y*, and *Z*                                 | `m/s`                                    |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 29-31           | TP 2 reference point rotational velocities about *X*, *Y*, and *Z*                                    | `rad/s`                                  |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 32-34           | TP 2 reference point translational accelerations along *X*, *Y*, and *Z*                              | `m/s^2`                                  |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 35-37           | TP 2 reference point rotational accelerations about *X*, *Y*, and *Z*                                 | `rad/s^2`                                |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| ...             | ...                                                                                                   | ...                                      |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 
 Applied loads
 ~~~~~~~~~~~~~
@@ -259,19 +299,19 @@ line, separated by white space. If the number of **JDampings** is less
 than the number of retained modes, the last value will be replicated for
 all the remaining modes. (see :numref:`SD_DampingSpecifications`)
 
-**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix] (see :numref:`SD_DampingSpecifications`)
-
+**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified matrix] (see :numref:`SD_DampingSpecifications`)
 
 **RayleighDamp** Mass and stiffness proportional damping  coefficients (:math:`(\alpha,\beta)` Rayleigh damping) [only if GuyanDampMod=1]
-Guyan damping matrix (6x6) [only if GuyanDamgMod=2] (see :numref:`SD_DampingSpecifications`)
 
-
-**Guyan damping matrix**:
-The 6 lines following this input line consits of the 6x6 coefficients of the damping matrix to be applied at the interface. (see :numref:`SD_DampingSpecifications`)
-
+**GuyanDampSize** Size of the square Guyan damping matrix [only if GuyanDampMod=2]. For a fixed-bottom structure, **GuyanDampSize** must be set to 6 x **nTP** where **nTP** is the number of independent transition pieces, i.e., the number of unique **TPID** in the **Interface Joints** section below. For a floating structure, the first six Guyan modes are always converted to rigid-body modes. Therefore, **GuyanDampSize** must be set to 6 x ( **nTP** - 1 ) because SubDyn no longer applies damping to rigid-body modes. Note that for a floating structure modeled with a rigid-body reference point, Guyan damping is only applied to the part of interface/transition piece velocity associated with elastic deflection of the structure, i.e., the velocity of the transition piece(s) relative to rigid-body motion. For more information on the rigid-body modes and the rigid-body reference point for a floating structure, see the **Interface Joints** section below. The next **GuyanDampSize** lines following this input line should provide the coefficients of the damping matrix to be applied at the interfaces/transition pieces. Each of the following lines should contain **GuyanDampSize** entries to provide the full square damping matrix. (see :numref:`SD_DampingSpecifications`)
 
 For more information on these parameters and guidelines on how to set
 them, see Sections :numref:`sd_modeling-considerations` and :numref:`subdyn-theory`.
+
+Initial Rigid-Body Position
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For a floating structure modeled with a rigid-body reference point, i.e., with an interface joint assigned to **TPID** = 0 in the **Interface Joints** section below, users must specify the initial displacements of this rigid-body reference point. **RBSurge**, **RBSway**, and **RBHeave** are the initial displacements of the rigid-body reference point in the earth-fixed **X**, **Y**, and **Z** directions in meters. **RBRoll**, **RBPitch**, and **RBYaw** are the initial rigid-body rotation angles in degrees following the order of body-fixed yaw rotation first, pitch rotation next, and roll rotation last. Setting all entries in this section to zeros corresponds to an undisplaced structure at the start of the simulation. This section is ignored if a fixed-bottom substructure is modeled or if the floating structure does not use a rigid-body reference point with **TPID** = 0 abscent from the **Interface Joints** section below.
 
 Structure Joints
 ~~~~~~~~~~~~~~~~
@@ -336,7 +376,7 @@ SubDyn requires the user to specify the boundary joints. **NReact**
 should be set equal to the number of joints (defined earlier) at the
 bottom of the structure (i.e., seabed) that are fully constrained;
 **NReact** also determines the number of rows in the subsequent table.
-In SubDyn, **NReact** must be greater than or equal to one. Each joint
+For a fixed-bottom structure, **NReact** must be greater than or equal to one. Each joint
 listed in the table is identified by a unique integer, **RJointID**,
 which must correspond to the **JointID** value found in the STRUCTURE
 JOINTS table. The flags **RctTDXss**, **RctTDYss**, **RctTDZss**,
@@ -350,10 +390,10 @@ by setting one or more DOF flags to 0 and providing the appropriate
 stiffness and mass matrix elements for that DOF via the **SSIfile**.
 If a DOF flag is set to 1, then the node DOF is considered restrained
 and the associated matrix elements potentially provided in the
-**SSIfile** will be ignored.
+**SSIfile** will be ignored. To model a floating structure, **NReact** 
+should be zero with no reaction joints specified in this section.
 
-
-An example of base reaction and interface table is given below
+An example of Base Reaction Joints table is given below
 
 .. code::
 
@@ -362,33 +402,87 @@ An example of base reaction and interface table is given below
     RJointID RctTDXss RctTDYss RctTDZss RctRDXss RctRDYss RctRDZss  SSIfile
       (-)     (flag)   (flag)   (flag)   (flag)   (flag)   (flag)   (string)
       61         1        1        1        1        1        1	    "SSI.txt"
-    ------------------- INTERFACE JOINTS
-      1   NInterf     - Number of interface joints locked to the Transition Piece (TP)
-    IJointID ItfTDXss ItfTDYss ItfTDZss ItfRDXss ItfRDYss ItfRDZss 
-      (-)     (flag)   (flag)   (flag)   (flag)   (flag)   (flag)
-      24         1        1        1        1        1        1
 
 
 Interface Joints
 ~~~~~~~~~~~~~~~~
 
 SubDyn requires the user to specify the interface joints. **NInterf**
-should be set equal to the number of joints at the top of the structure
-(i.e., TP); **NInterf** also determines the number of rows in the
+should be set equal to the number of joints at the top of the structure,
+i.e., transition pieces (TP). **NInterf** also determines the number of rows in the
 subsequent table. In SubDyn, **NInterf** must be greater than or equal
-to one. Note that these joints will be assumed to be rigidly connected
-to the platform reference point of ElastoDyn (see FAST documentation)
-when coupled to FAST, or to the TP reference point if SubDyn is run in
+to one. With the exception of the rigid-body reference point of a floating structure 
+with **TPID** = 0, these joints will be assumed to be rigidly connected
+to the platform reference points of ElastoDyn instances (see FAST documentation)
+when coupled to FAST, or to the TP reference points if SubDyn is run in
 stand-alone mode. Each joint listed in the table is identified by a
 unique integer, **IJointID**, which must correspond to the *JointID*
-value found in the STRUCTURE JOINTS table. The flags **ItfTDXss**,
-**ItfTDYss**, **ItfTDZss**, **ItfRDXss**, **ItfRDYss**,
+value found in the STRUCTURE JOINTS table. Note that only cantilever joints can 
+serve as interface joints. Furthermore, it is not allowed to assign multiple joints 
+belonging to the same rigid-body assembly as interface joints. (This is also redundant.) 
+
+Each interface joint must also be assigned a transition piece ID or **TPID**. 
+Each transition piece, identified by its unique **TPID**, can deflect 
+independently from all other transition pieces, and multiple joints can be 
+rigidly attached to each transition piece by assigning them the same 
+**TPID**. Note that all joints with the same **TPID** will effectively be 
+rigidly connected to each other through their rigid connection to the shared 
+transition piece. For a fixed-bottom structure, all **TPID** present in the 
+table must form a continuous sequence of integers starting from 1. For a floating 
+structure, one and exactly one joint can be assigned to **TPID** = 0. This 
+joint is a dummy transition piece that acts as the rigid-body reference point 
+for the floating substructure. Alternatively, **TPID** = 0 can be omitted for 
+a floating structure, in which case, there can only be one and exactly one 
+transition piece with **TPID** = 1 (though multiple joints can be assigned 
+to it). In this case, the single transition piece also serves as the rigid-body 
+reference point, replicating how previous versions of SubDyn models a floating 
+substructure. For accuracy and numerical stability, it is recommended to 
+select a joint near the center of the floater as the rigid-body reference point 
+to minimize elastic deflection relative to the rigid-body displacement.
+
+The ability to include multiple independent transition pieces is added 
+to SubDyn to enable the modeling of substructures (both fixed-bottom 
+and floating) of multirotor systems. For a fixed-bottom structure, interface 
+joints assigned to **TPID** = 1 are rigidly coupled to the platform reference 
+point of the first ElastoDyn instance simulating the first turbine; the 
+interface joints assigned to **TPID** = 2 are rigidly coupled to the platform 
+reference point of the second ElastoDyn instance simulating the second turbine; 
+and so on. For a floating structure, the same applies, except for the special 
+rigid-body reference point assigned to **TPID** = 0. SubDyn solves the rigid-body 
+motion of the floater about this point, which is not coupled to any ElastoDyn 
+instances (or transition pieces defined in the SubDyn standalone driver). 
+The motion of the rigid-body reference point defines the displaced 
+"rigid-body" position of the floater, and any small elastic deflection is 
+solved relative to this rigid-body configuration. This formulation is needed to 
+accommodate potentially large rigid-body motion, while keeping the elastic 
+defection linear. Alternatively, for a floating system with only one turbine, the 
+rigid-body reference point with **TPID** = 0 can be omitted, in which case, the 
+only transition piece allowed (with **TPID** = 1) serves as both the interface to 
+ElastoDyn and as the rigid-body reference point in SubDyn as in previous versions 
+of OpenFAST.
+
+The flags **ItfTDXss**, **ItfTDYss**, **ItfTDZss**, **ItfRDXss**, **ItfRDYss**,
 **ItfRDZss** indicate the fixity value for the three translations (TD)
 and three rotations (RD) in the SS coordinate system (global
 inertial-frame coordinate system). One denotes fixed and zero denotes
 free (instead of TRUE/FALSE). This version of SubDyn cannot handle
-partially restrained joints, so all flags must be set to one; different
-degrees of fixity will be considered in a future release.
+partially restrained joints, so all flags must be set to one. The latest 
+formulation of SubDyn cannot be easily modified to support partially 
+restrained joints, and these inputs will likely be removed in a future release.
+
+An example of Interface Joints table is given below
+
+.. code::
+
+    ------------------- INTERFACE JOINTS
+      4   NInterf     - Number of interface joints locked to the Transition Piece (TP)
+    IJointID    TPID    ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss     ![Global Coordinate System]
+      (-)       (-)      (flag)      (flag)      (flag)      (flag)      (flag)      (flag)
+       1         0         1           1           1           1           1           1      ! Rigid-body reference point not actually coupled to any transition piece
+       3         1         1           1           1           1           1           1      ! Joint attached to the 1st actual transition piece
+       4         2         1           1           1           1           1           1      ! Joint attached to the 2nd actual transition piece
+       5         2         1           1           1           1           1           1      ! Another joint also attached to the 2nd actual transition piece
+
 
 Members
 ~~~~~~~
