@@ -88,44 +88,76 @@ by that angle. (This feature is only available in standalone mode.)
 Input motion 
 ~~~~~~~~~~~~
 
-Setting **InputsMod** = 0 sets all TP reference-point input motions to
+Setting **InputsMod** = 0 sets all TP reference-point motions to
 zero for all time steps. Setting **InputsMod** = 1 allows the user to
 provide steady (fixed) inputs for the TP motion in the STEADY INPUTS
 section of the file—\ **uTPInSteady**, **uDotTPInSteady**, and
-**uDotDotTPInSteady** following the same convention as Table 1
-(without time). Setting **InputsMod** = 2 allows the user to input a
-time-series file whose name is specified via the **InputsFile**
-parameter. The time-series input file is a text-formatted file. This
-file has no header lines, **NSteps** rows, and each *i*\ :sup:`th` row
-has the first column showing time as *t* = ( *i* – 1 )\*\ **TimeStep**
-(the data will not be interpolated to other times). The remainder of
-each row is made of white-space-separated columns of floating point
-values representing the necessary motion inputs as shown in Table 1. All
-motions are specified in the global, inertial-frame coordinate system.
-SubDyn does not check for physical consistency between the displacement,
-velocity, and acceleration motions specified for the TP reference point
-in the driver file.
+**uDotDotTPInSteady**. Each line should contain 6 x **NTPs** inputs with 
+the first six entries for the first transition piece, the next six entries 
+for the second transition piece, and so on. The details of these inputs 
+are consistent with those for **InputsMod** = 2 below.
 
-Table 1. TP Reference Point Inputs Time-Series Data File Contents
+Setting **InputsMod** = 2 allows the user to provide a time-series file 
+whose name is specified via the **InputsFile** parameter. The time-series 
+input file is a text-formatted file. This file has no header lines, 
+**NSteps** rows, and each *i*\ :sup:`th` row has the first column showing 
+the time *t*. SubDyn driver will linearly interpolate the input time series 
+as needed. The remainder of each row is made of white-space-separated 
+columns of floating point values representing the necessary motion inputs 
+as shown in Table 1. All motions are specified in the global, inertial-frame 
+coordinate system. The roll, pitch, and yaw angles are Tait-Bryan angles 
+following the intrinsic yaw first, pitch second, and roll last convention. 
+The angular velocity and acceleration components are those about the global 
+earth-fixed axes. Note that these are different from the time derivatives 
+of the Tait-Bryan angles in general. 
+
+SubDyn does not check for physical consistency between the displacement, 
+velocity, and acceleration time series specified for the TP reference points 
+in the driver file and could provide unphysical results if the input motion 
+is not self-consistent. Note that if a rigid-body reference point is set for 
+a floating substructure in the main SubDyn input file (see the **Interface 
+Joints** section of the main input file below), SubDyn will solve for the 
+rigid-body motion internally based on the prescribed motion at the transition 
+pieces. In this case, the results can be highly sensitive to small 
+inconsistencies in the input motion. To obtain accurate results in this case, 
+it is suggested that the time step in the input file should match the SubDyn 
+solver time step exactly, so no time interpolation is required. Furthermore, 
+the input displacement, velocity, and acceleration should contain enough 
+digits to minimize inconsistencies due to truncation errors.
+
+Table 1. Formatting of the Motion Time-Series Input File for TP Reference Points 
 
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 | Column Number   | Input                                                                                                 | Units                                    |
 +=================+=======================================================================================================+==========================================+
 | 1               | Time step value                                                                                       |  `s`                                     |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 2-4             | TP reference point translational displacements along *X*, *Y*, and *Z*                                |  `m`                                     |
+| 2-4             | TP 1 reference point translational displacements along *X*, *Y*, and *Z*                              |  `m`                                     |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 5-7             | TP reference point rotational displacements about *X*, *Y*, and *Z* (small angle assumptions apply)   | `rad/s`                                  |
+| 5-7             | TP 1 reference point rotational displacements (Tait-Bryan roll, pitch, and yaw angles)                | `rad`                                    |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 8-10            | TP reference point translational velocities along *X*, *Y*, and *Z*                                   | `m/s`                                    |
+| 8-10            | TP 1 reference point translational velocities along *X*, *Y*, and *Z*                                 | `m/s`                                    |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 11-13           | TP reference point rotational velocities about *X*, *Y*, and *Z*                                      | `rad/s`                                  |
+| 11-13           | TP 1 reference point rotational velocities about *X*, *Y*, and *Z*                                    | `rad/s`                                  |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 14-16           | TP reference point translational accelerations along *X*, *Y*, and *Z*                                | `m/s^2`                                  |
+| 14-16           | TP 1 reference point translational accelerations along *X*, *Y*, and *Z*                              | `m/s^2`                                  |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-| 17-19           | TP reference point rotational accelerations about *X*, *Y*, and *Z*                                   | `rad/s^2`                                |
+| 17-19           | TP 1 reference point rotational accelerations about *X*, *Y*, and *Z*                                 | `rad/s^2`                                |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
-
+| 20-22           | TP 2 reference point translational displacements along *X*, *Y*, and *Z*                              |  `m`                                     |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 23-25           | TP 2 reference point rotational displacements (Tait-Bryan roll, pitch, and yaw angles)                | `rad`                                    |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 26-28           | TP 2 reference point translational velocities along *X*, *Y*, and *Z*                                 | `m/s`                                    |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 29-31           | TP 2 reference point rotational velocities about *X*, *Y*, and *Z*                                    | `rad/s`                                  |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 32-34           | TP 2 reference point translational accelerations along *X*, *Y*, and *Z*                              | `m/s^2`                                  |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| 35-37           | TP 2 reference point rotational accelerations about *X*, *Y*, and *Z*                                 | `rad/s^2`                                |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+| ...             | ...                                                                                                   | ...                                      |
++-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 
 Applied loads
 ~~~~~~~~~~~~~
@@ -404,7 +436,9 @@ a floating structure, in which case, there can only be one and exactly one
 transition piece with **TPID** = 1 (though multiple joints can be assigned 
 to it). In this case, the single transition piece also serves as the rigid-body 
 reference point, replicating how previous versions of SubDyn models a floating 
-substructure.
+substructure. For accuracy and numerical stability, it is recommended to 
+select a joint near the center of the floater as the rigid-body reference point 
+to minimize elastic deflection relative to the rigid-body displacement.
 
 The ability to include multiple independent transition pieces is added 
 to SubDyn to enable the modeling of substructures (both fixed-bottom 
