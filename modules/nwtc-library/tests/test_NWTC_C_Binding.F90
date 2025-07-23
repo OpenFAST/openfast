@@ -182,7 +182,7 @@ module test_NWTC_C_Binding
         integer, parameter :: result_length = test_c_string_len + 10
         character(len=result_length) :: result_string
 
-        result_string = RemoveCStringNullChar(test_c_string, test_c_string_len)
+        result_string = RemoveCStringNullChar(test_c_string_len, test_c_string)
         call check(error, 0, INDEX(result_string, C_NULL_CHAR))
 
     end subroutine
