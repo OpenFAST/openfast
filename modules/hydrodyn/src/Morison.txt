@@ -101,6 +101,11 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "Index into the filled group table if this is a filled member"    -
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Flag T/F for whether the member is modeled with potential flow theory"    -
 typedef   ^                            ^                             LOGICAL          PropMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"    -
+typedef   ^                            ^                             INTEGER          FDMod                    -          -        -         "Rectangular member transverse drag model (0: simple centerline based; 1: face based; 2: face based with suction-side-only formulation" -
+typedef   ^                            ^                             ReKi             VnCOffA                  -          -        -         "Rectangular member transverse drag relative velocity high-pass filter cutoff frequency - normal to Side A"  Hz
+typedef   ^                            ^                             ReKi             VnCOffB                  -          -        -         "Rectangular member transverse drag relative velocity high-pass filter cutoff frequency - normal to Side B"  Hz
+typedef   ^                            ^                             ReKi             FDLoFScA                 -          -        -         "Rectangular member transverse drag weighting factor - normal to Side A"  -
+typedef   ^                            ^                             ReKi             FDLoFScB                 -          -        -         "Rectangular member transverse drag weighting factor - normal to Side B"  -
 typedef   ^                            ^                             INTEGER          NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi             RefLength                -          -        -         "the reference total length for this member"    m
 typedef   ^                            ^                             ReKi             dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
@@ -182,6 +187,11 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           AxCa                     {:}        -        -         "Member axial Ca at each node"    -
 typedef   ^                            ^                             ReKi           AxCp                     {:}        -        -         "Member axial Cp at each node"    -
 typedef   ^                            ^                             ReKi           Cb                       {:}        -        -         "Member Cb at each node"    -
+typedef   ^                            ^                             IntKi          FDMod                    -          -        -         "Rectangular member transverse drag model (0: simple centerline based; 1: face based; 2: face based with suction-side-only formulation" -
+typedef   ^                            ^                             ReKi           VRelNFiltConstA          -          -        -         "Rectangular member transverse drag relative velocity high-pass filter constant - normal to Side A" -
+typedef   ^                            ^                             ReKi           VRelNFiltConstB          -          -        -         "Rectangular member transverse drag relative velocity high-pass filter constant - normal to Side B" -
+typedef   ^                            ^                             ReKi           DragLoFScA               -          -        -         "Rectangular member transverse drag weighting factor - normal to Side A" -
+typedef   ^                            ^                             ReKi           DragLoFScB               -          -        -         "Rectangular member transverse drag weighting factor - normal to Side B" -
 typedef   ^                            ^                             ReKi           m_fb_l                   {:}        -        -         "mass of flooded ballast in lower portion of each element"    kg
 typedef   ^                            ^                             ReKi           m_fb_u                   {:}        -        -         "mass of flooded ballast in upper portion of each element"    kg
 typedef   ^                            ^                             ReKi           h_cfb_l                  {:}        -        -         "distance to flooded ballast centroid from node point in lower portion of each element"    m
@@ -416,6 +426,7 @@ typedef   ^                            ContinuousStateType           SiKi       
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     V_rel_n_FiltStat               {:}      -         -         "State of the high-pass filter for the joint relative normal velocity" m/s
+typedef   ^                            DiscreteStateType             ReKi                     MV_rel_n_FiltStat              {:}{:}   -         -         "State of the high-pass filter for the rectangular member relative normal velocity" m/s
 #
 #
 # Define constraint states here:

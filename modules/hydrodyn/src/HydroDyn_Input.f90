@@ -915,18 +915,51 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       DO I = 1,InputFileData%Morison%NMembers
          ! We can't use the ParseAry here since PropPot is a logical
          Line = FileInfo_In%Lines(CurLine)
+
          READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,    InputFileData%Morison%InpMembers(I)%MJointID1,    &
                                       InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
                                       InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MSecGeom,     &
                                       InputFileData%Morison%InpMembers(I)%MSpinOrient, InputFileData%Morison%InpMembers(I)%MDivSize,     &
                                       InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
-                                      InputFileData%Morison%InpMembers(I)%PropPot
+                                      InputFileData%Morison%InpMembers(I)%PropPot,     InputFileData%Morison%InpMembers(I)%FDMod,        &
+                                      InputFileData%Morison%InpMembers(I)%VnCOffA,     InputFileData%Morison%InpMembers(I)%VnCOffB,      &
+                                      InputFileData%Morison%InpMembers(I)%FDLoFScA,    InputFileData%Morison%InpMembers(I)%FDLoFScB
          IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
-                        //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
-            if (Failed())  return;
+            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,    InputFileData%Morison%InpMembers(I)%MJointID1,    &
+                                         InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
+                                         InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MSecGeom,     &
+                                         InputFileData%Morison%InpMembers(I)%MSpinOrient, InputFileData%Morison%InpMembers(I)%MDivSize,     &
+                                         InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
+                                         InputFileData%Morison%InpMembers(I)%PropPot
+            IF ( ErrStat2 /= 0 ) THEN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
+                           //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
+               if (Failed())  return;
+            ELSE
+               InputFileData%Morison%InpMembers(I)%FDMod    =   0_IntKi
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            END IF
+         ELSE
+            IF ( InputFileData%Morison%InpMembers(I)%MSecGeom /= MSecGeom_Rec ) THEN
+               call WrScr('HydroDyn Warning: The optional member inputs FDMod, VnCOffA, VnCOffB, FDLoFScA, and FDLoFScB are only applicable to members with rectangular sections. These will be ignored for Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
+               InputFileData%Morison%InpMembers(I)%FDMod    =   0_IntKi
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            ELSE IF ( InputFileData%Morison%InpMembers(I)%FDMod == 0_IntKi ) THEN
+               call WrScr('HydroDyn Warning: Velocity filtering for rectangular-member transverse drag force is only available with FDMod = 1 or 2. The optional member inputs VnCOffA, VnCOffB, FDLoFScA, and FDLoFScB will be ignored for Member ID '//TRIM(num2Lstr(InputFileData%Morison%InpMembers(I)%MemberID))//'. ')
+               InputFileData%Morison%InpMembers(I)%VnCOffA  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%VnCOffB  = -1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScA =  1.0_ReKi
+               InputFileData%Morison%InpMembers(I)%FDLoFScB =  1.0_ReKi
+            END IF
          END IF
+
          InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R
 
          if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
@@ -2482,13 +2515,29 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             RETURN
          END IF
 
-         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 0 or 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
          IF ( InputFileData%Morison%InpMembers(I)%PropPot .AND. InputFileData%PotMod == 0  ) THEN
             CALL SetErrStat( ErrID_Fatal,'A member cannot have PropPot set to TRUE if PotMod = 0 in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         ! Optional member inputs for rectangular members
+         IF ( InputFileData%Morison%InpMembers(I)%FDMod /= 0_IntKi .AND. InputFileData%Morison%InpMembers(I)%FDMod /= 1_IntKi .AND. InputFileData%Morison%InpMembers(I)%FDMod /= 2_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDMod must be 0 (centerline-based drag), 1 (face-based drag), or 2 (face-based suction-side-only drag) for rectangular members.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%FDLoFScA < 0.0_ReKi .OR. InputFileData%Morison%InpMembers(I)%FDLoFScA > 1.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDLoFScA and FDLoFScB for rectangular members must be between 0 and 1 inclusive.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%FDLoFScB < 0.0_ReKi .OR. InputFileData%Morison%InpMembers(I)%FDLoFScB > 1.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FDLoFScA and FDLoFScB for rectangular members must be between 0 and 1 inclusive.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
