@@ -146,9 +146,9 @@ SUBROUTINE StringConvert_C2F(String_C, String_F)
 
 END SUBROUTINE
 
-FUNCTION RemoveCStringNullChar(String_C, StringLength_C)
-    CHARACTER(KIND=C_CHAR), INTENT(IN)                      :: String_C(StringLength_C)
+FUNCTION RemoveCStringNullChar(StringLength_C, String_C)
     INTEGER(C_INT), INTENT(IN)                              :: StringLength_C
+    CHARACTER(KIND=C_CHAR), INTENT(IN)                      :: String_C(StringLength_C)
     CHARACTER(LEN=StringLength_C)                           :: RemoveCStringNullChar
 
     integer :: i
@@ -177,7 +177,7 @@ FUNCTION FileNameFromCString(String_C, StringLength_C)
     i = MIN(IntfStrLen, StringLength_C)
     FileNameFromCString(1:i) = String_C(1:i)
     
-    FileNameFromCString = RemoveCStringNullChar(FileNameFromCString, IntfStrLen)
+    FileNameFromCString = RemoveCStringNullChar(IntfStrLen, FileNameFromCString)
 
     RETURN
 
