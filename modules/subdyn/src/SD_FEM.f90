@@ -375,11 +375,6 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
                CALL Fatal('All joints of a rigid link should be cantilever (not ball/pin/universal). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is not a cantilever joint).')
                return
             endif
-            ! Check that rigid links are not connected to the interface
-            iInterf = FINDLOCI(p%Nodes_I(:,1), iJoint )
-            if (iInterf>=1) then
-               CALL WrScr('[WARNING] There might be a bug when one beam and one rigid link are connected to the interface nodes. The problematic member might be MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
-            endif
          endif
       enddo
       ! Column 4-5: PropIndex 1-2 (instead of PropSetID1&2)
