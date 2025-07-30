@@ -572,7 +572,7 @@ or [**Mod_Wake=3**].
 
 **k_VortexDecay** [-] This constant specifies the decay rate of the 
 spanwise velocity components from the curled wake model. 
-DEFAULT is 0.0001.
+DEFAULT is 0.0.
 
 **NumVortices** [-] The number of vortices in the curled wake model. 
 DEFAULT is 100.

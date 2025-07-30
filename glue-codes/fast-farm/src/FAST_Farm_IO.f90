@@ -816,7 +816,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    !----------------------- CURL WAKE PARAMETERS ------------------------------------------
    CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .True., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.0001, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.0, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return
@@ -1026,9 +1026,9 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
 
-   IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay needs to be postive',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies needs to be greater than 1',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay must be >= 0',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies must be greater than 1',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D must be postive',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vCurl < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vCurl parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
