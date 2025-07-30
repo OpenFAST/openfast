@@ -166,7 +166,7 @@ domain discretization criteria, discussed in :numref:`FF:sec:DiscRecs`.
 
 Additional wake dynamics quantities are needed when specifying the FAST.Farm
 input file, as discussed further in :numref:`FF:wake-dynamics-parameters`.
-It is recommended to base **dr** on :math:`c_\text{max}`;
+It is recommended to set **dr** to :math:`\le D^\text{Rotor} / 15`;
 **NumRadii** on wake diameter and **dr**; and **NumPlanes** on **DT_Low**,
 inflow hub-height velocity, and the distance between turbine locations.
 
@@ -515,8 +515,16 @@ time steps. Note that :math:`D^\text{Wake}` can be approximated as
 
 When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the time step with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
 
+.. only:: html
+
    .. math::
-      DT_Low  \lessapprox \frac{dr}{2 V_\text{Hub}}
+      \textbf{DT_Low}  \lessapprox \frac{dr}{2 V_\text{Hub}}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{DT\_Low}  \lessapprox \frac{dr}{2 V_\text{Hub}}
 
 
 Spatial discretization convergence was assessed in the same manner as
@@ -531,16 +539,27 @@ denominator has the units [m/s]:
 
    .. math::
       \textbf{DS_Low} \le
-         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150 m/s}
-         = \frac{\textbf{DT_Low}V_\text{Hub}^2}{15 m/s}
+         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150~\text{m/s}} =
+         \begin{cases}
+            \frac{\textbf{DT_Low}V_\text{Hub}^2}{15~\text{m/s}}
+               & \qquad \text{for polar wake model} \\[0.5em]
+            \frac{C_\text{Meander}\textbf{DT_Low}V_\text{Hub}^2}{5~\text{m/s}}
+               & \qquad \text{for curled wake model}
+         \end{cases}
+         
 
 
 .. only:: not html
 
    .. math::
       \textbf{DS\_Low} \le
-         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150 m/s}
-         = \frac{\textbf{DT\_Low}V_\text{Hub}^2}{15 m/s}
+         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150~\text{m/s}} =
+         \begin{cases}
+            \frac{\textbf{DT\_Low}V_\text{Hub}^2}{15~\text{m/s}}
+               & \qquad \text{for polar wake model} \\[0.5em]
+            \frac{C_\text{Meander}\textbf{DT\_Low}V_\text{Hub}^2}{5~\text{m/s}}
+               & \qquad \text{for curled wake model}
+         \end{cases}
 
 
 For all synthetic turbulence methods, it is recommended that
@@ -816,12 +835,14 @@ parameters:
    suggested:
 
    .. math::
-      \textbf{dr} \le c_\text{max}
+      \textbf{dr} \le D^\text{Rotor} / 15
 
-When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the spacing with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
+When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the
+spacing with a value that (approximately) satisfies the following guideline (see
+Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
 
    .. math::
-      \textbf{dr}  < \frac{D}{10}
+      \textbf{dr} \le D^\text{Rotor} / 15
 
 
 
