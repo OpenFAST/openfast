@@ -167,12 +167,12 @@ low-resolution ambient wind data files must be named
 *Amb.t<n*\ :sub:`low`\ *>.vtk* and stored in a subdirectory named
 *Low*. In the file names, *<n*\ :sub:`low`\ *>* is an integer
 (without leading zeros) between *0* (at :math:`t=0`) and *N-1*, where
-:math:`N=FLOOR\left( \frac{TMax}{DT_\text{Low}} \right)+1` is the number
+:math:`N=FLOOR\left( \frac{\textbf{TMax}}{\textbf{DT_Low}} \right)+1` is the number
 of low-resolution time steps. The high-resolution ambient wind data
 files must be named *Amb.t<n*\ :sub:`high`\ *>.vtk*, where
 *<n*\ :sub:`high`\ *>* is an integer (without leading zeros)
 between 0 (at :math:`t=0`) and
-:math:`\frac{DT_\text{Low}}{DT\_High}\left( N-1 \right)`. The files must
+:math:`\frac{\textbf{DT_Low}}{\textbf{DT_High}}\left( N-1 \right)`. The files must
 be stored in a subdirectory named *HighT<n*\ :sub:`t`\ *>*, where
 *<n*\ :sub:`t`\ *>* is an integer (without leading zeros) between 1 and
 the total number of wind turbines (**NumTurbines**). Subdirectory
@@ -199,7 +199,7 @@ a prior simulation. If set to TRUE, FAST.Farm will check to ensure that:
    wind turbines. If there are more subdirectories, only the first
    **NumTurbines** will be used. If more files are in each subdirectory,
    only the first
-   :math:`\frac{DT_\text{Low}}{DT\_High}\left( N-1 \right)+1` will be
+   :math:`\frac{\textbf{DT_Low}}{\textbf{DT_High}}\left( N-1 \right)+1` will be
    used.
 
 -  The spatial resolution (number of grid points, origin, and spacing)
@@ -229,7 +229,7 @@ choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
 When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
 of **dr** and **DT_Low**.
-(typically  :math:`DT_Low<dr/(2V_\text{Hub})`, 
+(typically  :math:`\textbf{DT_Low}<\textbf{dr}/(2V_\text{Hub})`,
 see :numref:`FF:ModGuidance`)
 
 
@@ -562,9 +562,9 @@ the wake meandering and must be greater than or equal to one. If the
 DEFAULT keyword is specified in place of a numerical value,
 **C_Meander** is set to :math:`1.9`.
 
-*----------------Curled wake parameters------------------*
 
-
+Curled wake parameters
+~~~~~~~~~~~~~~~~~~~~~~
 
 **Swirl** [switch] 
 Include swirl velocities in wake [only used if [**Mod_Wake=2**]
@@ -572,7 +572,7 @@ or [**Mod_Wake=3**].
 
 **k_VortexDecay** [-] This constant specifies the decay rate of the 
 spanwise velocity components from the curled wake model. 
-DEFAULT is 0.0001.
+DEFAULT is 0.0.
 
 **NumVortices** [-] The number of vortices in the curled wake model. 
 DEFAULT is 100.
