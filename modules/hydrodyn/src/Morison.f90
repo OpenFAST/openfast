@@ -5321,6 +5321,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       dy     = y2-y1
       sz     = z1+z2
       dy_3   = y2*y2*y2-y1*y1*y1
+      dz     = z2-z1
       dz_2   = z2_2-z1_2
       dz_3   = z2_3-z1_3
       dz_4   = z2_4-z1_4
@@ -5335,18 +5336,22 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       My     = Z0/6.0*( 2.0*dy_3 + 2.0*dy*tmp2 + 3.0*tmp1*sz ) &    ! y_hat component
                + cosPhi/24.0*( -3.0*R_4*dTheta + 3.0*y1*z1*(2.0*z1_2-R_2) - 3.0*y2*z2*(2.0*z2_2-R_2) &
                                                             + 6.0*dy*sz*(z1_2+z2_2) + 8.0*tmp1*tmp2  )
-      IF (EqualRealNos(z1, z2)) THEN ! z_hat component (Nonzero only when z1 /= z2)
-         Mz = 0.0
-      ELSE
-         dz = z2-z1
-         a  = dy/dz
-         b  = tmp1/dz
-         tmp1 = a*a+1.0
-         tmp2 = a*b
-         tmp3 = b*b-R_2
-         Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &
-              -cosPhi/24.0*(3.0*tmp1*dz_4 + 8.0*tmp2*dz_3 + 6.0*tmp3*dz_2)
-      END IF
+      ! IF (EqualRealNos(z1, z2)) THEN ! z_hat component (Nonzero only when z1 /= z2)
+      !    Mz = 0.0
+      ! ELSE
+      !    dz = z2-z1
+      !    a  = dy/dz
+      !    b  = tmp1/dz
+      !    tmp1 = a*a+1.0
+      !    tmp2 = a*b
+      !    tmp3 = b*b-R_2
+      !    Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &
+      !         -cosPhi/24.0*(3.0*tmp1*dz_4 + 8.0*tmp2*dz_3 + 6.0*tmp3*dz_2)
+      ! END IF
+
+      Mz =     -Z0/ 6.0*( dz*( y2*y2 + y2*y1 + y1*y1 + tmp2 - 3.0*R_2 )                                                 ) &
+           -cosPhi/24.0*( dz_2*(3.0*z2_2+3.0*z1_2+2.0*y1*y2-6.0*R_2) + dz*dz*(y1*y1-y2*y2) + 4.0*dz*(y1*y1*z1+y2*y2*z2) )
+
       F(4:6) = p%WaveField%WtrDens * g * (My*y_hat + Mz*z_hat)
 
    END SUBROUTINE GetEndPlateHstLds_Cyl
