@@ -79,19 +79,57 @@ MODULE MoorDyn_IO
   INTEGER, PARAMETER             :: MZ        =   25
   INTEGER, PARAMETER             :: Sub       =   26
   INTEGER, PARAMETER             :: TenA      =   27 
-  INTEGER, PARAMETER             :: TenB      =   28 
+  INTEGER, PARAMETER             :: TenB      =   28
+  INTEGER, PARAMETER             :: WZ        =   29
+  INTEGER, PARAMETER             :: BoX       =   30
+  INTEGER, PARAMETER             :: BoY       =   31
+  INTEGER, PARAMETER             :: BoZ       =   32
+  INTEGER, PARAMETER             :: DpX       =   33
+  INTEGER, PARAMETER             :: DpY       =   34
+  INTEGER, PARAMETER             :: DpZ       =   35
+  INTEGER, PARAMETER             :: DqX       =   36
+  INTEGER, PARAMETER             :: DqY       =   37
+  INTEGER, PARAMETER             :: DqZ       =   38
+  INTEGER, PARAMETER             :: ApX       =   39
+  INTEGER, PARAMETER             :: ApY       =   40
+  INTEGER, PARAMETER             :: ApZ       =   41
+  INTEGER, PARAMETER             :: AqX       =   42
+  INTEGER, PARAMETER             :: AqY       =   43
+  INTEGER, PARAMETER             :: AqZ       =   44
+  INTEGER, PARAMETER             :: PdX       =   45
+  INTEGER, PARAMETER             :: PdY       =   46
+  INTEGER, PARAMETER             :: PdZ       =   47
+  INTEGER, PARAMETER             :: BX        =   48
+  INTEGER, PARAMETER             :: BY        =   49
+  INTEGER, PARAMETER             :: BZ        =   50
+  INTEGER, PARAMETER             :: Pd        =   51
+
+ 
 
 
   ! List of units corresponding to the quantities parameters for QTypes
-  CHARACTER(ChanLen), PARAMETER :: UnitList(0:26) =  (/ &
-                               "(s)       ","(m)       ","(m)       ","(m)       ", &
-                               "(deg)     ","(deg)     ","(deg)     ", &
-                               "(m/s)     ","(m/s)     ","(m/s)     ", &
-                               "(deg/s)   ","(deg/s)   ","(deg/s)   ", &
-                               "(m/s2)    ","(m/s2)    ","(m/s2)    ", &
-                               "(deg/s2)  ","(deg/s2)  ","(deg/s2)  ", &
-                               "(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(Nm)      ","(Nm)      ","(Nm)      ","(frac)    "/)
+  CHARACTER(ChanLen), PARAMETER :: UnitList(0:50) = (/ &
+  "(s)       ",                             & !  0: Time
+  "(m)       ", "(m)       ", "(m)       ", & !  1–3:  PosX, PosY, PosZ
+  "(deg)     ", "(deg)     ", "(deg)     ", & !  4–6:  RotX, RotY, RotZ
+  "(m/s)     ", "(m/s)     ", "(m/s)     ", & !  7–9:  VelX, VelY, VelZ
+  "(deg/s)   ", "(deg/s)   ", "(deg/s)   ", & ! 10–12: RVelX, RVelY, RVelZ
+  "(m/s2)    ", "(m/s2)    ", "(m/s2)    ", & ! 13–15: AccX, AccY, AccZ
+  "(deg/s2)  ", "(deg/s2)  ", "(deg/s2)  ", & ! 16–18: RAccX, RAccY, RAccZ
+  "(N)       ",                             & ! 19: Ten
+  "(N)       ", "(N)       ", "(N)       ", & ! 20–22: FX, FY, FZ
+  "(Nm)      ", "(Nm)      ", "(Nm)      ", & ! 23–25: MX, MY, MZ
+  "(frac)    ",                             & ! 26: Sub
+  "(N)       ", "(N)       ",               & ! 27–28: TenA, TenB
+  "(N)       ",                             & ! 29: WZ
+  "(N)       ", "(N)       ", "(N)       ", & ! 30–32: DpX, DpY, DpZ 
+  "(N)       ", "(N)       ", "(N)       ", & ! 33–35: DqX, DqY, DqZ 
+  "(N)       ", "(N)       ", "(N)       ", & ! 36–38: ApX, ApY, ApZ 
+  "(N)       ", "(N)       ", "(N)       ", & ! 39–41: AqX, AqY, AqZ 
+  "(N)       ", "(N)       ", "(N)       ", & ! 42–44: PdX, PdY, PdZ 
+  "(N)       ", "(N)       ", "(N)       ", & ! 45–47: BX, BY, BZ
+  "(N)       ", "(N)       ", "(N)       "  & ! 48–50: BoX, BoY, BoZ
+/)                     
 
   CHARACTER(28), PARAMETER  :: OutPFmt = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
   CHARACTER(28), PARAMETER  :: OutSFmt = "ES10.3E2"
@@ -695,6 +733,73 @@ CONTAINS
         ELSE IF (qVal == 'SUB') THEN
           p%OutParam(I)%QType = Sub
           p%OutParam(I)%Units = UnitList(Sub)
+        ELSE IF (qVal == 'WZ') THEN
+          p%OutParam(I)%QType = WZ
+          p%OutParam(I)%Units = UnitList(WZ)
+        ELSE IF (qVal == 'BoX') THEN
+          p%OutParam(I)%QType = BoX
+          p%OutParam(I)%Units = UnitList(BoX)
+        ELSE IF (qVal == 'BoY') THEN
+          p%OutParam(I)%QType = BoY
+          p%OutParam(I)%Units = UnitList(BoY)
+        ELSE IF (qVal == 'BoZ') THEN
+          p%OutParam(I)%QType = BoZ
+          p%OutParam(I)%Units = UnitList(BoZ)
+        ELSE IF (qVal == 'DpX') THEN
+          p%OutParam(I)%QType = DpX
+          p%OutParam(I)%Units = UnitList(DpX)
+        ELSE IF (qVal == 'DpY') THEN
+          p%OutParam(I)%QType = DpY
+          p%OutParam(I)%Units = UnitList(DpY)
+        ELSE IF (qVal == 'DpZ') THEN
+          p%OutParam(I)%QType = DpZ
+          p%OutParam(I)%Units = UnitList(DpZ)
+        ELSE IF (qVal == 'DqX') THEN
+          p%OutParam(I)%QType = DqX
+          p%OutParam(I)%Units = UnitList(DqX)
+        ELSE IF (qVal == 'DqY') THEN
+          p%OutParam(I)%QType = DqY
+          p%OutParam(I)%Units = UnitList(DqY)
+        ELSE IF (qVal == 'DqZ') THEN
+          p%OutParam(I)%QType = DqZ
+          p%OutParam(I)%Units = UnitList(DqZ)
+        ELSE IF (qVal == 'ApX') THEN
+          p%OutParam(I)%QType = ApX
+          p%OutParam(I)%Units = UnitList(ApX)
+        ELSE IF (qVal == 'ApY') THEN
+          p%OutParam(I)%QType = ApY
+          p%OutParam(I)%Units = UnitList(ApY)
+        ELSE IF (qVal == 'ApZ') THEN
+          p%OutParam(I)%QType = ApZ
+          p%OutParam(I)%Units = UnitList(ApZ)
+        ELSE IF (qVal == 'AqX') THEN
+          p%OutParam(I)%QType = AqX
+          p%OutParam(I)%Units = UnitList(AqX)
+        ELSE IF (qVal == 'AqY') THEN
+          p%OutParam(I)%QType = AqY
+          p%OutParam(I)%Units = UnitList(AqY)
+        ELSE IF (qVal == 'AqZ') THEN
+          p%OutParam(I)%QType = AqZ
+          p%OutParam(I)%Units = UnitList(AqZ)
+        ELSE IF (qVal == 'PdX') THEN
+          p%OutParam(I)%QType = PdX
+          p%OutParam(I)%Units = UnitList(PdX)
+        ELSE IF (qVal == 'PdY') THEN
+          p%OutParam(I)%QType = PdY
+          p%OutParam(I)%Units = UnitList(PdY)
+        ELSE IF (qVal == 'PdZ') THEN
+          p%OutParam(I)%QType = PdZ
+          p%OutParam(I)%Units = UnitList(PdZ)
+        ELSE IF (qVal == 'BX') THEN
+          p%OutParam(I)%QType = BX
+          p%OutParam(I)%Units = UnitList(BX)
+        ELSE IF (qVal == 'BY') THEN
+          p%OutParam(I)%QType = BY
+          p%OutParam(I)%Units = UnitList(BY)
+        ELSE IF (qVal == 'BZ') THEN
+          p%OutParam(I)%QType = BZ
+          p%OutParam(I)%Units = UnitList(BZ)
+
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
           CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Quantity type not recognized.')
@@ -801,9 +906,9 @@ CONTAINS
       DO I=1,p%NRods
       
          ! calculate number of output entries (excluding time) to write for this Rod
-         RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:9)) &
-                       + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(10:11)) &
-                             + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
+         RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:24)) &
+                          + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(25:26)) &
+                                + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(27:51))
       
          ALLOCATE(m%RodList(I)%RodWrOutput( 1 + RodNumOuts), STAT = ErrStat)  
          IF ( ErrStat /= ErrID_None ) THEN
@@ -1097,9 +1202,9 @@ CONTAINS
 
                         
             ! calculate number of output entries (excluding time) to write for this Rod
-            RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:9)) &
-                          + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(10:11)) &
-                                + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
+            RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:24)) &
+                          + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(25:26)) &
+                                + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(27:51))
                                   
             if (wordy > 2) PRINT *, RodNumOuts, " output channels"
 
@@ -1170,6 +1275,22 @@ CONTAINS
                WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr((m%RodList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'SRt', J=1,(m%RodList(I)%N) )
             END IF
+            IF (m%RodList(I)%OutFlagList(16) == 1) THEN
+               WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'ApX', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'ApY', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'ApZ', J=0,m%RodList(I)%N )
+            END IF
+            IF (m%RodList(I)%OutFlagList(17) == 1) THEN
+               WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'AqX', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'AqY', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'AqZ', J=0,m%RodList(I)%N )
+            END IF
+            IF (m%RodList(I)%OutFlagList(18) == 1) THEN
+               WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DpX', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DpY', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DpZ', J=0,m%RodList(I)%N )
+            END IF
+            IF (m%RodList(I)%OutFlagList(19) == 1) THEN
+               WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DqX', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DqY', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'DqZ', J=0,m%RodList(I)%N )
+            END IF
             
             WRITE(m%RodList(I)%RodUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
             
@@ -1235,6 +1356,20 @@ CONTAINS
                WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr((m%RodList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(1/s)', J=1,(m%RodList(I)%N) )
             END IF
+            IF (m%RodList(I)%OutFlagList(16) == 1) THEN
+                WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                  ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,m%RodList(I)%N )
+            END IF
+            IF (m%RodList(I)%OutFlagList(17) == 1) THEN
+                WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                 ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,m%RodList(I)%N )
+            END IF
+            IF (m%RodList(I)%OutFlagList(18) == 1) THEN
+                WRITE(m%RodList(I)%RodUnOut,'('//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A15))', advance='no') &
+                 ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,m%RodList(I)%N )
+            END IF
+
+               
             
             WRITE(m%RodList(I)%RodUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make Rod break at the end
             
@@ -1329,6 +1464,9 @@ CONTAINS
       INTEGER                                :: LineNumOuts                 ! number of entries in LineWrOutput for each line
       INTEGER                                :: RodNumOuts                  !   same for Rods
       CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
+      REAL(DbKi) :: VOFsum
+      
+
 
 
       IF ( .NOT. ALLOCATED( p%OutParam ) .OR. p%MDUnOut < 0 )  THEN
@@ -1462,11 +1600,66 @@ CONTAINS
                      CASE (MZ)
                         y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(6)  ! total force in z
                      CASE (Sub)
-                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%h0 / m%RodList(p%OutParam(I)%ObjID)%UnstrLen ! rod submergence
+                        VOFsum = 0.0_DbKi
+                        do j = 0, m%RodList(p%OutParam(I)%ObjID)%N
+                           VOFsum = VOFsum + m%RodList(p%OutParam(I)%ObjID)%VOF(j)
+                        end do
+                        y%WriteOutput(I) = VOFsum / (m%RodList(p%OutParam(I)%ObjID)%N + 1) ! rod submergence
                      CASE (TenA)
                         y%WriteOutput(I) = sqrt(m%RodList(p%OutParam(I)%ObjID)%FextA(1)**2 + m%RodList(p%OutParam(I)%ObjID)%FextA(2)**2 + m%RodList(p%OutParam(I)%ObjID)%FextA(3)**2)! external forces on end A
                      CASE (TenB)
                         y%WriteOutput(I) = sqrt(m%RodList(p%OutParam(I)%ObjID)%FextB(1)**2 + m%RodList(p%OutParam(I)%ObjID)%FextB(2)**2 + m%RodList(p%OutParam(I)%ObjID)%FextB(3)**2) ! external forces on end B
+                     CASE (ApX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Ap(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (ApY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Ap(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (ApZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Ap(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (AqX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Aq(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (AqY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Aq(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (AqZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Aq(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (BoX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Bo(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (BoY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Bo(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (BoZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Bo(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (DpX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dp(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (DpY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dp(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (DpZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dp(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (DqX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dq(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (DqY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dq(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (DqZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Dq(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (WZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%W(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (PdX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Pd(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (PdY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Pd(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (PdZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%Pd(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+
+                     CASE (BX)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%B(1,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (BY)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%B(2,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
+                     CASE (BZ)
+                        y%WriteOutput(I) = SUM(m%RodList(p%OutParam(I)%ObjID)%B(3,:)) / (m%RodList(p%OutParam(I)%ObjID)%N + 1)
                      CASE DEFAULT
                         y%WriteOutput(I) = 0.0_ReKi
                         ErrStat = ErrID_Warn
@@ -1493,6 +1686,57 @@ CONTAINS
                         y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Fnet(2,p%OutParam(I)%NodeID)  ! node force in y
                      CASE (FZ)
                         y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Fnet(3,p%OutParam(I)%NodeID)  ! node force in z
+                     CASE (WZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%W(3,p%OutParam(I)%NodeID)
+                     ! Bo (Buoyancy)
+                     CASE (BoX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Bo(1,p%OutParam(I)%NodeID)
+                     CASE (BoY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Bo(2,p%OutParam(I)%NodeID)
+                     CASE (BoZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Bo(3,p%OutParam(I)%NodeID)
+                     ! Dp (Drag p)
+                     CASE (DpX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dp(1,p%OutParam(I)%NodeID)
+                     CASE (DpY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dp(2,p%OutParam(I)%NodeID)
+                     CASE (DpZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dp(3,p%OutParam(I)%NodeID)
+                     ! Dq (Drag q)
+                     CASE (DqX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dq(1,p%OutParam(I)%NodeID)
+                     CASE (DqY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dq(2,p%OutParam(I)%NodeID)
+                     CASE (DqZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Dq(3,p%OutParam(I)%NodeID)
+                     ! Ap (Added Mass p)
+                     CASE (ApX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Ap(1,p%OutParam(I)%NodeID)
+                     CASE (ApY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Ap(2,p%OutParam(I)%NodeID)
+                     CASE (ApZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Ap(3,p%OutParam(I)%NodeID)
+                     ! Aq (Added Mass q)
+                     CASE (AqX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Aq(1,p%OutParam(I)%NodeID)
+                     CASE (AqY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Aq(2,p%OutParam(I)%NodeID)
+                     CASE (AqZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Aq(3,p%OutParam(I)%NodeID)
+                     ! Pd (Dynamic Pressure)
+                     CASE (PdX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Pd(1,p%OutParam(I)%NodeID)
+                     CASE (PdY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Pd(2,p%OutParam(I)%NodeID)
+                     CASE (PdZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%Pd(3,p%OutParam(I)%NodeID)
+                     ! B (bottom friction)
+                     CASE (BX)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%B(1,p%OutParam(I)%NodeID)
+                     CASE (BY)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%B(2,p%OutParam(I)%NodeID)
+                     CASE (BZ)
+                        y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%B(3,p%OutParam(I)%NodeID)
                      CASE DEFAULT
                         y%WriteOutput(I) = 0.0_ReKi
                         ErrStat = ErrID_Warn
@@ -1763,9 +2007,9 @@ CONTAINS
         IF (m%RodList(I)%OutFlagList(1) == 1) THEN    ! only proceed if the line is flagged to output a file
            
            ! calculate number of output entries to write for this Rod
-           RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:9)) &
-                         + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(10:11)) &
-                               + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
+           RodNumOuts = 3*(m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(2:24)) &
+                         + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(25:26)) &
+                               + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(27:51))
            
            
            Frmt = '(F10.4,'//TRIM(Int2LStr(RodNumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?

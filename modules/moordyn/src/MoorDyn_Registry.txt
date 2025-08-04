@@ -162,7 +162,7 @@ typedef  ^            ^                IntKi              TopA           {10}   
 typedef  ^            ^                IntKi              TopB           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttachedA     -       -  -   "number of attached lines to Rod end A"
 typedef  ^            ^                IntKi              nAttachedB     -       -  -   "number of attached lines to Rod end B"
-typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
+typedef  ^            ^                IntKi              OutFlagList   {55}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
 typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of point at end A: 0=pinned to Point, 1=cantilevered to Rod."  -
 typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of point at end B: 0=pinned to Point, 1=cantilevered to Rod."  -
@@ -216,7 +216,7 @@ typedef  ^            ^                DbKi               RodWrOutput  {:}      
 typedef  ^            ^                DbKi               FextU        {3}      -  -   "vector of user-defined external force on the rod end A always in the local body-fixed frame" "[N]"
 typedef  ^            ^                DbKi               Blin         {2}      -  -   "linear damping, transverse damping for rod element always in the local body-fixed frame" "[N/(m/s)]"
 typedef  ^            ^                DbKi               Bquad        {2}      -  -   "quadratic damping, transverse damping for rod element always in the local body-fixed frame" "[N/(m/s)^2]"
-
+typedef  ^            ^                DbKi               VOF          {:}       -  -   "Node-based volume-of-fluid for submergence"
 
 
 # this is the Line type, which holds data for each line object
