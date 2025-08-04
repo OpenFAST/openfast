@@ -213,6 +213,10 @@ CONTAINS
       
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
       
+      if (.not. allocated(Rod%VOF)) then
+         allocate(Rod%VOF(0:Rod%N))
+         Rod%VOF = 0.0_DbKi
+      end if
       
    END SUBROUTINE Rod_Initialize
    !--------------------------------------------------------------
@@ -677,7 +681,7 @@ CONTAINS
                VOF0 = 0.0_DbKi
             END IF
          end if
-         
+
          Lsum = Lsum + dL            ! add length attributed to this node to the total
 
          ! get submerged cross sectional area and centroid for each node
@@ -705,6 +709,7 @@ CONTAINS
          end if
          
          VOF = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
+         Rod%VOF(I) = VOF
 
 
          ! build mass and added mass matrix

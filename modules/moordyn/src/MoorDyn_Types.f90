@@ -181,7 +181,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttachedA = 0_IntKi      !< number of attached lines to Rod end A [-]
     INTEGER(IntKi)  :: nAttachedB = 0_IntKi      !< number of attached lines to Rod end B [-]
-    INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
+    INTEGER(IntKi) , DIMENSION(1:55)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
     INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of point at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
     INTEGER(IntKi)  :: endTypeB = 0_IntKi      !< type of point at end B: 0=pinned to Point, 1=cantilevered to Rod. [-]
@@ -235,6 +235,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A always in the local body-fixed frame [[N]]
     REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)]]
     REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)^2]]
+    REAL(DbKi), ALLOCATABLE :: VOF(:)   ! Node-based volume-of-fluid for submergence
   END TYPE MD_Rod
 ! =======================
 ! =========  MD_Line  =======
