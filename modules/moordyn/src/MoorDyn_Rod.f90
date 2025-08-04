@@ -104,12 +104,15 @@ CONTAINS
       
       ! allocate mass and inverse mass matrices for each node (including ends)
       ALLOCATE(Rod%M(3, 3, 0:N), STAT=ErrStat2);  if(AllocateFailed("Rod: M")) return
+      ALLOCATE(Rod%VOF(0:N), STAT=ErrStat2)  ! allocate VOF array (volume of fluid) for each node
+
 
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
       Rod%zeta = 0.0_DbKi
       Rod%PDyn = 0.0_DbKi
+      Rod%VOF = 0.0_DbKi
 
       ! ------------------------- set some geometric properties and the starting kinematics -------------------------
 
