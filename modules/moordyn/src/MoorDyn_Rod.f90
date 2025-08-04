@@ -105,12 +105,15 @@ CONTAINS
       ! allocate mass and inverse mass matrices for each node (including ends)
       ALLOCATE(Rod%M(3, 3, 0:N), STAT=ErrStat2);  if(AllocateFailed("Rod: M")) return
 
+      ALLOCATE(Rod%VOF(0:N), STAT=ErrStat2)  ! allocate VOF array (volume of fluid) for each node
+
 
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
       Rod%zeta = 0.0_DbKi
       Rod%PDyn = 0.0_DbKi
+      Rod%VOF = 0.0_DbKi
 
       ! ------------------------- set some geometric properties and the starting kinematics -------------------------
 
@@ -212,11 +215,6 @@ CONTAINS
       end if
       
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
-      
-      if (.not. allocated(Rod%VOF)) then
-         allocate(Rod%VOF(0:Rod%N))
-         Rod%VOF = 0.0_DbKi
-      end if
       
    END SUBROUTINE Rod_Initialize
    !--------------------------------------------------------------
@@ -714,10 +712,7 @@ CONTAINS
          end if
          
          VOF = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
-         if (.not. allocated(Rod%VOF)) then
-            allocate(Rod%VOF(0:Rod%N))
-         end if
-
+        
          Rod%VOF(I) = VOF
 
 
