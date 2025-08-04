@@ -235,7 +235,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A always in the local body-fixed frame [[N]]
     REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)]]
     REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)^2]]
-    REAL(DbKi), ALLOCATABLE :: VOF(:)   ! Node-based volume-of-fluid for submergence
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: VOF      !< Node-based volume-of-fluid for submergence [-]
   END TYPE MD_Rod
 ! =======================
 ! =========  MD_Line  =======
@@ -1444,6 +1444,18 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
    DstRodData%FextU = SrcRodData%FextU
    DstRodData%Blin = SrcRodData%Blin
    DstRodData%Bquad = SrcRodData%Bquad
+   if (allocated(SrcRodData%VOF)) then
+      LB(1:1) = lbound(SrcRodData%VOF)
+      UB(1:1) = ubound(SrcRodData%VOF)
+      if (.not. allocated(DstRodData%VOF)) then
+         allocate(DstRodData%VOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%VOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%VOF = SrcRodData%VOF
+   end if
 end subroutine
 
 subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
@@ -1516,6 +1528,9 @@ subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
    if (allocated(RodData%RodWrOutput)) then
       deallocate(RodData%RodWrOutput)
    end if
+   if (allocated(RodData%VOF)) then
+      deallocate(RodData%VOF)
+   end if
 end subroutine
 
 subroutine MD_PackRod(RF, Indata)
@@ -1587,6 +1602,7 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%FextU)
    call RegPack(RF, InData%Blin)
    call RegPack(RF, InData%Bquad)
+   call RegPackAlloc(RF, InData%VOF)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1662,6 +1678,7 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%FextU); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VOF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)

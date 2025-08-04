@@ -709,6 +709,10 @@ CONTAINS
          end if
          
          VOF = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
+         if (.not. allocated(Rod%VOF)) then
+            allocate(Rod%VOF(0:Rod%N))
+         end if
+
          Rod%VOF(I) = VOF
 
 
