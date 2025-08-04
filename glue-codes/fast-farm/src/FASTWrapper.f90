@@ -105,25 +105,6 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !.... Lidar data (unused) ....
    ExternInitData%Tmax = InitInp%TMax
 
-   
-      !.... supercontroller ....
-   if ( InitInp%UseSC ) then
-      ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
-      ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
-      ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
-      call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)',       ErrStat2, ErrMsg2);   if (Failed()) return;
-      call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
-      ExternInitData%fromSCGlob = InitInp%fromSCGlob
-      ExternInitData%fromSC =  InitInp%fromSC
-      call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
-      call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)',   ErrStat2, ErrMsg2);   if (Failed()) return;
-   else
-      
-      ExternInitData%NumSC2Ctrl     = 0 ! "number of controller inputs [from supercontroller]"
-      ExternInitData%NumCtrl2SC     = 0 ! "number of controller outputs [to supercontroller]"
-      ExternInitData%NumSC2CtrlGlob = 0 ! "number of global controller inputs [from supercontroller]"
-   
-   end if
       !.... multi-turbine options ....
    ExternInitData%TurbIDforName = InitInp%TurbNum
    ExternInitData%TurbinePos = InitInp%p_ref_Turbine
@@ -177,10 +158,6 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
    call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2);   if (Failed()) return;
    call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2);   if (Failed()) return;
-   
-   if ( InitInp%UseSC ) then
-      call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2);   if (Failed()) return;
-   end if
    
    if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
       nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
@@ -252,12 +229,12 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate memory for "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)
       endif
-      Failed0 = errStat >= AbortErrLev
+      Failed0 = ErrStat >= AbortErrLev
       if(Failed0) call cleanUp()
    end function Failed0
 END SUBROUTINE FWrap_Init
@@ -502,11 +479,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Turbine-dependent commands to the super controller:
-   if (m%Turbine%p_FAST%UseSC) then
-      y%toSC = m%Turbine%SC_DX%u%toSC
-   end if
-   
    
    if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
       ! ....... outputs from AeroDyn v15 ............
@@ -713,19 +685,6 @@ SUBROUTINE FWrap_SetInputs(u, m, t)
    ! set the 4d-wind-inflow input array (a bit of a hack [simplification] so that we don't have large amounts of data copied in multiple data structures):
       m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
       
-      ! do something with the inputs from the super-controller:
-   if ( m%Turbine%p_FAST%UseSC )  then
-      
-      if ( associated(m%Turbine%SC_DX%y%fromSCglob) ) then
-         m%Turbine%SC_DX%y%fromSCglob = u%fromSCglob   ! Yes, we set the inputs of FWrap to the 'outputs' of the SC_DX object, GJH
-      end if
-
-      if ( associated(m%Turbine%SC_DX%y%fromSC) ) then
-         m%Turbine%SC_DX%y%fromSC     = u%fromSC       ! Yes, we set the inputs of FWrap to the 'outputs' of the SC_DX object, GJH
-      end if
-
-   end if   
-   
 END SUBROUTINE FWrap_SetInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE FASTWrapper

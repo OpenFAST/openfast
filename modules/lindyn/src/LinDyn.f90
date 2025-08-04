@@ -179,10 +179,10 @@ subroutine LD_SetInitialConditions(x, x0, xd0, p, OtherState, m, errStat, errMsg
    nx = int(size(x%q)/2)
    errStat = ErrID_Fatal
    if (size(x0)/=size(xd0)) then
-      errMsg ='Shape of x0 and xd0 should match when setting intial conditions'; return
+      errMsg ='Shape of x0 and xd0 should match when setting initial conditions'; return
    endif
    if (size(x0)/=nx) then
-      errMsg ='Shape of x0 should match nx when setting intial conditions'; return
+      errMsg ='Shape of x0 should match nx when setting initial conditions'; return
    endif
    errMsg  = ''
    errStat = ErrID_None

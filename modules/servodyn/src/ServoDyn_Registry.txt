@@ -37,9 +37,6 @@ typedef	^	InitInputType	R8Ki	PtfmRefOrient	{3}{3}	-	-	"platform reference orient
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
-typedef	^	InitInputType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
-typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
-typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
 typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
 typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
@@ -54,18 +51,10 @@ typedef	^	InitInputType	IntKi	NumCableControl	-	-	-	"Number of cable control cha
 typedef	^	InitInputType	CHARACTER(64)	CableControlRequestor	{:}	-	-	"Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics."	-
 typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue code -- required to set m%u_xStC sizes" -
 #ADD in the TMD submodule input file passing here
-typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
-typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
 #initial inputs of lidar parameters
-typedef	^	InitInputType	ReKi	LidSpeed     	{:}  -	-	"Number of Lidar measurement distances"	-
-typedef	^	InitInputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
-typedef	^	InitInputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
-typedef	^	InitInputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
 typedef	^	InitInputType	IntKi	SensorType   	 -   -	-	"Lidar sensor type" -
 typedef	^	InitInputType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
 typedef	^	InitInputType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
-typedef	^	InitInputType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" -
-typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 # Define outputs from the initialization routine here:
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
@@ -192,7 +181,6 @@ typedef	^	BladedDLLType	ReKi	BlAirfoilCom	3	-	-	"Commanded Airfoil UserProp for 
 typedef	^	BladedDLLType	ReKi	PrevBlAirfoilCom	3	-	-	"Previously commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables)"	-
 typedef	^	BladedDLLType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous step), sent to Bladed DLL"	W
 typedef	^	BladedDLLType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
-typedef	^	BladedDLLType	SiKi	toSC	{:}	-	-	"controller output to supercontroller"	-
 typedef	^	BladedDLLType	logical	initialized	-	-	-	"flag that determines if DLL has been called (for difference between CalcOutput and UpdateStates)"	-
 typedef	^	BladedDLLType	INTEGER	NumLogChannels	-	-	-	"number of log channels from controller"	-
 typedef	^	BladedDLLType	OutParmType	LogChannels_OutParam	{:}	-	-	"Names and units (and other characteristics) of logging outputs from DLL"	-
@@ -242,8 +230,6 @@ typedef	^	BladedDLLType	ReKi	MsrPositionsZ  {:}      -	-	"Lidar Z direction meas
 typedef	^	BladedDLLType	IntKi	SensorType      -       -	-	"Lidar sensor type" -
 typedef	^	BladedDLLType	IntKi	NumBeam     	-       -	-	"Number of beams" -
 typedef	^	BladedDLLType	IntKi	NumPulseGate	-       -	-	"Number of pulse gates" -
-typedef	^	BladedDLLType	IntKi	PulseSpacing	-       -	-	"Distance between range gates" -
-typedef	^	BladedDLLType	IntKi	URefLid         -       -	-	"Reference average wind speed for the lidar"  m/s
 ## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
 typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
 typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
@@ -467,7 +453,6 @@ typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	ParameterType	IntKi	NumStC_Control	-	-	-	"Number of cable StC channels requested"	-
 typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC channel to average on each control channel sent to DLL"	-
-typedef ^       ParameterType   LOGICAL UseSC   -       -       -       "Supercontroller on/off flag" -
 # parameters for linearization
 typedef  ^  ParameterType  Integer  Jac_u_indx  {:}{:} - -  "matrix to help fill/pack the u vector in computing the jacobian"   -
 typedef  ^  ParameterType  Integer  Jac_x_indx  {:}{:} - -  "matrix to help fill/pack the x vector in computing the jacobian"   -
@@ -492,8 +477,6 @@ typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and
 typedef	^	ParameterType	IntKi	SensorType  	 -   -	-	"Lidar sensor type" -
 typedef	^	ParameterType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
 typedef	^	ParameterType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
-typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" m
-typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 
 
@@ -538,8 +521,6 @@ typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"
 typedef	^	InputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	InputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	InputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
-typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
-typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 #typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
@@ -573,4 +554,3 @@ typedef	^	OutputType	MeshType	BStCLoadMesh	{:}{:}	-	-	"StC module blade        o
 typedef	^	OutputType	MeshType	NStCLoadMesh	{:}	-	-	"StC module nacelle      output load mesh" -
 typedef	^	OutputType	MeshType	TStCLoadMesh	{:}	-	-	"StC module tower        output load mesh" -
 typedef	^	OutputType	MeshType	SStCLoadMesh	{:}	-	-	"StC module substructure output load mesh" -
-typedef	^	OutputType	SiKi	toSC	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-

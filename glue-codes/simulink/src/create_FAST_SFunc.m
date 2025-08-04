@@ -18,7 +18,7 @@
 % - The name of the library that was generated must match the `libname` variable below
 %   and should be located in the directory specified by `libDir`.
 % - The `includeDir` variable must specify the directory that contains the following header files:
-%   "FAST_Library.h", "OpenFOAM_Types.h", "SuperController_Types.h", and "ExtLoadsDX_Types.h" 
+%   "FAST_Library.h", "OpenFOAM_Types.h", and "ExtLoadsDX_Types.h" 
 %
 % Run `mex -setup` in Matlab to configure a C compiler if you have not already done so.
 
@@ -67,7 +67,6 @@ if ispc () % Windows PC
         ['-L' libDir], ...
         ['-l' libName], ...
         ['-I' includeDir], ...
-        '-I../../../modules/supercontroller/src', ... % needed for visual studio builds to find "SuperController_Types.h"
         '-I../../../modules/externalinflow/src',  ... % needed for visual studio builds to find "ExternalInflow_Types.h"
         '-I../../../modules/extloads/src', ... % needed for visual studio builds to find "ExtLoadsDX_Types.h"
         '-outdir', outDir, ...

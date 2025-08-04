@@ -1746,6 +1746,27 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
    CALL BD_CopyInput(u, m%u2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   ! compute mapping of applied distributed loads to the root location
+   ! NOTE: PtLoads are not handled at present. See comments in BeamDyn_IO.f90 for changes required.
+   if (p%CompAppliedLdAtRoot .and. p%BldMotionNodeLoc == BD_MESH_QP) then
+      ! create point mesh at root (cousin of rootmotion) 
+      CALL MeshCopy( SrcMesh   = u%RootMotion     &
+                    , DestMesh = m%LoadsAtRoot    &
+                    , CtrlCode = MESH_COUSIN      &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , Force    = .TRUE.           &
+                    , Moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
+
+      ! mapping of distributed loads to LoadsAtRoot
+      CALL MeshMapCreate( u%DistrLoad, m%LoadsAtRoot, m%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      m%LoadsAtRoot%remapFlag = .false.
+
+   endif
 
 end subroutine Init_MiscVars
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2282,7 +2303,7 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
    DO nelem = 1,p%elem_total
        DO idx_qp = 1,p%nqp
-            !> ### Calculate the the initial displacement fields in an element
+            !> ### Calculate the initial displacement fields in an element
             !! Initial displacement field \n
             !!    \f$   \underline{u_0}\left( \xi \right) =
             !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{u}_0}^k
@@ -2370,7 +2391,7 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
 
-   !> ### Calculate the the displacement fields in an element
+   !> ### Calculate the displacement fields in an element
    !! Using equations (27) and (28) \n
    !!    \f$   \underline{u}\left( \xi \right) =
    !!                \sum_{i=1}^{p+1} h^i\left( \xi \right) \underline{\hat{u}}^i
@@ -2662,7 +2683,8 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    do nelem = 1, p%elem_total
       qp_start = (nelem-1)*p%nqp
       do idx_qp = 1, p%nqp
-         call Calc_RR0mEta_rho(m%qp%RR0(:,:,idx_qp,nelem), &
+         call Calc_RR0mEta_rho(p%qp%mEta(:,idx_qp,nelem), &
+                               m%qp%RR0(:,:,idx_qp,nelem), &
                                p%Mass0_QP(:,:,qp_start+idx_qp), &
                                m%qp%RR0mEta(:,idx_qp,nelem), &
                                m%qp%rho(:,:,idx_qp,nelem))
@@ -2670,13 +2692,13 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    end do
 
 contains
-   subroutine Calc_RR0mEta_rho(RR0, Mass0, RR0mEta, rho)
-      real(BDKi), intent(in)  :: RR0(:,:), Mass0(:,:)
+   subroutine Calc_RR0mEta_rho(mEta, RR0, Mass0, RR0mEta, rho)
+      real(BDKi), intent(in)  :: mEta(:), RR0(:,:), Mass0(:,:)
       real(BDKi), intent(out)  :: RR0mEta(:), rho(:,:)
 
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-         m%qp%RR0mEta(:,idx_qp,nelem) = MATMUL(RR0, p%qp%mEta(:,idx_qp,nelem))
+         RR0mEta(:) = MATMUL(RR0, mEta)
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}

@@ -67,6 +67,7 @@ add_executable(nwtc_library_utest
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/NWTC_Library_test_tools.F90
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_IO_FileInfo.F90
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_RandomNumber.F90
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_C_Binding.F90
 )
 target_link_libraries(nwtc_library_utest nwtclibs testdrivelib)
 

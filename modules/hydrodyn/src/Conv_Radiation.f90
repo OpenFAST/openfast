@@ -178,7 +178,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
          RETURN
       END IF
 
-         ! Initialize all elements of the xd%XDHistory array with the intial values of u%Velocity
+         ! Initialize all elements of the xd%XDHistory array with the initial values of u%Velocity
       DO K = 0,p%NStepRdtn-1
          DO J = 1,6*p%NBody                 ! Loop through all DOFs
             xd%XDHistory(K,J) = u%Velocity(J)

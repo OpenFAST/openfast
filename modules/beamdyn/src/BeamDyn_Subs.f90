@@ -146,7 +146,7 @@ SUBROUTINE BD_CrvMatrixR(cc,Rr)
    c2  = cc(2)/4.0_BDKi
    c3  = cc(3)/4.0_BDKi
       ! \f$ c_0 \f$ is equivalent to \f$ 0.5 - (||\vec{c}||)^2 / 32 \f$
-   c0  = 0.5_BDKi * (1.0_BDKi-c1*c1-c2*c2-c3*c3)         ! 1/4 the value of the the AIAA paper (after plugging in c1, c2, c3 conversions)
+   c0  = 0.5_BDKi * (1.0_BDKi-c1*c1-c2*c2-c3*c3)         ! 1/4 the value of the AIAA paper (after plugging in c1, c2, c3 conversions)
 
 
    tr0 = 1.0_BDKi - c0                          ! This is 1/4 the value of the AIAA paper, after converting c0.
@@ -316,7 +316,7 @@ END SUBROUTINE BD_CrvCompose
 SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
    REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix
-   REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv paramters
+   REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv parameters
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    
@@ -525,13 +525,13 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
    ! loop through each of the "half" n points
    do i = 1, n_half
 
-      ! Intial guess for ith root; based on ith root of Chebyshev polynomial
+      ! Initial guess for ith root; based on ith root of Chebyshev polynomial
       x(i) = - cos( REAL( 2*i - 1, BDKi)  * pi_D / (2.0_BDKi * n_real) )
 
       ! initialize newton iteration counter
       newton = 0
 
-      p3 = 1. ! some intial big number;  logic will always take at least one newton iteration
+      p3 = 1. ! some initial big number;  logic will always take at least one newton iteration
       do while (abs(p3) .gt. eps .and. newton .le. newton_max)
 
          newton = newton + 1  ! keep track of number of newton iterations

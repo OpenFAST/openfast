@@ -5,7 +5,7 @@ ElastoDyn Theory
 ================
 
 Note this document is work in progress and is greatly incomplete. 
-This documentation was started to document some code changes to the the tail furl and rotor furl part of ElastoDyn. 
+This documentation was started to document some code changes to the tail furl and rotor furl part of ElastoDyn. 
 Please refer to the different ressources provided in :numref:`ed_intro` for additional documents.
 
 

@@ -63,7 +63,6 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A)'   )  'compiled with'
    Fmt = '(4x,A)'
    WRITE (UnSum,Fmt)  TRIM( GetNVD( NWTC_Ver ) )
-   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_SC    ) ) )
    WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_FWrap ) ) )
    WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_WD    ) ) )
    WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_AWAE  ) ) )
@@ -533,12 +532,11 @@ END SUBROUTINE WriteFarmOutputToFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary FAST.Farm input file, does some validation, and places the values it reads in the
 !!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_InitInp, OutList, ErrStat, ErrMsg )
+SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList, ErrStat, ErrMsg )
    TYPE(Farm_ParameterType),       INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    CHARACTER(*),                   INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
    TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   TYPE(SC_InitInputType),         INTENT(  OUT) :: SC_InitInp                      !< input-file data for SC module
    CHARACTER(ChanLen),             INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
@@ -627,16 +625,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       END SELECT
 
    CALL ReadVar( UnIn, InputFile, p%TMax, "TMax", "Total run time (s)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, p%UseSC, "UseSC", "Use a super controller? (flag)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%MooringMod, "Mod_SharedMooring", "Array-level mooring handling (-) (switch) {0: none; 3: array-level MoorDyn model}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, p%SC_FileName, "SC_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
-   SC_InitInp%DLL_FileName =  p%SC_FileName
 
    !---------------------- SHARED MOORING SYSTEM ------------------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: SHARED MOORING SYSTEM', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
@@ -982,12 +973,11 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE Farm_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat, ErrMsg )
+SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
       ! Passed variables
    TYPE(Farm_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InputFileType), INTENT(INOUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   TYPE(SC_InitInputType),   INTENT(INOUT) :: SC_InitInp              ! input-file data for SC module
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 

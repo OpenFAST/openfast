@@ -61,7 +61,7 @@ with the NREL OpenFAST team to define the scope of the work and coordinate
 development efforts. This is particularly important since many groups
 work on OpenFAST simultaneously. By engaging early, all developers can
 stay up to date and minimize conflicts during the code merge.
-The prefered method of communication is `GitHub Issues <https://github.com/openfast/openfast/issues>`_.
+The preferred method of communication is `GitHub Issues <https://github.com/openfast/openfast/issues>`_.
 An initial post should contain all relevant information about the planned
 development work, the areas of the software that will be impacted,
 and any model validation materials. See :ref:`development_plan`

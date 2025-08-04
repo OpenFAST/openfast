@@ -32,6 +32,7 @@ typedef  ^   ElemPropType  ReKi    Length   -  -  -  "Length of an element"
 typedef  ^   ElemPropType  ReKi    Ixx      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  ReKi    Iyy      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  ReKi    Jzz      -  -  -  "Moment of inertia of an element"
+typedef  ^   ElemPropType  ReKi    Jt       -  -  -  "Torsion constant of an element"
 typedef  ^   ElemPropType  LOGICAL Shear    -  -  -  "Use timoshenko (true) E-B (false)"
 typedef  ^   ElemPropType  ReKi    Kappa_x    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    Kappa_y    -  -  -  "Shear coefficient"
@@ -39,6 +40,8 @@ typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
 typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, for visualization only" m 
+typedef  ^   ElemPropType  ReKi    Sa     {2} -  -  "Side A lengths at node 1 and 2, for visualization only" m
+typedef  ^   ElemPropType  ReKi    Sb     {2} -  -  "Side B lengths at node 1 and 2, for visualization only" m
 typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
 typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
 typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N
@@ -99,7 +102,8 @@ typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity a
 typedef  ^  SD_InitType   DbKi               DT - - -                 "Time step from Glue Code" seconds
 typedef  ^  SD_InitType   INTEGER            NJoints - - -            "Number of joints of the sub structure" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsX - - -         "Number of extended property sets" 
-typedef  ^  SD_InitType   INTEGER            NPropSetsB - - -         "Number of property sets for beams" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsBC - - -        "Number of property sets for beams with a circular section" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsBR - - -        "Number of property sets for beams with a rectangular section" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsC - - -         "Number of property sets for cables" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsR - - -         "Number of property sets for rigid links" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsS - - -         "Number of property sets for spring elements" 
@@ -109,7 +113,8 @@ typedef  ^  SD_InitType   INTEGER            FEMMod - - -             "FEM switc
 typedef  ^  SD_InitType   INTEGER            NDiv - - -               "Number of divisions for each member" 
 typedef  ^  SD_InitType   LOGICAL            CBMod - - -              "Perform C-B flag" 
 typedef  ^  SD_InitType   ReKi               Joints {:}{:} - -        "Joints number and coordinate values" 
-typedef  ^  SD_InitType   ReKi               PropSetsB {:}{:} - -     "Property sets number and values" 
+typedef  ^  SD_InitType   ReKi               PropSetsBC {:}{:} - -    "Property sets number and values for circular beam sections" 
+typedef  ^  SD_InitType   ReKi               PropSetsBR {:}{:} - -    "Property sets number and values for rectangular beam sections" 
 typedef  ^  SD_InitType   ReKi               PropSetsC {:}{:} - -     "Property ID and values for cables" 
 typedef  ^  SD_InitType   ReKi               PropSetsR {:}{:} - -     "Property ID and values for rigid link" 
 typedef  ^  SD_InitType   ReKi               PropSetsS {:}{:} - -     "Property ID and values for spring element" 
@@ -121,6 +126,7 @@ typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan dam
 typedef  ^  SD_InitType   ReKi               RayleighDamp  {2} -  -   "Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]" 
 typedef  ^  SD_InitType   ReKi               GuyanDampMat  {6}{6} - - "Guyan Damping Matrix, see also CBB" 
 typedef  ^  SD_InitType   INTEGER            Members {:}{:} - -       "Member joints connection          " 
+typedef  ^  SD_InitType   ReKi               MemberSpin {:} - -       "Member spin angle about its axis - for rectangular members " rad
 typedef  ^  SD_InitType   CHARACTER(ChanLen) SSOutList {:} - -        "List of Output Channels           " 
 typedef  ^  SD_InitType   LOGICAL            OutCOSM - - -            "Output Cos-matrices Flag          " 
 typedef  ^  SD_InitType   LOGICAL            TabDelim - - -           "Generate a tab-delimited output file in OutJckF-Flag                       " 
@@ -131,12 +137,15 @@ typedef  ^  SD_InitType   ReKi               Soil_K {:}{:}{:} - -     "Soil stif
 typedef  ^  SD_InitType   ReKi               Soil_Points {:}{:}  - -  "Node positions where soil stiffness will be added                          " 
 typedef  ^  SD_InitType   Integer            Soil_Nodes {:}   - -     "Node indices where soil stiffness will be added                            " 
 typedef  ^  SD_InitType   INTEGER            NElem - - -              "Total number of elements" 
-typedef  ^  SD_InitType   INTEGER            NPropB  - - -            "Total number of property sets for Beams" 
+typedef  ^  SD_InitType   INTEGER            NPropBC - - -            "Total number of property sets for Beams with a circular section" 
+typedef  ^  SD_InitType   INTEGER            NPropBR - - -            "Total number of property sets for Beams with a rectangular section" 
+typedef  ^  SD_InitType   INTEGER            NPropX  - - -            "Total number of property sets for Beams with an arbitrary section" 
 typedef  ^  SD_InitType   INTEGER            NPropC  - - -            "Total number of property sets for Cable" 
 typedef  ^  SD_InitType   INTEGER            NPropR  - - -            "Total number of property sets for Rigid" 
 typedef  ^  SD_InitType   INTEGER            NPropS  - - -            "Total number of property sets for Spring" 
 typedef  ^  SD_InitType   ReKi               Nodes {:}{:} - -         "Nodes number and coordinates           " 
-typedef  ^  SD_InitType   ReKi               PropsB     {:}{:} - -    "Property sets and values for Beams     " 
+typedef  ^  SD_InitType   ReKi               PropsBC    {:}{:} - -    "Property sets and values for Beams with a circular section" 
+typedef  ^  SD_InitType   ReKi               PropsBR    {:}{:} - -    "Property sets and values for Beams with a rectangular section" 
 typedef  ^  SD_InitType   ReKi               PropsC     {:}{:} - -    "Property sets and values for Cable     " 
 typedef  ^  SD_InitType   ReKi               PropsR     {:}{:} - -    "Property sets and values for Rigid link" 
 typedef  ^  SD_InitType   ReKi               PropsS     {:}{:} - -    "Property sets and values for Spring    "
@@ -205,6 +214,7 @@ typedef  ^  ParameterType  INTEGER         nDOF          -  -  -  "Total degree 
 typedef  ^  ParameterType  INTEGER         nDOF_red      -  -  -  "Total degree of freedom after constraint reduction"
 typedef  ^  ParameterType  IntKi           Nmembers      -  -  -  "Number of members of the sub structure"
 typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes connections"
+typedef  ^  ParameterType  ReKi            ElemSpin    {:}  -  -  "Element spin angle about its axis" rad
 typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
 typedef  ^  ParameterType  R8Ki            FC         {:}    - -  "Initial cable force T0, not reduced"  N
 typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector, not reduced"  N

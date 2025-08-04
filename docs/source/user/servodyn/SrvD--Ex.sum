@@ -56,7 +56,7 @@
           60      -->  Rotor azimuth angle (rad) [SrvD input]
           61      -->  Number of blades (-) [SrvD NumBl parameter]
           62      -->  Maximum number of values which can be returned for logging (-) [set to 300]
-          63      <--  Number logging channels
+          63      -->  Record number for start of logging output (-) [set to ###]
           64      -->  Maximum number of characters which can be returned in "OUTNAME" (-) [set to 12601 (including the C NULL CHARACTER)]
           65      <--  Number of variables returned for logging [anything greater than MaxLoggingChannels is an error]
           69      -->  Blade 1 root in-plane bending moment (Nm) [SrvD input]

@@ -453,64 +453,104 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
 
 
    !-------------------------------------------------------------------------------------------------
-   ! Member Cross-section Properties Section
+   ! Cylindrical Member Cross-section Properties Section
    !-------------------------------------------------------------------------------------------------
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! NPropSets - Number of member cross-section property sets
-   call ParseVar( FileInfo_In, CurLine, 'NPropSets', InputFileData%Morison%NPropSets, ErrStat2, ErrMsg2, UnEc )
+      ! NPropSetsCyl - Number of cylindrical member cross-section property sets
+   call ParseVar( FileInfo_In, CurLine, 'NPropSetsCyl', InputFileData%Morison%NPropSetsCyl, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSets table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSetsCyl table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSets table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSetsCyl table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
 
-   IF ( InputFileData%Morison%NPropSets > 0 ) THEN
+   IF ( InputFileData%Morison%NPropSetsCyl > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 3, 'temporary array for MPropSets', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 3, 'temporary array for MPropSetsCyl', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for Member cross-section property set-related arrays
-      ALLOCATE ( InputFileData%Morison%MPropSets(InputFileData%Morison%NPropSets), STAT = ErrStat2 )
+      ALLOCATE ( InputFileData%Morison%MPropSetsCyl(InputFileData%Morison%NPropSetsCyl), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg2  = 'Error allocating space for MPropSets array.'
+         ErrMsg2  = 'Error allocating space for MPropSetsCyl array.'
          if (Failed())  return;
       END IF
 
-      DO I = 1,InputFileData%Morison%NPropSets
-         call ParseAry( FileInfo_In, CurLine, ' MPropSets line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+      DO I = 1,InputFileData%Morison%NPropSetsCyl
+         call ParseAry( FileInfo_In, CurLine, ' MPropSetsCyl line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         InputFileData%Morison%MPropSets(I)%PropSetID = NINT(tmpReArray(1))
-         InputFileData%Morison%MPropSets(I)%PropD     =      tmpReArray(2)
-         InputFileData%Morison%MPropSets(I)%PropThck  =      tmpReArray(3)
+         InputFileData%Morison%MPropSetsCyl(I)%PropSetID = NINT(tmpReArray(1))
+         InputFileData%Morison%MPropSetsCyl(I)%PropD     =      tmpReArray(2)
+         InputFileData%Morison%MPropSetsCyl(I)%PropThck  =      tmpReArray(3)
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
+   !-------------------------------------------------------------------------------------------------
+   ! Rectangular Member Cross-section Properties Section
+   !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! NPropSetsRec - Number of rectangular member cross-section property sets
+   call ParseVar( FileInfo_In, CurLine, 'NPropSetsRec', InputFileData%Morison%NPropSetsRec, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSetsRec table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSetsRec table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+
+   IF ( InputFileData%Morison%NPropSetsRec > 0 ) THEN
+
+      CALL AllocAry( tmpReArray, 4, 'temporary array for MPropSetsRec', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         ! Allocate memory for Member cross-section property set-related arrays
+      ALLOCATE ( InputFileData%Morison%MPropSetsRec(InputFileData%Morison%NPropSetsRec), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for MPropSetsRec array.'
+         if (Failed())  return;
+      END IF
+
+      DO I = 1,InputFileData%Morison%NPropSetsRec
+         call ParseAry( FileInfo_In, CurLine, ' MPropSetsRec line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+            if (Failed())  return;
+         InputFileData%Morison%MPropSetsRec(I)%PropSetID = NINT(tmpReArray(1))
+         InputFileData%Morison%MPropSetsRec(I)%PropA     =      tmpReArray(2)
+         InputFileData%Morison%MPropSetsRec(I)%PropB     =      tmpReArray(3)
+         InputFileData%Morison%MPropSetsRec(I)%PropThck  =      tmpReArray(4)
+      END DO
+
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
+   END IF
 
    !-------------------------------------------------------------------------------------------------
-   ! Simple hydrodynamic coefficients Section
+   ! Simple cylindrical member hydrodynamic coefficients Section
    !-------------------------------------------------------------------------------------------------
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
    CurLine = CurLine + 1
 
       ! Table header
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple cylindrical member hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple cylindrical member hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
 
 
-   CALL AllocAry( tmpReArray, 14, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
+   CALL AllocAry( tmpReArray, 14, 'temporary array for Simple cylindrical member hydrodynamic coefficients', ErrStat2, ErrMsg2 )
       if (Failed())  return
-   ! call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+   ! call ParseAry( FileInfo_In, CurLine, 'Simple cylindrical member hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
    !    if (Failed())  return;
-   CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(1_IntKi)), tmpReArray, size(tmpReArray), &
+   CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Simple cylindrical member hydrodynamic coefficients table row '//trim( Int2LStr(1_IntKi)), tmpReArray, size(tmpReArray), &
                          'MCF', 1.0_ReKi, (/5,6/), InputFileData%Morison%SimplMCF, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return
 
@@ -532,63 +572,100 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    if (allocated(tmpReArray))      deallocate(tmpReArray)
 
    !-------------------------------------------------------------------------------------------------
-   ! Depth-based Hydrodynamic Coefficients Section
+   ! Simple rectangular member hydrodynamic coefficients Section
    !-------------------------------------------------------------------------------------------------
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! NCoefDpth - Number of depth-based hydrodynamic coefficient property sets
-   call ParseVar( FileInfo_In, CurLine, 'NCoefDpth', InputFileData%Morison%NCoefDpth, ErrStat2, ErrMsg2, UnEc )
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple rectangular member hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple rectangular member hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+
+
+   CALL AllocAry( tmpReArray, 18, 'temporary array for Simple rectangular member hydrodynamic coefficients', ErrStat2, ErrMsg2 )
+      if (Failed())  return
+   CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Simple rectangular member hydrodynamic coefficients table row '//trim( Int2LStr(1_IntKi)), tmpReArray, size(tmpReArray), &
+                         'MCF', 1.0_ReKi, (/9,10/), InputFileData%Morison%SimplRecMCF, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return
+
+   InputFileData%Morison%SimplRecCdA      = tmpReArray( 1)
+   InputFileData%Morison%SimplRecCdAMG    = tmpReArray( 2)
+   InputFileData%Morison%SimplRecCdB      = tmpReArray( 3)
+   InputFileData%Morison%SimplRecCdBMG    = tmpReArray( 4)
+   InputFileData%Morison%SimplRecCaA      = tmpReArray( 5)
+   InputFileData%Morison%SimplRecCaAMG    = tmpReArray( 6)
+   InputFileData%Morison%SimplRecCaB      = tmpReArray( 7)
+   InputFileData%Morison%SimplRecCaBMG    = tmpReArray( 8)
+   InputFileData%Morison%SimplRecCp       = tmpReArray( 9)
+   InputFileData%Morison%SimplRecCpMG     = tmpReArray(10)
+   InputFileData%Morison%SimplRecAxCd     = tmpReArray(11)
+   InputFileData%Morison%SimplRecAxCdMG   = tmpReArray(12)
+   InputFileData%Morison%SimplRecAxCa     = tmpReArray(13)
+   InputFileData%Morison%SimplRecAxCaMG   = tmpReArray(14)
+   InputFileData%Morison%SimplRecAxCp     = tmpReArray(15)
+   InputFileData%Morison%SimplRecAxCpMG   = tmpReArray(16)
+   InputFileData%Morison%SimplRecCb       = tmpReArray(17)
+   InputFileData%Morison%SimplRecCbMG     = tmpReArray(18)
+
+   if (allocated(tmpReArray))      deallocate(tmpReArray)
+
+   !-------------------------------------------------------------------------------------------------
+   ! Depth-based Cylindrical Member Hydrodynamic Coefficients Section
+   !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! NCoefDpthCyl - Number of depth-based cylindrical member hydrodynamic coefficient property sets
+   call ParseVar( FileInfo_In, CurLine, 'NCoefDpthCyl', InputFileData%Morison%NCoefDpthCyl, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based cylindrical member hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based cylindrical member hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
 
-   IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
+   IF ( InputFileData%Morison%NCoefDpthCyl > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 15, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 15, 'temporary array for CoefDpthsCyl', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for depth-based coefficient arrays
-      ALLOCATE ( InputFileData%Morison%CoefDpths(InputFileData%Morison%NCoefDpth), STAT = ErrStat2 )
+      ALLOCATE ( InputFileData%Morison%CoefDpthsCyl(InputFileData%Morison%NCoefDpthCyl), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg2  = 'Error allocating space for CoefDpths array.'
+         ErrMsg2  = 'Error allocating space for CoefDpthsCyl array.'
          if (Failed())  return;
       END IF
                   
-      DO I = 1,InputFileData%Morison%NCoefDpth
-         ! call ParseAry( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-         !    if (Failed())  return;
-         CALL ParseRAryWKywrd( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
-                         'MCF', 1.0_ReKi, (/6,7/), InputFileData%Morison%CoefDpths(I)%DpthMCF, ErrStat2, ErrMsg2, UnEc )
+      DO I = 1,InputFileData%Morison%NCoefDpthCyl
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, ' CoefDpthsCyl coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                         'MCF', 1.0_ReKi, (/6,7/), InputFileData%Morison%CoefDpthsCyl(I)%DpthMCF, ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return
 
-
-         InputFileData%Morison%CoefDpths(I)%Dpth         = tmpReArray( 1)
-         InputFileData%Morison%CoefDpths(I)%DpthCd       = tmpReArray( 2)
-         InputFileData%Morison%CoefDpths(I)%DpthCdMG     = tmpReArray( 3)
-         InputFileData%Morison%CoefDpths(I)%DpthCa       = tmpReArray( 4)
-         InputFileData%Morison%CoefDpths(I)%DpthCaMG     = tmpReArray( 5)
-         InputFileData%Morison%CoefDpths(I)%DpthCp       = tmpReArray( 6)
-         InputFileData%Morison%CoefDpths(I)%DpthCpMG     = tmpReArray( 7)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCd     = tmpReArray( 8)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCdMG   = tmpReArray( 9)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCa     = tmpReArray(10)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCaMG   = tmpReArray(11)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCp     = tmpReArray(12)
-         InputFileData%Morison%CoefDpths(I)%DpthAxCpMG   = tmpReArray(13)
-         InputFileData%Morison%CoefDpths(I)%DpthCb       = tmpReArray(14)
-         InputFileData%Morison%CoefDpths(I)%DpthCbMG     = tmpReArray(15)
+         InputFileData%Morison%CoefDpthsCyl(I)%Dpth         = tmpReArray( 1)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCd       = tmpReArray( 2)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCdMG     = tmpReArray( 3)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCa       = tmpReArray( 4)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCaMG     = tmpReArray( 5)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCp       = tmpReArray( 6)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCpMG     = tmpReArray( 7)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCd     = tmpReArray( 8)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCdMG   = tmpReArray( 9)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCa     = tmpReArray(10)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCaMG   = tmpReArray(11)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCp     = tmpReArray(12)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCpMG   = tmpReArray(13)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCb       = tmpReArray(14)
+         InputFileData%Morison%CoefDpthsCyl(I)%DpthCbMG     = tmpReArray(15)
       END DO
       
-      DO I = 2,InputFileData%Morison%NCoefDpth
-         IF (InputFileData%Morison%CoefDpths(I)%DpthMCF .NEQV. InputFileData%Morison%CoefDpths(1)%DpthMCF) THEN
+      DO I = 2,InputFileData%Morison%NCoefDpthCyl
+         IF (InputFileData%Morison%CoefDpthsCyl(I)%DpthMCF .NEQV. InputFileData%Morison%CoefDpthsCyl(1)%DpthMCF) THEN
             ErrStat2 = ErrID_Fatal
-            ErrMsg2 = 'In the depth-based hydrodynamic coefficients, MCF is specified for some depth but not others.'
+            ErrMsg2 = 'In the depth-based cylindrical member hydrodynamic coefficients, MCF is specified for some depth but not others.'
             if (Failed()) RETURN
          END IF
       END DO
@@ -596,78 +673,218 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
-
    !-------------------------------------------------------------------------------------------------
-   ! Member-based Hydrodynamic Coefficients Section
+   ! Depth-based Rectangular Member Hydrodynamic Coefficients Section
    !-------------------------------------------------------------------------------------------------
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! NCoefMembers - Number of member-based hydrodynamic coefficient property sets
-   call ParseVar( FileInfo_In, CurLine, 'NCoefMembers', InputFileData%Morison%NCoefMembers, ErrStat2, ErrMsg2, UnEc )
+      ! NCoefDpthRec - Number of depth-based rectangular member hydrodynamic coefficient property sets
+   call ParseVar( FileInfo_In, CurLine, 'NCoefDpthRec', InputFileData%Morison%NCoefDpthRec, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based rectangular member hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based rectangular member hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
 
-   IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
+   IF ( InputFileData%Morison%NCoefDpthRec > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 29, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 19, 'temporary array for CoefDpthsRec', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
-         ! Allocate memory for Member-based coefficient arrays
-      ALLOCATE ( InputFileData%Morison%CoefMembers(InputFileData%Morison%NCoefMembers), STAT = ErrStat2 )
+         ! Allocate memory for depth-based coefficient arrays
+      ALLOCATE ( InputFileData%Morison%CoefDpthsRec(InputFileData%Morison%NCoefDpthRec), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg2  = 'Error allocating space for CoefMembers array.'
+         ErrMsg2  = 'Error allocating space for CoefDpthsRec array.'
          if (Failed())  return;
       END IF
-
-      DO I = 1,InputFileData%Morison%NCoefMembers
-         !call ParseAry( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-         !   if (Failed())  return;
-            
-         CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
-                      'MCF', 1.0_ReKi, (/10,11,12,13/), InputFileData%Morison%CoefMembers(I)%MemberMCF, ErrStat2, ErrMsg2, UnEc )
+                  
+      DO I = 1,InputFileData%Morison%NCoefDpthRec
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, ' CoefDpthsRec coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                         'MCF', 1.0_ReKi, (/10,11/), InputFileData%Morison%CoefDpthsRec(I)%DpthMCF, ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return
 
-         InputFileData%Morison%CoefMembers(I)%MemberID         = NINT(tmpReArray( 1))
-         InputFileData%Morison%CoefMembers(I)%MemberCd1        =      tmpReArray( 2)
-         InputFileData%Morison%CoefMembers(I)%MemberCd2        =      tmpReArray( 3)
-         InputFileData%Morison%CoefMembers(I)%MemberCdMG1      =      tmpReArray( 4)
-         InputFileData%Morison%CoefMembers(I)%MemberCdMG2      =      tmpReArray( 5)
-         InputFileData%Morison%CoefMembers(I)%MemberCa1        =      tmpReArray( 6)
-         InputFileData%Morison%CoefMembers(I)%MemberCa2        =      tmpReArray( 7)
-         InputFileData%Morison%CoefMembers(I)%MemberCaMG1      =      tmpReArray( 8)
-         InputFileData%Morison%CoefMembers(I)%MemberCaMG2      =      tmpReArray( 9)
-         InputFileData%Morison%CoefMembers(I)%MemberCp1        =      tmpReArray(10)
-         InputFileData%Morison%CoefMembers(I)%MemberCp2        =      tmpReArray(11)
-         InputFileData%Morison%CoefMembers(I)%MemberCpMG1      =      tmpReArray(12)
-         InputFileData%Morison%CoefMembers(I)%MemberCpMG2      =      tmpReArray(13)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCd1      =      tmpReArray(14)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCd2      =      tmpReArray(15)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCdMG1    =      tmpReArray(16)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCdMG2    =      tmpReArray(17)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCa1      =      tmpReArray(18)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCa2      =      tmpReArray(19)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1    =      tmpReArray(20)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2    =      tmpReArray(21)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCp1      =      tmpReArray(22)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCp2      =      tmpReArray(23)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCpMG1    =      tmpReArray(24)
-         InputFileData%Morison%CoefMembers(I)%MemberAxCpMG2    =      tmpReArray(25)
-         InputFileData%Morison%CoefMembers(I)%MemberCb1        =      tmpReArray(26)
-         InputFileData%Morison%CoefMembers(I)%MemberCb2        =      tmpReArray(27)
-         InputFileData%Morison%CoefMembers(I)%MemberCbMG1      =      tmpReArray(28)
-         InputFileData%Morison%CoefMembers(I)%MemberCbMG2      =      tmpReArray(29)
+
+         InputFileData%Morison%CoefDpthsRec(I)%Dpth         = tmpReArray( 1)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCdA      = tmpReArray( 2)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCdAMG    = tmpReArray( 3)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCdB      = tmpReArray( 4)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCdBMG    = tmpReArray( 5)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCaA      = tmpReArray( 6)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCaAMG    = tmpReArray( 7)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCaB      = tmpReArray( 8)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCaBMG    = tmpReArray( 9)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCp       = tmpReArray(10)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCpMG     = tmpReArray(11)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCd     = tmpReArray(12)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCdMG   = tmpReArray(13)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCa     = tmpReArray(14)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCaMG   = tmpReArray(15)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCp     = tmpReArray(16)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthAxCpMG   = tmpReArray(17)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCb       = tmpReArray(18)
+         InputFileData%Morison%CoefDpthsRec(I)%DpthCbMG     = tmpReArray(19)
+      END DO
+      
+      DO I = 2,InputFileData%Morison%NCoefDpthRec
+         IF (InputFileData%Morison%CoefDpthsRec(I)%DpthMCF .NEQV. InputFileData%Morison%CoefDpthsRec(1)%DpthMCF) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2 = 'In the depth-based rectangular member hydrodynamic coefficients, MCF is specified for some depth but not others.'
+            if (Failed()) RETURN
+         END IF
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
+   !-------------------------------------------------------------------------------------------------
+   ! Member-based Cylindrical Member Hydrodynamic Coefficients Section
+   !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! NCoefMembersCyl - Number of member-based cylindrical member hydrodynamic coefficient property sets
+   call ParseVar( FileInfo_In, CurLine, 'NCoefMembersCyl', InputFileData%Morison%NCoefMembersCyl, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based cylindrical member  hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based cylindrical member  hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+
+   IF ( InputFileData%Morison%NCoefMembersCyl > 0 ) THEN
+
+      CALL AllocAry( tmpReArray, 29, 'temporary array for CoefMembersCyl', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         ! Allocate memory for Member-based coefficient arrays
+      ALLOCATE ( InputFileData%Morison%CoefMembersCyl(InputFileData%Morison%NCoefMembersCyl), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for CoefMembersCyl array.'
+         if (Failed())  return;
+      END IF
+
+      DO I = 1,InputFileData%Morison%NCoefMembersCyl
+            
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Member-based cylindrical member  hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                      'MCF', 1.0_ReKi, (/10,11,12,13/), InputFileData%Morison%CoefMembersCyl(I)%MemberMCF, ErrStat2, ErrMsg2, UnEc )
+            if (Failed())  return
+
+         InputFileData%Morison%CoefMembersCyl(I)%MemberID         = NINT(tmpReArray( 1))
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCd1        =      tmpReArray( 2)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCd2        =      tmpReArray( 3)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG1      =      tmpReArray( 4)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG2      =      tmpReArray( 5)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCa1        =      tmpReArray( 6)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCa2        =      tmpReArray( 7)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG1      =      tmpReArray( 8)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG2      =      tmpReArray( 9)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCp1        =      tmpReArray(10)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCp2        =      tmpReArray(11)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCpMG1      =      tmpReArray(12)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCpMG2      =      tmpReArray(13)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd1      =      tmpReArray(14)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd2      =      tmpReArray(15)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG1    =      tmpReArray(16)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG2    =      tmpReArray(17)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa1      =      tmpReArray(18)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa2      =      tmpReArray(19)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG1    =      tmpReArray(20)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG2    =      tmpReArray(21)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp1      =      tmpReArray(22)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp2      =      tmpReArray(23)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG1    =      tmpReArray(24)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG2    =      tmpReArray(25)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCb1        =      tmpReArray(26)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCb2        =      tmpReArray(27)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG1      =      tmpReArray(28)
+         InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG2      =      tmpReArray(29)
+      END DO
+
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
+   END IF
+
+   !-------------------------------------------------------------------------------------------------
+   ! Member-based Rectangular Member Hydrodynamic Coefficients Section
+   !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! NCoefMembersRec - Number of member-based rectangular member hydrodynamic coefficient property sets
+   call ParseVar( FileInfo_In, CurLine, 'NCoefMembersRec', InputFileData%Morison%NCoefMembersRec, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based rectangular member hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based rectangular member hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+
+   IF ( InputFileData%Morison%NCoefMembersRec > 0 ) THEN
+
+      CALL AllocAry( tmpReArray, 37, 'temporary array for CoefMembersRec', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+         ! Allocate memory for Member-based coefficient arrays
+      ALLOCATE ( InputFileData%Morison%CoefMembersRec(InputFileData%Morison%NCoefMembersRec), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for CoefMembersRec array.'
+         if (Failed())  return;
+      END IF
+
+      DO I = 1,InputFileData%Morison%NCoefMembersRec
+            
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Member-based rectangular member hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                      'MCF', 1.0_ReKi, (/18,19,20,21/), InputFileData%Morison%CoefMembersRec(I)%MemberMCF, ErrStat2, ErrMsg2, UnEc )
+            if (Failed())  return
+
+         InputFileData%Morison%CoefMembersRec(I)%MemberID         = NINT(tmpReArray( 1))
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdA1       =      tmpReArray( 2)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdA2       =      tmpReArray( 3)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG1     =      tmpReArray( 4)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG2     =      tmpReArray( 5)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdB1       =      tmpReArray( 6)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdB2       =      tmpReArray( 7)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG1     =      tmpReArray( 8)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG2     =      tmpReArray( 9)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaA1       =      tmpReArray(10)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaA2       =      tmpReArray(11)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG1     =      tmpReArray(12)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG2     =      tmpReArray(13)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaB1       =      tmpReArray(14)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaB2       =      tmpReArray(15)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG1     =      tmpReArray(16)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG2     =      tmpReArray(17)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCp1        =      tmpReArray(18)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCp2        =      tmpReArray(19)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCpMG1      =      tmpReArray(20)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCpMG2      =      tmpReArray(21)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCd1      =      tmpReArray(22)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCd2      =      tmpReArray(23)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG1    =      tmpReArray(24)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG2    =      tmpReArray(25)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCa1      =      tmpReArray(26)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCa2      =      tmpReArray(27)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG1    =      tmpReArray(28)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG2    =      tmpReArray(29)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCp1      =      tmpReArray(30)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCp2      =      tmpReArray(31)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG1    =      tmpReArray(32)
+         InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG2    =      tmpReArray(33)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCb1        =      tmpReArray(34)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCb2        =      tmpReArray(35)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCbMG1      =      tmpReArray(36)
+         InputFileData%Morison%CoefMembersRec(I)%MemberCbMG2      =      tmpReArray(37)
+      END DO
+
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Members Section
@@ -698,17 +915,19 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       DO I = 1,InputFileData%Morison%NMembers
          ! We can't use the ParseAry here since PropPot is a logical
          Line = FileInfo_In%Lines(CurLine)
-         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,   InputFileData%Morison%InpMembers(I)%MJointID1,    &
-                                     InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
-                                     InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MDivSize,     &
-                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
-                                     InputFileData%Morison%InpMembers(I)%PropPot
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,    InputFileData%Morison%InpMembers(I)%MJointID1,    &
+                                      InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
+                                      InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MSecGeom,     &
+                                      InputFileData%Morison%InpMembers(I)%MSpinOrient, InputFileData%Morison%InpMembers(I)%MDivSize,     &
+                                      InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
+                                      InputFileData%Morison%InpMembers(I)%PropPot
          IF ( ErrStat2 /= 0 ) THEN
             ErrStat2 = ErrID_Fatal
             ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
                         //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
             if (Failed())  return;
          END IF
+         InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R
 
          if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
          CurLine = CurLine+1
@@ -1117,8 +1336,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    INTEGER                                          :: K                    ! Generic loop counter index
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    LOGICAL                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
-   REAL(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table
-   REAL(ReKi)                                       :: MaxDepth             ! The maximum depth entry in the Depth-based Hydrodynamic coefficents table
+   REAL(ReKi)                                       :: MinCylDepth          ! The minimum depth entry in the Depth-based cylindrical-member Hydrodynamic coefficents table
+   REAL(ReKi)                                       :: MaxCylDepth          ! The maximum depth entry in the Depth-based cylindrical-member Hydrodynamic coefficents table
+   REAL(ReKi)                                       :: MinRecDepth          ! The minimum depth entry in the Depth-based rectangular-member Hydrodynamic coefficents table
+   REAL(ReKi)                                       :: MaxRecDepth          ! The maximum depth entry in the Depth-based rectangular-member Hydrodynamic coefficents table
    REAL(ReKi)                                       :: z1
    REAL(ReKi)                                       :: z2
    REAL(ReKi)                                       :: MinMembrDpth
@@ -1693,259 +1914,383 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! Member Cross-section Properties Section
    !-------------------------------------------------------------------------------------------------
 
-   IF ( InputFileData%Morison%NPropSets < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'Number of member cross-section property sets must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%Morison%NPropSetsCyl < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Number of cylindrical member cross-section property sets must be greater than zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
-   IF ( InputFileData%Morison%NPropSets > 0 ) THEN
+   IF ( InputFileData%Morison%NPropSetsCyl > 0 ) THEN
 
-      DO I = 1,InputFileData%Morison%NPropSets
+      DO I = 1,InputFileData%Morison%NPropSetsCyl
 
             ! Make sure that the current JointID is not used elsewhere in the table.
-         DO J = I+1,InputFileData%Morison%NPropSets
-            IF ( InputFileData%Morison%MPropSets(I)%PropSetID == InputFileData%Morison%MPropSets(J)%PropSetID ) THEN
-               CALL SetErrStat( ErrID_Fatal,'Duplicate PropSetIDs were found in the Member Cross-section Properties table.',ErrStat,ErrMsg,RoutineName)
+         DO J = I+1,InputFileData%Morison%NPropSetsCyl
+            IF ( InputFileData%Morison%MPropSetsCyl(I)%PropSetID == InputFileData%Morison%MPropSetsCyl(J)%PropSetID ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate PropSetIDs were found in the Cylindrical Member Cross-section Properties table.',ErrStat,ErrMsg,RoutineName)
                RETURN
             END IF
          END DO
 
-         IF ( ( InputFileData%Morison%MPropSets(I)%PropD < 0 ) .OR.  ( InputFileData%Morison%MPropSets(I)%PropThck < 0 ) .OR. ( ( InputFileData%Morison%MPropSets(I)%PropD - InputFileData%Morison%MPropSets(I)%PropThck / 2.0 ) < 0) ) THEN
-            CALL SetErrStat( ErrID_Fatal,'PropD and PropThck must be greater than zero and (PropD - propThck/2 ) must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+         IF ( ( InputFileData%Morison%MPropSetsCyl(I)%PropD < 0 ) .OR.  ( InputFileData%Morison%MPropSetsCyl(I)%PropThck < 0 ) .OR. ( ( InputFileData%Morison%MPropSetsCyl(I)%PropD - 2.0 * InputFileData%Morison%MPropSetsCyl(I)%PropThck ) < 0) ) THEN
+            CALL SetErrStat( ErrID_Fatal,'For cylindrical members, PropD and PropThck must be greater than zero and (PropD - 2*PropThck) must be greater than zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
       END DO
 
    END IF
 
+   IF ( InputFileData%Morison%NPropSetsRec < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Number of rectangular member cross-section property sets must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+
+   IF ( InputFileData%Morison%NPropSetsRec > 0 ) THEN
+
+      DO I = 1,InputFileData%Morison%NPropSetsRec
+
+            ! Make sure that the current JointID is not used elsewhere in the table.
+         DO J = I+1,InputFileData%Morison%NPropSetsRec
+            IF ( InputFileData%Morison%MPropSetsRec(I)%PropSetID == InputFileData%Morison%MPropSetsRec(J)%PropSetID ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate PropSetIDs were found in the Rectangular Member Cross-section Properties table.',ErrStat,ErrMsg,RoutineName)
+               RETURN
+            END IF
+         END DO
+
+         IF ( ( InputFileData%Morison%MPropSetsRec(I)%PropA < 0 ) .OR. ( InputFileData%Morison%MPropSetsRec(I)%PropB < 0 ) .OR.  ( InputFileData%Morison%MPropSetsRec(I)%PropThck < 0 ) .OR. ( ( InputFileData%Morison%MPropSetsRec(I)%PropA - 2.0 * InputFileData%Morison%MPropSetsRec(I)%PropThck ) < 0) .OR. ( ( InputFileData%Morison%MPropSetsRec(I)%PropB - 2.0 * InputFileData%Morison%MPropSetsRec(I)%PropThck ) < 0) ) THEN
+            CALL SetErrStat( ErrID_Fatal,'For rectangular members, PropA, PropB, and PropThck must be greater than zero and (PropA - 2*PropThck) and (PropB - 2*PropThck) must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      END DO
+
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Simple hydrodynamic coefficients Section
    !-------------------------------------------------------------------------------------------------
 
    IF ( InputFileData%Morison%SimplCd < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplCdMG < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplCa < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplCaMG < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplAxCd < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplAxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplAxCdMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCd must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplCdMG   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCdMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplCa     < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCa must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplCaMG   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCaMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplAxCd   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCd must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplAxCdMG < 0 ) THEN
       CALL SetErrStat( ErrID_Fatal,'SimplAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplAxCa < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplAxCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%SimplAxCaMG < 0 ) THEN
+   ELSE IF ( InputFileData%Morison%SimplAxCa   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplAxCa must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplAxCaMG < 0 ) THEN
       CALL SetErrStat( ErrID_Fatal,'SimplAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
+   ELSE IF ( InputFileData%Morison%SimplCb     < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCb must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplCbMG   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCbMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
    END IF
-   IF ( InputFileData%Morison%SimplCb < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   IF ( InputFileData%Morison%SimplRecCdA < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCdA must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCdAMG  < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCdAMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCdB    < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCdB must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCdBMG  < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCdBMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCaA    < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCaA must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCaAMG  < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCaAMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCaB    < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCaB must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCaBMG  < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCaBMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecAxCd   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecAxCd must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecAxCdMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecAxCa   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecAxCa must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecAxCaMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCb     < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCb must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+   ELSE IF ( InputFileData%Morison%SimplRecCbMG   < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplRecCbMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
    END IF
-   IF ( InputFileData%Morison%SimplCbMG < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'SimplCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+
    !TODO: Do we need a test for AxCp
 
    !-------------------------------------------------------------------------------------------------
    ! Depth-based Hydrodynamic Coefficients Section
    !-------------------------------------------------------------------------------------------------
 
-   IF ( InputFileData%Morison%NCoefDpth < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'NCoefDpth must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%Morison%NCoefDpthCyl < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'NCoefDpthCyl must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
-
-   IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
-      MinDepth = 99999999.0
-      MaxDepth = -99999999.0
-      DO I = 1,InputFileData%Morison%NCoefDpth
+   IF ( InputFileData%Morison%NCoefDpthCyl > 0 ) THEN
+      MinCylDepth =  99999999.0
+      MaxCylDepth = -99999999.0
+      DO I = 1,InputFileData%Morison%NCoefDpthCyl
 
             ! Record the minimum and maximum depths covered by this table.  This will be used as part of a consistency check
             ! in the members table, below.
-         IF (  InputFileData%Morison%CoefDpths(I)%Dpth < MinDepth ) THEN
-            MinDepth = InputFileData%Morison%CoefDpths(I)%Dpth
+         IF (  InputFileData%Morison%CoefDpthsCyl(I)%Dpth < MinCylDepth ) THEN
+            MinCylDepth = InputFileData%Morison%CoefDpthsCyl(I)%Dpth
          ELSE
             CALL SetErrStat( ErrID_Fatal,'The rows of the Depth-based Hydrodynamic Coefficients table must be ordered with increasing depth (decreasing Z).',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%Dpth > MaxDepth ) THEN
-            MaxDepth = InputFileData%Morison%CoefDpths(I)%Dpth
+         IF ( InputFileData%Morison%CoefDpthsCyl(I)%Dpth > MaxCylDepth ) THEN
+            MaxCylDepth = InputFileData%Morison%CoefDpthsCyl(I)%Dpth
          END IF
 
             ! Make sure that the current Dpth is not used elsewhere in the table.
-         DO J = I+1,InputFileData%Morison%NCoefDpth
-            IF ( EqualRealNos( InputFileData%Morison%CoefDpths(I)%Dpth, InputFileData%Morison%CoefDpths(J)%Dpth ) ) THEN
-               CALL SetErrStat( ErrID_Fatal,'Duplicate Dpths were found in the Depth-based Hydrodynamic Coefficients table.',ErrStat,ErrMsg,RoutineName)
+         DO J = I+1,InputFileData%Morison%NCoefDpthCyl
+            IF ( EqualRealNos( InputFileData%Morison%CoefDpthsCyl(I)%Dpth, InputFileData%Morison%CoefDpthsCyl(J)%Dpth ) ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate Dpths were found in the Depth-based Hydrodynamic Coefficients table for cylindrical members.',ErrStat,ErrMsg,RoutineName)
                RETURN
             END IF
          END DO
 
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCd < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
+         IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCd < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCd must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCdMG   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCdMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCa     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCa must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCaMG   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCaMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCd   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCd must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCdMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCa   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCa must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCaMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCp   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCp must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthAxCpMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthAxCpMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCb     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCb must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsCyl(I)%DpthCbMG   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for cylindrical members, DpthCbMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
          END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCdMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCa < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCaMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCd < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCdMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCa < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCaMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCp < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCp must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCpMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCpMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCb < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefDpths(I)%DpthCbMG < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
+         IF (ErrStat >= AbortErrLev) RETURN
+
       END DO
 
       ! TODO: Sort the table based on depth so that a linear interpolation can be easily performed between entries.
 
    END IF
 
+   IF ( InputFileData%Morison%NCoefDpthRec < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'NCoefDpthRec must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+
+   IF ( InputFileData%Morison%NCoefDpthRec > 0 ) THEN
+      MinRecDepth =  99999999.0
+      MaxRecDepth = -99999999.0
+      DO I = 1,InputFileData%Morison%NCoefDpthRec
+
+            ! Record the minimum and maximum depths covered by this table.  This will be used as part of a consistency check
+            ! in the members table, below.
+         IF (  InputFileData%Morison%CoefDpthsRec(I)%Dpth < MinRecDepth ) THEN
+            MinRecDepth = InputFileData%Morison%CoefDpthsRec(I)%Dpth
+         ELSE
+            CALL SetErrStat( ErrID_Fatal,'The rows of the Depth-based Hydrodynamic Coefficients table must be ordered with increasing depth (decreasing Z).',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefDpthsRec(I)%Dpth > MaxRecDepth ) THEN
+            MaxRecDepth = InputFileData%Morison%CoefDpthsRec(I)%Dpth
+         END IF
+
+            ! Make sure that the current Dpth is not used elsewhere in the table.
+         DO J = I+1,InputFileData%Morison%NCoefDpthRec
+            IF ( EqualRealNos( InputFileData%Morison%CoefDpthsRec(I)%Dpth, InputFileData%Morison%CoefDpthsRec(J)%Dpth ) ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate Dpths were found in the Depth-based Hydrodynamic Coefficients table for rectangular members.',ErrStat,ErrMsg,RoutineName)
+               RETURN
+            END IF
+         END DO
+
+         IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCdA < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCdA must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCdAMG  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCdAMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCdB    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCdB must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCdBMG  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCdBMG must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCaA    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCa must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCaAMG  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCaMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCaB    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCa must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCaBMG  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCaMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCd   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCd must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCdMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCdMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCa   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCa must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCaMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCp   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCp must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthAxCpMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthAxCpMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCb     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCb must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefDpthsRec(I)%DpthCbMG   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table for rectangular members, DpthCbMG must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         END IF
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      END DO
+
+      ! TODO: Sort the table based on depth so that a linear interpolation can be easily performed between entries.
+
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Member-based Hydrodynamic Coefficients Section
    !-------------------------------------------------------------------------------------------------
 
-   IF ( InputFileData%Morison%NCoefMembers < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'NCoefMembers must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%Morison%NCoefMembersCyl < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'NCoefMembersCyl must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
-   IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
+   IF ( InputFileData%Morison%NCoefMembersCyl > 0 ) THEN
 
-      DO I = 1,InputFileData%Morison%NCoefMembers
+      DO I = 1,InputFileData%Morison%NCoefMembersCyl
 
             ! Make sure that the current MemberID is not used elsewhere in the table.
-         DO J = I+1,InputFileData%Morison%NCoefMembers
-            IF ( InputFileData%Morison%CoefMembers(I)%MemberID == InputFileData%Morison%CoefMembers(J)%MemberID ) THEN
-               CALL SetErrStat( ErrID_Fatal,'Duplicate MemberIDs were found in the Member-based Hydrodynamic coefficients table.',ErrStat,ErrMsg,RoutineName)
+         DO J = I+1,InputFileData%Morison%NCoefMembersCyl
+            IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberID == InputFileData%Morison%CoefMembersCyl(J)%MemberID ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate MemberIDs were found in the Member-based Hydrodynamic coefficients table for cylindrical members.',ErrStat,ErrMsg,RoutineName)
                RETURN
             END IF
          END DO
 
-
-
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCd1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCd1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
+         IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCd1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCd1 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCd2     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCd2 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCdMG1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCdMG2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCa1     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCa1 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCa2     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCa2 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCaMG1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCaMG2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberAxCa1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberAxCa2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberAxCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberAxCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCb1     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCb1 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCb2     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCb2 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCbMG1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for cylindrical members, MemberCbMG2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
          END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCd2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCd2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCdMG1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCdMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCdMG2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCdMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCa1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCa2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCaMG1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCaMG2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG1 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG2 < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
+         IF (ErrStat >= AbortErrLev) RETURN
       END DO
 
    END IF
 
+   IF ( InputFileData%Morison%NCoefMembersRec < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'NCoefMembersRec must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+
+   IF ( InputFileData%Morison%NCoefMembersRec > 0 ) THEN
+
+      DO I = 1,InputFileData%Morison%NCoefMembersRec
+
+            ! Make sure that the current MemberID is not used elsewhere in the table.
+         DO J = I+1,InputFileData%Morison%NCoefMembersRec
+            IF ( InputFileData%Morison%CoefMembersRec(I)%MemberID == InputFileData%Morison%CoefMembersRec(J)%MemberID ) THEN
+               CALL SetErrStat( ErrID_Fatal,'Duplicate MemberIDs were found in the Member-based Hydrodynamic coefficients table for rectangular members.',ErrStat,ErrMsg,RoutineName)
+               RETURN
+            END IF
+         END DO
+
+         IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdA1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdA1 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdA2    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdA2 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG1  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdAMG1 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG2  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdAMG2 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdB1    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdB1 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdB2    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdB2 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG1  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdBMG1 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG2  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCdBMG2 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaA1    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaA1 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaA2    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaA2 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG1  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaAMG1 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG2  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaAMG2 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaB1    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaB1 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaB2    < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaB2 must be greater or equal to zero.'   ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG1  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaBMG1 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG2  < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCaBMG2 must be greater or equal to zero.' ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberAxCa1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberAxCa1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberAxCa2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberAxCa2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberAxCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberAxCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCb1     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCb1 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCb2     < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCb2 must be greater or equal to zero.'    ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCbMG1   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCbMG1 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         ELSE IF ( InputFileData%Morison%CoefMembersRec(I)%MemberCbMG2   < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table for rectangular members, MemberCbMG2 must be greater or equal to zero.'  ,ErrStat,ErrMsg,RoutineName)
+         END IF
+         IF (ErrStat >= AbortErrLev) RETURN
+      END DO
+
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Members Section
@@ -2011,17 +2356,25 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
 
             ! Find MPropSetID1 and MPropSetID2 in the Member cross-section properties table and then record their index locations
-         DO J = 1,InputFileData%Morison%NPropSets
-
-
-
-            IF ( InputFileData%Morison%InpMembers(I)%MPropSetID1 == InputFileData%Morison%MPropSets(J)%PropSetID ) THEN
-               InputFileData%Morison%InpMembers(I)%MPropSetID1Indx = J
-            END IF
-            IF ( InputFileData%Morison%InpMembers(I)%MPropSetID2 == InputFileData%Morison%MPropSets(J)%PropSetID ) THEN
-               InputFileData%Morison%InpMembers(I)%MPropSetID2Indx = J
-            END IF
-         END DO
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Cyl ) THEN
+            DO J = 1,InputFileData%Morison%NPropSetsCyl
+               IF ( InputFileData%Morison%InpMembers(I)%MPropSetID1 == InputFileData%Morison%MPropSetsCyl(J)%PropSetID ) THEN
+                  InputFileData%Morison%InpMembers(I)%MPropSetID1Indx = J
+               END IF
+               IF ( InputFileData%Morison%InpMembers(I)%MPropSetID2 == InputFileData%Morison%MPropSetsCyl(J)%PropSetID ) THEN
+                  InputFileData%Morison%InpMembers(I)%MPropSetID2Indx = J
+               END IF
+            END DO
+         ELSE IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec ) THEN
+            DO J = 1,InputFileData%Morison%NPropSetsRec
+               IF ( InputFileData%Morison%InpMembers(I)%MPropSetID1 == InputFileData%Morison%MPropSetsRec(J)%PropSetID ) THEN
+                  InputFileData%Morison%InpMembers(I)%MPropSetID1Indx = J
+               END IF
+               IF ( InputFileData%Morison%InpMembers(I)%MPropSetID2 == InputFileData%Morison%MPropSetsRec(J)%PropSetID ) THEN
+                  InputFileData%Morison%InpMembers(I)%MPropSetID2Indx = J
+               END IF
+            END DO
+         END IF
 
             ! Make sure that a PropSetID entry in the Member cross-section properties table was found
          IF ( InputFileData%Morison%InpMembers(I)%MPropSetID1Indx == -1 ) THEN
@@ -2048,46 +2401,89 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
 
          IF ( InputFileData%Morison%InpMembers(I)%MCoefMod == 2 ) THEN
-            IF ( InputFileData%Morison%NCoefDpth == 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal,'NCoefDpth must be greater than zero when a member is using a depth-based coefficient model.',ErrStat,ErrMsg,RoutineName)
-               RETURN
-            END IF
-               ! We will not extrapolate depth-based coefficient values, so make sure that the depth-based table has values that are outside the depth range of this member
-               ! NOTE: This is actually potentially overly conservative because the final member may be shorter due to joint overlap handling.
+            ! We will not extrapolate depth-based coefficient values, so make sure that the depth-based table has values that are outside the depth range of this member
+            ! NOTE: This is actually potentially overly conservative because the final member may be shorter due to joint overlap handling.
             z1 = InputFileData%Morison%InpJoints( InputFileData%Morison%InpMembers(I)%MJointID1Indx )%Position(3)
             z2 = InputFileData%Morison%InpJoints( InputFileData%Morison%InpMembers(I)%MJointID2Indx )%Position(3)
             MinMembrDpth = min( z1, z2 )
             MaxMembrDpth = max( z1, z2 )
-            IF ( ( MinMembrDpth < MinDepth ) .OR. ( MaxMembrDpth > MaxDepth ) ) THEN
-               CALL SetErrStat( ErrID_Fatal,'This member uses a depth-based coefficient model, but the member depth is outside the range of values provided in the depth-based hydrodynamic coefficients table.',ErrStat,ErrMsg,RoutineName)
-               RETURN
+            IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Cyl ) THEN
+               IF ( InputFileData%Morison%NCoefDpthCyl == 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'NCoefDpthCyl for cylindrical members must be greater than zero when a member is using a depth-based coefficient model.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+               IF ( ( MinMembrDpth < MinCylDepth ) .OR. ( MaxMembrDpth > MaxCylDepth ) ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'This cylindrical member uses a depth-based coefficient model, but the member depth is outside the range of values provided in the depth-based hydrodynamic coefficients table.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+            ELSE IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec ) THEN
+               IF ( InputFileData%Morison%NCoefDpthRec == 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'NCoefDpthRec for rectangular members must be greater than zero when a member is using a depth-based coefficient model.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+               IF ( ( MinMembrDpth < MinRecDepth ) .OR. ( MaxMembrDpth > MaxRecDepth ) ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'This rectangular member uses a depth-based coefficient model, but the member depth is outside the range of values provided in the depth-based hydrodynamic coefficients table.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+            END IF
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%MCoefMod == 3 ) THEN
+
+            IF (InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Cyl) THEN
+
+               IF ( InputFileData%Morison%NCoefMembersCyl == 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'NCoefMembersCyl must be greater than zero when a member is using a member-based coefficient model.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+               ! Make sure this id appears in the Members table and mark it's location for future use
+               FoundID = .FALSE.
+               DO J = 1,InputFileData%Morison%NCoefMembersCyl
+                  IF ( InputFileData%Morison%CoefMembersCyl(J)%MemberID == InputFileData%Morison%InpMembers(I)%MemberID ) THEN
+                     FoundID = .TRUE.
+                     InputFileData%Morison%InpMembers(I)%MmbrCoefIDIndx = J
+                  END IF
+               END DO
+               IF ( .NOT. FoundID ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'Could not locate the MemberID referenced in the Members table in the associated Member-based Hydrodynamic coefficients table for cylindrical members.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+
+            ELSE IF (InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec) THEN
+
+               IF ( InputFileData%Morison%NCoefMembersRec == 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'NCoefMembersRec must be greater than zero when a member is using a member-based coefficient model.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+               ! Make sure this id appears in the Members table and mark it's location for future use
+               FoundID = .FALSE.
+               DO J = 1,InputFileData%Morison%NCoefMembersRec
+                  IF ( InputFileData%Morison%CoefMembersRec(J)%MemberID == InputFileData%Morison%InpMembers(I)%MemberID ) THEN
+                     FoundID = .TRUE.
+                     InputFileData%Morison%InpMembers(I)%MmbrCoefIDIndx = J
+                  END IF
+               END DO
+               IF ( .NOT. FoundID ) THEN
+                  CALL SetErrStat( ErrID_Fatal,'Could not locate the MemberID referenced in the Members table in the associated Member-based Hydrodynamic coefficients table for rectangular members.',ErrStat,ErrMsg,RoutineName)
+                  RETURN
+               END IF
+
             END IF
 
          END IF
 
-
-         IF ( InputFileData%Morison%InpMembers(I)%MCoefMod == 3 ) THEN
-            IF ( InputFileData%Morison%NCoefMembers == 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal,'NCoefMembers must be greater than zero when a member is using a member-based coefficient model.',ErrStat,ErrMsg,RoutineName)
-               RETURN
-            END IF
-               ! Make sure this id appears in the Members table and mark it's location for future use
-            FoundID = .FALSE.
-            DO J = 1,InputFileData%Morison%NCoefMembers
-               IF ( InputFileData%Morison%CoefMembers(J)%MemberID == InputFileData%Morison%InpMembers(I)%MemberID ) THEN
-                  FoundID = .TRUE.
-                  InputFileData%Morison%InpMembers(I)%MmbrCoefIDIndx = J
-               END IF
-            END DO
-
-            IF ( .NOT. FoundID ) THEN
-               CALL SetErrStat( ErrID_Fatal,'Could not locate the MemberID referenced in the Members table in the associated Member-based Hydrodynamic coefficients table.',ErrStat,ErrMsg,RoutineName)
-               RETURN
-            END IF
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom /= MSecGeom_Cyl .AND. InputFileData%Morison%InpMembers(I)%MSecGeom /= MSecGeom_Rec ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MSecGeom must be 1 for cylindrical members or 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
+            RETURN
          END IF
 
          IF ( InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 1 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
             CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 1 for column-type hydrostatic load calculation or 2 for ship-like calculation.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
@@ -2096,7 +2492,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             RETURN
          END IF
 
-         
       END DO
 
    END IF
@@ -2132,6 +2527,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
                   InputFileData%Morison%InpMembers(k)%MmbrFilledIDIndx = I
 
+                  ! Set entries of member list of the filled group to the member index instead of ID for quick lookup later
+                  InputFileData%Morison%FilledGroups(I)%FillMList(J) = K
+
                END IF
             END DO
 
@@ -2150,6 +2548,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
                ! Deal with DEFAULT or create a REAL from the string
 
+         CALL Conv2UC( InputFileData%Morison%FilledGroups(I)%FillDensChr )
          IF ( TRIM(InputFileData%Morison%FilledGroups(I)%FillDensChr) /= 'DEFAULT' )  THEN
 
             READ (InputFileData%Morison%FilledGroups(I)%FillDensChr,*,IOSTAT=IOS)  InputFileData%Morison%FilledGroups(I)%FillDens

@@ -1,3 +1,5 @@
+# ...... Include files ..... 
+usefrom Current.txt
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 # Data structures for representing wave fields.
 #
@@ -72,3 +74,4 @@ typedef     ^                 ^                 INTEGER              WaveMod    
 
 typedef     ^                 ^                 INTEGER              NStepWave         -              -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -              -        -        "NStepWave / 2" -
+typedef     ^                 ^            Current_InitInputType   Current_InitInput   -              -        -        "InitInputs in the Current Module. For coupling with MD." - 

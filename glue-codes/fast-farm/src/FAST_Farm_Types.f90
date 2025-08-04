@@ -34,12 +34,10 @@ MODULE FAST_Farm_Types
 USE FASTWrapper_Types
 USE WakeDynamics_Types
 USE AWAE_Types
-USE SuperController_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules = 5      ! The number of modules available in FAST.Farm [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_None = 0      ! No module selected [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_SC = 1      ! Super Controller [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_FWrap = 2      ! FAST Wrapper [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD = 3      ! Wake Dynamics [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
@@ -55,8 +53,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low-resolution time step [-]
     INTEGER(IntKi)  :: NumTurbines = 0_IntKi      !< Number of turbines in the simulation [-]
     CHARACTER(1024)  :: WindFilePath      !< Path name of wind data files from ABLSolver precursor [-]
-    CHARACTER(1024)  :: SC_FileName      !< Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms [-]
-    LOGICAL  :: UseSC = .false.      !< Use a super controller? [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin} [-]
     INTEGER(IntKi)  :: MooringMod = 0_IntKi      !< Mod_SharedMooring is a flag for array-level mooring. (switch) {0: none, 3: yes/MoorDyn} [-]
@@ -159,20 +155,6 @@ IMPLICIT NONE
     LOGICAL  :: IsInitialized = .FALSE.      !< Has AWAE_Init been called [-]
   END TYPE AWAE_Data
 ! =======================
-! =========  SC_Data  =======
-  TYPE, PUBLIC :: SC_Data
-    TYPE(SC_ContinuousStateType)  :: x      !< Continuous states [-]
-    TYPE(SC_DiscreteStateType)  :: xd      !< Discrete states [-]
-    TYPE(SC_ConstraintStateType)  :: z      !< Constraint states [-]
-    TYPE(SC_OtherStateType)  :: OtherState      !< Other states [-]
-    TYPE(SC_ParameterType)  :: p      !< Parameters [-]
-    TYPE(SC_InputType)  :: uInputs      !< System inputs [-]
-    REAL(DbKi) , DIMENSION(1:1)  :: utimes = 0.0_R8Ki      !< Current time [s]
-    TYPE(SC_OutputType)  :: y      !< System outputs [-]
-    TYPE(SC_MiscVarType)  :: m      !< Misc/optimization variables [-]
-    LOGICAL  :: IsInitialized = .FALSE.      !< Has SC_Init been called [-]
-  END TYPE SC_Data
-! =======================
 ! =========  MD_Data  =======
   TYPE, PUBLIC :: MD_Data
     TYPE(MD_ContinuousStateType)  :: x      !< Continuous states [-]
@@ -211,7 +193,6 @@ IMPLICIT NONE
     TYPE(FASTWrapper_Data) , DIMENSION(:), ALLOCATABLE  :: FWrap      !< FASTWrapper data (one instance per turbine) [-]
     TYPE(WakeDynamics_Data) , DIMENSION(:), ALLOCATABLE  :: WD      !< WakeDynamics (WD) data [-]
     TYPE(AWAE_Data)  :: AWAE      !< Ambient Wind & Array Effects (AWAE) data [-]
-    TYPE(SC_Data)  :: SC      !< Super Controller (SC) data [-]
     TYPE(MD_Data)  :: MD      !< Farm-level MoorDyn model data [-]
     TYPE(WAT_IfW_data)  :: WAT_IfW      !< IfW data for WAT (temporary location until pointers are enabled) [-]
   END TYPE All_FastFarm_Data
@@ -237,8 +218,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%n_high_low = SrcParamData%n_high_low
    DstParamData%NumTurbines = SrcParamData%NumTurbines
    DstParamData%WindFilePath = SrcParamData%WindFilePath
-   DstParamData%SC_FileName = SrcParamData%SC_FileName
-   DstParamData%UseSC = SrcParamData%UseSC
    if (allocated(SrcParamData%WT_Position)) then
       LB(1:2) = lbound(SrcParamData%WT_Position)
       UB(1:2) = ubound(SrcParamData%WT_Position)
@@ -452,8 +431,6 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPack(RF, InData%n_high_low)
    call RegPack(RF, InData%NumTurbines)
    call RegPack(RF, InData%WindFilePath)
-   call RegPack(RF, InData%SC_FileName)
-   call RegPack(RF, InData%UseSC)
    call RegPackAlloc(RF, InData%WT_Position)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%MooringMod)
@@ -535,8 +512,6 @@ subroutine Farm_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%n_high_low); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumTurbines); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WindFilePath); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SC_FileName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WT_Position); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MooringMod); if (RegCheckErr(RF, RoutineName)) return
@@ -1097,107 +1072,6 @@ subroutine Farm_UnPackAWAE_Data(RF, OutData)
    call RegUnpack(RF, OutData%IsInitialized); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Farm_CopySC_Data(SrcSC_DataData, DstSC_DataData, CtrlCode, ErrStat, ErrMsg)
-   type(SC_Data), intent(in) :: SrcSC_DataData
-   type(SC_Data), intent(inout) :: DstSC_DataData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'Farm_CopySC_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_CopyContState(SrcSC_DataData%x, DstSC_DataData%x, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyDiscState(SrcSC_DataData%xd, DstSC_DataData%xd, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyConstrState(SrcSC_DataData%z, DstSC_DataData%z, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyOtherState(SrcSC_DataData%OtherState, DstSC_DataData%OtherState, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyParam(SrcSC_DataData%p, DstSC_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyInput(SrcSC_DataData%uInputs, DstSC_DataData%uInputs, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstSC_DataData%utimes = SrcSC_DataData%utimes
-   call SC_CopyOutput(SrcSC_DataData%y, DstSC_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_CopyMisc(SrcSC_DataData%m, DstSC_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstSC_DataData%IsInitialized = SrcSC_DataData%IsInitialized
-end subroutine
-
-subroutine Farm_DestroySC_Data(SC_DataData, ErrStat, ErrMsg)
-   type(SC_Data), intent(inout) :: SC_DataData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'Farm_DestroySC_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_DestroyContState(SC_DataData%x, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyDiscState(SC_DataData%xd, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyConstrState(SC_DataData%z, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyOtherState(SC_DataData%OtherState, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyParam(SC_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyInput(SC_DataData%uInputs, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyOutput(SC_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DestroyMisc(SC_DataData%m, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine Farm_PackSC_Data(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SC_Data), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'Farm_PackSC_Data'
-   if (RF%ErrStat >= AbortErrLev) return
-   call SC_PackContState(RF, InData%x) 
-   call SC_PackDiscState(RF, InData%xd) 
-   call SC_PackConstrState(RF, InData%z) 
-   call SC_PackOtherState(RF, InData%OtherState) 
-   call SC_PackParam(RF, InData%p) 
-   call SC_PackInput(RF, InData%uInputs) 
-   call RegPack(RF, InData%utimes)
-   call SC_PackOutput(RF, InData%y) 
-   call SC_PackMisc(RF, InData%m) 
-   call RegPack(RF, InData%IsInitialized)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine Farm_UnPackSC_Data(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SC_Data), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'Farm_UnPackSC_Data'
-   if (RF%ErrStat /= ErrID_None) return
-   call SC_UnpackContState(RF, OutData%x) ! x 
-   call SC_UnpackDiscState(RF, OutData%xd) ! xd 
-   call SC_UnpackConstrState(RF, OutData%z) ! z 
-   call SC_UnpackOtherState(RF, OutData%OtherState) ! OtherState 
-   call SC_UnpackParam(RF, OutData%p) ! p 
-   call SC_UnpackInput(RF, OutData%uInputs) ! uInputs 
-   call RegUnpack(RF, OutData%utimes); if (RegCheckErr(RF, RoutineName)) return
-   call SC_UnpackOutput(RF, OutData%y) ! y 
-   call SC_UnpackMisc(RF, OutData%m) ! m 
-   call RegUnpack(RF, OutData%IsInitialized); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
 subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, ErrMsg)
    type(MD_Data), intent(inout) :: SrcMD_DataData
    type(MD_Data), intent(inout) :: DstMD_DataData
@@ -1531,9 +1405,6 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
    call Farm_CopyAWAE_Data(SrcAll_FastFarm_DataData%AWAE, DstAll_FastFarm_DataData%AWAE, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call Farm_CopySC_Data(SrcAll_FastFarm_DataData%SC, DstAll_FastFarm_DataData%SC, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call Farm_CopyMD_Data(SrcAll_FastFarm_DataData%MD, DstAll_FastFarm_DataData%MD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1577,8 +1448,6 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
    end if
    call Farm_DestroyAWAE_Data(All_FastFarm_DataData%AWAE, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call Farm_DestroySC_Data(All_FastFarm_DataData%SC, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Farm_DestroyMD_Data(All_FastFarm_DataData%MD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Farm_DestroyWAT_IfW_data(All_FastFarm_DataData%WAT_IfW, ErrStat2, ErrMsg2)
@@ -1613,7 +1482,6 @@ subroutine Farm_PackAll_FastFarm_Data(RF, Indata)
       end do
    end if
    call Farm_PackAWAE_Data(RF, InData%AWAE) 
-   call Farm_PackSC_Data(RF, InData%SC) 
    call Farm_PackMD_Data(RF, InData%MD) 
    call Farm_PackWAT_IfW_data(RF, InData%WAT_IfW) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -1657,7 +1525,6 @@ subroutine Farm_UnPackAll_FastFarm_Data(RF, OutData)
       end do
    end if
    call Farm_UnpackAWAE_Data(RF, OutData%AWAE) ! AWAE 
-   call Farm_UnpackSC_Data(RF, OutData%SC) ! SC 
    call Farm_UnpackMD_Data(RF, OutData%MD) ! MD 
    call Farm_UnpackWAT_IfW_data(RF, OutData%WAT_IfW) ! WAT_IfW 
 end subroutine

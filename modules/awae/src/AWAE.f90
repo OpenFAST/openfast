@@ -909,9 +909,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IfW_InitInp%RootName          = TRIM(p%OutFileRoot)//'.IfW'
       IfW_InitInp%FilePassingMethod = 0_IntKi      ! Read IfW input file from disk
       IfW_InitInp%InputFileName     = InitInp%InputFileData%InflowFile
-      IfW_InitInp%lidar%Tmax        = 0.0_ReKi
-      IfW_InitInp%lidar%HubPosition = 0.0_ReKi
-      IfW_InitInp%lidar%SensorType  = SensorType_None
+      IfW_InitInp%HubPosition       = 0.0_ReKi
       IfW_InitInp%Use4Dext          = .false.
       IfW_InitInp%MHK               = MHK_None
       IfW_InitInp%WtrDpth           = 0.0_ReKi
@@ -1207,12 +1205,12 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate memory for "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
-      Failed0 = errStat >= AbortErrLev
+      Failed0 = ErrStat >= AbortErrLev
    end function Failed0
 end subroutine AWAE_Init
 

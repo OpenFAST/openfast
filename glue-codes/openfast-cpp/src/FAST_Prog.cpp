@@ -146,11 +146,6 @@ void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, doubl
         if (setUniformXBladeForces)
             get_if_present(cDriverInp, "x_blade_force", *xBladeForce, 0.0);
 
-        get_if_present(cDriverInp, "super_controller", fi.scStatus, false);
-        if(fi.scStatus) {
-            get_required(cDriverInp, "sc_libfile", fi.scLibFile);
-        }
-
         fi.globTurbineData.resize(fi.nTurbinesGlob);
         for (int iTurb=0; iTurb < fi.nTurbinesGlob; iTurb++) {
             if (cDriverInp["Turbine" + std::to_string(iTurb)]) {

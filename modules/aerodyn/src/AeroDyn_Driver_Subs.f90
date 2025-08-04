@@ -477,6 +477,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, err
       InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
       InitInp%IW_InitInp%MHK        = dvr%MHK
+      InitInp%IW_InitInp%OutputAccel= dvr%MHK /= MHK_None
       InitInp%IW_InitInp%FilePassingMethod = 0_IntKi ! read input file instead of passed file data
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
@@ -557,12 +558,12 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
+         call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
       endif
-      Failed0 = errStat >= AbortErrLev
+      Failed0 = ErrStat >= AbortErrLev
       if(Failed0) call cleanUp()
    end function Failed0
 

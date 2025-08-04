@@ -1444,7 +1444,7 @@ SUBROUTINE FEAM_CalcOutput    ( t, u, p, x, xd, z, OtherState, y, misc, ErrStat,
     CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
     ! Local variables
-    REAL(ReKi)                                     :: AllOuts(MaxOutPts)     ! All the the available output channels
+    REAL(ReKi)                                     :: AllOuts(MaxOutPts)     ! All the available output channels
     INTEGER(IntKi)                                 :: I,J                    ! Generic loop index
 !    INTEGER(IntKi)                                 :: K                      ! Blade index
 !    INTEGER(IntKi)                                 :: ErrStat2
@@ -2208,7 +2208,7 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
     p%NEQ(:)   = (p%NumElems+1)*p%NHBD-1     ! number of equations
     
     DO I = 1, p%NumLines
-        p%GSL        (I,:,:)  = InputFileData%GSL     (I,:,:)  !bjj: todo: Inspector flags this as unintialized
+        p%GSL        (I,:,:)  = InputFileData%GSL     (I,:,:)  !bjj: todo: Inspector flags this as uninitialized
         p%LineCI     (I)      = InputFileData%LineCI  (I)
         p%LineCD     (I)      = InputFileData%LineCD  (I)
         p%Elength    (I)      = InputFileData%LUnstrLen(I)/p%NumElems

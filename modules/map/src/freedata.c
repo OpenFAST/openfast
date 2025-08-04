@@ -56,8 +56,8 @@ MAP_ERROR_CODE free_outlist(Domain* domain, char* map_msg, MAP_ERROR_CODE* ierr)
     list_iterator_stop(&domain->y_list->out_list_ptr);     
     
     // @rm y_list->out_list no longer exists/is useful ?
-    list_destroy(&domain->y_list->out_list);     /* destroy output lists for writting information to output file */
-    list_destroy(&domain->y_list->out_list_ptr); /* destroy output lists for writting information to output file */
+    list_destroy(&domain->y_list->out_list);     /* destroy output lists for writing information to output file */
+    list_destroy(&domain->y_list->out_list_ptr); /* destroy output lists for writing information to output file */
   };
   MAPFREE(domain->y_list);
   return MAP_SAFE;

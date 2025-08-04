@@ -7980,7 +7980,7 @@ SUBROUTINE MrsnOut_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
 
    TYPE(Morison_InitInputType ),  INTENT( IN    ) :: InitInp              ! data needed to initialize the output module     
    TYPE(Morison_OutputType),      INTENT( INOUT ) :: y                    ! Morison module's output data
-   TYPE(Morison_ParameterType),   INTENT( INOUT ) :: p                    ! Morison module paramters
+   TYPE(Morison_ParameterType),   INTENT( INOUT ) :: p                    ! Morison module parameters
    TYPE(Morison_InitOutputType ), INTENT( INOUT ) :: InitOut              ! Morison module initialization output data
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None

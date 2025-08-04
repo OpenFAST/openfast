@@ -4,6 +4,7 @@ use testdrive, only: run_testsuite, new_testsuite, testsuite_type
 
 use test_NWTC_IO_FileInfo, only: test_NWTC_IO_FileInfo_suite
 use test_NWTC_RandomNumber, only: test_NWTC_RandomNumber_suite
+use test_NWTC_C_Binding, only: test_NWTC_C_Binding_suite
 use NWTC_Num
 
 implicit none
@@ -17,7 +18,8 @@ call SetConstants()
 
 testsuites = [ &
              new_testsuite("test_NWTC_IO_FileInfo", test_NWTC_IO_FileInfo_suite), &
-             new_testsuite("test_NWTC_RandomNumber_suite", test_NWTC_RandomNumber_suite) &
+             new_testsuite("test_NWTC_RandomNumber_suite", test_NWTC_RandomNumber_suite), &
+             new_testsuite("test_NWTC_C_Binding", test_NWTC_C_Binding_suite) &
              ]
 
 do is = 1, size(testsuites)

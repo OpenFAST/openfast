@@ -146,7 +146,7 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
       read(iUnit,*, iostat=istat) sPrescr(i), GammaPrescr(i)
       if (istat/=0) then
          errStat2=ErrID_Fatal
-         errMsg2='Error occured while reading line '//num2lstr(i+1)//' of circulation file: '//trim(CirculationFileName)
+         errMsg2='Error occurred while reading line '//num2lstr(i+1)//' of circulation file: '//trim(CirculationFileName)
          if(Failed()) return
       endif
    enddo

@@ -9,55 +9,55 @@ xchar = strcat(xchar(1:end-1),'\n');
 fprintf(fid,xchar);
 
 
-% Super Controller
-
-   % Global (turbine-independent) super controller input
-fprintf(fid,'Global Super Controller Input\n');
-for beta = 1:9
-   x = {'',['SCGblIn' num2str(beta,'%1d')], ' ', ['Global (turbine-independent) super controller input ' num2str(beta,'%1d')], ' ', '(user)' };
-   csvFun = @(str)sprintf('%s,',str);
-   xchar = cellfun(csvFun, x, 'UniformOutput', false);
-   xchar = strcat(xchar{:});
-   xchar = strcat(xchar(1:end-1),'\n');
-   fprintf(fid,xchar);
-end
+%% Super Controller
+%
+%   % Global (turbine-independent) super controller input
+%fprintf(fid,'Global Super Controller Input\n');
+%for beta = 1:9
+%   x = {'',['SCGblIn' num2str(beta,'%1d')], ' ', ['Global (turbine-independent) super controller input ' num2str(beta,'%1d')], ' ', '(user)' };
+%   csvFun = @(str)sprintf('%s,',str);
+%   xchar = cellfun(csvFun, x, 'UniformOutput', false);
+%   xchar = strcat(xchar{:});
+%   xchar = strcat(xchar(1:end-1),'\n');
+%   fprintf(fid,xchar);
+%end
   
-   % Turbine-dependent super controller input ? for turbine ?
-fprintf(fid,'Turbine-dependent Super Controller Input\n');
-for alpha = 1:9
-   for beta = 1:9
-      x = {'',['SCT' num2str(alpha,'%1d') 'In' num2str(beta,'%1d')], ' ', ['Turbine-dependent super controller input ' num2str(beta,'%1d') ' for turbine ' num2str(alpha,'%1d')], ' ', '(user)' };
-      csvFun = @(str)sprintf('%s,',str);
-      xchar = cellfun(csvFun, x, 'UniformOutput', false);
-      xchar = strcat(xchar{:});
-      xchar = strcat(xchar(1:end-1),'\n');
-      fprintf(fid,xchar);
-   end
-end
+%   % Turbine-dependent super controller input ? for turbine ?
+%fprintf(fid,'Turbine-dependent Super Controller Input\n');
+%for alpha = 1:9
+%   for beta = 1:9
+%      x = {'',['SCT' num2str(alpha,'%1d') 'In' num2str(beta,'%1d')], ' ', ['Turbine-dependent super controller input ' num2str(beta,'%1d') ' for turbine ' num2str(alpha,'%1d')], ' ', '(user)' };
+%      csvFun = @(str)sprintf('%s,',str);
+%      xchar = cellfun(csvFun, x, 'UniformOutput', false);
+%      xchar = strcat(xchar{:});
+%      xchar = strcat(xchar(1:end-1),'\n');
+%      fprintf(fid,xchar);
+%   end
+%end
 
-   % Global (turbine-independent) super controller output
-fprintf(fid,'Global Super Controller Output\n');
-for beta = 1:9
-   x = {'',['SCGblOt' num2str(beta,'%1d')], ' ', ['Global (turbine-independent) super controller output ' num2str(beta,'%1d')], ' ', '(user)' };
-   csvFun = @(str)sprintf('%s,',str);
-   xchar = cellfun(csvFun, x, 'UniformOutput', false);
-   xchar = strcat(xchar{:});
-   xchar = strcat(xchar(1:end-1),'\n');
-   fprintf(fid,xchar);
-end
-
-   % Turbine-dependent super controller output ? for turbine ?
-fprintf(fid,'Turbine-dependent Super Controller Output\n');
-for alpha = 1:9
-   for beta = 1:9
-      x = {'',['SCT' num2str(alpha,'%1d') 'Ot' num2str(beta,'%1d')], ' ', ['Turbine-dependent super controller output ' num2str(beta,'%1d') ' for turbine ' num2str(alpha,'%1d')], ' ', '(user)' };
-      csvFun = @(str)sprintf('%s,',str);
-      xchar = cellfun(csvFun, x, 'UniformOutput', false);
-      xchar = strcat(xchar{:});
-      xchar = strcat(xchar(1:end-1),'\n');
-      fprintf(fid,xchar);
-   end
-end
+%   % Global (turbine-independent) super controller output
+%fprintf(fid,'Global Super Controller Output\n');
+%for beta = 1:9
+%   x = {'',['SCGblOt' num2str(beta,'%1d')], ' ', ['Global (turbine-independent) super controller output ' num2str(beta,'%1d')], ' ', '(user)' };
+%   csvFun = @(str)sprintf('%s,',str);
+%   xchar = cellfun(csvFun, x, 'UniformOutput', false);
+%   xchar = strcat(xchar{:});
+%   xchar = strcat(xchar(1:end-1),'\n');
+%   fprintf(fid,xchar);
+%end
+%
+%   % Turbine-dependent super controller output ? for turbine ?
+%fprintf(fid,'Turbine-dependent Super Controller Output\n');
+%for alpha = 1:9
+%   for beta = 1:9
+%      x = {'',['SCT' num2str(alpha,'%1d') 'Ot' num2str(beta,'%1d')], ' ', ['Turbine-dependent super controller output ' num2str(beta,'%1d') ' for turbine ' num2str(alpha,'%1d')], ' ', '(user)' };
+%      csvFun = @(str)sprintf('%s,',str);
+%      xchar = cellfun(csvFun, x, 'UniformOutput', false);
+%      xchar = strcat(xchar{:});
+%      xchar = strcat(xchar(1:end-1),'\n');
+%      fprintf(fid,xchar);
+%   end
+%end
 
 % Wind Turbine and its Inflow
 fprintf(fid,'Rotor Centerline Orientation\n');

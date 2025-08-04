@@ -85,7 +85,6 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\modules\moordyn\src\MoorDyn_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Body.f90"/>
-		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Driver.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_IO.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Line.f90"/>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Misc.f90"/>
@@ -251,5 +250,155 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<Filter Name="Random Number">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<Filter Name="SeaState">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\SeaState\src\Current.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\SeaState\src\Current_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\Current_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField.txt">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\SeaState\src\SeaSt_WaveField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\SeaState\src\SeaSt_WaveField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\SeaState\src\SeaSt_WaveField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\SeaState\src\SeaSt_WaveField_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField_Types.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\SeaState.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\SeaState\src\SeaState_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\SeaState_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\Waves.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\SeaState\src\Waves_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\Waves2.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\SeaState\src\Waves2_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\Waves2_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\SeaState\src\Waves_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\SeaState\src\Current.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\SeaState.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\SeaState_Input.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Output.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\UserWaves.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\Waves.f90"/>
+		<File RelativePath="..\..\modules\SeaState\src\Waves2.f90"/></Filter>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Driver.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

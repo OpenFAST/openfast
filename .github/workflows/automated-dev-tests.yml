@@ -21,15 +21,114 @@ env:
   C_COMPILER: gcc-12
   GCOV_EXE: gcov-12
   CMAKE_BUILD_PARALLEL_LEVEL: 8
-  CTEST_PARALLEL_LEVEL: 2
-
+  CTEST_PARALLEL_LEVEL: 4
 
 jobs:
 
-  ### BUILD JOBS
+  #-----------------------------------------------------------------------------
+  #  BUILD JOBS
+  #-----------------------------------------------------------------------------
+
+  build-all-debug-single:
+    # Tests compiling in debug mode with single precision.
+    # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
+    # Debug speeds up the build.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: Configure build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DVARIABLE_TRACKING:BOOL=OFF \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --target all
 
 
-  build-all-debug:
+  build-all-release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: List files in workspace
+        run: ls ${{github.workspace}}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: Configure build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DVARIABLE_TRACKING:BOOL=OFF \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DOPENMP:BOOL=ON \
+            -DDOUBLE_PRECISION=ON \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --target all
+      - name: Archive files
+        run: |
+          tar -cvf workspace.tar -C ${{github.workspace}} \
+          --exclude='*.a' --exclude='*.o' --exclude='build/ftnmods' \
+          --exclude='.git' --exclude='docs' --exclude='vs-build' \
+          .
+      - name: Save workspace for other jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-all-release
+          path: workspace.tar
+
+  #-----------------------------------------------------------------------------
+  #  BUILD AND TEST JOBS
+  #-----------------------------------------------------------------------------
+
+  build-all-test-modules-debug:
     # Tests compiling in debug mode.
     # Also compiles the Registry and generates new types files.
     # Debug more speeds up the build.
@@ -43,377 +142,150 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+        run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
-            -DBUILD_SHARED_LIBS:BOOL=OFF \
-            -DGENERATE_TYPES=ON \
-            -DVARIABLE_TRACKING=OFF \
+            -DGENERATE_TYPES:BOOL=ON \
+            -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DBUILD_OPENFAST_SIMULINK_API=ON \
             ${GITHUB_WORKSPACE}
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-all-debug-${{ github.sha }}
-
-  build-all-debug-single:
-    # Tests compiling in debug mode with single precision.
-    # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
-    # Debug speeds up the build.
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev
-      - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
-            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
-            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
-            -DBUILD_SHARED_LIBS:BOOL=OFF \
-            -DVARIABLE_TRACKING=OFF \
-            -DDOUBLE_PRECISION:BOOL=OFF \
-            ${GITHUB_WORKSPACE}
-      - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target all
-
-
-
-  build-drivers-release:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-      - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
-            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DVARIABLE_TRACKING=OFF \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build module drivers
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_module_drivers
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-drivers-release-${{ github.sha }}
-
-
-  build-postlib-release:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
-      - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
-            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
-            -DCMAKE_BUILD_TYPE:STRING=RELWITHDEBINFO \
-            -DOPENMP:BOOL=ON \
-            -DDOUBLE_PRECISION=ON \
-            -DVARIABLE_TRACKING=OFF \
-            -DBUILD_FASTFARM:BOOL=ON \
-            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
-            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
-            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
-            -DBUILD_SHARED_LIBS:BOOL=OFF \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DBUILD_OPENFAST_SIMULINK_API=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build openfast-postlib
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: cmake --build . --target openfast_postlib
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-postlib-release-${{ github.sha }}
-
-
-  build-interfaces-release:
-    runs-on: ubuntu-22.04
-    needs: build-postlib-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-postlib-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST C-Interfaces
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target openfastlib openfast_lib_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-interfaces-release-${{ github.sha }}
-
-
-  build-openfast-release:
-    runs-on: ubuntu-22.04
-    needs: build-postlib-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-postlib-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST glue-code
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target openfast
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-
-
-  build-fastfarm-release:
-    runs-on: ubuntu-22.04
-    needs: build-postlib-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-postlib-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            ${GITHUB_WORKSPACE}
-      - name: Build FAST.Farm
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target FAST.Farm
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-fastfarm-release-${{ github.sha }}
-
-
-
-  ### BUILD AND TEST JOBS
-
-  build-test-uadriver-debug:
-    # UA driver used to require -DUA_OUTS
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev
-      - name: Setup workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
-      - name: Configure build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
-            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
-            -DBUILD_SHARED_LIBS:BOOL=OFF \
-            -DGENERATE_TYPES=ON \
-            -DVARIABLE_TRACKING=OFF \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build all
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target unsteadyaero_driver
-
       - name: Run UnsteadyAero tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
           ctest -VV -R "^ua_" 
-
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          # Don't run regression tests here since they currently fail inconsistently
+          test-target: unit
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run SeaState tests
+        uses: ./.github/actions/tests-module-seastate
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      - name: Run VersionInfo tests
+        uses: ./.github/actions/tests-module-version
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-uadriver
+          name: rtest-modules-debug
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/unsteadyaero
+            ${{github.workspace}}/build/reg_tests/modules
+            ${{github.workspace}}/build/unit_tests
 
 
+  build-test-OF-simulink:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
+      - name: Setup workspace
+        run: cmake -E make_directory ${{github.workspace}}/build
+      - name: Configure build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_OPENFAST_SIMULINK_API:BOOL=ON \
+            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DGENERATE_TYPES:BOOL=ON \
+            -DVARIABLE_TRACKING:BOOL=OFF \
+            ${GITHUB_WORKSPACE}
+      - name: Build FAST_SFunc
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --target FAST_SFunc
+      - name: Run MATLAB tests and generate artifacts
+        uses: matlab-actions/run-tests@v2
+        with:
+          source-folder: ${{github.workspace}}/build/glue-codes/simulink; ${{github.workspace}}/glue-codes/simulink/examples
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
 
-  ### TEST JOBS
+  #-----------------------------------------------------------------------------
+  #  TEST JOBS
+  #-----------------------------------------------------------------------------
 
   rtest-module-drivers:
     runs-on: ubuntu-22.04
-    needs: build-drivers-release
+    needs: build-all-release
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-drivers-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
@@ -443,99 +315,50 @@ jobs:
         with:
           name: rtest-module-drivers
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-
-
-  rtest-modules-debug:
-    runs-on: ubuntu-22.04
-    needs: build-all-debug
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-all-debug-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          # Don't run regression tests here since they currently fail inconsistently
-          test-target: unit
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run InflowWind tests
-        uses: ./.github/actions/tests-module-inflowwind
-      - name: Run MoorDyn tests
-        uses: ./.github/actions/tests-module-moordyn
-      - name: Run NWTC Library tests
-        uses: ./.github/actions/tests-module-nwtclibrary
-      - name: Run SeaState tests
-        uses: ./.github/actions/tests-module-seastate
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
-      - name: Run VersionInfo tests
-        uses: ./.github/actions/tests-module-version
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-modules-debug
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/unit_tests
+            ${{github.workspace}}/build/reg_tests/modules
 
 
   rtest-interfaces:
     runs-on: ubuntu-22.04
-    needs: build-interfaces-release
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-interfaces-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Run Interface / API tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          ctest -VV -L "cpp|python|fastlib" \
+          ctest -VV \
+              -L "cpp|python|fastlib" \
               -LE "openfast_io"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
@@ -543,460 +366,167 @@ jobs:
         with:
           name: rtest-interfaces
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/moordyn
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp
+            ${{github.workspace}}/build/reg_tests/glue-codes/python
+            ${{github.workspace}}/build/reg_tests/modules/aerodyn
+            ${{github.workspace}}/build/reg_tests/modules/moordyn
+            ${{github.workspace}}/build/reg_tests/modules/inflowwind
+            ${{github.workspace}}/build/reg_tests/modules/hydrodyn
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
 
 
   rtest-OF:
     runs-on: ubuntu-22.04
-    needs: build-openfast-release
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast \
-          -LE "cpp|linear|python|fastlib|aeromap" \
-          -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
+          -LE "cpp|linear|python|fastlib|offshore"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-OF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-  rtest-openfast_io:
+
+  rtest-OF-offshore:
     runs-on: ubuntu-22.04
-    needs: build-openfast-release
+    needs: build-all-release
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Install openfast_io
-        working-directory: ${{runner.workspace}}/openfast/openfast_io
-        run: |
-          pip install -e .
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run openfast_io tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -j4 \
-          -L openfast_io 
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-openfast_io
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/openfast_io
-
-
-  rtest-OF-simulink:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
-      - name: Build FAST_SFunc
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target FAST_SFunc
-      - name: Run MATLAB tests and generate artifacts
-        uses: matlab-actions/run-tests@v2
-        with:
-          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
-          test-results-junit: test-results/results.xml
-          code-coverage-cobertura: code-coverage/coverage.xml
-
-
-  rtest-OF-5MW_Land_AeroMap:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Run 5MW aero map tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L aeromap -LE "cpp|linear|python" -R 5MW_Land_AeroMap
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-5MW_Land_AeroMap
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  rtest-OF-5MW_OC4Semi_WSt_WavesWN:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
+          ctest -VV \
+          -L openfast -L offshore \
+          -LE "cpp|linear|python|fastlib"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF-5MW_OC4Semi_WSt_WavesWN
+          name: rtest-OF-offshore
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-
-  rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr -j1
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  rtest-OF-5MW_Land_BD_DLL_WTurb:
-    runs-on: ubuntu-22.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-5MW_Land_BD_DLL_WTurb
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
+ 
   rtest-OF-linearization:
     runs-on: ubuntu-22.04
-    needs: build-openfast-release
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Run OpenFAST linearization tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV -L linear
       - name: Failing test artifacts
@@ -1005,54 +535,169 @@ jobs:
         with:
           name: rtest-OF-linearization
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-
-  rtest-FF:
+  rtest-OF-aeromap:
     runs-on: ubuntu-22.04
-    needs: build-fastfarm-release
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 1
     steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: ${{runner.workspace}}
-          key: build-fastfarm-release-${{ github.sha }}
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        working-directory: ${{github.workspace}}
         run: |
           pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         run: |
           cmake \
-            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run aero map tests
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest -VV -L aeromap -LE "cpp|linear|python"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-OF-aeromap
+          path: |
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-openfast_io:
+    runs-on: ubuntu-22.04
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 1
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        working-directory: ${{github.workspace}}
+        run: |
+          pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Install openfast_io
+        working-directory: ${{github.workspace}}/openfast_io
+        run: |
+          pip install -e .
+      - name: Configure Tests
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run openfast_io tests
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest -VV -L openfast_io 
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-openfast_io
+          path: |
+            ${{github.workspace}}/build/reg_tests/openfast_io
+
+
+  rtest-FF:
+    runs-on: ubuntu-22.04
+    needs: build-all-release
+    env:
+      OMP_NUM_THREADS: 2
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C${{github.workspace}}
+          rm workspace.tar
+      - name: List files in workspace
+        run: ls
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        working-directory: ${{github.workspace}}
+        run: |
+          pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run FAST.Farm tests
-        working-directory: ${{runner.workspace}}/openfast/build
+        working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          set OMP_NUM_THREADS=2
-          ctest -VV -L fastfarm --verbose
+          ctest -VV -j1 -L fastfarm --verbose
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: rtest-FF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm
+            ${{github.workspace}}/build/reg_tests/glue-codes/fast-farm

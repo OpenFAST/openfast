@@ -98,7 +98,7 @@ MAP_EXTERNCALL int free_init_data (MAP_InitializationData_t init, char* map_msg,
 
 /**
  * @brief Set the water depth. Should be called before {@link map_init()}
- * @param p_type paramter type, native C struct {@link MAP_ParameterType_t}
+ * @param p_type parameter type, native C struct {@link MAP_ParameterType_t}
  * @param depth water depth [m]
  *
  * Example Fortran usage:
@@ -123,7 +123,7 @@ MAP_EXTERNCALL void map_set_sea_depth(MAP_Parameter_t p_type, const double depth
 
 /**
  * @brief Set the water density. Should be called before {@link map_init()}
- * @param p_type paramter type, native C struct {@link MAP_ParameterType_t}
+ * @param p_type parameter type, native C struct {@link MAP_ParameterType_t}
  * @param rho water density [kg/m^3]
  *
  * Example Fortran usage:
@@ -148,7 +148,7 @@ MAP_EXTERNCALL void map_set_sea_density(MAP_Parameter_t p_type, const double rho
 
 /**
  * @brief Set the gravitational constant. Should be called before {@link map_init()}
- * @param p_type paramter type, native C struct {@link MAP_ParameterType_t}
+ * @param p_type parameter type, native C struct {@link MAP_ParameterType_t}
  * @param grtavity gravitational acceleration [m/s^2]
  *
  * Example Fortran usage:

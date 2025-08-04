@@ -844,7 +844,7 @@ SUBROUTINE DBEMT_ABM4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrM
       x_in = x%element(i,j)
       
 
-         ! predict: (note that we are overwritting x%element(i,j)%vind and x%element(i,j)%vind_1 here):
+         ! predict: (note that we are overwriting x%element(i,j)%vind and x%element(i,j)%vind_1 here):
       CALL DBEMT_AB4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN

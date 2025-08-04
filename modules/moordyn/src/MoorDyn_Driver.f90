@@ -22,13 +22,14 @@ PROGRAM MoorDyn_Driver
 
    USE MoorDyn_Types
    USE MoorDyn
+   USE SeaState_Types
+   USE SeaState
    USE NWTC_Library 
    USE VersionInfo
 
    IMPLICIT NONE 
 
    TYPE MD_Drvr_InitInput
-      ! LOGICAL                 :: Echo
       REAL(DbKi)              :: Gravity
       REAL(DbKi)              :: rhoW
       REAL(DbKi)              :: WtrDepth
@@ -37,6 +38,8 @@ PROGRAM MoorDyn_Driver
       CHARACTER(1024)         :: OutRootName
       REAL(DbKi)              :: TMax
       REAL(DbKi)              :: dtC
+
+      CHARACTER(1024)         :: SeaStateInputFile
       
       INTEGER                 :: FarmSize
       REAL(DbKi)              :: FarmPositions(8,40)
@@ -48,10 +51,10 @@ PROGRAM MoorDyn_Driver
 
 
    INTEGER(IntKi)                        :: ErrStat          ! Status of error message   
-   CHARACTER(1024)                       :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)                        :: ErrStat2          ! Status of error message   
-   CHARACTER(1024)                       :: ErrMsg2           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2           ! Error message if ErrStat /= ErrID_None
 
    CHARACTER(1024)                       :: drvrFilename     ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(MD_Drvr_InitInput)               :: drvrInitInp      ! Initialization data for the driver program
@@ -71,6 +74,19 @@ PROGRAM MoorDyn_Driver
    REAL(DbKi), DIMENSION(:), ALLOCATABLE :: MD_uTimes
 
    TYPE (MD_OutputType)                  :: MD_y        ! Output file identifier
+
+   ! SeaState types
+   TYPE(SeaSt_InitInputType)             :: InitInData_SeaSt     ! Input data for initialization
+   TYPE(SeaSt_InitOutputType)            :: InitOutData_SeaSt    ! Output data from initialization
+   type(SeaSt_ContinuousStateType)                    :: x_SeaSt              ! Continuous states
+   type(SeaSt_DiscreteStateType)                      :: xd_SeaSt             ! Discrete states
+   type(SeaSt_ConstraintStateType)                    :: z_SeaSt              ! Constraint states
+   type(SeaSt_OtherStateType)                         :: OtherState_SeaSt     ! Other states
+   type(SeaSt_MiscVarType)                            :: m_SeaSt              ! Misc/optimization variables
+   type(SeaSt_ParameterType)                          :: p_SeaSt              ! Parameters
+   type(SeaSt_InputType)                              :: u_SeaSt(1)      ! System inputs
+   type(SeaSt_OutputType)                             :: y_SeaSt              ! System outputs
+   LOGICAL                                            :: SeaState_Initialized = .FALSE.
 
    ! Motion file parsing
    type(FileInfoType)                    :: FileInfo_PrescribeMtn  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
@@ -108,8 +124,8 @@ PROGRAM MoorDyn_Driver
    REAL(ReKi)                            :: PrevClockTime      !< Previous clock time in seconds past midnight
    INTEGER                               :: SimStrtTime (8)    !< An array containing the elements of the start time (after initialization).
    INTEGER                               :: ProgStrtTime (8)   !< An array containing the elements of the program start time (before initialization).
-   REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without intialization)
-   REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with intialization)
+   REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without initialization)
+   REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with initialization)
 
   
    CHARACTER(20)                         :: FlagArg              ! flag argument from command line
@@ -153,7 +169,6 @@ PROGRAM MoorDyn_Driver
    ! do any initializing and allocating needed in prep for calling MD_Init   
 
    ! set the input file name and other environment terms
-   !MD_InitInp%NStepWave   = 1        ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
    MD_InitInp%Tmax                    = drvrInitInp%TMax   
    MD_InitInp%g                       = drvrInitInp%Gravity
    MD_InitInp%rhoW                    = drvrInitInp%rhoW
@@ -161,9 +176,6 @@ PROGRAM MoorDyn_Driver
    MD_InitInp%FileName                = drvrInitInp%MDInputFile
    MD_InitInp%RootName                = drvrInitInp%OutRootName
    MD_InitInp%UsePrimaryInputFile     = .TRUE.
-   !MD_InitInp%PassedPrimaryInputData  = 
-   ! MD_InitInp%Echo                    = drvrInitInp%Echo
-   !MD_InitInp%OutList                 = <<<< never used?
    MD_InitInp%Linearize               = .FALSE.
    
    TMax = drvrInitInp%TMax  
@@ -211,29 +223,37 @@ PROGRAM MoorDyn_Driver
    
    
    ! -------------------------------- -----------------------------------
+
+   IF (LEN_TRIM(drvrInitInp%SeaStateInputFile) > 0 ) THEN ! If SeaState input file path in driver input file is not empty. Error checks for Null pointer in MD_Init -> setupWaterKin
+      ! Initialize the SeaState module
+      InitInData_SeaSt%hasIce       = .FALSE.
+      InitInData_SeaSt%Gravity      = MD_InitInp%g
+      InitInData_SeaSt%defWtrDens   = MD_InitInp%rhoW
+      InitInData_SeaSt%defWtrDpth   = MD_InitInp%WtrDepth
+      InitInData_SeaSt%defMSL2SWL   = 0.0_DbKi ! MoorDyn does not allow for a sea level offset
+      InitInData_SeaSt%UseInputFile = .TRUE. 
+      InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
+      InitInData_SeaSt%OutRootName  = trim(MD_InitInp%RootName)//'.SEA'
+      InitInData_SeaSt%TMax         = MD_InitInp%TMax
+      InitInData_SeaSt%Linearize    = MD_InitInp%Linearize
+      
+      CALL SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, dtC, InitOutData_SeaSt, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+      SeaState_Initialized = .TRUE.
+
+      IF ( dtC /= drvrInitInp%dtC) THEN
+         ErrMsg2 = 'The SeaState Module attempted to change the coupling timestep, but this is not allowed.  The SeaState Module must use the Driver coupling timestep.'
+         ErrStat2 = ErrID_Fatal
+         CALL AbortIfFailed()
+      ENDIF
    
-   ! fill in the hydrodynamics data
-   !ALLOCATE( MD_InitInp%WaveVel (2,200,3))
-   !ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
-   !ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
-   !ALLOCATE( MD_InitInp%WaveElev(2,200)  )
-   !ALLOCATE( MD_InitInp%WaveTime(2)      )
-   !MD_InitInp%WaveVel  = 0.0_ReKi
-   !MD_InitInp%WaveAcc  = 0.0_ReKi
-   !MD_InitInp%WavePDyn = 0.0_ReKi
-   !MD_InitInp%WaveElev = 0.0_ReKi
-   !MD_InitInp%WaveTime = 0.0_ReKi
-   !DO I = 1,SIZE(MD_InitInp%WaveTime)
-   !   MD_InitInp%WaveTime(I) = 600.0*I
-   !END DO
-   
-   ! open driver output file >>> not yet used <<<
-   !CALL GetNewUnit( Un )
-   !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
+      ! pass the pointer
+      MD_InitInp%WaveField => InitOutData_SeaSt%WaveField
+
+   END IF
   
    ! call the initialization routine
    CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 ); call AbortIfFailed()
-   
+
    CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat2, ErrMsg2 ); call AbortIfFailed()
    CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat2, ErrMsg2 ); call AbortIfFailed()
       
@@ -673,6 +693,9 @@ PROGRAM MoorDyn_Driver
    CALL RunTimes( ProgStrtTime, ProgStrtCPU, SimStrtTime, SimStrtCPU, t )   
    
    ! Destroy all objects
+   IF (SeaState_Initialized) THEN
+      CALL SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, ErrStat2, ErrMsg2); call AbortIfFailed()
+   ENDIF
    CALL MD_End( MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
    do j = 2,MD_interp_order+1
@@ -683,7 +706,7 @@ PROGRAM MoorDyn_Driver
       CALL WrScr1( "Errors: " )
       CALL WrScr( trim(GetErrStr(ErrStat))//': '//trim(ErrMsg) )
    endif
-
+   
    !close (un)    
    call CleanUp()
    CALL NormStop()
@@ -696,6 +719,16 @@ CONTAINS
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver')
         
         if (ErrStat >= AbortErrLev) then
+           if (SeaState_Initialized) then
+              call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, ErrStat2, ErrMsg2)
+                 call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver' )
+           end if
+
+           CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat2, ErrMsg2 )
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver' )
+           CALL SeaSt_DestroyInitInput( InitInData_SeaSt, ErrStat2, ErrMsg2 )
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver' )
+
            call CleanUp()
            Call ProgAbort(trim(ErrMsg))
         elseif ( ErrStat2 /= ErrID_None ) THEN
@@ -724,8 +757,9 @@ CONTAINS
       TYPE(MD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
       ! Local variables  
       INTEGER                                          :: J                    ! generic integer for counting
+      INTEGER                                          :: i                    ! generic integer for counting
 
-      ! CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
+      CHARACTER(1024)                                  :: tmpString            ! temporary string
       CHARACTER(1024)                                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(1024)                                  :: FilePath             ! Name of path to MoorDyn input file
    
@@ -739,23 +773,20 @@ CONTAINS
       call AbortIfFailed()
    
       CALL WrScr( 'Opening MoorDyn Driver input file:  '//FileName )
-      
-      ! Read until "echo"
-      CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
-      ! CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
-      ! ! If we echo, we rewind
-      ! IF ( InitInp%Echo ) THEN
-      !    EchoFile = TRIM(FileName)//'.echo'
-      !    CALL GetNewUnit( UnEcho )   
-      !    CALL OpenEcho ( UnEcho, EchoFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
-      !    REWIND(UnIn)
-      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      !    CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      ! END IF
+
+      ! Read through the header lines until hitting ---
+      DO I=1,30 ! max of 30 header lines
+         CALL ReadVar( UnIn, FileName, tmpString, '', 'MoorDyn Driver input file header line', ErrStat2, ErrMsg2); call AbortIfFailed()
+         IF (INDEX(tmpString, '---') > 0) EXIT ! exit the loop if we hit the end of the header
+      ENDDO
+      ! make sure the user didn't give more than 30 lines of header text
+      IF (I == 30) THEN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = ' The MoorDyn Driver input file can have a maximum of 30 header lines.'
+         CALL AbortIfFailed()
+      END IF
       !---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------
-      CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      ! The Environmental conditions header is read at the end of the above loop. 
       CALL ReadVar( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%rhoW   , 'rhoW', 'water density', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%WtrDepth, 'WtrDepth', 'water depth', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
@@ -768,7 +799,17 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, InitInp%InputsMod  , 'InputsMode', 'Mode for the inputs - zero/steady/time-series', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%InputsFile , 'InputsFile', 'Filename for the MoorDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%FarmSize   , 'NumTurbines', 'number of turbines in FAST.Farm', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadCom( UnIn, FileName, 'Initial positions header', ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL ReadVar( UnIn, FileName, tmpString          , 'SeaStateFile', 'Filename for the SeaState inputs', ErrStat2, ErrMsg2, UnEcho)
+      ! Check if SeaState path is given. If not provided, then initialize it as an empty string. This keeps things backwards compatible
+      IF (INDEX(tmpString, '---') > 0) THEN 
+         InitInp%SeaStateInputFile = ''
+         CALL WrScr('No SeaState input file specified in the MoorDyn driver. SeaState will not be initialized.')
+      ELSE
+         InitInp%SeaStateInputFile = tmpString
+         CALL ReadCom( UnIn, FileName, 'Initial positions header', ErrStat2, ErrMsg2); call AbortIfFailed() ! skip the inital positions header if SeaState path exists (need to read an extra line)
+      END IF
+      !---------------------- Initial Positions --------------------------------------------------------
+      ! The Initial Positions conditions header is read by the above SeaState path logic 
       CALL ReadCom( UnIn, FileName, 'Initial positions table header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
       CALL ReadCom( UnIn, FileName, 'Initial positions table header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
       do J=1,MAX(1,InitInp%FarmSize)

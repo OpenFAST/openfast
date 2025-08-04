@@ -101,7 +101,7 @@ SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStri
 #endif
    integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
    type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
+   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    integer(c_int),            intent(in   )  :: NumWindPts_C
    real(c_double),            intent(in   )  :: DT_C
@@ -239,7 +239,7 @@ CONTAINS
       call WrSCr("")
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   ADI_C_Init")
+      call WrScr("   IfW_C_Init")
       call WrScr("   --------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (IfWinputFilePassed==1_c_int) TmpFlag="T"

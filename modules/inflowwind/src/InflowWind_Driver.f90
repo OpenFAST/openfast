@@ -733,7 +733,7 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
                      InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                      InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg)
 
-            ! Make sure no errors occured that give us reason to terminate now.
+            ! Make sure no errors occurred that give us reason to terminate now.
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
@@ -860,7 +860,7 @@ end if
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg )
 
-      ! Make sure no errors occured that give us reason to terminate now.
+      ! Make sure no errors occurred that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
@@ -879,7 +879,7 @@ end if
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y2, InflowWind_MiscVars,  ErrStat, ErrMsg )
 
-      ! Make sure no errors occured that give us reason to terminate now.
+      ! Make sure no errors occurred that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
@@ -898,7 +898,7 @@ end if
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y3, InflowWind_MiscVars, ErrStat, ErrMsg )
 
-      ! Make sure no errors occured that give us reason to terminate now.
+      ! Make sure no errors occurred that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )

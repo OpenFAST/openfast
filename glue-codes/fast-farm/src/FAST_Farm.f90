@@ -49,8 +49,8 @@ REAL(DbKi)                            :: PrevSimTime        !< Previous time mes
 REAL(ReKi)                            :: PrevClockTime      !< Previous clock time in seconds past midnight
 INTEGER                               :: SimStrtTime (8)    !< An array containing the elements of the start time (after initialization).
 INTEGER                               :: ProgStrtTime (8)   !< An array containing the elements of the program start time (before initialization).
-REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without intialization)
-REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with intialization)
+REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without initialization)
+REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with initialization)
 
 ! these should probably go in the FAST.Farm registry:
 type(All_FastFarm_Data)               :: farm  

@@ -142,7 +142,7 @@ if (USE_LOCAL_STATIC_LAPACK)
   set(LAPACK_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX})
   include(ExternalProject)
   ExternalProject_Add(lapack
-    URL http://www.netlib.org/lapack/lapack.tgz
+    URL https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v3.12.1.tar.gz
     CMAKE_ARGS 
       -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install 
       -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
@@ -208,7 +208,6 @@ set(OPENFAST_MODULES
   lindyn
   map
   turbsim
-  supercontroller
   externalinflow
   openfast-library
   simple-elastodyn

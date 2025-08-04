@@ -478,7 +478,7 @@ The CMake options specific to OpenFAST and their default settings are:
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: ON)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
     USE_LOCAL_STATIC_LAPACK        - Enable downloading and building static LAPACK and BLAS libs (Default: OFF)
-    VARIABLE_TRACKING              - Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU. (Defualt: ON)
+    VARIABLE_TRACKING              - Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU. (Default: ON)
 
 
 Additional system-specific options may exist for a given system, but those

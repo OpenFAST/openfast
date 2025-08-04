@@ -138,5 +138,5 @@ module levels, as specified within the OpenFAST input files) are
 described in the OpenFAST documentation and include summary (*.sum*)
 files, time-series results (ASCI *.out* or binary *.outb*) files,
 visualization (*.vtk*) files, etc. FAST.Farm simulations will generate
-these same files, but with the the path/rootname changed to *<RootName
+these same files, but with the path/rootname changed to *<RootName
 of WT_FASTInFile>.T<n*\ :sub:`t`\ *>*.

@@ -769,7 +769,7 @@ subroutine Set_SrvD_Outs( p, y, m, AllOuts )
    type(SrvD_ParameterType),                    intent(in   )  :: p           !< Parameters
    type(SrvD_OutputType),                       intent(in   )  :: y           !< Outputs computed at Time
    type(SrvD_MiscVarType),                      intent(inout)  :: m           !< Misc (optimization) variables
-   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts)  ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts)  ! All the available output channels
    integer  :: K
 
    !...............................................................................................................................   
@@ -803,7 +803,7 @@ subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
    type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumNStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
@@ -817,7 +817,7 @@ subroutine Set_NStC_Outs_Instance( i, x, m, y, AllOuts )     ! Nacelle single St
    type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
    type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
    type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
-   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: j
    j=1
    if (i < MaxStC) then
@@ -847,7 +847,7 @@ subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
    type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumTStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
@@ -861,7 +861,7 @@ subroutine Set_TStC_Outs_Instance( i, x, m, y, AllOuts )     ! Tower single StC 
    type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
    type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
    type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
-   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: j
    j=1
    if (i < MaxStC) then
@@ -891,7 +891,7 @@ subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
    type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumBStC,MaxStC)                         ! in case we have more Blade StCs than the outputs are set for
@@ -906,7 +906,7 @@ subroutine Set_BStC_Outs_Instance( i, numBl, x, m, y, AllOuts )        ! Single 
    type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
    type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
    type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
-   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: j
    if (i < MaxStC) then
       do j=1,min(NumBl,MaxBlOuts)
@@ -937,7 +937,7 @@ subroutine Set_SStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform
    type(StC_ContinuousStateType),   allocatable,intent(in   )  :: x(:)                 !< Continuous states at t
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
-   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumSStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
@@ -951,7 +951,7 @@ subroutine Set_SStC_Outs_Instance( i, x, m, y, AllOuts )     ! Platform
    type(StC_ContinuousStateType),   intent(in   )  :: x                 !< Continuous states at t
    type(StC_MiscVarType),           intent(in   )  :: m                 !< Misc (optimization) variables
    type(StC_OutputType),            intent(in   )  :: y                 !< Outputs computed at Time
-   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the available output channels
    integer  :: j
    j=1
    if (i < MaxStC) then

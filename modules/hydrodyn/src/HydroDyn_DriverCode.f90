@@ -73,11 +73,11 @@ PROGRAM HydroDynDriver
    TYPE(HD_Drvr_Data)                                 :: drvrData             ! Data for the driver program (from an input file)
    TYPE(HD_Drvr_MappingData)                          :: mappingData          ! data for mesh mappings in the driver
    
-   integer                                            :: StrtTime (8)         ! Start time of simulation (including intialization)
+   integer                                            :: StrtTime (8)         ! Start time of simulation (including initialization)
    integer                                            :: SimStrtTime (8)      ! Start time of simulation (after initialization)
    real(ReKi)                                         :: PrevClockTime        ! Clock time at start of simulation in seconds
    real(ReKi)                                         :: UsrTime1             ! User CPU time for simulation initialization
-   real(ReKi)                                         :: UsrTime2             ! User CPU time for simulation (without intialization)
+   real(ReKi)                                         :: UsrTime2             ! User CPU time for simulation (without initialization)
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 

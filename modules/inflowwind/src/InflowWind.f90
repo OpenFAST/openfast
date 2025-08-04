@@ -186,23 +186,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    endif
 
    ! initialize sensor data:
-   p%lidar%SensorType         = InputFileData%SensorType
-   IF (InputFileData%SensorType /= SensorType_None) THEN
-      p%lidar%NumBeam            = InputFileData%NumBeam
-      p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
-      p%lidar%LidRadialVel       = InputFileData%LidRadialVel
-      p%lidar%NumPulseGate       = InputFileData%NumPulseGate
-      p%lidar%FocalDistanceX     = InputFileData%FocalDistanceX  ! these are allocatable.  Should allocate then copy
-      p%lidar%FocalDistanceY     = InputFileData%FocalDistanceY
-      p%lidar%FocalDistanceZ     = InputFileData%FocalDistanceZ
-      p%lidar%MeasurementInterval= InputFileData%MeasurementInterval
-      p%lidar%PulseSpacing       = InputFileData%PulseSpacing
-      p%lidar%URefLid            = InputFileData%URefLid
-      p%lidar%ConsiderHubMotion  = InputFileData%ConsiderHubMotion
-
-      CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
-                       y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg ); if (Failed()) return
-   endif
+   CALL Lidar_Init( InitInp, InputFileData, InputGuess, p, y, m, TimeInterval, TmpErrStat, TmpErrMsg )
+      if (Failed()) return
 
       ! If a summary file was requested, open it.
    IF ( InputFileData%SumPrint ) THEN
@@ -216,7 +201,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    ! Allocate the array for passing points
    CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg ); if (Failed()) return
    InputGuess%PositionXYZ = 0.0_ReKi
-   InputGuess%HubPosition = 0.0_ReKi
+   InputGuess%HubPosition = InitInp%HubPosition
    CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg); if (Failed()) return
 
    ! Allocate the array for passing velocities out
@@ -550,7 +535,7 @@ END SUBROUTINE InflowWind_Init
 !! these PositionXYZPrime coordinates.
 !!
 !! After the calculation by the submodule, the PositionXYZPrime coordinate array is deallocated.  The returned VelocityUVW
-!! array is then rotated by p%PropagationDir so that it now corresponds the the global coordinate UVW values for wind
+!! array is then rotated by p%PropagationDir so that it now corresponds to the global coordinate UVW values for wind
 !! with that direction.
 !----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
@@ -619,12 +604,10 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
       ! return sensor values
    IF (p%lidar%SensorType /= SensorType_None) THEN
          
-      CALL Lidar_CalcOutput(Time, InputData, p, &
-                           ContStates, DiscStates, ConstrStates, OtherStates, &  
-                           OutputData, m, TmpErrStat, TmpErrMsg )
+      CALL Lidar_CalcOutput(Time, InputData, p, OutputData, m, TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          
-   END IF      
+   END IF
        
       
    !-----------------------------

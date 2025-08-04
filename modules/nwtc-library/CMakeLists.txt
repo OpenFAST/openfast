@@ -78,6 +78,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_Num.f90
   src/NWTC_Str.f90
   src/NWTC_RandomNumber.f90
+  src/NWTC_C_Binding.f90
   
   src/NWTC_Library_Types.f90
   src/VTK.f90

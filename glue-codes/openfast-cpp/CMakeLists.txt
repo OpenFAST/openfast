@@ -29,7 +29,7 @@ find_package(ZLIB REQUIRED)
 find_package(HDF5 REQUIRED)
 find_package(NetCDF REQUIRED COMPONENTS C)
 
-add_library(openfastcpplib SHARED src/OpenFAST.cpp src/SC.cpp)
+add_library(openfastcpplib SHARED src/OpenFAST.cpp)
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
   openfastlib
@@ -46,7 +46,7 @@ target_include_directories(openfastcpplib PUBLIC
   ${LIBXML2_INCLUDE_DIR}
   ${MPI_INCLUDE_PATH}
 )
-set_target_properties(openfastcpplib PROPERTIES PUBLIC_HEADER "src/OpenFAST.H;src/SC.h")
+set_target_properties(openfastcpplib PROPERTIES PUBLIC_HEADER "src/OpenFAST.H")
 
 install(TARGETS openfastcpplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

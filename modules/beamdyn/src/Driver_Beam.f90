@@ -63,8 +63,8 @@ PROGRAM BeamDyn_Driver_Program
    REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
    REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
    REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
-   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without intialization) [(s)]
-   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including intialization) [-]
+   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without initialization) [(s)]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including initialization) [-]
    INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
    CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 

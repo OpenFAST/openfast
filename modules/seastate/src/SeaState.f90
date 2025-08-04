@@ -153,6 +153,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Initialize Current module
       CALL Current_Init(InputFileData%Current, Current_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
+      p%WaveField%Current_InitInput = InputFileData%Current ! Save the current input data for later use by MD
       
       ! Move initialization output data from Current module into the initialization input data for the Waves module
       IF (ALLOCATED(Current_InitOut%CurrVxi)) CALL Move_Alloc( Current_InitOut%CurrVxi, InputFileData%Waves%CurrVxi )
@@ -275,7 +276,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          DEALLOCATE ( InitOut%WriteOutputHdr )
       END IF
       
-      InitOut%WaveField => p%WaveField
+      InitOut%WaveField => p%WaveField 
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
       InitOut%InvalidWithSSExctn = InputFileData%WaveMod == WaveMod_ExtFull      .or. & ! 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.'

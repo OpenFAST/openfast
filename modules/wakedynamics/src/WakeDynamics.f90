@@ -633,10 +633,10 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate memory for "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = errStat >= AbortErrLev
    end function Failed0

@@ -94,7 +94,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MeasurementInterval = 0.0_ReKi      !< Time between each measurement [s]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
     LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
-    INTEGER(IntKi)  :: ConsiderHubMotion = 0_IntKi      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes] [-]
+    INTEGER(IntKi)  :: ConsiderHubMotion = 0_IntKi      !< whether or not the hub motion's impact on the Lidar measurement will be considered [-]
     TYPE(Grid3D_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================
@@ -111,7 +111,6 @@ IMPLICIT NONE
     TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this [FilePassingMethod = 1] [-]
     TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this [FilePassingMethod = 2] [-]
     LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
-    TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
     REAL(ReKi)  :: RadAvg = 0.0_ReKi      !< Radius (from hub) used for averaging wind speed [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
@@ -119,6 +118,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level [m]
     LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
     LOGICAL  :: LidarEnabled = .false.      !< Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition = 0.0_ReKi      !< initial position of the hub (lidar mounted on hub) [0,0,HubHeight] [m]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -511,9 +511,6 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%OutputAccel = SrcInitInputData%OutputAccel
-   call Lidar_CopyInitInput(SrcInitInputData%lidar, DstInitInputData%lidar, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call InflowWind_IO_CopyGrid4D_InitInputType(SrcInitInputData%FDext, DstInitInputData%FDext, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -523,6 +520,7 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%BoxExceedAllow = SrcInitInputData%BoxExceedAllow
    DstInitInputData%LidarEnabled = SrcInitInputData%LidarEnabled
+   DstInitInputData%HubPosition = SrcInitInputData%HubPosition
 end subroutine
 
 subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -537,8 +535,6 @@ subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyInputFile(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call Lidar_DestroyInitInput(InitInputData%lidar, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_IO_DestroyGrid4D_InitInputType(InitInputData%FDext, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -560,7 +556,6 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
    call InflowWind_PackInputFile(RF, InData%PassedFileData) 
    call RegPack(RF, InData%OutputAccel)
-   call Lidar_PackInitInput(RF, InData%lidar) 
    call InflowWind_IO_PackGrid4D_InitInputType(RF, InData%FDext) 
    call RegPack(RF, InData%RadAvg)
    call RegPack(RF, InData%MHK)
@@ -568,6 +563,7 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call RegPack(RF, InData%MSL2SWL)
    call RegPack(RF, InData%BoxExceedAllow)
    call RegPack(RF, InData%LidarEnabled)
+   call RegPack(RF, InData%HubPosition)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -587,7 +583,6 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
    call InflowWind_UnpackInputFile(RF, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(RF, OutData%OutputAccel); if (RegCheckErr(RF, RoutineName)) return
-   call Lidar_UnpackInitInput(RF, OutData%lidar) ! lidar 
    call InflowWind_IO_UnpackGrid4D_InitInputType(RF, OutData%FDext) ! FDext 
    call RegUnpack(RF, OutData%RadAvg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
@@ -595,6 +590,7 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BoxExceedAllow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LidarEnabled); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HubPosition); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)

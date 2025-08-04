@@ -9,7 +9,7 @@ structural loads of wind turbines within a wind farm. FAST.Farm uses
 `OpenFAST <https://github.com/OpenFAST/openfast>`__ to solve the
 aero-hydro-servo-elastic dynamics of each individual turbine, but
 considers additional physics for wind farm-wide ambient wind in the
-atmospheric boundary layer; a wind-farm super controller; and wake
+atmospheric boundary layer; and wake
 deficits, advection, deflection, meandering, and merging. FAST.Farm is
 based on some of the principles of the dynamic wake meandering (DWM)
 model -- including passive tracer modeling of wake meandering -- but addresses
@@ -58,7 +58,8 @@ software that follows the programming requirements of the FAST
 modularization framework,
 whereby the submodels are implemented as modules interconnected through
 a driver code. The submodel hierarchy of FAST.Farm is illustrated in
-:numref:`FF:FFarm`.
+:numref:`FF:FFarm` where the dashed lines indicated routines compiled 
+separately from FAST.Farm.
 
 .. figure:: Pictures/FFarmHierarchy.png
    :alt: FAST.Farm submodel hierarchy.
@@ -72,8 +73,8 @@ Wake advection, deflection, and meandering; near-wake correction; and
 wake-deficit increment are submodels of the wake-dynamics (*WD*) model,
 implemented in a single module. Ambient wind and wake merging are
 submodels of the ambient wind and array effects (*AWAE*) model,
-implemented in a single module. Combined with the super controller
-(*SC*) and OpenFAST (*OF*) modules, FAST.Farm has four modules and one
+implemented in a single module. Combined with the OpenFAST (*OF*) modules,
+FAST.Farm has three modules and one
 driver. There are multiple instances of the *OF* and *WD* modules -- one
 instance for each wind turbine/rotor.
 
@@ -86,18 +87,6 @@ solution forward. Additionally, the FAST.Farm driver reads an input file
 of simulation parameters, checks the validity of these parameters,
 initializes the modules, writes results to a file, and releases memory
 at the end of the simulation.
-
-Super Controller Module
------------------------
-
-The *SC* module of FAST.Farm -- essentially identical to the super
-controller available in `SOWFA <https://github.com/NREL/SOWFA>`__ allows
-wind-farm-wide control logic to be implemented by the user, including
-sending and receiving commands from the individual turbine controllers
-in OpenFAST. The logic of such a super controller could be developed
-through the application of the National Renewable Energy Laboratory
-(NREL) code FLOw Redirection and Induction in Steady state
-(`FLORIS <https://github.com/WISDEM/FLORISSE>`__).
 
 OpenFAST Module
 ---------------

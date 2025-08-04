@@ -44,7 +44,7 @@
  Including pile up term, Hp
  Including rubble lifting term, Hl
  Including block rotation term, Ht
- Including crack lenght modification term, Lc
+ Including crack length modification term, Lc
 ** Pile up term, Hp = 2242 Newtons
 ** Rubble lifting term, Hl = 2.09678E+05 Newtons
 ** Block rotation term, Ht = 42609 Newtons

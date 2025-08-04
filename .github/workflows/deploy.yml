@@ -145,6 +145,10 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Test devenv actually works
+        shell: cmd
+        run: .github/scripts/windows_devenv_test.bat
+
       - name: Install Intel oneAPI BaseKit (Windows)
         shell: cmd
         env:

@@ -1,5 +1,5 @@
+
 from ctypes import (
-	CDLL,
     POINTER,
     create_string_buffer,
     byref,
@@ -9,22 +9,24 @@ from ctypes import (
     c_char,
     c_bool
 )
-import os
 from typing import List, Tuple
 import numpy as np
 import math
+from pathlib import Path
+
+from .interface_abc import OpenFASTInterfaceType
 
 
 IntfStrLen = 1025    # FAST_Library global
 NumFixedInputs = 51  # FAST_Library global
 
 
-class FastLibAPI(CDLL):
+class FastLibAPI(OpenFASTInterfaceType):
 
     def __init__(self, library_path: str, input_file_name: str):
         super().__init__(library_path)
-        self.library_path = library_path
-        self.input_file_name = create_string_buffer(os.path.abspath(input_file_name).encode('utf-8'))
+        
+        self.input_file_name = create_string_buffer(str(Path(input_file_name).absolute()).encode('utf-8'))
 
         self._initialize_routines()
 
@@ -34,7 +36,7 @@ class FastLibAPI(CDLL):
         self.dt = c_double(0.0)
         self.dt_out = c_double(0.0)
         self.t_max = c_double(0.0)
-        self.abort_error_level = c_int(4)  # Initialize to 4 (ErrID_Fatal) and reset to user-given value in FAST_Sizes
+        # self.abort_error_level = c_int(4)  # Initialize to 4 (ErrID_Fatal) and reset to user-given value in FAST_Sizes
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
         self.output_channel_names = []
@@ -123,11 +125,7 @@ class FastLibAPI(CDLL):
         self.FAST_HubPosition.restype = c_int
 
 
-    def fatal_error(self, error_status) -> bool:
-        return error_status.value >= self.abort_error_level.value
-
-
-    def fast_init(self) -> None:
+    def init(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(IntfStrLen)
 
@@ -172,7 +170,7 @@ class FastLibAPI(CDLL):
         del _error_message
         del channel_names
 
-    def fast_sim(self) -> None:
+    def sim(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(IntfStrLen)
 
@@ -186,7 +184,7 @@ class FastLibAPI(CDLL):
             _error_message
         )
         if self.fatal_error(_error_status):
-            self.fast_deinit()
+            self.deinit()
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
         # Calculate output frequency and initialize output index
@@ -207,13 +205,13 @@ class FastLibAPI(CDLL):
             if i%output_frequency == 0:
                 i_out += 1
             if self.fatal_error(_error_status):
-                self.fast_deinit()
+                self.deinit()
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
             if self.end_early:
                 break
 
 
-    def fast_deinit(self) -> None:
+    def deinit(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(IntfStrLen)
 
@@ -236,26 +234,26 @@ class FastLibAPI(CDLL):
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
 
-    def fast_run(self) -> None:
-        self.fast_init()
-        self.fast_sim()
-        self.fast_deinit()
+    def run(self) -> None:
+        self.init()
+        self.sim()
+        self.deinit()
 
 
-    @property
-    def total_time_steps(self) -> int:
-        # From FAST_Subs FAST_Init:
-        # p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
-        # Then in FAST_Prog:
-        # TIME_STEP_LOOP:  DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 
-        # 
-        # Note that Fortran indexing starts at 1 and includes the upper bound
-        # Python indexing starts at 0 and does not include the upper bound
-        # The for-loop in this interface begins at 1 (there's an init step before)
-        # and that's why we have the +1 below
-        # 
-        # We assume here t_initial is always 0
-        return math.ceil( self.t_max.value / self.dt.value) + 1  
+    # @property
+    # def total_time_steps(self) -> int:
+    #     # From FAST_Subs FAST_Init:
+    #     # p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+    #     # Then in FAST_Prog:
+    #     # TIME_STEP_LOOP:  DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 
+    #     # 
+    #     # Note that Fortran indexing starts at 1 and includes the upper bound
+    #     # Python indexing starts at 0 and does not include the upper bound
+    #     # The for-loop in this interface begins at 1 (there's an init step before)
+    #     # and that's why we have the +1 below
+    #     # 
+    #     # We assume here t_initial is always 0
+    #     return math.ceil( self.t_max.value / self.dt.value) + 1  
 
 
     @property
