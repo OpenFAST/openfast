@@ -214,7 +214,7 @@ CONTAINS
 
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
       
-      
+
    END SUBROUTINE Rod_Initialize
    !--------------------------------------------------------------
 
@@ -863,13 +863,13 @@ CONTAINS
            
             ! axial drag
             Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
-
+            
             ! long-wave diffraction force
             Rod%Aq(:,I) = Rod%Aq(:,I) + Rod%VOF(I) * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
-
+            
             ! Froud-Krylov force
             Rod%Pd(:,I) = Rod%Pd(:,I) - Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
-
+            
             ! added mass
             DO J=1,3
                DO K=1,3
