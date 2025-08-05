@@ -107,7 +107,6 @@ CONTAINS
 
       ALLOCATE(Rod%VOF(0:N), STAT=ErrStat2)  ! allocate VOF array (volume of fluid) for each node
 
-
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
@@ -213,9 +212,10 @@ CONTAINS
          states(4:6)   = Rod%q        ! rod direction unit vector
          
       end if
-      
+
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
       
+
    END SUBROUTINE Rod_Initialize
    !--------------------------------------------------------------
 
@@ -710,19 +710,16 @@ CONTAINS
                zA = Rod%r(3,I) - 0.6666666666 * Rod%d* (sin(al))**3 / (2.0*al - sin(2.0*al))
             end if
          end if
-         
-         VOF = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
-        
-         Rod%VOF(I) = VOF
 
+         Rod%VOF(I) = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
 
          ! build mass and added mass matrix
          DO J=1,3
             DO K=1,3
                IF (J==K) THEN
-                  Rod%M(K,J,I) = m_i + VOF*p%rhoW*v_i*( Rod%Can*(1 - Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
+                  Rod%M(K,J,I) = m_i + Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(1 - Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
                ELSE
-                  Rod%M(K,J,I) = VOF*p%rhoW*v_i*( Rod%Can*(-Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
+                  Rod%M(K,J,I) = Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(-Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
                END IF
             END DO
          END DO
@@ -743,7 +740,7 @@ CONTAINS
             Rod%W(:,I) = (/ 0.0_DbKi, 0.0_DbKi, -m_i * p%g /)   ! assuming g is positive
             
             ! radial buoyancy force from sides (now calculated based on outside pressure, for submerged portion only)
-            Ftemp = -VOF * v_i * p%rhoW*p%g * sinPhi   ! magnitude of radial buoyancy force at this node
+            Ftemp = -Rod%VOF(I) * v_i * p%rhoW*p%g * sinPhi   ! magnitude of radial buoyancy force at this node
             Rod%Bo(:,I) = (/ Ftemp*cosBeta*cosPhi, Ftemp*sinBeta*cosPhi, -Ftemp*sinPhi /)            
 
             !relative flow velocities
@@ -770,7 +767,7 @@ CONTAINS
             MagVq = sqrt(SumSqVq)
 
             ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp 
+            Rod%Dp(:,I) = Rod%VOF(I) * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp 
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
 
             ! transverse and tangential damping force (note this is the force per node)
@@ -783,7 +780,7 @@ CONTAINS
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
             ! transverse and axial fluid inertia force
-            Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
+            Rod%Ap(:,I) = Rod%VOF(I) * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
             Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)* v_i * aq  ! <<< just put a taper-based term here eventually?
 
             ! dynamic pressure
@@ -827,28 +824,28 @@ CONTAINS
          ! >>> eventually should consider a VOF approach for the ends    hTilt = 0.5*Rod%d/cosPhi <<<
          
             ! buoyancy force
-            Ftemp = -VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
+            Ftemp = -Rod%VOF(I) * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
             Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
                   
             ! buoyancy moment
-            Mtemp = -VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
+            Mtemp = -Rod%VOF(I) * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
          
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
          
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
             ! long-wave diffraction force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + Rod%VOF(I) * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! Froude-Krylov force
-            Rod%Pd(:,I) = Rod%Pd(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
+            Rod%Pd(:,I) = Rod%Pd(:,I) + Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
             
             ! added mass
             DO J=1,3
                DO K=1,3
-                  Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
+                  Rod%M(K,J,I) = Rod%M(K,J,I) + Rod%VOF(I)*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                END DO
             END DO
          
@@ -857,26 +854,26 @@ CONTAINS
          IF ((I==N) .and. (z1lo < Rod%zeta(I))) THEN    ! if this end B and it is at least partially submerged (note, if N=0, both this and previous if statement are true)
          
             ! buoyancy force
-            Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
+            Ftemp = Rod%VOF(I) * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
             Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
          
             ! buoyancy moment
-            Mtemp = VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
+            Mtemp = Rod%VOF(I) * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
            
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
             
             ! long-wave diffraction force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + Rod%VOF(I) * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! Froud-Krylov force
-            Rod%Pd(:,I) = Rod%Pd(:,I) - VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
+            Rod%Pd(:,I) = Rod%Pd(:,I) - Rod%VOF(I) * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
             
             ! added mass
             DO J=1,3
                DO K=1,3
-                  Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
+                  Rod%M(K,J,I) = Rod%M(K,J,I) + Rod%VOF(I)*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                END DO
             END DO
             

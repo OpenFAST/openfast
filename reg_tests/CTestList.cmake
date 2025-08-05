@@ -528,7 +528,6 @@ md_regression("md_VIV"                                        "moordyn")
 md_regression("md_waterkin2"                                  "moordyn")
 md_regression("md_waterkin3"                                  "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
-
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
 
