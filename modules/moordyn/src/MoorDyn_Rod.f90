@@ -104,6 +104,7 @@ CONTAINS
       
       ! allocate mass and inverse mass matrices for each node (including ends)
       ALLOCATE(Rod%M(3, 3, 0:N), STAT=ErrStat2);  if(AllocateFailed("Rod: M")) return
+
       ALLOCATE(Rod%VOF(0:N), STAT=ErrStat2)  ! allocate VOF array (volume of fluid) for each node
 
       ! set to zero initially (important of wave kinematics are not being used)
@@ -683,7 +684,7 @@ CONTAINS
                VOF0 = 0.0_DbKi
             END IF
          end if
-         
+
          Lsum = Lsum + dL            ! add length attributed to this node to the total
 
          ! get submerged cross sectional area and centroid for each node
@@ -718,7 +719,9 @@ CONTAINS
             DO K=1,3
                IF (J==K) THEN
                   Rod%M(K,J,I) = m_i + Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(1 - Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
+                  Rod%M(K,J,I) = m_i + Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(1 - Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
                ELSE
+                  Rod%M(K,J,I) = Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(-Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
                   Rod%M(K,J,I) = Rod%VOF(I)*p%rhoW*v_i*( Rod%Can*(-Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
                END IF
             END DO
@@ -740,6 +743,7 @@ CONTAINS
             Rod%W(:,I) = (/ 0.0_DbKi, 0.0_DbKi, -m_i * p%g /)   ! assuming g is positive
             
             ! radial buoyancy force from sides (now calculated based on outside pressure, for submerged portion only)
+            Ftemp = -Rod%VOF(I) * v_i * p%rhoW*p%g * sinPhi   ! magnitude of radial buoyancy force at this node
             Ftemp = -Rod%VOF(I) * v_i * p%rhoW*p%g * sinPhi   ! magnitude of radial buoyancy force at this node
             Rod%Bo(:,I) = (/ Ftemp*cosBeta*cosPhi, Ftemp*sinBeta*cosPhi, -Ftemp*sinPhi /)            
 
