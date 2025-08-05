@@ -106,7 +106,6 @@ CONTAINS
       ALLOCATE(Rod%M(3, 3, 0:N), STAT=ErrStat2);  if(AllocateFailed("Rod: M")) return
       ALLOCATE(Rod%VOF(0:N), STAT=ErrStat2)  ! allocate VOF array (volume of fluid) for each node
 
-
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
@@ -212,7 +211,7 @@ CONTAINS
          states(4:6)   = Rod%q        ! rod direction unit vector
          
       end if
-      
+
       ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
       
       
