@@ -30,7 +30,7 @@ if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 
-# turn of some optimizations for _Types files with gfortran
+# turn off some optimizations for _Types files with gfortran
 if (${_build_type} STREQUAL "RELEASE" AND ${_compiler_id} STREQUAL "GNU")
   set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-schedule-insns -fno-inline-functions -fno-ipa-cp")
 endif()

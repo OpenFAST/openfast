@@ -50,7 +50,7 @@ if (${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
   set_source_files_properties(src/FAST_Farm_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
-# turn of some optimizations for _Types files with gfortran
+# turn off some optimizations for _Types files with gfortran
 if (${_build_type} STREQUAL "RELEASE" AND ${_compiler_id} STREQUAL "GNU")
   set_source_files_properties(src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-schedule-insns -fno-inline-functions -fno-ipa-cp")
   set_source_files_properties(src/FAST_Farm_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-schedule-insns -fno-inline-functions -fno-ipa-cp")
