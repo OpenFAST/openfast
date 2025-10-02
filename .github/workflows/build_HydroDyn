@@ -1,0 +1,40 @@
+name: Build HydroDyn (Windows, MinGW)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows-hydrodyn:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout v3.1.0
+        uses: actions/checkout@v4
+        with:
+          ref: 'v3.1.0'
+
+      - name: Setup MSYS2 (MinGW)
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: |
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-pkg-config
+            make
+
+      - name: Build HydroDyn
+        shell: msys2 {0}
+        run: |
+          mkdir -p build_hydrodyn
+          cd build_hydrodyn
+          cmake .. -G "MinGW Makefiles" -DBUILD_SHARED_LIBS=ON -DBUILD_OPENFAST=OFF -DBUILD_HYDRODYN=ON
+          make -j2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrodyn-windows
+          path: |
+            build_hydrodyn/modules/hydrodyn/**
+            build_hydrodyn/modules/hydrodyn/*.exe
+            build_hydrodyn/**/hydrodyn*.exe
