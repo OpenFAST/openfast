@@ -1,1 +1,40 @@
+name: Build HydroDyn (Windows, MinGW)   # The name of your workflow
 
+on:
+  workflow_dispatch:                     # This means you can run it manually
+
+jobs:
+  build-windows-hydrodyn:                # Name of the job
+    runs-on: windows-latest              # Use a Windows virtual machine
+    steps:
+      - name: Checkout v3.1.0           # Step 1: get the code
+        uses: actions/checkout@v4
+        with:
+          ref: 'v3.1.0'
+
+      - name: Setup MSYS2 (MinGW)       # Step 2: set up compiler tools
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: |
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-pkg-config
+            make
+
+      - name: Build HydroDyn             # Step 3: configure and compile HydroDyn
+        shell: msys2 {0}
+        run: |
+          mkdir -p build_hydrodyn
+          cd build_hydrodyn
+          cmake .. -G "MinGW Makefiles" -DBUILD_SHARED_LIBS=ON -DBUILD_OPENFAST=OFF -DBUILD_HYDRODYN=ON
+          make -j2
+
+      - name: Upload artifact            # Step 4: save outputs for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrodyn-windows
+          path: |
+            build_hydrodyn/modules/hydrodyn/**
+            build_hydrodyn/modules/hydrodyn/*.exe
+            build_hydrodyn/**/hydrodyn*.exe
