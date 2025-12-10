@@ -39,7 +39,7 @@ IMPLICIT NONE
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: independent X,Y,Z (each translational DOF may use TMDI via StC_X_b/StC_Y_b/StC_Z_b and StC_T_[XYZ]); 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series; 5: Force from external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -57,6 +57,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: StC_X_C = 0.0_ReKi      !< StC X damping [N/(m/s)]
     REAL(ReKi)  :: StC_Y_C = 0.0_ReKi      !< StC Y damping [N/(m/s)]
     REAL(ReKi)  :: StC_Z_C = 0.0_ReKi      !< StC Z damping [N/(m/s)]
+    REAL(ReKi)  :: StC_X_b = 0.0_ReKi      !< Inerter inertance along local X (b_x). Used only when StC_DOF_MODE=1. [kg]
+    REAL(ReKi)  :: StC_Y_b = 0.0_ReKi      !< Inerter inertance along local Y (b_y). Used only when StC_DOF_MODE=1. [kg]
+    REAL(ReKi)  :: StC_Z_b = 0.0_ReKi      !< Inerter inertance along local Z (b_z). Used only when StC_DOF_MODE=1. [kg]
+    REAL(ReKi)  :: StC_T_X = 0.0_ReKi      !< X coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1. [m]
+    REAL(ReKi)  :: StC_T_Y = 0.0_ReKi      !< Y coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1. [m]
+    REAL(ReKi)  :: StC_T_Z = 0.0_ReKi      !< Z coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1. [m]
     REAL(ReKi)  :: StC_X_PSP = 0.0_ReKi      !< Positive stop position (maximum X mass displacement) [m]
     REAL(ReKi)  :: StC_X_NSP = 0.0_ReKi      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi)  :: StC_Y_PSP = 0.0_ReKi      !< Positive stop position (maximum Y mass displacement) [m]
@@ -181,7 +187,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: StC_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: independent X,Y,Z (each translational DOF may use TMDI via bX_M/bY_M/bZ_M and T_[XYZ]); 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series; 5: Force from external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -196,6 +202,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_X = 0.0_ReKi      !< StC damping [N/(m/s)]
     REAL(ReKi)  :: C_Y = 0.0_ReKi      !< StC damping [N/(m/s)]
     REAL(ReKi)  :: C_Z = 0.0_ReKi      !< StC damping [N/(m/s)]
+    REAL(ReKi)  :: bX_M = 0.0_ReKi      !< Inerter inertance along local X (maps from StC_X_b when StC_DOF_MODE=1) [kg]
+    REAL(ReKi)  :: bY_M = 0.0_ReKi      !< Inerter inertance along local Y (maps from StC_Y_b when StC_DOF_MODE=1) [kg]
+    REAL(ReKi)  :: bZ_M = 0.0_ReKi      !< Inerter inertance along local Z (maps from StC_Z_b when StC_DOF_MODE=1) [kg]
+    REAL(ReKi)  :: T_X = 0.0_ReKi      !< X coordinate of node T in local N, relative to P (maps from StC_T_X when StC_DOF_MODE=1) [m]
+    REAL(ReKi)  :: T_Y = 0.0_ReKi      !< Y coordinate of node T in local N, relative to P (maps from StC_T_Y when StC_DOF_MODE=1) [m]
+    REAL(ReKi)  :: T_Z = 0.0_ReKi      !< Z coordinate of node T in local N, relative to P (maps from StC_T_Z when StC_DOF_MODE=1) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: K_S = 0.0_ReKi      !< StC stop stiffness [N/m]
     REAL(ReKi) , DIMENSION(1:3)  :: C_S = 0.0_ReKi      !< StC stop damping [N/(m/s)]
     REAL(ReKi) , DIMENSION(1:3)  :: P_SP = 0.0_ReKi      !< Positive stop position (maximum mass displacement) [m]
@@ -283,6 +295,12 @@ subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    DstInputFileData%StC_X_C = SrcInputFileData%StC_X_C
    DstInputFileData%StC_Y_C = SrcInputFileData%StC_Y_C
    DstInputFileData%StC_Z_C = SrcInputFileData%StC_Z_C
+   DstInputFileData%StC_X_b = SrcInputFileData%StC_X_b
+   DstInputFileData%StC_Y_b = SrcInputFileData%StC_Y_b
+   DstInputFileData%StC_Z_b = SrcInputFileData%StC_Z_b
+   DstInputFileData%StC_T_X = SrcInputFileData%StC_T_X
+   DstInputFileData%StC_T_Y = SrcInputFileData%StC_T_Y
+   DstInputFileData%StC_T_Z = SrcInputFileData%StC_T_Z
    DstInputFileData%StC_X_PSP = SrcInputFileData%StC_X_PSP
    DstInputFileData%StC_X_NSP = SrcInputFileData%StC_X_NSP
    DstInputFileData%StC_Y_PSP = SrcInputFileData%StC_Y_PSP
@@ -407,6 +425,12 @@ subroutine StC_PackInputFile(RF, Indata)
    call RegPack(RF, InData%StC_X_C)
    call RegPack(RF, InData%StC_Y_C)
    call RegPack(RF, InData%StC_Z_C)
+   call RegPack(RF, InData%StC_X_b)
+   call RegPack(RF, InData%StC_Y_b)
+   call RegPack(RF, InData%StC_Z_b)
+   call RegPack(RF, InData%StC_T_X)
+   call RegPack(RF, InData%StC_T_Y)
+   call RegPack(RF, InData%StC_T_Z)
    call RegPack(RF, InData%StC_X_PSP)
    call RegPack(RF, InData%StC_X_NSP)
    call RegPack(RF, InData%StC_Y_PSP)
@@ -484,6 +508,12 @@ subroutine StC_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%StC_X_C); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_C); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Z_C); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_X_b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_Y_b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_Z_b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_T_X); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_T_Y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_T_Z); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_X_PSP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_X_NSP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_PSP); if (RegCheckErr(RF, RoutineName)) return
@@ -1420,6 +1450,12 @@ subroutine StC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%C_X = SrcParamData%C_X
    DstParamData%C_Y = SrcParamData%C_Y
    DstParamData%C_Z = SrcParamData%C_Z
+   DstParamData%bX_M = SrcParamData%bX_M
+   DstParamData%bY_M = SrcParamData%bY_M
+   DstParamData%bZ_M = SrcParamData%bZ_M
+   DstParamData%T_X = SrcParamData%T_X
+   DstParamData%T_Y = SrcParamData%T_Y
+   DstParamData%T_Z = SrcParamData%T_Z
    DstParamData%K_S = SrcParamData%K_S
    DstParamData%C_S = SrcParamData%C_S
    DstParamData%P_SP = SrcParamData%P_SP
@@ -1529,6 +1565,12 @@ subroutine StC_PackParam(RF, Indata)
    call RegPack(RF, InData%C_X)
    call RegPack(RF, InData%C_Y)
    call RegPack(RF, InData%C_Z)
+   call RegPack(RF, InData%bX_M)
+   call RegPack(RF, InData%bY_M)
+   call RegPack(RF, InData%bZ_M)
+   call RegPack(RF, InData%T_X)
+   call RegPack(RF, InData%T_Y)
+   call RegPack(RF, InData%T_Z)
    call RegPack(RF, InData%K_S)
    call RegPack(RF, InData%C_S)
    call RegPack(RF, InData%P_SP)
@@ -1591,6 +1633,12 @@ subroutine StC_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%C_X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_Z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%bX_M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%bY_M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%bZ_M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%T_X); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%T_Y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%T_Z); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_S); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_S); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%P_SP); if (RegCheckErr(RF, RoutineName)) return

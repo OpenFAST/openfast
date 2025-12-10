@@ -100,7 +100,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
       INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
       REAL(ReKi), allocatable, dimension(:,:)       :: RefPosGlobal
-
+      INTEGER(IntKi)                                :: NnodesLocal
+      REAL(ReKi)                                    :: TposGlobal(3)
       type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
       type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
       character(1024)                               :: PriPath       !< Primary path
@@ -219,7 +220,14 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
     ! Define system output initializations (set up mesh) here:
     ! Create the input and output meshes associated with lumped loads
-
+    ! Number of nodes per StC instance:
+    !   2 when using inerters (TMDI) in DOF mode 1 (X_b>0 or Y_b>0 or Z_b>0), else 1
+   IF ( p%StC_DOF_MODE == DOFMode_Indept .AND. &
+         ( p%bX_M > 0.0_ReKi .OR. p%bY_M > 0.0_ReKi .OR. p%bZ_M > 0.0_ReKi ) ) THEN
+      NnodesLocal = 2_IntKi
+   ELSE
+      NnodesLocal = 1_IntKi
+   END IF
    ALLOCATE (u%Mesh(p%NumMeshPts), STAT=ErrStat2)
    IF (ErrStat2/=0) THEN
       CALL SetErrStat(ErrID_Fatal,"Error allocating u%Mesh.",ErrStat,ErrMsg,RoutineName)
@@ -238,7 +246,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       CALL MeshCreate( BlankMesh        = u%Mesh(i_pt)      &
                      ,IOS               = COMPONENT_INPUT   &
-                     ,Nnodes            = 1                 &
+                     ,Nnodes            = NnodesLocal       &   ! was 1
                      ,ErrStat           = ErrStat2          &
                      ,ErrMess           = ErrMsg2           &
                      ,TranslationDisp   = .TRUE.            &
@@ -253,7 +261,21 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
          ! Create the node on the mesh
       CALL MeshPositionNode ( u%Mesh(i_pt),1, RefPosGlobal(:,i_pt), ErrStat2, ErrMsg2, InitInp%InitRefOrient(:,:,i_pt) )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ! --- TMDI: add node 2 (T) at r_T = r_P + R * [T_X, T_Y, T_Z]
+      IF ( NnodesLocal == 2_IntKi ) THEN
+         TposGlobal(:) = RefPosGlobal(:,i_pt) + REAL( matmul( (/ p%T_X, p%T_Y, p%T_Z /), &
+                                                       InitInp%InitRefOrient(:,:,i_pt) ), ReKi )
+         CALL MeshPositionNode ( u%Mesh(i_pt), 2, TposGlobal, ErrStat2, ErrMsg2, InitInp%InitRefOrient(:,:,i_pt) )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+         ! Create a point element at node 2 as well (node 1 element is created below as in the original code)
+         CALL MeshConstructElement (  u%Mesh(i_pt)        &
+                              , ELEMENT_POINT      &
+                              , ErrStat2           &
+                              , ErrMsg2            &
+                              , 2                  )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
          ! Create the mesh element
       CALL MeshConstructElement (  u%Mesh(i_pt)        &
                                   , ELEMENT_POINT      &
@@ -283,6 +305,11 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Set initial displacements
       u%Mesh(i_pt)%Orientation(1:3,1:3,1) = InitInp%InitOrient(:,:,i_pt)
       u%Mesh(i_pt)%TranslationDisp(1:3,1) = InitInp%InitTransDisp(:,i_pt)
+      ! --- TMDI: initialize node 2 (T) the same as node 1 (P)
+      IF ( NnodesLocal == 2_IntKi ) THEN
+         u%Mesh(i_pt)%Orientation(1:3,1:3,2) = InitInp%InitOrient(:,:,i_pt)
+         u%Mesh(i_pt)%TranslationDisp(1:3,2) = InitInp%InitTransDisp(:,i_pt)
+      END IF
    enddo
 
 
@@ -738,7 +765,8 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       real(ReKi), dimension(3)   :: F_Y_P
       real(ReKi), dimension(3)   :: F_Z_P
       real(ReKi), dimension(3)   :: F_XY_P
-
+      Real(ReKi), dimension(3)   :: F_T_L    ! inerter force at node T, local coords
+      Real(ReKi), dimension(3)   :: aT_L     ! translational acceleration at node T, local coords
       !  NOTE: the following two sets of variables could likely be combined into arrays
       !        that could be more easily used with array functions like MATMUL, cross_product,
       !        dot_product etc.
@@ -820,6 +848,16 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! forces and moments in global coordinates
             y%Mesh(i_pt)%Force(:,1) =  real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
             y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
+            ! local acceleration at T (node 2): local = R * global, no fallbacks
+			   aT_L(:) = matmul(u%Mesh(i_pt)%Orientation(:,:,2), u%Mesh(i_pt)%TranslationAcc(:,2))
+			   ! inerter reactions (local N) using x_dot_dot_tmdi and y_dot_dot_tmdi from dxdt
+			   F_T_L(1) = p%bX_M * ( dxdt%StC_x(2,i_pt) + m%rddot_P(1,i_pt) - aT_L(1) )
+			   F_T_L(2) = p%bY_M * ( dxdt%StC_x(4,i_pt) + m%rddot_P(2,i_pt) - aT_L(2) )
+			   F_T_L(3) = p%bZ_M * ( dxdt%StC_x(6,i_pt) + m%rddot_P(3,i_pt) - aT_L(3) )
+
+			   ! write T-node loads in global coordinates; moment at T is zero
+			   y%Mesh(i_pt)%Force(:,2)  =  real( matmul( transpose(u%Mesh(i_pt)%Orientation(:,:,2)), F_T_L ), ReKi )
+			   y%Mesh(i_pt)%Moment(:,2) =  0.0_ReKi
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
@@ -1039,7 +1077,9 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       REAL(ReKi), dimension(3,p%NumMeshPts)           :: K          ! tuned mass damper stiffness
       Real(ReKi)                                      :: denom      ! denominator for omni-direction factors
       integer(IntKi)                                  :: i_pt       ! Generic counter for mesh point
-
+      ! --- TMDI (node T acceleration & classic TMD accelerations)
+      REAL(ReKi)                                      :: aT_L(3)
+      REAL(ReKi)                                      :: xdd_cl, ydd_cl, zdd_cl
       ! Local error handling
       integer(IntKi)       :: ErrStat2
       character(ErrMsgLen) :: ErrMsg2
@@ -1194,43 +1234,66 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ! Compute the first time derivatives, dxdt%StC_x(2), dxdt%StC_x(4), and dxdt%StC_x(6), of the continuous states,:
       IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
 
-         IF (p%StC_X_DOF) THEN
+         ! ---------- X DOF (TMDI identity; reduces to classic when bX_M = 0) ----------
+         IF ( p%StC_X_DOF ) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_X) * x%StC_x(1,i_pt) &
-                                   - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
-                                   - ( m%C_Brake(1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
-                                   + m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
+               ! local acceleration at node T (node 2): local = R * global
+               aT_L(:) = matmul( u%Mesh(i_pt)%Orientation(:,:,2), u%Mesh(i_pt)%TranslationAcc(:,2) )
+
+               ! classic (no-inerter) x_dot_dot formula (K(1,i_pt) already set above)
+               xdd_cl =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_X ) * x%StC_x(1,i_pt)  &
+                        - ( m%C_ctrl(1,i_pt) / p%M_X ) * x%StC_x(2,i_pt)                                           &
+                        - ( m%C_Brake(1,i_pt) / p%M_X ) * x%StC_x(2,i_pt)                                          &
+                        +   m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
+
+               ! TMDI identity: x_dot_dot_tmdi = (M/(M+b)) x_dot_dot_cl  -  (b/(M+b)) (aP - aT)
+               dxdt%StC_x(2,i_pt) = ( p%M_X / (p%M_X + p%bX_M) ) * xdd_cl  &
+                                    - ( p%bX_M / (p%M_X + p%bX_M) ) * ( m%rddot_P(1,i_pt) - aT_L(1) )
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
                dxdt%StC_x(2,i_pt) = 0.0_ReKi
             enddo
          END IF
-         IF (p%StC_Y_DOF) THEN
+
+         ! ---------- Y DOF (TMDI identity; reduces to classic when bY_M = 0) ----------
+         IF ( p%StC_Y_DOF ) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Y) * x%StC_x(3,i_pt) &
-                                   - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
-                                   - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
-                                   + m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
+               ! local acceleration at node T (node 2): local = R * global
+               aT_L(:) = matmul( u%Mesh(i_pt)%Orientation(:,:,2), u%Mesh(i_pt)%TranslationAcc(:,2) )
+
+                ! classic (no-inerter) y_dot_dot formula 
+               ydd_cl =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Y ) * x%StC_x(3,i_pt)  &
+                        - ( m%C_ctrl(2,i_pt) / p%M_Y ) * x%StC_x(4,i_pt)                                           &
+                        - ( m%C_Brake(2,i_pt) / p%M_Y ) * x%StC_x(4,i_pt)                                          &
+                        +   m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
+
+               dxdt%StC_x(4,i_pt) = ( p%M_Y / (p%M_Y + p%bY_M) ) * ydd_cl  &
+                                    - ( p%bY_M / (p%M_Y + p%bY_M) ) * ( m%rddot_P(2,i_pt) - aT_L(2) )
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
                dxdt%StC_x(4,i_pt) = 0.0_ReKi
             enddo
          END IF
-         IF (p%StC_Z_DOF) THEN
+         ! ---------- Z DOF (TMDI identity; reduces to classic when bZ_M = 0) ----------
+         IF ( p%StC_Z_DOF ) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3,i_pt) / p%M_Z) * x%StC_x(5,i_pt) &
-                                   - ( m%C_ctrl( 3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
-                                   - ( m%C_Brake(3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
-                                   + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Z
+		      ! local acceleration at node T (node 2): local = R * global
+		      aT_L(:) = matmul( u%Mesh(i_pt)%Orientation(:,:,2), u%Mesh(i_pt)%TranslationAcc(:,2) )
+	         ! classic (no-inerter) z_dot_dot formula 
+		      zdd_cl =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3,i_pt) / p%M_Z ) * x%StC_x(5,i_pt)  &
+                     - ( m%C_ctrl(3,i_pt) / p%M_Z ) * x%StC_x(6,i_pt)                                          &
+                     - ( m%C_Brake(3,i_pt) / p%M_Z ) * x%StC_x(6,i_pt)                                         &
+                     +   m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Z
+		      dxdt%StC_x(6,i_pt) = ( p%M_Z / (p%M_Z + p%bZ_M) ) * zdd_cl  &
+                                 - ( p%bZ_M / (p%M_Z + p%bZ_M) ) * ( m%rddot_P(3,i_pt) - aT_L(3) )
             enddo
          ELSE
             do i_pt=1,p%NumMeshPts
                dxdt%StC_x(6,i_pt) = 0.0_ReKi
             enddo
          END IF
-
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
@@ -1847,7 +1910,13 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
       !  At rest Z position of StC(s) (m) [relative to reference origin of the component]
    call ParseVar( FileInfo_In, Curline, 'StC_P_Z', InputFileData%StC_P_Z, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
-
+   !  TMDI: node-T coordinates in local N, relative to P (always present; set 0.0 if not used)
+   call ParseVar( FileInfo_In, Curline, 'StC_T_X', InputFileData%StC_T_X, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+   call ParseVar( FileInfo_In, Curline, 'StC_T_Y', InputFileData%StC_T_Y, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+   call ParseVar( FileInfo_In, Curline, 'StC_T_Z', InputFileData%StC_T_Z, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
    !-------------------------------------------------------------------------------------------------
    ! StC INITIAL CONDITIONS [used only when StC_DOF_MODE=1 or 2]
    !-------------------------------------------------------------------------------------------------
@@ -1934,6 +2003,13 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
       !  StC Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
    call ParseVar( FileInfo_In, Curline, 'StC_Z_C', InputFileData%StC_Z_C, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
+   !  TMDI: inerter inertances (kg) along local X and Y (always present; set 0.0 if not used)
+   call ParseVar( FileInfo_In, Curline, 'StC_X_b', InputFileData%StC_X_b, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+   call ParseVar( FileInfo_In, Curline, 'StC_Y_b', InputFileData%StC_Y_b, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_b', InputFileData%StC_Z_b, ErrStat2, ErrMsg2, UnEcho )
+	  If (Failed()) return;
       !  Stop spring X stiffness (N/m)
    call ParseVar( FileInfo_In, Curline, 'StC_X_KS', InputFileData%StC_X_KS, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
@@ -2251,6 +2327,45 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   
+   IF ( InputFileData%StC_DOF_MODE == DOFMode_Indept ) THEN
+      ! X-direction inerter validation
+      IF ( InputFileData%StC_X_DOF .AND. InputFileData%StC_X_b < 0.0_ReKi ) &
+         CALL SetErrStat( ErrID_Fatal, 'StC_X_b (inerter inertance) must be >= 0 when StC_X_DOF is enabled.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%StC_X_DOF .AND. InputFileData%StC_X_b > 0.0_ReKi ) THEN
+         IF ( InputFileData%StC_X_M <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_X_M must be > 0 when using an inerter (TMDI) in X.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%StC_X_K <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_X_K must be > 0 when using an inerter (TMDI) in X.', ErrStat, ErrMsg, RoutineName )
+      END IF
+      ! Y-direction inerter validation
+      IF ( InputFileData%StC_Y_DOF .AND. InputFileData%StC_Y_b < 0.0_ReKi ) &
+         CALL SetErrStat( ErrID_Fatal, 'StC_Y_b (inerter inertance) must be >= 0 when StC_Y_DOF is enabled.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%StC_Y_DOF .AND. InputFileData%StC_Y_b > 0.0_ReKi ) THEN
+         IF ( InputFileData%StC_Y_M <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_Y_M must be > 0 when using an inerter (TMDI) in Y.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%StC_Y_K <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_Y_K must be > 0 when using an inerter (TMDI) in Y.', ErrStat, ErrMsg, RoutineName )
+      END IF
+      ! Z-direction inerter validation
+      IF ( InputFileData%StC_Z_DOF .AND. InputFileData%StC_Z_b < 0.0_ReKi ) &
+         CALL SetErrStat( ErrID_Fatal, 'StC_Z_b (inerter inertance) must be >= 0 when StC_Z_DOF is enabled.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%StC_Z_DOF .AND. InputFileData%StC_Z_b > 0.0_ReKi ) THEN
+         IF ( InputFileData%StC_Z_M <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_Z_M must be > 0 when using an inerter (TMDI) in Z.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%StC_Z_K <= 0.0_ReKi ) &
+            CALL SetErrStat( ErrID_Fatal, 'StC_Z_K must be > 0 when using an inerter (TMDI) in Z.', ErrStat, ErrMsg, RoutineName )
+      END IF	
+      ! If any inerter is used (X_b, Y_b, or Z_b > 0), passive control should be enforced
+      IF ( ( InputFileData%StC_X_b > 0.0_ReKi .OR. InputFileData%StC_Y_b > 0.0_ReKi .OR. InputFileData%StC_Z_b > 0.0_ReKi ) &
+            .AND. InputFileData%StC_CMODE /= ControlMode_None ) &
+         CALL SetErrStat( ErrID_Fatal, 'With inerters (TMDI) in DOF mode 1, StC_CMODE must be 0 (none).', ErrStat, ErrMsg, RoutineName )
+
+      ! If inerter(s) are specified, require at least one of the translational DOFs to be ON
+      IF ( ( InputFileData%StC_X_b > 0.0_ReKi .OR. InputFileData%StC_Y_b > 0.0_ReKi .OR. InputFileData%StC_Z_b > 0.0_ReKi ) &
+            .AND. .NOT.( InputFileData%StC_X_DOF .OR. InputFileData%StC_Y_DOF .OR. InputFileData%StC_Z_DOF ) ) &
+         CALL SetErrStat( ErrID_Fatal, 'With inerters (TMDI) in DOF mode 1, at least one of StC_X_DOF, StC_Y_DOF, or StC_Z_DOF must be TRUE.', ErrStat, ErrMsg, RoutineName )
+   END IF
 
       ! Check spring preload in ZDof
    TmpCh = trim(InputFileData%StC_Z_PreLdC)
@@ -2328,6 +2443,25 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%M_Z = InputFileData%StC_Z_M
    p%K_Z = InputFileData%StC_Z_K
    p%C_Z = InputFileData%StC_Z_C
+
+   IF ( p%StC_DOF_MODE == DOFMode_Indept ) THEN
+      ! Inerter inertances (kg)
+      p%bX_M = InputFileData%StC_X_b
+      p%bY_M = InputFileData%StC_Y_b
+      p%bZ_M = InputFileData%StC_Z_b
+
+      ! Location of node T in local N, relative to P (m)
+      p%T_X  = InputFileData%StC_T_X
+      p%T_Y  = InputFileData%StC_T_Y
+      p%T_Z  = InputFileData%StC_T_Z
+   ELSE
+      p%bX_M = 0.0_ReKi
+      p%bY_M = 0.0_ReKi
+      p%bZ_M = 0.0_ReKi
+      p%T_X  = 0.0_ReKi
+      p%T_Y  = 0.0_ReKi
+      p%T_Z  = 0.0_ReKi
+   END IF
 
    ! StC Omni parameters
    p%M_XY = InputFileData%StC_XY_M
