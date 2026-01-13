@@ -206,7 +206,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    CALL AllocAry( InputFileData%PtfmVol0     , InputFileData%NBody,     'PtfmVol0'     , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%PtfmCOBxt    , InputFileData%NBody,     'PtfmCOBxt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%PtfmCOByt    , InputFileData%NBody,     'PtfmCOByt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
-
+   CALL AllocAry( InputFileData%NAddDOF      , InputFileData%NBody,     'NAddDOF'      , ErrStat2, ErrMsg2);   if (Failed())  return;
 
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
    call ParseAry( FileInfo_In, CurLine, 'PotFile', InputFileData%PotFile, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
@@ -245,6 +245,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseAry( FileInfo_In, CurLine, 'PtfmCOByt', InputFileData%PtfmCOByt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    
+   call ParseAry( FileInfo_In, CurLine, 'NAddDOF', InputFileData%NAddDOF, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd order WAMIT forces
@@ -1523,6 +1525,25 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
       end do
    END IF
+
+   IF ( InputFileData%PotMod == 1 ) THEN
+      do i = 1,InputFileData%NBody
+         IF ( InputFileData%NAddDOF(i) < 0 )THEN
+            CALL SetErrStat( ErrID_Fatal,'NAddDOF must be non-negative for all WAMIT bodies.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
+   END IF
+
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%NBody > 1 ) THEN
+      do i = 1,InputFileData%NBody
+         IF ( InputFileData%NAddDOF(i) > 0 )THEN
+            CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF is currently only allowed with NBody=1.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
+   END IF
+
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping

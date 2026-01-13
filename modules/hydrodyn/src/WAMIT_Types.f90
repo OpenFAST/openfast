@@ -50,6 +50,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOBxt      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOByt      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
     INTEGER(IntKi)  :: RdtnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
@@ -116,6 +117,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT_ParameterType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
+    LOGICAL  :: HasAddDOF = .false.      !< .TRUE. if additional generalized DOF are present, .FALSE. otherwise [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
+    INTEGER(IntKi)  :: NDOF = 0_IntKi      !< Total number of degrees of freedom [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDOFStrt      !< Starting DOF index for each body [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_HS_Moment_Offset      !< The offset moment due to the COB being offset from the WAMIT body's local location {matrix 3xNBody} [N-m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroAdMsI      !<  [(sec)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroSttc      !<  [-]
@@ -257,6 +262,18 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       end if
       DstInitInputData%PtfmCOByt = SrcInitInputData%PtfmCOByt
    end if
+   if (allocated(SrcInitInputData%NAddDOF)) then
+      LB(1:1) = lbound(SrcInitInputData%NAddDOF)
+      UB(1:1) = ubound(SrcInitInputData%NAddDOF)
+      if (.not. allocated(DstInitInputData%NAddDOF)) then
+         allocate(DstInitInputData%NAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%NAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%NAddDOF = SrcInitInputData%NAddDOF
+   end if
    DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
@@ -303,6 +320,9 @@ subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%PtfmCOByt)) then
       deallocate(InitInputData%PtfmCOByt)
    end if
+   if (allocated(InitInputData%NAddDOF)) then
+      deallocate(InitInputData%NAddDOF)
+   end if
    call Conv_Rdtn_DestroyInitInput(InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitInputData%WaveField)
@@ -326,6 +346,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%PtfmRefztRot)
    call RegPackAlloc(RF, InData%PtfmCOBxt)
    call RegPackAlloc(RF, InData%PtfmCOByt)
+   call RegPackAlloc(RF, InData%NAddDOF)
    call RegPack(RF, InData%RdtnMod)
    call RegPack(RF, InData%ExctnMod)
    call RegPack(RF, InData%ExctnDisp)
@@ -369,6 +390,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOBxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOByt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnDisp); if (RegCheckErr(RF, RoutineName)) return
@@ -859,6 +881,32 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    ErrMsg  = ''
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
+   DstParamData%HasAddDOF = SrcParamData%HasAddDOF
+   if (allocated(SrcParamData%NAddDOF)) then
+      LB(1:1) = lbound(SrcParamData%NAddDOF)
+      UB(1:1) = ubound(SrcParamData%NAddDOF)
+      if (.not. allocated(DstParamData%NAddDOF)) then
+         allocate(DstParamData%NAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%NAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%NAddDOF = SrcParamData%NAddDOF
+   end if
+   DstParamData%NDOF = SrcParamData%NDOF
+   if (allocated(SrcParamData%BDOFStrt)) then
+      LB(1:1) = lbound(SrcParamData%BDOFStrt)
+      UB(1:1) = ubound(SrcParamData%BDOFStrt)
+      if (.not. allocated(DstParamData%BDOFStrt)) then
+         allocate(DstParamData%BDOFStrt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BDOFStrt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%BDOFStrt = SrcParamData%BDOFStrt
+   end if
    if (allocated(SrcParamData%F_HS_Moment_Offset)) then
       LB(1:2) = lbound(SrcParamData%F_HS_Moment_Offset)
       UB(1:2) = ubound(SrcParamData%F_HS_Moment_Offset)
@@ -951,6 +999,12 @@ subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%NAddDOF)) then
+      deallocate(ParamData%NAddDOF)
+   end if
+   if (allocated(ParamData%BDOFStrt)) then
+      deallocate(ParamData%BDOFStrt)
+   end if
    if (allocated(ParamData%F_HS_Moment_Offset)) then
       deallocate(ParamData%F_HS_Moment_Offset)
    end if
@@ -985,6 +1039,10 @@ subroutine WAMIT_PackParam(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%NBody)
    call RegPack(RF, InData%NBodyMod)
+   call RegPack(RF, InData%HasAddDOF)
+   call RegPackAlloc(RF, InData%NAddDOF)
+   call RegPack(RF, InData%NDOF)
+   call RegPackAlloc(RF, InData%BDOFStrt)
    call RegPackAlloc(RF, InData%F_HS_Moment_Offset)
    call RegPackAlloc(RF, InData%HdroAdMsI)
    call RegPackAlloc(RF, InData%HdroSttc)
@@ -1024,6 +1082,10 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BDOFStrt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_HS_Moment_Offset); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HdroAdMsI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HdroSttc); if (RegCheckErr(RF, RoutineName)) return

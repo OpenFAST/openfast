@@ -38,6 +38,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: RdtnDT = 0.0_R8Ki      !<  [-]
     CHARACTER(80)  :: RdtnDTChr 
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
+    INTEGER(IntKi)  :: NDOF = 0_IntKi      !< Total number of degrees of freedom for all bodies including AddDOF [-]
     REAL(ReKi)  :: HighFreq = 0.0_ReKi      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroAddMs      !<  [-]
@@ -83,6 +84,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(DbKi)  :: RdtnDT = 0.0_R8Ki      !<  [-]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
+    INTEGER(IntKi)  :: NDOF = 0_IntKi      !< Total number of degrees of freedom for all bodies including AddDOF [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: RdtnKrnl      !<  [-]
     INTEGER(IntKi)  :: NStepRdtn = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NStepRdtn1 = 0_IntKi      !<  [-]
@@ -118,6 +120,7 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
    DstInitInputData%RdtnDT = SrcInitInputData%RdtnDT
    DstInitInputData%RdtnDTChr = SrcInitInputData%RdtnDTChr
    DstInitInputData%NBody = SrcInitInputData%NBody
+   DstInitInputData%NDOF = SrcInitInputData%NDOF
    DstInitInputData%HighFreq = SrcInitInputData%HighFreq
    DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
    if (allocated(SrcInitInputData%HdroAddMs)) then
@@ -186,6 +189,7 @@ subroutine Conv_Rdtn_PackInitInput(RF, Indata)
    call RegPack(RF, InData%RdtnDT)
    call RegPack(RF, InData%RdtnDTChr)
    call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NDOF)
    call RegPack(RF, InData%HighFreq)
    call RegPack(RF, InData%WAMITFile)
    call RegPackAlloc(RF, InData%HdroAddMs)
@@ -207,6 +211,7 @@ subroutine Conv_Rdtn_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%RdtnDT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnDTChr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HighFreq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAMITFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HdroAddMs); if (RegCheckErr(RF, RoutineName)) return
@@ -480,6 +485,7 @@ subroutine Conv_Rdtn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Er
    DstParamData%DT = SrcParamData%DT
    DstParamData%RdtnDT = SrcParamData%RdtnDT
    DstParamData%NBody = SrcParamData%NBody
+   DstParamData%NDOF = SrcParamData%NDOF
    if (allocated(SrcParamData%RdtnKrnl)) then
       LB(1:3) = lbound(SrcParamData%RdtnKrnl)
       UB(1:3) = ubound(SrcParamData%RdtnKrnl)
@@ -516,6 +522,7 @@ subroutine Conv_Rdtn_PackParam(RF, Indata)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%RdtnDT)
    call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NDOF)
    call RegPackAlloc(RF, InData%RdtnKrnl)
    call RegPack(RF, InData%NStepRdtn)
    call RegPack(RF, InData%NStepRdtn1)
@@ -533,6 +540,7 @@ subroutine Conv_Rdtn_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnDT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RdtnKrnl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepRdtn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepRdtn1); if (RegCheckErr(RF, RoutineName)) return

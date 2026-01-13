@@ -53,6 +53,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             R8Ki                     PtfmRefztRot                    {:}        -          -         "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 typedef   ^                            ^                             ReKi                     PtfmCOBxt                       {:}        -          -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmCOByt                       {:}        -          -         ""    -
+typedef   ^                            ^                             INTEGER                  NAddDOF                         {:}        -          -         "Number of additional generalized degrees of freedom"    -
 typedef   ^                            ^                             WAMIT_InitInputType      WAMIT                           -          -          -         "Initialization data for WAMIT module"    -
 typedef   ^                            ^                             WAMIT2_InitInputType     WAMIT2                          -          -          -         "Initialization data for WAMIT2 module"    -
 typedef   ^                            ^                             Morison_InitInputType    Morison                         -          -          -         "Initialization data for Morison module"    -

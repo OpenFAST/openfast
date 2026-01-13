@@ -21,6 +21,7 @@ include   Registry_NWTC_Library.txt
 typedef   Conv_Radiation/Conv_Rdtn     InitInputType                 DbKi             RdtnDT                   -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(80)    RdtnDTChr
 typedef   ^                            ^                             INTEGER          NBody                    -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             INTEGER          NDOF                     -          -         -         "Total number of degrees of freedom for all bodies including AddDOF"        -
 typedef   ^                            ^                             ReKi             HighFreq                 -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)  WAMITFile                -          -        -         ""    -
 typedef   ^                            ^                             SiKi             HdroAddMs                {:}{:}{:}   -        -         ""    -
@@ -68,6 +69,7 @@ typedef   ^                            MiscVarType                   INTEGER    
 typedef   ^                            ParameterType                 DbKi             DT                       -          -         -         "Time step for continuous state integration & discrete state update"  seconds
 typedef   ^                            ^                             DbKi             RdtnDT                   -          -         -         ""        -
 typedef   ^                            ^                             INTEGER          NBody                    -          -         -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             INTEGER          NDOF                     -          -         -         "Total number of degrees of freedom for all bodies including AddDOF"        -
 typedef   ^                            ^                             SiKi             RdtnKrnl                {:}{:}{:}   -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn                -          -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn1               -          -         -         ""        -

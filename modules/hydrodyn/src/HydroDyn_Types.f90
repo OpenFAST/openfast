@@ -66,6 +66,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOBxt      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOByt      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
     TYPE(WAMIT_InitInputType)  :: WAMIT      !< Initialization data for WAMIT module [-]
     TYPE(WAMIT2_InitInputType)  :: WAMIT2      !< Initialization data for WAMIT2 module [-]
     TYPE(Morison_InitInputType)  :: Morison      !< Initialization data for Morison module [-]
@@ -408,6 +409,18 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       end if
       DstInputFileData%PtfmCOByt = SrcInputFileData%PtfmCOByt
    end if
+   if (allocated(SrcInputFileData%NAddDOF)) then
+      LB(1:1) = lbound(SrcInputFileData%NAddDOF)
+      UB(1:1) = ubound(SrcInputFileData%NAddDOF)
+      if (.not. allocated(DstInputFileData%NAddDOF)) then
+         allocate(DstInputFileData%NAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%NAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%NAddDOF = SrcInputFileData%NAddDOF
+   end if
    call WAMIT_CopyInitInput(SrcInputFileData%WAMIT, DstInputFileData%WAMIT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -504,6 +517,9 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%PtfmCOByt)) then
       deallocate(InputFileData%PtfmCOByt)
    end if
+   if (allocated(InputFileData%NAddDOF)) then
+      deallocate(InputFileData%NAddDOF)
+   end if
    call WAMIT_DestroyInitInput(InputFileData%WAMIT, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call WAMIT2_DestroyInitInput(InputFileData%WAMIT2, ErrStat2, ErrMsg2)
@@ -542,6 +558,7 @@ subroutine HydroDyn_PackInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%PtfmRefztRot)
    call RegPackAlloc(RF, InData%PtfmCOBxt)
    call RegPackAlloc(RF, InData%PtfmCOByt)
+   call RegPackAlloc(RF, InData%NAddDOF)
    call WAMIT_PackInitInput(RF, InData%WAMIT) 
    call WAMIT2_PackInitInput(RF, InData%WAMIT2) 
    call Morison_PackInitInput(RF, InData%Morison) 
@@ -590,6 +607,7 @@ subroutine HydroDyn_UnPackInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOBxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOByt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
    call WAMIT_UnpackInitInput(RF, OutData%WAMIT) ! WAMIT 
    call WAMIT2_UnpackInitInput(RF, OutData%WAMIT2) ! WAMIT2 
    call Morison_UnpackInitInput(RF, OutData%Morison) ! Morison 
