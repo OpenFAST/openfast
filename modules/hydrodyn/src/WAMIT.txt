@@ -131,10 +131,14 @@ typedef   ^                            ^                       SeaSt_WaveField_P
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     MeshType                 Mesh                    -          -         -         "Displacements at the WAMIT reference point in the inertial frame" -
-typedef   ^                            ^                             ReKi                     PtfmRefY                -          -         -         "Reference yaw offset" (rad)
+typedef   ^                            InputType                     MeshType                 Mesh                    -           -         -         "Displacements at the WAMIT reference point in the inertial frame" -
+typedef   ^                            ^                             ReKi                     PtfmRefY                -           -         -         "Reference yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     qAddDOF                {:}          -         -         "Displacement of generalized DOF" -
+typedef   ^                            ^                             ReKi                     qAddDOFDot             {:}          -         -         "Velocity     of generalized DOF" -
+typedef   ^                            ^                             ReKi                     qAddDOFDotDot          {:}          -         -         "Acceleration of generalized DOF" -
 #
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                   MeshType                 Mesh                     -           -         -         "Loads at the WAMIT reference point in the inertial frame" -
+typedef   ^                            OutputType                    MeshType                 Mesh                     -          -         -         "Loads at the WAMIT reference point in the inertial frame" -
+typedef   ^                            ^                             ReKi                     FAddDOF                 {:}         -         -         "Additional generalized DOF forcing " -

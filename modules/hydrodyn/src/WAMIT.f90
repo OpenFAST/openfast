@@ -309,6 +309,14 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       call AllocAry( p%HdroAdMsI,    p%NDOF,p%NDOF, 'p%HdroAdMsI'         , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       call AllocAry( p%HdroSttc ,    p%NDOF,p%NDOF, 'p%HdroSttc'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+         ! Allocate input/output arrays
+      if ( p%HasAddDOF ) then
+         call AllocAry( u%qAddDOF,       p%NDOF-6*p%NBody, 'u%qAddDOF'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( u%qAddDOFDot,    p%NDOF-6*p%NBody, 'u%qAddDOFDot'    , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( u%qAddDOFDotDot, p%NDOF-6*p%NBody, 'u%qAddDOFDotDot' , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( y%FAddDOF,       p%NDOF-6*p%NBody, 'y%FAddDOF'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
       do iBody = 1, p%NBody     
          p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
          p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
@@ -1753,6 +1761,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       INTEGER                                           :: I               ! Generic loop counter
       INTEGER                                           :: nTime           ! Number of inputs
       integer(IntKi)                                    :: iBody           ! WAMIT body index
+      integer(IntKi)                                    :: AddDOFCntr      ! Counter for additional DOF
 
       integer(IntKi)                                    :: indxStart, indxEnd                   ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
 
@@ -1794,6 +1803,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                ErrMsg = ' Failed to allocate array Conv_Rdtn_u(I)%Velocity.'
                RETURN
             END IF
+            AddDOFCntr = 0_IntKi
             do iBody=1,p%NBody
                indxStart = p%BDOFStrt(iBody)
                indxEnd   = indxStart+5
@@ -1803,16 +1813,17 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                if ( p%NAddDOF(iBody) > 0_IntKi ) then
                   indxStart = p%BDOFStrt(iBody)+6
                   indxEnd   = indxStart-1+p%NAddDOF(iBody)
-                  m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = 0.0_ReKi ! LW: Waiting for addDOF inputs to be implemented
+                  Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = Inputs(I)%qAddDOFDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+                  AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
                end if
             end do
          END DO
-                 
+
          CALL Conv_Rdtn_UpdateStates( t, n, Conv_Rdtn_u, InputTimes, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, &
                                       z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
-         
+
          DEALLOCATE(Conv_Rdtn_u)
-         
+
       ELSE IF ( p%RdtnMod == 2 )  THEN       ! Update the state-space radiation memory effect sub-module's state      
           
            ! Allocate array of SS_Rdtn inputs
@@ -2025,7 +2036,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       end if
       
-      
+      AddDOFCntr = 0_IntKi
       do iBody = 1, p%NBody
          
          ! Determine the rotational angles from the direction-cosine matrix
@@ -2068,9 +2079,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          if ( p%NAddDOF(iBody) > 0_IntKi ) then
             indxStart = p%BDOFStrt(iBody) + 6
             indxEnd   = indxStart - 1 + p%NAddDOF(iBody)
-            q      (indxStart:indxEnd) = 0.0_ReKi
-            qdot   (indxStart:indxEnd) = 0.0_ReKi
-            qdotdot(indxStart:indxEnd) = 0.0_ReKi  ! LW: Waiting for addDOF inputs to be implemented
+            q      (indxStart:indxEnd) = u%qAddDOF      (AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            qdot   (indxStart:indxEnd) = u%qAddDOFDot   (AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            qdotdot(indxStart:indxEnd) = u%qAddDOFDotDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
          end if
          
       end do
@@ -2176,10 +2188,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          DO I=1,3
             y%Mesh%Moment(I,iBody)   = m%F_PtfmAM(indxStart+I+3) + m%F_Rdtn(indxStart+I+3) + m%F_Waves1(indxStart+I+3) + m%F_HS(indxStart+I+3)
          END DO
-         IF (p%NAddDOF(iBody) > 1_IntKi) THEN
+         IF (p%NAddDOF(iBody) > 0_IntKi) THEN
             indxStart   = p%BDOFStrt(iBody) + 6_IntKi
             indxEnd     = p%BDOFStrt(iBody) + 5_IntKi + p%NAddDOF(iBody)
-            ! y%FAddDOF(AddDOFCntr+1_IntKi:AddDOFCntr+p%NAddDOF(iBody)) = m%F_PtfmAM(indxStart:indxEnd) + m%F_Rdtn(indxStart:indxEnd) + m%F_Waves1(indxStart:indxEnd) + m%F_HS(indxStart:indxEnd) LW: Waiting for additional forcing output to be implemented
+            y%FAddDOF(AddDOFCntr+1_IntKi:AddDOFCntr+p%NAddDOF(iBody)) = m%F_PtfmAM(indxStart:indxEnd) + m%F_Rdtn(indxStart:indxEnd) + m%F_Waves1(indxStart:indxEnd) + m%F_HS(indxStart:indxEnd)
             AddDOFCntr  = AddDOFCntr + p%NAddDOF(iBody)
          END IF
       end do
@@ -2259,7 +2271,7 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       
       integer(IntKi)                                     :: iBody               ! WAMIT body index
       integer(IntKi)                                     :: indxStart, indxEnd  ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
-
+      integer(IntKi)                                     :: AddDOFCntr          ! Counter for additional DOF
       REAL(ReKi)                                         :: tmpVec6(6)
 
          ! Initialize ErrStat
@@ -2269,7 +2281,8 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       
       
          ! Update discrete states here:
-      IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.   
+      IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.
+         AddDOFCntr = 0_IntKi
          do iBody=1,p%NBody
                indxStart = p%BDOFStrt(iBody)
                indxEnd   = indxStart+5
@@ -2279,7 +2292,8 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
                if ( p%NAddDOF(iBody) > 0_IntKi ) then
                   indxStart = p%BDOFStrt(iBody)+6
                   indxEnd   = indxStart-1+p%NAddDOF(iBody)
-                  m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = 0.0_ReKi ! LW: Waiting for addDOF inputs to be implemented
+                  m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = u%qAddDOFDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+                  AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
                end if
          end do
          CALL Conv_Rdtn_UpdateDiscState( Time, n, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, &
