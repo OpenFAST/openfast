@@ -110,10 +110,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       CHARACTER(1024)                        :: SummaryName                         ! name of the HydroDyn summary file   
       TYPE(HydroDyn_InputFile)               :: InputFileData                       !< Data from input file
       TYPE(FileInfoType)                     :: InFileInfo                          !< The derived type for holding the full input file for parsing -- we may pass this in the future
-!      LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
-!      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
-!      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
-      INTEGER                                :: I, J, k, iBody, iWAMIT               ! Generic counters
+      INTEGER                                :: I, J, k, iBody, jBody, iWAMIT       ! Generic counters
          ! These are dummy variables to satisfy the framework, but are not used 
          
  
@@ -602,8 +599,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !===============================================
       p%PotMod = InputFileData%Potmod      
       IF ( InputFileData%UnSum > 0 ) THEN
-      
-  
+
          IF ( InputFileData%PotMod == 1 .AND.  InputFileData%WAMIT%RdtnMod == 1) THEN
             ! Write the header for this section:  Note: When NBodyMod = 1 the kernel is now 6*NBody by 6*Nbody in size,
             !   and we have NBody 6 by 6 kernels for NBodyMod=2 or 3
@@ -621,28 +617,41 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   end do
                end do
                write(InputFileData%UnSum,'()')  ! end of line character
-               
-               ! LW: Need to fix the unit below later now that we have generalized DOF
-               WRITE( InputFileData%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '   (-)   ' , '    (s)   ' 
+
+               WRITE( InputFileData%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '   (-)   ' , '    (s)   '
                do i = 1,p%WAMIT(iWAMIT)%NDOF
+                  do iBody = 1,p%WAMIT(iWAMIT)%NBody-1_IntKi
+                     if ( p%WAMIT(iWAMIT)%BDOFStrt(iBody+1_IntKi)>i ) exit
+                  end do
+                  if ( p%WAMIT(iWAMIT)%BDOFStrt(p%WAMIT(iWAMIT)%NBody)<=i ) iBody = p%WAMIT(iWAMIT)%NBody
                   do j = 1,p%WAMIT(iWAMIT)%NDOF
-                     if ( mod(i-1,6)+1 < 4 ) then
-                        if ( mod(j-1,6)+1 < 4  ) then  
-                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    ' !  ' (kg/s^2) '
+                     do jBody = 1,p%WAMIT(iWAMIT)%NBody-1_IntKi
+                        if ( p%WAMIT(iWAMIT)%BDOFStrt(jBody+1_IntKi)>j ) exit
+                     end do
+                     if ( p%WAMIT(iWAMIT)%BDOFStrt(p%WAMIT(iWAMIT)%NBody)<=j ) jBody = p%WAMIT(iWAMIT)%NBody
+                     if ( i-p%WAMIT(iWAMIT)%BDOFStrt(iBody) < 3_IntKi ) then
+                        if ( j-p%WAMIT(iWAMIT)%BDOFStrt(jBody) < 3_IntKi ) then
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kg/s^2)  '
+                        else if ( j-p%WAMIT(iWAMIT)%BDOFStrt(jBody) < 6_IntKi ) then
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
                         else
-                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    ' ! ' (kgm/s^2) '
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    '
                         end if  
-                     else
-                        if  ( mod(j-1,6)+1 < 4 )  then
-                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    ' ! ' (kgm/s^2) '
+                     else if ( i-p%WAMIT(iWAMIT)%BDOFStrt(iBody) < 6_IntKi ) then
+                        if  ( j-p%WAMIT(iWAMIT)%BDOFStrt(jBody) < 3_IntKi )  then
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) ' (kgm/s^2) '
+                        else if ( j-p%WAMIT(iWAMIT)%BDOFStrt(jBody) < 6_IntKi ) then
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '(kgm^2/s^2)'
                         else
-                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    ' ! '(kgm^2/s^2)'
-                        end if                      
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    '
+                        end if
+                     else
+                           WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) '    (-)    '
                      end if
                   end do
                end do
                write(InputFileData%UnSum,'()')  ! end of line character
-                 
+
                do k= 0,p%WAMIT(iWAMIT)%Conv_Rdtn%NStepRdtn-1
                   WRITE( InputFileData%UnSum, '(1X,I10,2X,E12.5)',ADVANCE='no' ) K, K*p%WAMIT(iWAMIT)%Conv_Rdtn%RdtnDT
                   do i = 1,p%WAMIT(iWAMIT)%NDOF
@@ -655,27 +664,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
             end do
 
-            ! else
-            !   do j = 1,p%nWAMITObj
-            !      WRITE( InputFileData%UnSum,  '(//)' )
-            !      WRITE( InputFileData%UnSum,  '(A)' ) 'Radiation memory effect kernel'
-            !      WRITE( InputFileData%UnSum,  '(//)' )
-            !      WRITE( InputFileData%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
-            !      WRITE( InputFileData%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
-
-            !   ! Write the data
-            !      DO I = 0,p%WAMIT(j)%Conv_Rdtn%NStepRdtn-1
-            !         WRITE( InputFileData%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT(j)%Conv_Rdtn%RdtnDT, &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,1,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,2,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,3,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,6,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,2,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,3,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,4,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,6,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,3,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,6,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,6,I), &
-            !            p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(5,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(5,6,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(6,6,I)
-            !      END DO
-            !   end do
-            !end if
          END IF
          
       END IF
