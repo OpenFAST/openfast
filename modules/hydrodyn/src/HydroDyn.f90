@@ -613,7 +613,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                WRITE( InputFileData%UnSum, '(1X,A10,2X,A10)',ADVANCE='no' )    '    n    ' , '     t    '
                do i = 1,p%WAMIT(iWAMIT)%NDOF
                   do j = 1,p%WAMIT(iWAMIT)%NDOF
-                     WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) 'K'//trim(num2lstr(i))//trim(num2lstr(j))
+                     WRITE( InputFileData%UnSum, '(2X,A16)',ADVANCE='no' ) 'K('//trim(num2lstr(i))//','//trim(num2lstr(j))//')'
                   end do
                end do
                write(InputFileData%UnSum,'()')  ! end of line character
