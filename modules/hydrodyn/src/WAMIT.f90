@@ -1995,7 +1995,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                indxStart = p%BDOFStrt(iBody)
                indxEnd   = indxStart+5+p%NAddDOF(iBody)
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
-               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
+               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( 6+p%NAddDOF(iBody), Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
 
@@ -2021,7 +2021,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                indxStart = p%BDOFStrt(iBody)
                indxEnd   = indxStart+5+p%NAddDOF(iBody)
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
-               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
+               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( 6+p%NAddDOF(iBody), Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
 
