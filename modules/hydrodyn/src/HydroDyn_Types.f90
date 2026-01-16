@@ -59,6 +59,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmVol0      !<  [-]
     LOGICAL  :: HasWAMIT = .false.      !< .TRUE. if using WAMIT model, .FALSE. otherwise [-]
+    LOGICAL  :: HasAddDOF = .false.      !< .TRUE. if additional generalized DOF are present, .FALSE. otherwise [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WAMITULEN      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefxt      !< The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ] [(m)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefyt      !< The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ] [(m)]
@@ -338,6 +339,7 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmVol0 = SrcInputFileData%PtfmVol0
    end if
    DstInputFileData%HasWAMIT = SrcInputFileData%HasWAMIT
+   DstInputFileData%HasAddDOF = SrcInputFileData%HasAddDOF
    if (allocated(SrcInputFileData%WAMITULEN)) then
       LB(1:1) = lbound(SrcInputFileData%WAMITULEN)
       UB(1:1) = ubound(SrcInputFileData%WAMITULEN)
@@ -564,6 +566,7 @@ subroutine HydroDyn_PackInputFile(RF, Indata)
    call RegPack(RF, InData%NBodyMod)
    call RegPackAlloc(RF, InData%PtfmVol0)
    call RegPack(RF, InData%HasWAMIT)
+   call RegPack(RF, InData%HasAddDOF)
    call RegPackAlloc(RF, InData%WAMITULEN)
    call RegPackAlloc(RF, InData%PtfmRefxt)
    call RegPackAlloc(RF, InData%PtfmRefyt)
@@ -613,6 +616,7 @@ subroutine HydroDyn_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmVol0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasWAMIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasAddDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WAMITULEN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return

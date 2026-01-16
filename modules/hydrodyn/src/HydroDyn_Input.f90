@@ -1535,15 +1535,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       end do
    END IF
 
-   IF ( InputFileData%PotMod == 1 .and. InputFileData%NBody > 1 ) THEN
-      do i = 1,InputFileData%NBody
-         IF ( InputFileData%NAddDOF(i) > 0 )THEN
-            CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF is currently only allowed with NBody=1.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-      end do
+   InputFileData%hasAddDOF = any( InputFileData%NAddDOF > 0_IntKi )
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%NBody > 1 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF is currently only allowed with NBody=1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
    END IF
-
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%ExctnMod == 2 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave exctiation model (ExctnMod=2). Need ExctnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%RdtnMod == 2 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave radiation model (RdtnMod=2). Need RdtnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
