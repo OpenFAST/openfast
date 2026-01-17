@@ -264,6 +264,12 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     call MV_AddMeshVar(Vars%u, 'Interface node', MotionFields, &
                        DatLoc(ExtPtfm_u_PtfmMesh), &
                        Mesh=u%PtfmMesh, &
+                       Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
+                                 2.0_R8Ki*D2R_D, &  ! Orientation
+                                 2.0_R8Ki*D2R_D, &  ! TranslationVel
+                                 2.0_R8Ki*D2R_D, &  ! RotationVel
+                                 2.0_R8Ki*D2R_D, &  ! TranslationAcc
+                                 2.0_R8Ki*D2R_D], &
                        Flags=VF_SmallAngle)
 
     !---------------------------------------------------------------------------
@@ -286,12 +292,12 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
 
     call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
-    if (Linearize) then
-       call ExtPtfm_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-       call ExtPtfm_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-       call ExtPtfm_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-       call ExtPtfm_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-    end if
+    ! if (Linearize) then
+    call ExtPtfm_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    ! end if
 
 contains
     function WriteOutLinName(iParam) result(Name)
@@ -860,6 +866,30 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
    CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
 
+   ! if ( p%hasRBMode ) then
+   ! ! --- Computation of qm and qmdot
+   ! ! >>> Latex formulae:
+   ! ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
+   ! ! >>> MATMUL IMPLEMENTATION
+   ! !dxdt%qm= x%qmdot
+   ! !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
+   ! !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
+   ! ! >>> BLAS IMPLEMENTATION
+   ! !           COPY( N   , X                    , INCX, Y      , INCY)
+   ! CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
+   ! CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
+   ! dxdt%qmdot = dxdt%qmdot   &
+   !            + p%Forces0(6+1:6+p%nCB) - matmul(p%KG(7:6+p%nCB,:),[m%uFlat(1:6) x%qm])   &                        !        + F_G0  - KG*qm
+   !            + u%FHydro(1:p%nCB)                                                                                 !        + F_HD2
+   !
+   ! !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
+   ! CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
+   ! CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
+   ! CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
+   ! CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
+   !
+   ! end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv')
@@ -922,13 +952,13 @@ END SUBROUTINE ExtPtfm_CalcConstrStateResidual
 SUBROUTINE ExtPtfm_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
    TYPE(ModVarsType),                  INTENT(IN   ) :: Vars       !< Module variables
    REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
-   TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ExtPtfm_InputType),            INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
    TYPE(ExtPtfm_ContinuousStateType),  INTENT(IN   ) :: x          !< Continuous states at operating point
    TYPE(ExtPtfm_DiscreteStateType),    INTENT(IN   ) :: xd         !< Discrete states at operating point
    TYPE(ExtPtfm_ConstraintStateType),  INTENT(IN   ) :: z          !< Constraint states at operating point
    TYPE(ExtPtfm_OtherStateType),       INTENT(IN   ) :: OtherState !< Other states at operating point
-   TYPE(ExtPtfm_OutputType),           INTENT(IN   ) :: y          !< Output (change to inout if a mesh copy is required); 
+   TYPE(ExtPtfm_OutputType),           INTENT(INOUT) :: y          !< Output (change to inout if a mesh copy is required);
                                                                    !!   Output fields are not used by this routine, but type is   
                                                                    !!   available here so that mesh parameter information (i.e.,  
                                                                    !!   connectivity) does not have to be recalculated for dYdu.
@@ -943,69 +973,148 @@ SUBROUTINE ExtPtfm_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, Err
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   INTEGER(IntKi) :: i, j ! Loop index
-   logical        :: CalcOutputs
+   character(*), parameter       :: RoutineName = 'ExtPtfm_JacobianPInput'
+   integer(intKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   INTEGER(IntKi) :: i, j, col ! Loop index
+   ! logical        :: CalcOutputs
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! allocate and set dYdu
+   ! Calculate OP values here
+   call ExtPtfm_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+
+   ! Make a copy of the inputs to perturb
+   call ExtPtfm_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call ExtPtfm_VarsPackInput(Vars, u, m%Jac%u)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
 
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, N_OUTPUTS+p%NumOuts, N_INPUTS, 'dYdu', ErrStat, ErrMsg)
-         if(Failed()) return
-         dYdu = 0.0_ReKi
+         call AllocAry(dYdu, m%Jac%Ny, m%Jac%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      
-      dYdu(1:6, 1:N_INPUTS) = p%DMat(1:6, 1:N_INPUTS)
 
-      ! Check if outputs need to be processed
-      CalcOutputs = .false.
-      do i = 1, size(Vars%y)
-         if (MV_HasFlagsAll(Vars%y(i), VF_WriteOut)) CalcOutputs = .true.
-      end do
-      
-      ! dYdu is zero except if WriteOutput is the interface loads
-      if (CalcOutputs) then
-         do i = 1, p%NumOuts
-            select case (p%OutParam(i)%Indx)
-            case (ID_PtfFx)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(1,1:N_INPUTS)
-            case (ID_PtfFy)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(2,1:N_INPUTS)
-            case (ID_PtfFz)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(3,1:N_INPUTS)
-            case (ID_PtfMx)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(4,1:N_INPUTS)
-            case (ID_PtfMy)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(5,1:N_INPUTS)
-            case (ID_PtfMz)
-               dYdu(6+i,1:N_INPUTS) = p%DMat(6,1:N_INPUTS)
-            case default
-               dYdu(6+i,1:N_INPUTS) = 0.0_ReKi
-            end select
+      ! Loop through input variables
+      do i = 1, size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%u(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Calculate column index
+            col = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
          end do
-      end if
+      end do
    end if
 
-   ! allocate and set dXdu
-   if (present(dXdu)) then
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu) .and. (m%Jac%Nx > 0)) then
 
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, 2*p%nCB, N_INPUTS, 'dXdu', ErrStat, ErrMsg)
-         if(Failed()) return
-         dXdu = 0.0_ReKi
-      end if
+         call AllocAry(dXdu, m%Jac%Nx, m%Jac%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+      endif
 
-      dXdu(1:2*p%nCB,1:N_INPUTS) = p%BMat(1:2*p%nCB,1:N_INPUTS)
+      ! Loop through input variables
+      do i = 1,size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%u(i)%Num
+
+            ! Calculate positive perturbation and resulting continuous state derivatives
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation and resulting continuous state derivatives
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
+         end do
+      end do
    end if
+
+   ! ! allocate and set dYdu
+   ! if (present(dYdu)) then
+   !
+   !    if (.not. allocated(dYdu)) then
+   !       call AllocAry(dYdu, N_OUTPUTS+p%NumOuts, N_INPUTS, 'dYdu', ErrStat, ErrMsg)
+   !       if(Failed()) return
+   !       dYdu = 0.0_ReKi
+   !    end if
+   !
+   !    dYdu(1:6, 1:N_INPUTS) = p%DMat(1:6, 1:N_INPUTS)
+   !
+   !     ! Check if outputs need to be processed
+   !    CalcOutputs = .false.
+   !    do i = 1, size(Vars%y)
+   !       if (MV_HasFlagsAll(Vars%y(i), VF_WriteOut)) CalcOutputs = .true.
+   !    end do
+   !
+   !    ! dYdu is zero except if WriteOutput is the interface loads
+   !    if (CalcOutputs) then
+   !       do i = 1, p%NumOuts
+   !          select case (p%OutParam(i)%Indx)
+   !          case (ID_PtfFx)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(1,1:N_INPUTS)
+   !          case (ID_PtfFy)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(2,1:N_INPUTS)
+   !          case (ID_PtfFz)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(3,1:N_INPUTS)
+   !          case (ID_PtfMx)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(4,1:N_INPUTS)
+   !          case (ID_PtfMy)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(5,1:N_INPUTS)
+   !          case (ID_PtfMz)
+   !             dYdu(6+i,1:N_INPUTS) = p%DMat(6,1:N_INPUTS)
+   !          case default
+   !             dYdu(6+i,1:N_INPUTS) = 0.0_ReKi
+   !          end select
+   !       end do
+   !    end if
+   ! end if
+   !
+   ! ! allocate and set dXdu
+   ! if (present(dXdu)) then
+   !
+   !    if (.not. allocated(dXdu)) then
+   !       call AllocAry(dXdu, 2*p%nCB, N_INPUTS, 'dXdu', ErrStat, ErrMsg)
+   !       if(Failed()) return
+   !       dXdu = 0.0_ReKi
+   !    end if
+   !
+   !    dXdu(1:2*p%nCB,1:N_INPUTS) = p%BMat(1:2*p%nCB,1:N_INPUTS)
+   ! end if
 
    if (present(dXddu)) then
    end if
 
    if (present(dZdu)) then
    end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')
@@ -1015,8 +1124,9 @@ END SUBROUTINE ExtPtfm_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE ExtPtfm_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
+   TYPE(ModVarsType),                  INTENT(IN   ) :: Vars       !< Module variables
    REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
@@ -1043,59 +1153,145 @@ SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                    !!   functions (Z) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-   INTEGER(IntKi) :: i,j    ! Loop index
-   INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
-   INTEGER(IntKi) :: iDOF ! Mode number
+
+   character(*), parameter       :: RoutineName = 'ExtPtfm_JacobianPContState'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   INTEGER(IntKi)                :: i,j,col    ! Loop index
+   ! INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
+   ! INTEGER(IntKi) :: iDOF ! Mode number
+
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! If no state variables, return
+   if (m%Jac%Nx == 0) return
+
+   ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
+   call ExtPtfm_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call ExtPtfm_VarsPackContState(Vars, x, m%Jac%x)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
-      ! allocate and set dYdx
+
+      ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-          call AllocAry(dYdx, N_OUTPUTS+p%NumOuts, 2*p%nCB, 'dYdx', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dYdx,1); do j=1,size(dYdx,2); dYdx(i,j)=0.0_ReKi; enddo;enddo
+         call AllocAry(dYdx, m%Jac%Ny, m%Jac%Nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
-      ! WriteOutputs
-      do i = 1,p%NumOuts
-          idx  = p%OutParam(i)%Indx
-          iDOF = mod(idx-ID_QSTART, p%nCB)+1
-           ! if output is an interface load dYdx is a row of the Cmatrix
-           if     (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(1,1:2*p%nCB)
-           elseif (idx==ID_PtfFy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(2,1:2*p%nCB)
-           elseif (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(3,1:2*p%nCB)
-           elseif (idx==ID_PtfMx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(4,1:2*p%nCB)
-           elseif (idx==ID_PtfMy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(5,1:2*p%nCB)
-           elseif (idx==ID_PtfMz) then; dYdx(6+i,1:2*p%nCB) = p%CMat(6,1:2*p%nCB)
-           ! Below we look at the index, we assumed an order for the outputs
-           ! where after the index ID_Qstart, the AllOutputs are: Q,QDot and Qf
-           ! An alternative coulbe to look at the name of the DOF instead:
-           ! e.g. if (index(p%OutParam,'CBQ_')>0) then ... (see SetOutParam) 
-           else if ((idx-ID_QStart>=  0    ) .and. (idx-ID_QStart<p%nCB) ) then
-               ! Output is a DOF position, dYdx has a 1 at the proper location
-               dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-               dYdx(6+i,        iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-           else if ((idx-ID_QStart>=  p%nCB) .and. (idx-ID_QStart<2*p%nCB) ) then
-               ! Output is a DOF velocity, dYdx has a 1 at the proper location
-               dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-               dYdx(6+i,p%nCB + iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-           else ! e.g. WaveElevation or CB Forces
-               dYdx(6+i,1:2*p%nCB  ) = 0.0_ReKi
-           endif 
+
+      ! Loop through state variables
+      do i = 1,size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Calculate column index
+            col = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+         end do
       end do
    end if
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
    if (present(dXdx)) then
-      ! allocate and set dXdx
+
+      ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-          call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dXdx,1); do j=1,size(dXdx,2); dXdx(i,j)=0.0_ReKi; enddo;enddo
+         call AllocAry(dXdx, m%Jac%Nx, m%Jac%Nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
+
+      ! Loop through state variables
+      do i = 1,size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
+         end do
+      end do
    end if
+
+   ! if (present(dYdx)) then
+   !    ! allocate and set dYdx
+   !    if (.not. allocated(dYdx)) then
+   !        call AllocAry(dYdx, N_OUTPUTS+p%NumOuts, 2*p%nCB, 'dYdx', ErrStat, ErrMsg); if(Failed()) return
+   !        do i=1,size(dYdx,1); do j=1,size(dYdx,2); dYdx(i,j)=0.0_ReKi; enddo;enddo
+   !    end if
+   !    dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
+   !    ! WriteOutputs
+   !    do i = 1,p%NumOuts
+   !        idx  = p%OutParam(i)%Indx
+   !        iDOF = mod(idx-ID_QSTART, p%nCB)+1
+   !         ! if output is an interface load dYdx is a row of the Cmatrix
+   !         if     (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(1,1:2*p%nCB)
+   !         elseif (idx==ID_PtfFy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(2,1:2*p%nCB)
+   !         elseif (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(3,1:2*p%nCB)
+   !         elseif (idx==ID_PtfMx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(4,1:2*p%nCB)
+   !         elseif (idx==ID_PtfMy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(5,1:2*p%nCB)
+   !         elseif (idx==ID_PtfMz) then; dYdx(6+i,1:2*p%nCB) = p%CMat(6,1:2*p%nCB)
+   !         ! Below we look at the index, we assumed an order for the outputs
+   !         ! where after the index ID_Qstart, the AllOutputs are: Q,QDot and Qf
+   !         ! An alternative coulbe to look at the name of the DOF instead:
+   !         ! e.g. if (index(p%OutParam,'CBQ_')>0) then ... (see SetOutParam)
+   !         else if ((idx-ID_QStart>=  0    ) .and. (idx-ID_QStart<p%nCB) ) then
+   !             ! Output is a DOF position, dYdx has a 1 at the proper location
+   !             dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
+   !             dYdx(6+i,        iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
+   !         else if ((idx-ID_QStart>=  p%nCB) .and. (idx-ID_QStart<2*p%nCB) ) then
+   !             ! Output is a DOF velocity, dYdx has a 1 at the proper location
+   !             dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
+   !             dYdx(6+i,p%nCB + iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
+   !         else ! e.g. WaveElevation or CB Forces
+   !             dYdx(6+i,1:2*p%nCB  ) = 0.0_ReKi
+   !         endif
+   !    end do
+   ! end if
+   ! if (present(dXdx)) then
+   !    ! allocate and set dXdx
+   !    if (.not. allocated(dXdx)) then
+   !        call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', ErrStat, ErrMsg); if(Failed()) return
+   !        do i=1,size(dXdx,1); do j=1,size(dXdx,2); dXdx(i,j)=0.0_ReKi; enddo;enddo
+   !    end if
+   !    dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
+   ! end if
+
    if (present(dXddx)) then
    end if
+
    if (present(dZdx)) then
    end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')

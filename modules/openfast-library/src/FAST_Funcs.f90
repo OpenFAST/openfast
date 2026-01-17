@@ -1484,7 +1484,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                   dYdx=dYdx, dXdx=dXdx)
 
    case (Module_ExtPtfm)
-      call ExtPtfm_JacobianPContState(ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, &
+      call ExtPtfm_JacobianPContState(ModData%Vars, ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, &
                                       T%ExtPtfm%x(iState), T%ExtPtfm%xd(iState), &
                                       T%ExtPtfm%z(iState), T%ExtPtfm%OtherSt(iState), &
                                       T%ExtPtfm%y, T%ExtPtfm%m, ErrStat2, ErrMsg2, &

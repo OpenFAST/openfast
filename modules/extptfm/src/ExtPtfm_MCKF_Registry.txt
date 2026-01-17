@@ -69,10 +69,12 @@ typedef   ^                     ^               IntKi                    n      
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^               ParameterType   ReKi     Mass   {:}{:} - - "Mass matrix" "kg, kg-m, kg-m^2"
-typedef  ^               ParameterType   ReKi     Damp   {:}{:} - - "Damping matrix" -
-typedef  ^               ParameterType   ReKi     Stff   {:}{:} - - "Stiffness matrix" -
-typedef  ^               ParameterType   ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
+typedef  ^               ParameterType   Logical  hasRBMode   - - - "True: has rigid-body modes/floating structure; False: no rigid-body modes"
+typedef  ^                    ^          ReKi     Mass   {:}{:} - - "Mass matrix" "kg, kg-m, kg-m^2"
+typedef  ^                    ^          ReKi     Damp   {:}{:} - - "Damping matrix" -
+typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness matrix" -
+typedef  ^                    ^          ReKi     Forces0   {:} - - "Prescribed constant external loads including selfweight" -
+typedef  ^                    ^          ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
 typedef  ^                    ^          ReKi     AMat {:}{:}   - - "State matrix A" ""
 typedef  ^                    ^          ReKi     BMat {:}{:}   - - "State matrix B" ""
@@ -102,21 +104,28 @@ typedef  ^                    ^          OutParmType   OutParam          {:}   -
 typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for linearization analysis" -
 
 # ..... Inputs ....................................................................................................................
-typedef  ^               InputType             MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -
+typedef  ^               InputType            MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -
+typedef  ^                  ^                 MeshType ConnLdMesh           -  -  -  "Load mesh for connection points on the structure" -
+typedef  ^                  ^                 MeshType HydroLdMesh          -  -  -  "Hydrodynamic loads from HydroDyn for the rigid-body modes" -
+typedef  ^                  ^                 ReKi     FHydro              {:} -  -  "Generalized hydrodynamic forcing to elastic modes" -
 
 
 # ..... Outputs ...................................................................................................................
 typedef   ^               OutputType          MeshType PtfmMesh     -  - -   "Loads at the platform reference point" -
+typedef   ^                 ^                 MeshType ConnMesh     -  - -   "Motion mesh for connection points on the structure" -
+typedef   ^                 ^                 ReKi     qm          {:} - -   "Displacement of internal elastic modes" -
+typedef   ^                 ^                 ReKi     qmdot       {:} - -   "Velocity of internal elastic modes" -
+typedef   ^                 ^                 ReKi     qmdotdot    {:} - -   "Acceleration of internal elastic modes" -
 typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
-typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
-typedef    ^              MiscVarType          ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
-typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into times, to speed up interpolation" -
-typedef    ^              MiscVarType          LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
+typedef    ^                  ^                ReKi     uFlat   {18} - - "Flattened vector of inputs"
+typedef    ^                  ^                ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
+typedef    ^                  ^                IntKi    Indx       - - - "Index into times, to speed up interpolation" -
+typedef    ^                  ^                LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef    ^                  ^              ModJacType Jac       - - - "Data structure for calculating module Jacobians" -
 typedef    ^                  ^     ExtPtfm_ContinuousStateType x_perturb - - -	""	-
