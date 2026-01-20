@@ -75,7 +75,7 @@ CONTAINS
       
       do j = 1, p%NBody
 
-         iSub = p%BDOFStrt(i)
+         jSub = p%BDOFStrt(j)
 
          Rj(1,:) = [ cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
          Rj(2,:) = [-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
@@ -88,7 +88,7 @@ CONTAINS
 
             if ( (.not. EqualRealNos(RotZ(i), 0.0_R8Ki)) .or. (.not. EqualRealNos(RotZ(j), 0.0_R8Ki)) ) then
 
-               jSub = p%BDOFStrt(j)
+               iSub = p%BDOFStrt(i)
 
                Ri(1,:) = [ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
                Ri(2,:) = [-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
