@@ -322,10 +322,10 @@ contains
                     DstMod => GlueModData(GlueModMaps(j)%iModDst))
 
             ! Determine if source and destination modules are in tight coupling or Option 1
-            SrcModTC = any(SrcMod%iMod == p%iModTC)
-            SrcModO1 = any(SrcMod%iMod == p%iModOpt1)
-            DstModTC = any(DstMod%iMod == p%iModTC)
-            DstModO1 = any(DstMod%iMod == p%iModOpt1)
+            SrcModTC = iand(SrcMod%Category, MC_Tight) /= 0
+            SrcModO1 = iand(SrcMod%Category, MC_Option1) /= 0
+            DstModTC = iand(DstMod%Category, MC_Tight) /= 0
+            DstModO1 = iand(DstMod%Category, MC_Option1) /= 0
 
             ! If source or destination module is not in TC or Option 1, continue
             if (.not. (SrcModTC .or. SrcModO1)) cycle
@@ -451,6 +451,28 @@ contains
                   end if
 
                end if
+
+            case (Map_Variable)
+
+               ! This includes all variable-to-variable mappings for modules
+               ! that are in tight coupling and/or Option 1. May need to limit
+               ! this in the future to just loads and accelerations.
+
+               ! Add flag to source variable
+               do i = 1, size(SrcMod%Vars%y)
+                  associate (Var => SrcMod%Vars%y(i))
+                     if (.not. MV_EqualDL(Mapping%SrcDL, Var%DL)) cycle
+                     call MV_SetFlags(Var, VF_Solve)
+                  end associate
+               end do
+
+               ! Add flag to destination variable
+               do i = 1, size(DstMod%Vars%u)
+                  associate (Var => DstMod%Vars%u(i))
+                     if (.not. MV_EqualDL(Mapping%DstDL, Var%DL)) cycle
+                     call MV_SetFlags(Var, VF_Solve)
+                  end associate
+               end do
 
             end select
 
