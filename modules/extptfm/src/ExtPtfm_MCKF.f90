@@ -290,13 +290,14 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        Mesh=u%FBMesh, &
                        Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
                                  MaxTorque/100.0_R8Ki])   ! Moment
-
-    call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
-                   DL=DatLoc(ExtPtfm_u_Fm), &
-                   Num=size(u%Fm), &
-                   Flags = VF_Linearize, &
-                   Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to 1
-                   LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
+    if ( p%nCB > 0_IntKi ) then
+       call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
+                      DL=DatLoc(ExtPtfm_u_Fm), &
+                      Num=size(u%Fm), &
+                      Flags = VF_Linearize, &
+                      Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to 1
+                      LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
+    end if
 
     !---------------------------------------------------------------------------
     ! Output variables
@@ -306,20 +307,22 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        DL=DatLoc(ExtPtfm_y_PtfmMesh), &
                        Mesh=y%PtfmMesh)
 
-    call MV_AddVar(Vars%y, "qm", FieldScalar, &
-                  DL=DatLoc(ExtPtfm_y_qm), &
-                  Num=size(y%qm), &
-                  LinNames=[('Follower mode '//trim(num2lstr(i))//' displacement, -', i=1,size(y%qm))])
+    if ( p%nCB>0_IntKi ) then
+       call MV_AddVar(Vars%y, "qm", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qm), &
+                     Num=size(y%qm), &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' displacement, -', i=1,size(y%qm))])
 
-    call MV_AddVar(Vars%y, "qmdot", FieldScalar, &
-                  DL=DatLoc(ExtPtfm_y_qmdot), &
-                  Num=size(y%qmdot), &
-                  LinNames=[('Follower mode '//trim(num2lstr(i))//' velocity, -/s', i=1,size(y%qmdot))])
+       call MV_AddVar(Vars%y, "qmdot", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qmdot), &
+                     Num=size(y%qmdot), &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' velocity, -/s', i=1,size(y%qmdot))])
 
-    call MV_AddVar(Vars%y, "qmdotdot", FieldScalar, &
-                  DL=DatLoc(ExtPtfm_y_qmdotdot), &
-                  Num=size(y%qmdotdot), &
-                  LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
+       call MV_AddVar(Vars%y, "qmdotdot", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qmdotdot), &
+                     Num=size(y%qmdotdot), &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
+    end if
 
     call MV_AddVar(Vars%y, p%OutParam(i)%Name, FieldScalar, &
                    DL=DatLoc(ExtPtfm_y_WriteOutput), &
@@ -873,8 +876,8 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    enddo 
    
    !print *,'t:',t,'u%Fm(3):',u%Fm(3)
-   print *,'t:',t,'u%FBMesh%Force:',u%FBMesh%Force(:,1)
-   print *,'t:',t,'y%qm(1):',y%qm(1)
+   !print *,'t:',t,'u%FBMesh%Force:',u%FBMesh%Force(:,1)
+   !print *,'t:',t,'y%qm(1):',y%qm(1)
 
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------

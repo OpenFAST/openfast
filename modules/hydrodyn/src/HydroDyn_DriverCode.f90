@@ -239,10 +239,12 @@ PROGRAM HydroDynDriver
       CALL CheckError()
    END IF
 
-   IF ( drvrData%NAddDOF > p%NAddDOF(1) ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'NAddDOF in the HydroDyn driver input file is greater than that in the HydroDyn primary input file. This is not allowed.'
-      CALL CheckError()
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( drvrData%NAddDOF > p%NAddDOF(1) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'NAddDOF in the HydroDyn driver input file is greater than that in the HydroDyn primary input file. This is not allowed.'
+         CALL CheckError()
+      END IF
    END IF
 
    ! Set initial inputs at t = 0

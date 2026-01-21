@@ -1036,26 +1036,28 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
    call MV_AddMeshVar(Vars%u, "Platform-RefPt", MotionFields, DatLoc(HydroDyn_u_PRPMesh), u%PRPMesh, &
                       Perturbs=Perturbs)
 
-   call MV_AddVar(Vars%u, "qAddDOF", FieldScalar, &
-                  DL=DatLoc(HydroDyn_u_qAddDOF), &
-                  Num=size(u%qAddDOF), &
-                  Flags = VF_Linearize, &
-                  Perturb = PerturbRot, &
-                  LinNames=[('Generalized DOF '//trim(num2lstr(i))//' displacement, -', i=1,size(u%qAddDOF))])
+   if ( p%HasAddDOF ) then
+      call MV_AddVar(Vars%u, "qAddDOF", FieldScalar, &
+                     DL=DatLoc(HydroDyn_u_qAddDOF), &
+                     Num=size(u%qAddDOF), &
+                     Flags = VF_Linearize, &
+                     Perturb = PerturbRot, &
+                     LinNames=[('Generalized DOF '//trim(num2lstr(i))//' displacement, -', i=1,size(u%qAddDOF))])
 
-   call MV_AddVar(Vars%u, "qAddDOFDot", FieldScalar, &
-                  DL=DatLoc(HydroDyn_u_qAddDOFDot), &
-                  Num=size(u%qAddDOFDot), &
-                  Flags = VF_Linearize, &
-                  Perturb = PerturbRot, &
-                  LinNames=[('Generalized DOF '//trim(num2lstr(i))//' velocity, -/s', i=1,size(u%qAddDOFDot))])
+      call MV_AddVar(Vars%u, "qAddDOFDot", FieldScalar, &
+                     DL=DatLoc(HydroDyn_u_qAddDOFDot), &
+                     Num=size(u%qAddDOFDot), &
+                     Flags = VF_Linearize, &
+                     Perturb = PerturbRot, &
+                     LinNames=[('Generalized DOF '//trim(num2lstr(i))//' velocity, -/s', i=1,size(u%qAddDOFDot))])
 
-   call MV_AddVar(Vars%u, "qAddDOFDotDot", FieldScalar, &
-                  DL=DatLoc(HydroDyn_u_qAddDOFDotDot), &
-                  Num=size(u%qAddDOFDotDot), &
-                  Flags = VF_Linearize, &
-                  Perturb = PerturbRot, &
-                  LinNames=[('Generalized DOF '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(u%qAddDOFDotDot))])
+      call MV_AddVar(Vars%u, "qAddDOFDotDot", FieldScalar, &
+                     DL=DatLoc(HydroDyn_u_qAddDOFDotDot), &
+                     Num=size(u%qAddDOFDotDot), &
+                     Flags = VF_Linearize, &
+                     Perturb = PerturbRot, &
+                     LinNames=[('Generalized DOF '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(u%qAddDOFDotDot))])
+   end if
 
    call MV_AddVar(Vars%u, "WaveElev0", FieldScalar, DatLoc(HydroDyn_u_WaveElev0), &
                   Flags=VF_ExtLin + VF_Linearize, &
@@ -1081,10 +1083,12 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
 
    call MV_AddMeshVar(Vars%y, "WAMITLoads", LoadFields, DatLoc(HydroDyn_y_WAMITMesh), y%WAMITMesh)
 
-   call MV_AddVar(Vars%y, "FAddDOF", FieldScalar, &
-                  DL=DatLoc(HydroDyn_y_FAddDOF), &
-                  Num=size(y%FAddDOF), &
-                  LinNames=[('Generalized DOF '//trim(num2lstr(i))//' force, -', i=1,size(y%FAddDOF))])
+   if ( p%HasAddDOF ) then
+      call MV_AddVar(Vars%y, "FAddDOF", FieldScalar, &
+                     DL=DatLoc(HydroDyn_y_FAddDOF), &
+                     Num=size(y%FAddDOF), &
+                     LinNames=[('Generalized DOF '//trim(num2lstr(i))//' force, -', i=1,size(y%FAddDOF))])
+   end if
 
    call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, DatLoc(HydroDyn_y_WriteOutput), &
                   Flags=VF_WriteOut, &
@@ -1645,9 +1649,11 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                         if ( ErrStat >= AbortErrLev ) return
                   
                   m%u_WAMIT(1)%PtfmRefY      = PtfmRefY
-                  m%u_WAMIT(1)%qAddDOF       = u%qAddDOF
-                  m%u_WAMIT(1)%qAddDOFDot    = u%qAddDOFDot
-                  m%u_WAMIT(1)%qAddDOFDotDot = u%qAddDOFDotDot
+                  if ( p%HasAddDOF ) then
+                     m%u_WAMIT(1)%qAddDOF       = u%qAddDOF
+                     m%u_WAMIT(1)%qAddDOFDot    = u%qAddDOFDot
+                     m%u_WAMIT(1)%qAddDOFDotDot = u%qAddDOFDotDot
+                  end if
                   call WAMIT_CalcOutput( Time, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
                                           z%WAMIT, OtherState%WAMIT(1), y%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1655,7 +1661,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                      y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(1)%Mesh%Force (:,iBody)
                      y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(1)%Mesh%Moment(:,iBody)
                   end do
-                  y%FAddDOF = y%FAddDOF + y%WAMIT(1)%FAddDOF
+                  if ( p%HasAddDOF ) then
+                     y%FAddDOF = y%FAddDOF + y%WAMIT(1)%FAddDOF
+                  end if
                   ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
                   m%F_Waves = m%F_Waves + m%WAMIT(1)%F_Waves1
                else
@@ -1702,8 +1710,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          end if      ! m%u_WAMIT is allocated
 
 !print *,'t:',Time,'y%FAddDOF(3):',y%FAddDOF(3)
-print *,'t:',Time,'u%qAddDOF(1):',u%qAddDOF(1)
-print *,'t:',Time,'y%WAMITMesh%Force:',y%WAMITMesh%Force(:,1)
+!print *,'t:',Time,'u%qAddDOF(1):',u%qAddDOF(1)
+!print *,'t:',Time,'y%WAMITMesh%Force:',y%WAMITMesh%Force(:,1)
 
          ! Second order <- No generalized DOF
          if (p%WAMIT2used) then
@@ -1875,8 +1883,8 @@ SUBROUTINE HydroDyn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m
                
       ! Initialize ErrStat
          
-   ErrStat = ErrID_None         
-   ErrMsg  = ""               
+   ErrStat = ErrID_None
+   ErrMsg  = ""
       
    ! Nothing to do here since none of the sub-modules have contraint states
    z_residual = z  
@@ -1902,6 +1910,9 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, MeshMapData, ErrStat, ErrMsg )
    integer(IntKi)                                 :: ErrStat2             ! temporary Error status of the operation
    character(ErrMsgLen)                           :: ErrMsg2              ! temporary Error message if ErrStat /= ErrID_None
    
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
    CalcLoadsAtWRP = 0.0_ReKi
    
    if ( y%WAMITMesh%Committed  ) then
