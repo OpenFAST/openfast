@@ -1486,6 +1486,27 @@ subroutine InitMappings_ExtPtfm(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
                          Active=Turbine%p_FAST%CompSub /= Module_SD, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
+   case (Module_HD)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(HydroDyn_y_Morison_Mesh), &
+                       SrcDispDL=DatLoc(HydroDyn_u_Morison_Mesh), &
+                       DstDL=DatLoc(ExtPtfm_u_FBMesh), &
+                       DstDispDL=DatLoc(ExtPtfm_u_PtfmMesh), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2);  if (Failed()) return
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(HydroDyn_y_WAMITMesh), &
+                       SrcDispDL=DatLoc(HydroDyn_u_WAMITMesh), &
+                       DstDL=DatLoc(ExtPtfm_u_FBMesh), &
+                       DstDispDL=DatLoc(ExtPtfm_u_PtfmMesh), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2);  if (Failed()) return
+
+      call MapVariable(Mappings, &
+                       SrcMod=SrcMod, SrcDL=DatLoc(HydroDyn_y_FAddDOF), &
+                       DstMod=DstMod, DstDL=DatLoc(ExtPtfm_u_Fm), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
    end select
 
 contains
@@ -1558,7 +1579,7 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &          ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
-                         Active=Turbine%p_FAST%NRotors == 1, &
+                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -1586,7 +1607,6 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y0Mesh), &                  ! SD%y%Y0Mesh
                          DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
-                         Active=Turbine%p_FAST%NRotors > 1, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -1598,6 +1618,24 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          SrcDL=DatLoc(SD_y_Y2Mesh), &                  ! SD%y%Y2Mesh
                          DstDL=DatLoc(HydroDyn_u_WAMITMesh), &         ! HD%u%WAMITMesh
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call MapVariable(Mappings, &
+                       SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qm), &
+                       DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOF), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+      call MapVariable(Mappings, &
+                       SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qmdot), &
+                       DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOFDot), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+      call MapVariable(Mappings, &
+                       SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qmdotdot), &
+                       DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOFDotDot), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
    end select
 
 contains

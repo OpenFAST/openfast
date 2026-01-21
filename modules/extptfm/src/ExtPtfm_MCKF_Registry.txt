@@ -106,8 +106,8 @@ typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -
 # ..... Inputs ....................................................................................................................
 typedef  ^               InputType            MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -
 typedef  ^                  ^                 MeshType ConnLdMesh           -  -  -  "Load mesh for connection points on the structure" -
-typedef  ^                  ^                 MeshType HydroLdMesh          -  -  -  "Hydrodynamic loads from HydroDyn for the rigid-body modes" -
-typedef  ^                  ^                 ReKi     FHydro              {:} -  -  "Generalized hydrodynamic forcing to elastic modes" -
+typedef  ^                  ^                 MeshType FBMesh               -  -  -  "Load mesh for rigid-body DOF" -
+typedef  ^                  ^                 ReKi     Fm                  {:} -  -  "External forcing to the internal elastic modes" -
 
 
 # ..... Outputs ...................................................................................................................

@@ -132,8 +132,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_InputType
     TYPE(MeshType)  :: PtfmMesh      !< Displacements at the platform reference point [-]
     TYPE(MeshType)  :: ConnLdMesh      !< Load mesh for connection points on the structure [-]
-    TYPE(MeshType)  :: HydroLdMesh      !< Hydrodynamic loads from HydroDyn for the rigid-body modes [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FHydro      !< Generalized hydrodynamic forcing to elastic modes [-]
+    TYPE(MeshType)  :: FBMesh      !< Load mesh for rigid-body DOF [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Fm      !< External forcing to the internal elastic modes [-]
   END TYPE ExtPtfm_InputType
 ! =======================
 ! =========  ExtPtfm_OutputType  =======
@@ -165,8 +165,8 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ExtPtfm_x_qmdot                  =   2 ! ExtPtfm%qmdot
    integer(IntKi), public, parameter :: ExtPtfm_u_PtfmMesh               =   3 ! ExtPtfm%PtfmMesh
    integer(IntKi), public, parameter :: ExtPtfm_u_ConnLdMesh             =   4 ! ExtPtfm%ConnLdMesh
-   integer(IntKi), public, parameter :: ExtPtfm_u_HydroLdMesh            =   5 ! ExtPtfm%HydroLdMesh
-   integer(IntKi), public, parameter :: ExtPtfm_u_FHydro                 =   6 ! ExtPtfm%FHydro
+   integer(IntKi), public, parameter :: ExtPtfm_u_FBMesh                 =   5 ! ExtPtfm%FBMesh
+   integer(IntKi), public, parameter :: ExtPtfm_u_Fm                     =   6 ! ExtPtfm%Fm
    integer(IntKi), public, parameter :: ExtPtfm_y_PtfmMesh               =   7 ! ExtPtfm%PtfmMesh
    integer(IntKi), public, parameter :: ExtPtfm_y_ConnMesh               =   8 ! ExtPtfm%ConnMesh
    integer(IntKi), public, parameter :: ExtPtfm_y_qm                     =   9 ! ExtPtfm%qm
@@ -1253,20 +1253,20 @@ subroutine ExtPtfm_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
    call MeshCopy(SrcInputData%ConnLdMesh, DstInputData%ConnLdMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcInputData%HydroLdMesh, DstInputData%HydroLdMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call MeshCopy(SrcInputData%FBMesh, DstInputData%FBMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInputData%FHydro)) then
-      LB(1:1) = lbound(SrcInputData%FHydro)
-      UB(1:1) = ubound(SrcInputData%FHydro)
-      if (.not. allocated(DstInputData%FHydro)) then
-         allocate(DstInputData%FHydro(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcInputData%Fm)) then
+      LB(1:1) = lbound(SrcInputData%Fm)
+      UB(1:1) = ubound(SrcInputData%Fm)
+      if (.not. allocated(DstInputData%Fm)) then
+         allocate(DstInputData%Fm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%FHydro.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Fm.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInputData%FHydro = SrcInputData%FHydro
+      DstInputData%Fm = SrcInputData%Fm
    end if
 end subroutine
 
@@ -1283,10 +1283,10 @@ subroutine ExtPtfm_DestroyInput(InputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( InputData%ConnLdMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( InputData%HydroLdMesh, ErrStat2, ErrMsg2)
+   call MeshDestroy( InputData%FBMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InputData%FHydro)) then
-      deallocate(InputData%FHydro)
+   if (allocated(InputData%Fm)) then
+      deallocate(InputData%Fm)
    end if
 end subroutine
 
@@ -1297,8 +1297,8 @@ subroutine ExtPtfm_PackInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%PtfmMesh) 
    call MeshPack(RF, InData%ConnLdMesh) 
-   call MeshPack(RF, InData%HydroLdMesh) 
-   call RegPackAlloc(RF, InData%FHydro)
+   call MeshPack(RF, InData%FBMesh) 
+   call RegPackAlloc(RF, InData%Fm)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1312,8 +1312,8 @@ subroutine ExtPtfm_UnPackInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%PtfmMesh) ! PtfmMesh 
    call MeshUnpack(RF, OutData%ConnLdMesh) ! ConnLdMesh 
-   call MeshUnpack(RF, OutData%HydroLdMesh) ! HydroLdMesh 
-   call RegUnpackAlloc(RF, OutData%FHydro); if (RegCheckErr(RF, RoutineName)) return
+   call MeshUnpack(RF, OutData%FBMesh) ! FBMesh 
+   call RegUnpackAlloc(RF, OutData%Fm); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1680,10 +1680,10 @@ SUBROUTINE ExtPtfm_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Err
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(u1%ConnLdMesh, u2%ConnLdMesh, tin, u_out%ConnLdMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp1(u1%HydroLdMesh, u2%HydroLdMesh, tin, u_out%HydroLdMesh, tin_out, ErrStat2, ErrMsg2)
+   CALL MeshExtrapInterp1(u1%FBMesh, u2%FBMesh, tin, u_out%FBMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   IF (ALLOCATED(u_out%FHydro) .AND. ALLOCATED(u1%FHydro)) THEN
-      u_out%FHydro = a1*u1%FHydro + a2*u2%FHydro
+   IF (ALLOCATED(u_out%Fm) .AND. ALLOCATED(u1%Fm)) THEN
+      u_out%Fm = a1*u1%Fm + a2*u2%Fm
    END IF ! check if allocated
 END SUBROUTINE
 
@@ -1746,10 +1746,10 @@ SUBROUTINE ExtPtfm_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(u1%ConnLdMesh, u2%ConnLdMesh, u3%ConnLdMesh, tin, u_out%ConnLdMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp2(u1%HydroLdMesh, u2%HydroLdMesh, u3%HydroLdMesh, tin, u_out%HydroLdMesh, tin_out, ErrStat2, ErrMsg2)
+   CALL MeshExtrapInterp2(u1%FBMesh, u2%FBMesh, u3%FBMesh, tin, u_out%FBMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   IF (ALLOCATED(u_out%FHydro) .AND. ALLOCATED(u1%FHydro)) THEN
-      u_out%FHydro = a1*u1%FHydro + a2*u2%FHydro + a3*u3%FHydro
+   IF (ALLOCATED(u_out%Fm) .AND. ALLOCATED(u1%Fm)) THEN
+      u_out%Fm = a1*u1%Fm + a2*u2%Fm + a3*u3%Fm
    END IF ! check if allocated
 END SUBROUTINE
 
@@ -1951,8 +1951,8 @@ function ExtPtfm_InputMeshPointer(u, DL) result(Mesh)
        Mesh => u%PtfmMesh
    case (ExtPtfm_u_ConnLdMesh)
        Mesh => u%ConnLdMesh
-   case (ExtPtfm_u_HydroLdMesh)
-       Mesh => u%HydroLdMesh
+   case (ExtPtfm_u_FBMesh)
+       Mesh => u%FBMesh
    end select
 end function
 
@@ -2078,10 +2078,10 @@ subroutine ExtPtfm_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%PtfmMesh, ValAry)                              ! Mesh
       case (ExtPtfm_u_ConnLdMesh)
          call MV_PackMesh(V, u%ConnLdMesh, ValAry)                            ! Mesh
-      case (ExtPtfm_u_HydroLdMesh)
-         call MV_PackMesh(V, u%HydroLdMesh, ValAry)                           ! Mesh
-      case (ExtPtfm_u_FHydro)
-         VarVals = u%FHydro(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (ExtPtfm_u_FBMesh)
+         call MV_PackMesh(V, u%FBMesh, ValAry)                                ! Mesh
+      case (ExtPtfm_u_Fm)
+         VarVals = u%Fm(V%iLB:V%iUB)                                          ! Rank 1 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -2108,10 +2108,10 @@ subroutine ExtPtfm_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%PtfmMesh)                            ! Mesh
       case (ExtPtfm_u_ConnLdMesh)
          call MV_UnpackMesh(V, ValAry, u%ConnLdMesh)                          ! Mesh
-      case (ExtPtfm_u_HydroLdMesh)
-         call MV_UnpackMesh(V, ValAry, u%HydroLdMesh)                         ! Mesh
-      case (ExtPtfm_u_FHydro)
-         u%FHydro(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (ExtPtfm_u_FBMesh)
+         call MV_UnpackMesh(V, ValAry, u%FBMesh)                              ! Mesh
+      case (ExtPtfm_u_Fm)
+         u%Fm(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
       end select
    end associate
 end subroutine
@@ -2124,10 +2124,10 @@ function ExtPtfm_InputFieldName(DL) result(Name)
        Name = "u%PtfmMesh"
    case (ExtPtfm_u_ConnLdMesh)
        Name = "u%ConnLdMesh"
-   case (ExtPtfm_u_HydroLdMesh)
-       Name = "u%HydroLdMesh"
-   case (ExtPtfm_u_FHydro)
-       Name = "u%FHydro"
+   case (ExtPtfm_u_FBMesh)
+       Name = "u%FBMesh"
+   case (ExtPtfm_u_Fm)
+       Name = "u%Fm"
    case default
        Name = "Unknown Field"
    end select

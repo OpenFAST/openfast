@@ -186,8 +186,17 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    
    ! Define initial guess (set up mesh first) for the system inputs here:
    call Init_meshes(u, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
+   call AllocAry( u%Fm, p%nCB, 'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   u%Fm = 0.0_ReKi
 
    ! --- Outputs
+   call AllocAry( y%qm,       p%nCB, 'Internal elastic mode displacement', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( y%qmdot,    p%nCB, 'Internal elastic mode velocity',     ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( y%qmdotdot, p%nCB, 'Internal elastic mode acceleration', ErrStat,ErrMsg); if(Failed()) return
+   y%qm       = x%qm
+   y%qmdot    = x%qmdot
+   y%qmdotdot = 0.0_ReKi
+
    CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
    m%AllOuts(1:ID_QStart+3*p%nCBFull-1) = 0.0
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
@@ -238,6 +247,10 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     ErrStat = ErrID_None
     ErrMsg = ""
  
+   ScaleLength = 100
+   MaxThrust = 490.0_R8Ki * pi_D /  9.0_R8Ki * ScaleLength**2
+   MaxTorque = 122.5_R8Ki * pi_D / 27.0_R8Ki * ScaleLength**3
+
     ! Clear module variables type
     call NWTC_Library_DestroyModVarsType(Vars, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -269,8 +282,21 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                                  2.0_R8Ki*D2R_D, &  ! TranslationVel
                                  2.0_R8Ki*D2R_D, &  ! RotationVel
                                  2.0_R8Ki*D2R_D, &  ! TranslationAcc
-                                 2.0_R8Ki*D2R_D], &
+                                 2.0_R8Ki*D2R_D],&  ! RotationalAcc
                        Flags=VF_SmallAngle)
+
+    call MV_AddMeshVar(Vars%u, 'Rigid-body load', LoadFields, &
+                       DatLoc(ExtPtfm_u_FBMesh), &
+                       Mesh=u%FBMesh, &
+                       Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
+                                 MaxTorque/100.0_R8Ki])   ! Moment
+
+    call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
+                   DL=DatLoc(ExtPtfm_u_Fm), &
+                   Num=size(u%Fm), &
+                   Flags = VF_Linearize, &
+                   Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to 1
+                   LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
 
     !---------------------------------------------------------------------------
     ! Output variables
@@ -279,6 +305,21 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     call MV_AddMeshVar(Vars%y, "Interface node", LoadFields, &
                        DL=DatLoc(ExtPtfm_y_PtfmMesh), &
                        Mesh=y%PtfmMesh)
+
+    call MV_AddVar(Vars%y, "qm", FieldScalar, &
+                  DL=DatLoc(ExtPtfm_y_qm), &
+                  Num=size(y%qm), &
+                  LinNames=[('Follower mode '//trim(num2lstr(i))//' displacement, -', i=1,size(y%qm))])
+
+    call MV_AddVar(Vars%y, "qmdot", FieldScalar, &
+                  DL=DatLoc(ExtPtfm_y_qmdot), &
+                  Num=size(y%qmdot), &
+                  LinNames=[('Follower mode '//trim(num2lstr(i))//' velocity, -/s', i=1,size(y%qmdot))])
+
+    call MV_AddVar(Vars%y, "qmdotdot", FieldScalar, &
+                  DL=DatLoc(ExtPtfm_y_qmdotdot), &
+                  Num=size(y%qmdotdot), &
+                  LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
 
     call MV_AddVar(Vars%y, p%OutParam(i)%Name, FieldScalar, &
                    DL=DatLoc(ExtPtfm_y_WriteOutput), &
@@ -415,16 +456,32 @@ SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
                      TranslationAcc    = .TRUE.           , &
                      RotationAcc       = .TRUE.)
    if(Failed()) return
-      
    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return
+   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
    ! Create the mesh element
    CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%PtfmMesh, ErrStat, ErrMsg ); if(Failed()) return
+   
    ! the output mesh is a sibling of the input:
    CALL MeshCopy( SrcMesh=u%PtfmMesh, DestMesh=y%PtfmMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
                   ErrStat=ErrStat, ErrMess=ErrMsg, Force=.TRUE., Moment=.TRUE. )
    if(Failed()) return
+
+   ! Create the input and output meshes associated with platform loads
+   CALL MeshCreate(  BlankMesh         = u%FBMesh         , &
+                     IOS               = COMPONENT_INPUT  , &
+                     Nnodes            = 1                , &
+                     ErrStat           = ErrStat          , &
+                     ErrMess           = ErrMsg           , &
+                     Force             = .TRUE.           , &
+                     Moment            = .TRUE.)
+   if(Failed()) return
+   ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
+   CALL MeshPositionNode (u%FBMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
+   ! Create the mesh element
+   CALL MeshConstructElement (  u%FBMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
+   CALL MeshCommit ( u%FBMesh, ErrStat, ErrMsg ); if(Failed()) return
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'Init_meshes')
@@ -783,6 +840,10 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       y%PtfmMesh%Moment(I,1) = Fc(I+3)
    enddo
 
+   y%qm = x%qm
+   y%qmdot = x%qmdot
+   y%qmdotdot = 0.0_ReKi
+
    ! --- All Outputs
    m%AllOuts(ID_PtfFx) = y%PtfmMesh%Force (1,1)
    m%AllOuts(ID_PtfFy) = y%PtfmMesh%Force (2,1)
@@ -809,7 +870,12 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       else
           y%WriteOutput(I) = -9.9999e20
       endif
-   enddo    
+   enddo 
+   
+   !print *,'t:',t,'u%Fm(3):',u%Fm(3)
+   print *,'t:',t,'u%FBMesh%Force:',u%FBMesh%Force(:,1)
+   print *,'t:',t,'y%qm(1):',y%qm(1)
+
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 
