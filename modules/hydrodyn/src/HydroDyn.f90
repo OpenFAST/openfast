@@ -1709,9 +1709,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             end if   ! m%u_WAMIT(1)%Mesh%Committed
          end if      ! m%u_WAMIT is allocated
 
-!print *,'t:',Time,'y%FAddDOF(3):',y%FAddDOF(3)
-!print *,'t:',Time,'u%qAddDOF(1):',u%qAddDOF(1)
-!print *,'t:',Time,'y%WAMITMesh%Force:',y%WAMITMesh%Force(:,1)
 
          ! Second order <- No generalized DOF
          if (p%WAMIT2used) then

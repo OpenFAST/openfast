@@ -106,21 +106,23 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_ED), &
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
+                 pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_ExtLd)]
 
    ! Indices of tight coupling modules
    p%iModTC = [pack(modInds, ModIDs == Module_ED .and. p%ModCoupling /= LooseCoupling), &
                pack(modInds, ModIDs == Module_BD .and. p%ModCoupling /= LooseCoupling), &
-               pack(modInds, ModIDs == Module_SD .and. p%ModCoupling /= LooseCoupling)]
+               pack(modInds, ModIDs == Module_SD .and. p%ModCoupling /= LooseCoupling), &
+               pack(modInds, ModIDs == Module_ExtPtfm .and. p%ModCoupling /= LooseCoupling)]
 
    ! Indices of Option 1 modules
    p%iModOpt1 = [pack(modInds, ModIDs == Module_ED .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_BD .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_SD .and. p%ModCoupling == LooseCoupling), &
+                 pack(modInds, ModIDs == Module_ExtPtfm .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_SED), &
                  pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK /= MHK_None), &
-                 pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
                  pack(modInds, ModIDs == Module_Orca), &
                  pack(modInds, ModIDs == Module_MD)]
@@ -131,6 +133,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_ED), &
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
+                 pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_SeaSt), &
                  pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK == MHK_None), &

@@ -113,6 +113,7 @@ typedef  ^                  ^                 ReKi     Fm                  {:} -
 # ..... Outputs ...................................................................................................................
 typedef   ^               OutputType          MeshType PtfmMesh     -  - -   "Loads at the platform reference point" -
 typedef   ^                 ^                 MeshType ConnMesh     -  - -   "Motion mesh for connection points on the structure" -
+typedef   ^                 ^                 MeshType FBMesh       -  - -   "Motion mesh for rigid-body DOF" -
 typedef   ^                 ^                 ReKi     qm          {:} - -   "Displacement of internal elastic modes" -
 typedef   ^                 ^                 ReKi     qmdot       {:} - -   "Velocity of internal elastic modes" -
 typedef   ^                 ^                 ReKi     qmdotdot    {:} - -   "Acceleration of internal elastic modes" -

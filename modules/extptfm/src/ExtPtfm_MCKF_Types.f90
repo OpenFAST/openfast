@@ -140,6 +140,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_OutputType
     TYPE(MeshType)  :: PtfmMesh      !< Loads at the platform reference point [-]
     TYPE(MeshType)  :: ConnMesh      !< Motion mesh for connection points on the structure [-]
+    TYPE(MeshType)  :: FBMesh      !< Motion mesh for rigid-body DOF [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qm      !< Displacement of internal elastic modes [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdot      !< Velocity of internal elastic modes [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< Acceleration of internal elastic modes [-]
@@ -169,10 +170,11 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ExtPtfm_u_Fm                     =   6 ! ExtPtfm%Fm
    integer(IntKi), public, parameter :: ExtPtfm_y_PtfmMesh               =   7 ! ExtPtfm%PtfmMesh
    integer(IntKi), public, parameter :: ExtPtfm_y_ConnMesh               =   8 ! ExtPtfm%ConnMesh
-   integer(IntKi), public, parameter :: ExtPtfm_y_qm                     =   9 ! ExtPtfm%qm
-   integer(IntKi), public, parameter :: ExtPtfm_y_qmdot                  =  10 ! ExtPtfm%qmdot
-   integer(IntKi), public, parameter :: ExtPtfm_y_qmdotdot               =  11 ! ExtPtfm%qmdotdot
-   integer(IntKi), public, parameter :: ExtPtfm_y_WriteOutput            =  12 ! ExtPtfm%WriteOutput
+   integer(IntKi), public, parameter :: ExtPtfm_y_FBMesh                 =   9 ! ExtPtfm%FBMesh
+   integer(IntKi), public, parameter :: ExtPtfm_y_qm                     =  10 ! ExtPtfm%qm
+   integer(IntKi), public, parameter :: ExtPtfm_y_qmdot                  =  11 ! ExtPtfm%qmdot
+   integer(IntKi), public, parameter :: ExtPtfm_y_qmdotdot               =  12 ! ExtPtfm%qmdotdot
+   integer(IntKi), public, parameter :: ExtPtfm_y_WriteOutput            =  13 ! ExtPtfm%WriteOutput
 
 contains
 
@@ -1334,6 +1336,9 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call MeshCopy(SrcOutputData%ConnMesh, DstOutputData%ConnMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcOutputData%FBMesh, DstOutputData%FBMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%qm)) then
       LB(1:1) = lbound(SrcOutputData%qm)
       UB(1:1) = ubound(SrcOutputData%qm)
@@ -1397,6 +1402,8 @@ subroutine ExtPtfm_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%ConnMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%FBMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%qm)) then
       deallocate(OutputData%qm)
    end if
@@ -1418,6 +1425,7 @@ subroutine ExtPtfm_PackOutput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%PtfmMesh) 
    call MeshPack(RF, InData%ConnMesh) 
+   call MeshPack(RF, InData%FBMesh) 
    call RegPackAlloc(RF, InData%qm)
    call RegPackAlloc(RF, InData%qmdot)
    call RegPackAlloc(RF, InData%qmdotdot)
@@ -1435,6 +1443,7 @@ subroutine ExtPtfm_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%PtfmMesh) ! PtfmMesh 
    call MeshUnpack(RF, OutData%ConnMesh) ! ConnMesh 
+   call MeshUnpack(RF, OutData%FBMesh) ! FBMesh 
    call RegUnpackAlloc(RF, OutData%qm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qmdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qmdotdot); if (RegCheckErr(RF, RoutineName)) return
@@ -1854,6 +1863,8 @@ SUBROUTINE ExtPtfm_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, Er
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%ConnMesh, y2%ConnMesh, tin, y_out%ConnMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   CALL MeshExtrapInterp1(y1%FBMesh, y2%FBMesh, tin, y_out%FBMesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%qm) .AND. ALLOCATED(y1%qm)) THEN
       y_out%qm = a1*y1%qm + a2*y2%qm
    END IF ! check if allocated
@@ -1927,6 +1938,8 @@ SUBROUTINE ExtPtfm_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%ConnMesh, y2%ConnMesh, y3%ConnMesh, tin, y_out%ConnMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   CALL MeshExtrapInterp2(y1%FBMesh, y2%FBMesh, y3%FBMesh, tin, y_out%FBMesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%qm) .AND. ALLOCATED(y1%qm)) THEN
       y_out%qm = a1*y1%qm + a2*y2%qm + a3*y3%qm
    END IF ! check if allocated
@@ -1966,6 +1979,8 @@ function ExtPtfm_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%PtfmMesh
    case (ExtPtfm_y_ConnMesh)
        Mesh => y%ConnMesh
+   case (ExtPtfm_y_FBMesh)
+       Mesh => y%FBMesh
    end select
 end function
 
@@ -2153,6 +2168,8 @@ subroutine ExtPtfm_VarPackOutput(V, y, ValAry)
          call MV_PackMesh(V, y%PtfmMesh, ValAry)                              ! Mesh
       case (ExtPtfm_y_ConnMesh)
          call MV_PackMesh(V, y%ConnMesh, ValAry)                              ! Mesh
+      case (ExtPtfm_y_FBMesh)
+         call MV_PackMesh(V, y%FBMesh, ValAry)                                ! Mesh
       case (ExtPtfm_y_qm)
          VarVals = y%qm(V%iLB:V%iUB)                                          ! Rank 1 Array
       case (ExtPtfm_y_qmdot)
@@ -2187,6 +2204,8 @@ subroutine ExtPtfm_VarUnpackOutput(V, ValAry, y)
          call MV_UnpackMesh(V, ValAry, y%PtfmMesh)                            ! Mesh
       case (ExtPtfm_y_ConnMesh)
          call MV_UnpackMesh(V, ValAry, y%ConnMesh)                            ! Mesh
+      case (ExtPtfm_y_FBMesh)
+         call MV_UnpackMesh(V, ValAry, y%FBMesh)                              ! Mesh
       case (ExtPtfm_y_qm)
          y%qm(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
       case (ExtPtfm_y_qmdot)
@@ -2207,6 +2226,8 @@ function ExtPtfm_OutputFieldName(DL) result(Name)
        Name = "y%PtfmMesh"
    case (ExtPtfm_y_ConnMesh)
        Name = "y%ConnMesh"
+   case (ExtPtfm_y_FBMesh)
+       Name = "y%FBMesh"
    case (ExtPtfm_y_qm)
        Name = "y%qm"
    case (ExtPtfm_y_qmdot)

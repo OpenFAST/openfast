@@ -267,7 +267,7 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
       endif
       !write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
    end do
-   if (len(WarnMsg)>0) then
+   if (len(trim(WarnMsg))>0) then
        call SetErrStat(ErrID_Warn, WarnMsg,ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
        write(*,'(A)')trim(WarnMsg)
    endif

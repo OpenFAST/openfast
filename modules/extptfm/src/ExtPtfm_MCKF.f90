@@ -266,7 +266,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
 
     do i = 1, p%nCB
         call MV_AddVar(Vars%x, "Mode"//trim(Num2LStr(p%ActiveCBDOF(i))), FieldTransVel, &
-                       DL=DatLoc(ExtPtfm_x_qm), iAry=i, &
+                       DL=DatLoc(ExtPtfm_x_qmdot), iAry=i, &
                        LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' velocity, -'])
     end do
 
@@ -285,11 +285,12 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                                  2.0_R8Ki*D2R_D],&  ! RotationalAcc
                        Flags=VF_SmallAngle)
 
-    call MV_AddMeshVar(Vars%u, 'Rigid-body load', LoadFields, &
+    call MV_AddMeshVar(Vars%u, 'Rigid-body load mesh', LoadFields, &
                        DatLoc(ExtPtfm_u_FBMesh), &
                        Mesh=u%FBMesh, &
                        Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
                                  MaxTorque/100.0_R8Ki])   ! Moment
+
     if ( p%nCB > 0_IntKi ) then
        call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
                       DL=DatLoc(ExtPtfm_u_Fm), &
@@ -306,6 +307,10 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     call MV_AddMeshVar(Vars%y, "Interface node", LoadFields, &
                        DL=DatLoc(ExtPtfm_y_PtfmMesh), &
                        Mesh=y%PtfmMesh)
+
+    call MV_AddMeshVar(Vars%y, "Rigid-body motion mesh", MotionFields, &
+                       DL=DatLoc(ExtPtfm_y_FBMesh), &
+                       Mesh=y%FBMesh)
 
     if ( p%nCB>0_IntKi ) then
        call MV_AddVar(Vars%y, "qm", FieldScalar, &
@@ -324,11 +329,13 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                      LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
     end if
 
-    call MV_AddVar(Vars%y, p%OutParam(i)%Name, FieldScalar, &
-                   DL=DatLoc(ExtPtfm_y_WriteOutput), &
-                   Num=p%NumOuts, &
-                   Flags=VF_WriteOut, &
-                   LinNames=[(WriteOutLinName(i), i=1, p%NumOuts)])
+    if ( p%NumOuts > 0_IntKi ) then
+       call MV_AddVar(Vars%y, p%OutParam(i)%Name, FieldScalar, &
+                      DL=DatLoc(ExtPtfm_y_WriteOutput), &
+                      Num=p%NumOuts, &
+                      Flags=VF_WriteOut, &
+                      LinNames=[(WriteOutLinName(i), i=1, p%NumOuts)])
+    end if
 
     !---------------------------------------------------------------------------
     ! Initialization dependent on linearization
@@ -484,6 +491,16 @@ SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
    ! Create the mesh element
    CALL MeshConstructElement (  u%FBMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%FBMesh, ErrStat, ErrMsg ); if(Failed()) return
+
+   ! the output mesh is a sibling of the input:
+   CALL MeshCopy( SrcMesh=u%FBMesh, DestMesh=y%FBMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
+                  ErrStat=ErrStat, ErrMess=ErrMsg, TranslationDisp   = .TRUE.           , &
+                  Orientation       = .TRUE.           , &
+                  TranslationVel    = .TRUE.           , &
+                  RotationVel       = .TRUE.           , &
+                  TranslationAcc    = .TRUE.           , &
+                  RotationAcc       = .TRUE. )
+   if(Failed()) return
 
 CONTAINS
     logical function Failed()
@@ -805,6 +822,14 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ! Local variables
    INTEGER(IntKi)                                  :: I                 !< Generic counters
    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
+
+   y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
+   y%FBMesh%Orientation     = u%PtfmMesh%Orientation
+   y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
+   y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
+   y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
+   y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+
    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
    call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
 
@@ -837,15 +862,20 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
        Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
    endif
 
+   Fc(1:3) = Fc(1:3) + u%FBMesh%Force(:,1)
+   Fc(4:6) = Fc(4:6) + u%FBMesh%Moment(:,1)
+
    ! Update the output mesh
    do i=1,3
       y%PtfmMesh%Force(I,1)  = Fc(I)
       y%PtfmMesh%Moment(I,1) = Fc(I+3)
    enddo
 
-   y%qm = x%qm
-   y%qmdot = x%qmdot
-   y%qmdotdot = 0.0_ReKi
+   if (p%nCB>0) then
+      y%qm = x%qm
+      y%qmdot = x%qmdot
+      y%qmdotdot = 0.0_ReKi
+   end if
 
    ! --- All Outputs
    m%AllOuts(ID_PtfFx) = y%PtfmMesh%Force (1,1)
@@ -875,9 +905,6 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       endif
    enddo 
    
-   !print *,'t:',t,'u%Fm(3):',u%Fm(3)
-   !print *,'t:',t,'u%FBMesh%Force:',u%FBMesh%Force(:,1)
-   !print *,'t:',t,'y%qm(1):',y%qm(1)
 
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
