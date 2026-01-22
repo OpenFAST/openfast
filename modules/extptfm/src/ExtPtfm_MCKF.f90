@@ -261,13 +261,17 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     do i = 1, p%nCB
         call MV_AddVar(Vars%x, "Mode"//trim(Num2LStr(p%ActiveCBDOF(i))), FieldTransDisp, &
                        DL=DatLoc(ExtPtfm_x_qm), iAry=i, &
+                       DerivOrder=0, &
+                       Perturb=2.0_ReKi*D2R_D, &
                        LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' displacement, -'])
     end do
 
     do i = 1, p%nCB
         call MV_AddVar(Vars%x, "Mode"//trim(Num2LStr(p%ActiveCBDOF(i))), FieldTransVel, &
                        DL=DatLoc(ExtPtfm_x_qmdot), iAry=i, &
-                       LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' velocity, -'])
+                       DerivOrder=1, &
+                       Perturb=2.0_ReKi*D2R_D, &
+                       LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' velocity, -/s'])
     end do
 
     !---------------------------------------------------------------------------
@@ -820,8 +824,9 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi)                                  :: I                 !< Generic counters
-   real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
+   INTEGER(IntKi)                                  :: I             !< Generic counters
+   real(ReKi), dimension(6)                        :: Fc            !< Output coupling force
+   TYPE(ExtPtfm_ContinuousStateType)               :: xdot          ! time derivatives of continuous states
 
    y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
    y%FBMesh%Orientation     = u%PtfmMesh%Orientation
@@ -871,10 +876,11 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       y%PtfmMesh%Moment(I,1) = Fc(I+3)
    enddo
 
+   CALL ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
    if (p%nCB>0) then
       y%qm = x%qm
       y%qmdot = x%qmdot
-      y%qmdotdot = 0.0_ReKi
+      y%qmdotdot = xdot%qmdot
    end if
 
    ! --- All Outputs
@@ -956,6 +962,7 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    !           COPY( N   , X                    , INCX, Y      , INCY)
    CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
    CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
+   dxdt%qmdot = dxdt%qmdot + u%Fm(1:p%nCB)
    !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
    CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
    CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
