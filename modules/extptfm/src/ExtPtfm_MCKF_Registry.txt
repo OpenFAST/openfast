@@ -27,6 +27,7 @@ typedef   ^                ^             CHARACTER(1024)   RootName   - - -     
 # ..... Primary Input file data ...........................................................................................................
 typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
 typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef        ^                     ^            LOGICAL            hasRBMode  -  - -  "True: has rigid-body modes/floating structure; False: no rigid-body modes" -
 typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
@@ -76,17 +77,32 @@ typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness m
 typedef  ^                    ^          ReKi     Forces0   {:} - - "Prescribed constant external loads including selfweight" -
 typedef  ^                    ^          ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
-typedef  ^                    ^          ReKi     AMat {:}{:}   - - "State matrix A" ""
-typedef  ^                    ^          ReKi     BMat {:}{:}   - - "State matrix B" ""
-typedef  ^                    ^          ReKi     CMat {:}{:}   - - "State matrix C" ""
-typedef  ^                    ^          ReKi     DMat {:}{:}   - - "State matrix D" ""
-typedef  ^                    ^          ReKi     FX {:}        - - "State  constant Fx" ""
-typedef  ^                    ^          ReKi     FY {:}        - - "Output constant Fy" ""
+#typedef  ^                    ^          ReKi     AMat {:}{:}   - - "State matrix A" ""
+#typedef  ^                    ^          ReKi     BMat {:}{:}   - - "State matrix B" ""
+#typedef  ^                    ^          ReKi     CMat {:}{:}   - - "State matrix C" ""
+#typedef  ^                    ^          ReKi     DMat {:}{:}   - - "State matrix D" ""
+typedef  ^                    ^          ReKi     A1Mat {:}{:}  - - "State matrix A1" ""
+typedef  ^                    ^          ReKi     A2Mat {:}{:}  - - "State matrix A2" ""
+typedef  ^                    ^          ReKi     B1Mat {:}{:}  - - "State matrix B1" ""
+typedef  ^                    ^          ReKi     B2Mat {:}{:}  - - "State matrix B2" ""
+typedef  ^                    ^          ReKi     B3Mat {:}{:}  - - "State matrix B3" ""
+typedef  ^                    ^          ReKi     B4Mat {:}{:}  - - "State matrix B4" ""
+typedef  ^                    ^          ReKi     C1Mat {:}{:}  - - "State matrix C1" ""
+typedef  ^                    ^          ReKi     C2Mat {:}{:}  - - "State matrix C2" ""
+typedef  ^                    ^          ReKi     D1Mat {:}{:}  - - "State matrix D1" ""
+typedef  ^                    ^          ReKi     D2Mat {:}{:}  - - "State matrix D2" ""
+typedef  ^                    ^          ReKi     D3Mat {:}{:}  - - "State matrix D3" ""
+typedef  ^                    ^          ReKi     D4Mat {:}{:}  - - "State matrix D4" ""
+#typedef  ^                    ^          ReKi     FX {:}        - - "State  constant Fx" ""
+#typedef  ^                    ^          ReKi     FY {:}        - - "Output constant Fy" ""
 typedef  ^                    ^          ReKi     M11 {:}{:}    - - "Matrix M11" ""
 typedef  ^                    ^          ReKi     M12 {:}{:}    - - "Matrix M12" ""
-typedef  ^                    ^          ReKi     M22 {:}{:}    - - "Matrix M22" ""
 typedef  ^                    ^          ReKi     M21 {:}{:}    - - "Matrix M21" ""
+typedef  ^                    ^          ReKi     M22 {:}{:}    - - "Matrix M22" ""
+typedef  ^                    ^          ReKi     M22Inv {:}{:} - - "Inverse of matrix M22" ""
 typedef  ^                    ^          ReKi     K11 {:}{:}    - - "Matrix K11" ""
+typedef  ^                    ^          ReKi     K12 {:}{:}    - - "Matrix K12" ""
+typedef  ^                    ^          ReKi     K21 {:}{:}    - - "Matrix K21" ""
 typedef  ^                    ^          ReKi     K22 {:}{:}    - - "Matrix K22" ""
 typedef  ^                    ^          ReKi     C11 {:}{:}    - - "Matrix C11" ""
 typedef  ^                    ^          ReKi     C12 {:}{:}    - - "Matrix C12" ""
@@ -125,6 +141,8 @@ typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Ex
 typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
 typedef    ^                  ^                ReKi     uFlat   {18} - - "Flattened vector of inputs"
 typedef    ^                  ^                ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
+typedef    ^                  ^                ReKi     F1       {:} - - "Interface/rigid-body mode forcing" -
+typedef    ^                  ^                ReKi     F2       {:} - - "Internal elastic mode forcing" -
 typedef    ^                  ^                IntKi    Indx       - - - "Index into times, to speed up interpolation" -
 typedef    ^                  ^                LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"

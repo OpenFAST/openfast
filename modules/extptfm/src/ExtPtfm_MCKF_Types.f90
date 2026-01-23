@@ -45,6 +45,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_InputFile
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
+    LOGICAL  :: hasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
     INTEGER(IntKi)  :: FileFormat = 0_IntKi      !< File format switch [-]
     CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
     CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
@@ -100,17 +101,26 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Forces0      !< Prescribed constant external loads including selfweight [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Forces      !< Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion. [N, N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: times      !< the time associated with each row of Forces [s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AMat      !< State matrix A []
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BMat      !< State matrix B []
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMat      !< State matrix C []
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DMat      !< State matrix D []
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FX      !< State  constant Fx []
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FY      !< Output constant Fy []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A1Mat      !< State matrix A1 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A2Mat      !< State matrix A2 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B1Mat      !< State matrix B1 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B2Mat      !< State matrix B2 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B3Mat      !< State matrix B3 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B4Mat      !< State matrix B4 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C1Mat      !< State matrix C1 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C2Mat      !< State matrix C2 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D1Mat      !< State matrix D1 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D2Mat      !< State matrix D2 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D3Mat      !< State matrix D3 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D4Mat      !< State matrix D4 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M11      !< Matrix M11 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M12      !< Matrix M12 []
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M22      !< Matrix M22 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M21      !< Matrix M21 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M22      !< Matrix M22 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M22Inv      !< Inverse of matrix M22 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K11      !< Matrix K11 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K12      !< Matrix K12 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K21      !< Matrix K21 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K22      !< Matrix K22 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C11      !< Matrix C11 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C12      !< Matrix C12 []
@@ -152,6 +162,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
     REAL(ReKi) , DIMENSION(1:18)  :: uFlat = 0.0_ReKi      !< Flattened vector of inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F1      !< Interface/rigid-body mode forcing [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F2      !< Internal elastic mode forcing [-]
     INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
@@ -238,6 +250,7 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    ErrMsg  = ''
    DstInputFileData%DT = SrcInputFileData%DT
    DstInputFileData%IntMethod = SrcInputFileData%IntMethod
+   DstInputFileData%hasRBMode = SrcInputFileData%hasRBMode
    DstInputFileData%FileFormat = SrcInputFileData%FileFormat
    DstInputFileData%RedFile = SrcInputFileData%RedFile
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
@@ -326,6 +339,7 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%IntMethod)
+   call RegPack(RF, InData%hasRBMode)
    call RegPack(RF, InData%FileFormat)
    call RegPack(RF, InData%RedFile)
    call RegPack(RF, InData%RedFileCst)
@@ -353,6 +367,7 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%hasRBMode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FileFormat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFileCst); if (RegCheckErr(RF, RoutineName)) return
@@ -795,77 +810,149 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%times = SrcParamData%times
    end if
-   if (allocated(SrcParamData%AMat)) then
-      LB(1:2) = lbound(SrcParamData%AMat)
-      UB(1:2) = ubound(SrcParamData%AMat)
-      if (.not. allocated(DstParamData%AMat)) then
-         allocate(DstParamData%AMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%A1Mat)) then
+      LB(1:2) = lbound(SrcParamData%A1Mat)
+      UB(1:2) = ubound(SrcParamData%A1Mat)
+      if (.not. allocated(DstParamData%A1Mat)) then
+         allocate(DstParamData%A1Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AMat.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%A1Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%AMat = SrcParamData%AMat
+      DstParamData%A1Mat = SrcParamData%A1Mat
    end if
-   if (allocated(SrcParamData%BMat)) then
-      LB(1:2) = lbound(SrcParamData%BMat)
-      UB(1:2) = ubound(SrcParamData%BMat)
-      if (.not. allocated(DstParamData%BMat)) then
-         allocate(DstParamData%BMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%A2Mat)) then
+      LB(1:2) = lbound(SrcParamData%A2Mat)
+      UB(1:2) = ubound(SrcParamData%A2Mat)
+      if (.not. allocated(DstParamData%A2Mat)) then
+         allocate(DstParamData%A2Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BMat.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%A2Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%BMat = SrcParamData%BMat
+      DstParamData%A2Mat = SrcParamData%A2Mat
    end if
-   if (allocated(SrcParamData%CMat)) then
-      LB(1:2) = lbound(SrcParamData%CMat)
-      UB(1:2) = ubound(SrcParamData%CMat)
-      if (.not. allocated(DstParamData%CMat)) then
-         allocate(DstParamData%CMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%B1Mat)) then
+      LB(1:2) = lbound(SrcParamData%B1Mat)
+      UB(1:2) = ubound(SrcParamData%B1Mat)
+      if (.not. allocated(DstParamData%B1Mat)) then
+         allocate(DstParamData%B1Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMat.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B1Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%CMat = SrcParamData%CMat
+      DstParamData%B1Mat = SrcParamData%B1Mat
    end if
-   if (allocated(SrcParamData%DMat)) then
-      LB(1:2) = lbound(SrcParamData%DMat)
-      UB(1:2) = ubound(SrcParamData%DMat)
-      if (.not. allocated(DstParamData%DMat)) then
-         allocate(DstParamData%DMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%B2Mat)) then
+      LB(1:2) = lbound(SrcParamData%B2Mat)
+      UB(1:2) = ubound(SrcParamData%B2Mat)
+      if (.not. allocated(DstParamData%B2Mat)) then
+         allocate(DstParamData%B2Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DMat.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B2Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%DMat = SrcParamData%DMat
+      DstParamData%B2Mat = SrcParamData%B2Mat
    end if
-   if (allocated(SrcParamData%FX)) then
-      LB(1:1) = lbound(SrcParamData%FX)
-      UB(1:1) = ubound(SrcParamData%FX)
-      if (.not. allocated(DstParamData%FX)) then
-         allocate(DstParamData%FX(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcParamData%B3Mat)) then
+      LB(1:2) = lbound(SrcParamData%B3Mat)
+      UB(1:2) = ubound(SrcParamData%B3Mat)
+      if (.not. allocated(DstParamData%B3Mat)) then
+         allocate(DstParamData%B3Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FX.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B3Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%FX = SrcParamData%FX
+      DstParamData%B3Mat = SrcParamData%B3Mat
    end if
-   if (allocated(SrcParamData%FY)) then
-      LB(1:1) = lbound(SrcParamData%FY)
-      UB(1:1) = ubound(SrcParamData%FY)
-      if (.not. allocated(DstParamData%FY)) then
-         allocate(DstParamData%FY(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcParamData%B4Mat)) then
+      LB(1:2) = lbound(SrcParamData%B4Mat)
+      UB(1:2) = ubound(SrcParamData%B4Mat)
+      if (.not. allocated(DstParamData%B4Mat)) then
+         allocate(DstParamData%B4Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FY.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B4Mat.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%FY = SrcParamData%FY
+      DstParamData%B4Mat = SrcParamData%B4Mat
+   end if
+   if (allocated(SrcParamData%C1Mat)) then
+      LB(1:2) = lbound(SrcParamData%C1Mat)
+      UB(1:2) = ubound(SrcParamData%C1Mat)
+      if (.not. allocated(DstParamData%C1Mat)) then
+         allocate(DstParamData%C1Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%C1Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%C1Mat = SrcParamData%C1Mat
+   end if
+   if (allocated(SrcParamData%C2Mat)) then
+      LB(1:2) = lbound(SrcParamData%C2Mat)
+      UB(1:2) = ubound(SrcParamData%C2Mat)
+      if (.not. allocated(DstParamData%C2Mat)) then
+         allocate(DstParamData%C2Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%C2Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%C2Mat = SrcParamData%C2Mat
+   end if
+   if (allocated(SrcParamData%D1Mat)) then
+      LB(1:2) = lbound(SrcParamData%D1Mat)
+      UB(1:2) = ubound(SrcParamData%D1Mat)
+      if (.not. allocated(DstParamData%D1Mat)) then
+         allocate(DstParamData%D1Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%D1Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%D1Mat = SrcParamData%D1Mat
+   end if
+   if (allocated(SrcParamData%D2Mat)) then
+      LB(1:2) = lbound(SrcParamData%D2Mat)
+      UB(1:2) = ubound(SrcParamData%D2Mat)
+      if (.not. allocated(DstParamData%D2Mat)) then
+         allocate(DstParamData%D2Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%D2Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%D2Mat = SrcParamData%D2Mat
+   end if
+   if (allocated(SrcParamData%D3Mat)) then
+      LB(1:2) = lbound(SrcParamData%D3Mat)
+      UB(1:2) = ubound(SrcParamData%D3Mat)
+      if (.not. allocated(DstParamData%D3Mat)) then
+         allocate(DstParamData%D3Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%D3Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%D3Mat = SrcParamData%D3Mat
+   end if
+   if (allocated(SrcParamData%D4Mat)) then
+      LB(1:2) = lbound(SrcParamData%D4Mat)
+      UB(1:2) = ubound(SrcParamData%D4Mat)
+      if (.not. allocated(DstParamData%D4Mat)) then
+         allocate(DstParamData%D4Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%D4Mat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%D4Mat = SrcParamData%D4Mat
    end if
    if (allocated(SrcParamData%M11)) then
       LB(1:2) = lbound(SrcParamData%M11)
@@ -891,18 +978,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%M12 = SrcParamData%M12
    end if
-   if (allocated(SrcParamData%M22)) then
-      LB(1:2) = lbound(SrcParamData%M22)
-      UB(1:2) = ubound(SrcParamData%M22)
-      if (.not. allocated(DstParamData%M22)) then
-         allocate(DstParamData%M22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%M22.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%M22 = SrcParamData%M22
-   end if
    if (allocated(SrcParamData%M21)) then
       LB(1:2) = lbound(SrcParamData%M21)
       UB(1:2) = ubound(SrcParamData%M21)
@@ -915,6 +990,30 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%M21 = SrcParamData%M21
    end if
+   if (allocated(SrcParamData%M22)) then
+      LB(1:2) = lbound(SrcParamData%M22)
+      UB(1:2) = ubound(SrcParamData%M22)
+      if (.not. allocated(DstParamData%M22)) then
+         allocate(DstParamData%M22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%M22.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%M22 = SrcParamData%M22
+   end if
+   if (allocated(SrcParamData%M22Inv)) then
+      LB(1:2) = lbound(SrcParamData%M22Inv)
+      UB(1:2) = ubound(SrcParamData%M22Inv)
+      if (.not. allocated(DstParamData%M22Inv)) then
+         allocate(DstParamData%M22Inv(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%M22Inv.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%M22Inv = SrcParamData%M22Inv
+   end if
    if (allocated(SrcParamData%K11)) then
       LB(1:2) = lbound(SrcParamData%K11)
       UB(1:2) = ubound(SrcParamData%K11)
@@ -926,6 +1025,30 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%K11 = SrcParamData%K11
+   end if
+   if (allocated(SrcParamData%K12)) then
+      LB(1:2) = lbound(SrcParamData%K12)
+      UB(1:2) = ubound(SrcParamData%K12)
+      if (.not. allocated(DstParamData%K12)) then
+         allocate(DstParamData%K12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%K12.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%K12 = SrcParamData%K12
+   end if
+   if (allocated(SrcParamData%K21)) then
+      LB(1:2) = lbound(SrcParamData%K21)
+      UB(1:2) = ubound(SrcParamData%K21)
+      if (.not. allocated(DstParamData%K21)) then
+         allocate(DstParamData%K21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%K21.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%K21 = SrcParamData%K21
    end if
    if (allocated(SrcParamData%K22)) then
       LB(1:2) = lbound(SrcParamData%K22)
@@ -1065,23 +1188,41 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%times)) then
       deallocate(ParamData%times)
    end if
-   if (allocated(ParamData%AMat)) then
-      deallocate(ParamData%AMat)
+   if (allocated(ParamData%A1Mat)) then
+      deallocate(ParamData%A1Mat)
    end if
-   if (allocated(ParamData%BMat)) then
-      deallocate(ParamData%BMat)
+   if (allocated(ParamData%A2Mat)) then
+      deallocate(ParamData%A2Mat)
    end if
-   if (allocated(ParamData%CMat)) then
-      deallocate(ParamData%CMat)
+   if (allocated(ParamData%B1Mat)) then
+      deallocate(ParamData%B1Mat)
    end if
-   if (allocated(ParamData%DMat)) then
-      deallocate(ParamData%DMat)
+   if (allocated(ParamData%B2Mat)) then
+      deallocate(ParamData%B2Mat)
    end if
-   if (allocated(ParamData%FX)) then
-      deallocate(ParamData%FX)
+   if (allocated(ParamData%B3Mat)) then
+      deallocate(ParamData%B3Mat)
    end if
-   if (allocated(ParamData%FY)) then
-      deallocate(ParamData%FY)
+   if (allocated(ParamData%B4Mat)) then
+      deallocate(ParamData%B4Mat)
+   end if
+   if (allocated(ParamData%C1Mat)) then
+      deallocate(ParamData%C1Mat)
+   end if
+   if (allocated(ParamData%C2Mat)) then
+      deallocate(ParamData%C2Mat)
+   end if
+   if (allocated(ParamData%D1Mat)) then
+      deallocate(ParamData%D1Mat)
+   end if
+   if (allocated(ParamData%D2Mat)) then
+      deallocate(ParamData%D2Mat)
+   end if
+   if (allocated(ParamData%D3Mat)) then
+      deallocate(ParamData%D3Mat)
+   end if
+   if (allocated(ParamData%D4Mat)) then
+      deallocate(ParamData%D4Mat)
    end if
    if (allocated(ParamData%M11)) then
       deallocate(ParamData%M11)
@@ -1089,14 +1230,23 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%M12)) then
       deallocate(ParamData%M12)
    end if
-   if (allocated(ParamData%M22)) then
-      deallocate(ParamData%M22)
-   end if
    if (allocated(ParamData%M21)) then
       deallocate(ParamData%M21)
    end if
+   if (allocated(ParamData%M22)) then
+      deallocate(ParamData%M22)
+   end if
+   if (allocated(ParamData%M22Inv)) then
+      deallocate(ParamData%M22Inv)
+   end if
    if (allocated(ParamData%K11)) then
       deallocate(ParamData%K11)
+   end if
+   if (allocated(ParamData%K12)) then
+      deallocate(ParamData%K12)
+   end if
+   if (allocated(ParamData%K21)) then
+      deallocate(ParamData%K21)
    end if
    if (allocated(ParamData%K22)) then
       deallocate(ParamData%K22)
@@ -1144,17 +1294,26 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%Forces0)
    call RegPackAlloc(RF, InData%Forces)
    call RegPackAlloc(RF, InData%times)
-   call RegPackAlloc(RF, InData%AMat)
-   call RegPackAlloc(RF, InData%BMat)
-   call RegPackAlloc(RF, InData%CMat)
-   call RegPackAlloc(RF, InData%DMat)
-   call RegPackAlloc(RF, InData%FX)
-   call RegPackAlloc(RF, InData%FY)
+   call RegPackAlloc(RF, InData%A1Mat)
+   call RegPackAlloc(RF, InData%A2Mat)
+   call RegPackAlloc(RF, InData%B1Mat)
+   call RegPackAlloc(RF, InData%B2Mat)
+   call RegPackAlloc(RF, InData%B3Mat)
+   call RegPackAlloc(RF, InData%B4Mat)
+   call RegPackAlloc(RF, InData%C1Mat)
+   call RegPackAlloc(RF, InData%C2Mat)
+   call RegPackAlloc(RF, InData%D1Mat)
+   call RegPackAlloc(RF, InData%D2Mat)
+   call RegPackAlloc(RF, InData%D3Mat)
+   call RegPackAlloc(RF, InData%D4Mat)
    call RegPackAlloc(RF, InData%M11)
    call RegPackAlloc(RF, InData%M12)
-   call RegPackAlloc(RF, InData%M22)
    call RegPackAlloc(RF, InData%M21)
+   call RegPackAlloc(RF, InData%M22)
+   call RegPackAlloc(RF, InData%M22Inv)
    call RegPackAlloc(RF, InData%K11)
+   call RegPackAlloc(RF, InData%K12)
+   call RegPackAlloc(RF, InData%K21)
    call RegPackAlloc(RF, InData%K22)
    call RegPackAlloc(RF, InData%C11)
    call RegPackAlloc(RF, InData%C12)
@@ -1197,17 +1356,26 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Forces0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Forces); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%times); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%AMat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%BMat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%CMat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DMat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%FX); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%FY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%A1Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%A2Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%B1Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%B2Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%B3Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%B4Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C1Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C2Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%D1Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%D2Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%D3Mat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%D4Mat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M12); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%M22); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M21); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M22Inv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%K11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%K12); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%K21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%K22); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%C11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%C12); if (RegCheckErr(RF, RoutineName)) return
@@ -1487,6 +1655,30 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_at_t = SrcMiscData%F_at_t
    end if
+   if (allocated(SrcMiscData%F1)) then
+      LB(1:1) = lbound(SrcMiscData%F1)
+      UB(1:1) = ubound(SrcMiscData%F1)
+      if (.not. allocated(DstMiscData%F1)) then
+         allocate(DstMiscData%F1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F1 = SrcMiscData%F1
+   end if
+   if (allocated(SrcMiscData%F2)) then
+      LB(1:1) = lbound(SrcMiscData%F2)
+      UB(1:1) = ubound(SrcMiscData%F2)
+      if (.not. allocated(DstMiscData%F2)) then
+         allocate(DstMiscData%F2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F2 = SrcMiscData%F2
+   end if
    DstMiscData%Indx = SrcMiscData%Indx
    DstMiscData%EquilStart = SrcMiscData%EquilStart
    if (allocated(SrcMiscData%AllOuts)) then
@@ -1533,6 +1725,12 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_at_t)) then
       deallocate(MiscData%F_at_t)
    end if
+   if (allocated(MiscData%F1)) then
+      deallocate(MiscData%F1)
+   end if
+   if (allocated(MiscData%F2)) then
+      deallocate(MiscData%F2)
+   end if
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
@@ -1556,6 +1754,8 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%xFlat)
    call RegPack(RF, InData%uFlat)
    call RegPackAlloc(RF, InData%F_at_t)
+   call RegPackAlloc(RF, InData%F1)
+   call RegPackAlloc(RF, InData%F2)
    call RegPack(RF, InData%Indx)
    call RegPack(RF, InData%EquilStart)
    call RegPackAlloc(RF, InData%AllOuts)
@@ -1578,6 +1778,8 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%xFlat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%uFlat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return

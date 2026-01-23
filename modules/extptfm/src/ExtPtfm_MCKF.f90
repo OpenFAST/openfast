@@ -132,6 +132,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    else
        p%EP_DeltaT = InputFileData%DT
    endif
+   ! Switch for modeling rigid-body modes
+   p%hasRBMode = InputFileData%hasRBMode
    ! Setting p%OutParam from OutList
    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, ErrStat, ErrMsg); if(Failed()) return
    ! Set the constant state matrices A,B,C,D
@@ -179,7 +181,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
 
    m%Indx = 1 ! used to optimize interpolation of loads in time
    call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,p%nTot; m%F_at_t(I)=0; end do
+   call AllocAry( m%F1, 6,'Interface/rigid-body mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%F2, p%nCB,'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat,ErrMsg); if(Failed()) return
    do I=1,2*p%nCB; m%xFlat(I)=0; end do
    do I=1,N_INPUTS; m%uFlat(I)=0; end do
@@ -374,77 +377,86 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
    INTEGER(IntKi)                          :: I                                         ! loop counter
-   INTEGER(IntKi)                          :: nX                                        ! Number of states
-   INTEGER(IntKi)                          :: nU                                        ! Number of inputs
-   INTEGER(IntKi)                          :: nY                                        ! Number of ouputs
    INTEGER(IntKi)                          :: n1                                        ! Number of interface DOF
    INTEGER(IntKi)                          :: n2                                        ! Number of CB DOF
-   real(ReKi), dimension(:,:), allocatable :: I22
-   ! Init 
-   nX = 2*p%nCB
-   nU = 3*6
-   nY = 6
-   n1 = 6
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   n1 = 6_IntKi
    n2 = p%nCB
-   if (allocated(p%AMat)) deallocate(p%AMat)
-   if (allocated(p%BMat)) deallocate(p%BMat)
-   if (allocated(p%CMat)) deallocate(p%CMat)
-   if (allocated(p%DMat)) deallocate(p%DMat)
-   if (allocated(p%M11))  deallocate(p%M11)
-   if (allocated(p%M12))  deallocate(p%M12)
-   if (allocated(p%M22))  deallocate(p%M22)
-   if (allocated(p%M21))  deallocate(p%M21)
-   if (allocated(p%C11))  deallocate(p%C11)
-   if (allocated(p%C12))  deallocate(p%C12)
-   if (allocated(p%C22))  deallocate(p%C22)
-   if (allocated(p%C21))  deallocate(p%C21)
-   if (allocated(p%K11))  deallocate(p%C11)
-   if (allocated(p%K22))  deallocate(p%C22)
-   ! Allocation
-   call allocAry(p%AMat, nX, nX, 'p%AMat', ErrStat, ErrMsg); if(Failed()) return ; p%AMat(1:nX,1:nX) =0
-   call allocAry(p%BMat, nX, nU, 'p%BMat', ErrStat, ErrMsg); if(Failed()) return ; p%BMat(1:nX,1:nU) =0
-   call allocAry(p%FX  , nX,     'p%FX'  , ErrStat, ErrMsg); if(Failed()) return ; p%Fx  (1:nX)      =0
-   call allocAry(p%CMat, nY, nX, 'p%CMat', ErrStat, ErrMsg); if(Failed()) return ; p%CMat(1:nY,1:nX) =0
-   call allocAry(p%DMat, nY, nU, 'p%DMat', ErrStat, ErrMsg); if(Failed()) return ; p%DMat(1:nY,1:nU) =0
-   call allocAry(p%FY  , nY,     'p%FY'  , ErrStat, ErrMsg); if(Failed()) return ; p%FY  (1:nY)      =0
-   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat, ErrMsg); if(Failed()) return ; p%M11 (1:n1,1:n1) =0
-   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat, ErrMsg); if(Failed()) return ; p%K11 (1:n1,1:n1) =0
-   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat, ErrMsg); if(Failed()) return ; p%C11 (1:n1,1:n1) =0
-   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat, ErrMsg); if(Failed()) return ; p%M22 (1:n2,1:n2) =0
-   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat, ErrMsg); if(Failed()) return ; p%K22 (1:n2,1:n2) =0
-   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat, ErrMsg); if(Failed()) return ; p%C22 (1:n2,1:n2) =0
-   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat, ErrMsg); if(Failed()) return ; p%M12 (1:n1,1:n2) =0
-   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat, ErrMsg); if(Failed()) return ; p%C12 (1:n1,1:n2) =0
-   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat, ErrMsg); if(Failed()) return ; p%M21 (1:n2,1:n1) =0
-   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat, ErrMsg); if(Failed()) return ; p%C21 (1:n2,1:n1) =0
-   call allocAry(  I22 , n2, n2, '  I22' , ErrStat, ErrMsg); if(Failed()) return ;   I22 (1:n2,1:n2) =0
-   do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
+
+   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K12 , n1, n2, 'p%K12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K21 , n2, n1, 'p%K21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%A1Mat, n2, n2, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%A2Mat, n2, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B1Mat, n2, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B2Mat, n2, n1, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B3Mat, n2, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B4Mat, n2, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%C1Mat, n1, n2, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C2Mat, n1, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D1Mat, n1, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D2Mat, n1, n1, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D3Mat, n1, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D4Mat, n1, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+
    ! Submatrices
-   p%M11(1:n1,1:n1) = p%Mass(1:n1      ,1:n1      )
-   p%C11(1:n1,1:n1) = p%Damp(1:n1      ,1:n1      )
-   p%K11(1:n1,1:n1) = p%Stff(1:n1      ,1:n1      )
-   p%M12(1:n1,1:n2) = p%Mass(1:n1      ,n1+1:n1+n2)
-   p%C12(1:n1,1:n2) = p%Damp(1:n1      ,n1+1:n1+n2)
-   p%M21(1:n2,1:n1) = p%Mass(n1+1:n1+n2,1:n1      )
-   p%C21(1:n2,1:n1) = p%Damp(n1+1:n1+n2,1:n1      )
-   p%M22(1:n2,1:n2) = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
-   p%C22(1:n2,1:n2) = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
-   p%K22(1:n2,1:n2) = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
-   ! A matrix
-   p%AMat(1:n2   ,n2+1:nX) = I22   (1:n2,1:n2)
-   p%AMat(n2+1:nX,1:n2   ) = -p%K22(1:n2,1:n2)
-   p%AMat(n2+1:nX,n2+1:nX) = -p%C22(1:n2,1:n2)
-   ! B matrix
-   p%BMat(n2+1:nX,7 :12  ) = -p%C21(1:n2,1:6)
-   p%BMat(n2+1:nX,13:18  ) = -p%M21(1:n2,1:6)
-   ! C matrix
-   p%CMat(1:nY,1:n2   ) = matmul(p%M12,p%K22)
-   p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22) - p%C12
-   ! D matrix
-   p%DMat(1:nY,1:6   ) = -p%K11
-   p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
-   p%DMat(1:nY,13:18 ) = -p%M11 + matmul(p%M12,p%M21)
-CONTAINS
+   p%M11 = p%Mass(   1:n1   ,   1:n1   )
+   p%M12 = p%Mass(   1:n1   ,n1+1:n1+n2)
+   p%M21 = p%Mass(n1+1:n1+n2,   1:n1   )
+   p%M22 = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
+   if ( n2 > 0_IntKi ) then
+      call PseudoInverse(p%M22, p%M22Inv, ErrStat, ErrMsg); if(Failed()) return
+   else
+      call allocAry(  p%M22Inv , n2, n2, 'p%M22Inv' , ErrStat, ErrMsg); if(Failed()) return ! Empty placeholder array
+   end if
+
+   p%C11 = p%Damp(   1:n1   ,   1:n1   )
+   p%C12 = p%Damp(   1:n1   ,n1+1:n1+n2)
+   p%C21 = p%Damp(n1+1:n1+n2,   1:n1   )
+   p%C22 = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
+
+   p%K11 = p%Stff(   1:n1   ,   1:n1   )
+   p%K12 = p%Stff(   1:n1   ,n1+1:n1+n2)
+   p%K21 = p%Stff(n1+1:n1+n2,   1:n1   )
+   p%K22 = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
+
+   ! A matrices
+   p%A1Mat = - matmul(p%M22Inv, p%K22)
+   p%A2Mat = - matmul(p%M22Inv, p%C22)
+
+   ! B matrices
+   p%B1Mat = - matmul(p%M22Inv, p%K21)
+   p%B2Mat = - matmul(p%M22Inv, p%C21)
+   p%B3Mat = - matmul(p%M22Inv, p%M21)
+   p%B4Mat =          p%M22Inv
+
+   ! C matrices
+   p%C1Mat = p%K12 + matmul( p%M12, p%A1Mat )
+   p%C2Mat = p%C12 + matmul( p%M12, p%A2Mat )
+
+   ! D matrices
+   p%D1Mat = p%K11 + matmul( p%M12, p%B1Mat )
+   p%D2Mat = p%C11 + matmul( p%M12, p%B2Mat )
+   p%D3Mat = p%M11 + matmul( p%M12, p%B3Mat )
+   p%D4Mat =         matmul( p%M12, p%B4Mat )
+
+   CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_SetStateMatrices')
         Failed =  ErrStat >= AbortErrLev
@@ -827,6 +839,8 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    INTEGER(IntKi)                                  :: I             !< Generic counters
    real(ReKi), dimension(6)                        :: Fc            !< Output coupling force
    TYPE(ExtPtfm_ContinuousStateType)               :: xdot          ! time derivatives of continuous states
+   real(R8Ki), dimension(3,3)                      :: Rg2b          ! Rotation matrix from global earth-fixed coordinate system to rigid-body coordinate system
+   real(R8Ki), dimension(3,3)                      :: Rb2g          ! Rotation matrix from rigid-body coordinate system to global earth-fixed coordinate system
 
    y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
    y%FBMesh%Orientation     = u%PtfmMesh%Orientation
@@ -838,48 +852,51 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
    call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
 
-   ! --- Flatening vectors and using linear state formulation y=Cx+Du+Fy
-   ! u flat (x1, \dot{x1}, \ddot{x1})
-   m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-   m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcOutput')
-   m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-   m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-   m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-   m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-
-   !--- Computing output:  y = Cx + Du + Fy  
-   ! 
-   if (p%nCB>0) then
-       ! x flat
-       m%xFlat(      1:p%nCB  ) = x%qm   (1:p%nCB)
-       m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
-
-       ! >>> MATMUL implementation
-       !Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
-
-       ! >>> LAPACK implementation
-       Fc(1:6) = m%F_at_t(1:6) ! Fc = F1r + ...
-       !           GEMV(TRS, M  , N      , alpha    , A     , LDA, X                    ,INCX, Beta  ,  Y, IncY)
-       CALL LAPACK_GEMV('n', 6  , 2*p%nCB,  1.0_ReKi, p%CMat, 6  , m%xFlat              , 1, 1.0_ReKi, Fc, 1   ) ! = C*x + (F1r)
-       CALL LAPACK_GEMV('n', 6  ,   18   ,  1.0_ReKi, p%DMat, 6  , m%uFlat              , 1, 1.0_ReKi, Fc, 1   ) ! + D*u
-       CALL LAPACK_GEMV('n', 6  , p%nCB  , -1.0_ReKi, p%M12 , 6  , m%F_at_t(6+1:6+p%nCB), 1, 1.0_ReKi, Fc, 1   ) ! - M12*F2r
+   if ( p%hasRBMode ) then
+      Rg2b = u%PtfmMesh%Orientation(:,:,1)
+      Rb2g = transpose(Rg2b)
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in body-fixed coordinate system
+      m%uFlat(1:3)   = 0.0_ReKi ! Translational displacement is zero in body-fixed system - corresponding stiffness terms must be zero
+      m%uFlat(4:6)   = EulerExtractZYX(u%PtfmMesh%Orientation(:,:,1))
+      m%uFlat(7:9  ) = matmul( Rg2b, u%PtfmMesh%TranslationVel(:,1) )
+      m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
+      m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
+      m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
    else
-       Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
-   endif
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
+      m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcOutput')
+      m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+      m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
+      m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+      m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   end if
 
-   Fc(1:3) = Fc(1:3) + u%FBMesh%Force(:,1)
-   Fc(4:6) = Fc(4:6) + u%FBMesh%Moment(:,1)
+   !--- Computing output:  y = Cx + Du + Fy
+   m%F2 = m%F_at_t(6+1:6+p%nCB) + u%Fm
+   Fc   = matmul( p%D1Mat, m%uFlat(1:6) ) + matmul( p%D2Mat, m%uFlat(7:12) ) + matmul( p%D3Mat, m%uFlat(13:18) ) + matmul( p%D4Mat, m%F2 )
+   if (p%nCB>0) then
+      Fc = Fc + matmul( p%C1Mat, x%qm ) + matmul( p%C2Mat, x%qmdot )
+   end if
+   if ( p%hasRBMode ) then
+      Fc(1:3) = matmul( Rb2g, Fc(1:3) )
+      Fc(4:6) = matmul( Rb2g, Fc(4:6) )
+   end if
+
+   !--- Compute reaction load applied to tower base
+   m%F1(1:3) = u%FBMesh%Force(:,1)
+   m%F1(4:6) = u%FBMesh%Moment(:,1)
+   m%F1      = m%F1 + m%F_at_t(1:6)
+   Fc        = -Fc + m%F1
 
    ! Update the output mesh
-   do i=1,3
-      y%PtfmMesh%Force(I,1)  = Fc(I)
-      y%PtfmMesh%Moment(I,1) = Fc(I+3)
-   enddo
+   y%PtfmMesh%Force(:,1)  = Fc(1:3)
+   y%PtfmMesh%Moment(:,1) = Fc(4:6)
 
    CALL ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
    if (p%nCB>0) then
-      y%qm = x%qm
-      y%qmdot = x%qmdot
+      y%qm       = x%qm
+      y%qmdot    = x%qmdot
       y%qmdotdot = xdot%qmdot
    end if
 
@@ -909,8 +926,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       else
           y%WriteOutput(I) = -9.9999e20
       endif
-   enddo 
-   
+   enddo
 
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -931,67 +947,49 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    TYPE(ExtPtfm_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
    ! Local variables
    INTEGER(IntKi)                                    :: I
+   REAL(R8Ki), dimension(3,3)                        :: Rg2b         ! Rotation matrix global 2 body coordinates
+   REAL(R8Ki), dimension(3,3)                        :: Rb2g         ! Rotation matrix body 2 global coordinates
+
    ! Allocation of output dxdt (since intent(out))
    call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    ErrStat, ErrMsg); if(Failed()) return
    call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', ErrStat, ErrMsg); if(Failed()) return
    if ( p%nCB == 0 ) return
-   do I=1,p%nCB; dxdt%qm   (I)=0; enddo
-   do I=1,p%nCB; dxdt%qmdot(I)=0; enddo
+   dxdt%qm   =0.0_ReKi
+   dxdt%qmdot=0.0_ReKi
 
    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%F
    call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
 
-   ! u flat (x1, \dot{x1}, \ddot{x1})
-   m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-   m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed()) return
-   m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-   m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-   m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-   m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   if ( p%hasRBMode ) then
+      Rg2b = u%PtfmMesh%Orientation(:,:,1)
+      Rb2g = transpose(Rg2b)
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in body-fixed coordinate system
+      m%uFlat(1:3)   = 0.0_ReKi ! u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = EulerExtractZYX(u%PtfmMesh%Orientation(:,:,1))
+      m%uFlat(7:9  ) = matmul( Rg2b, u%PtfmMesh%TranslationVel(:,1) )
+      m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
+      m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
+      m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
+   else
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
+      m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed()) return
+      m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+      m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
+      m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+      m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   end if
 
-   ! --- Computation of qm and qmdot
-   ! >>> Latex formulae:
-   ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
-   ! >>> MATMUL IMPLEMENTATION 
-   !dxdt%qm= x%qmdot
-   !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-   !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
-   ! >>> BLAS IMPLEMENTATION 
-   !           COPY( N   , X                    , INCX, Y      , INCY)
-   CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
-   CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
-   dxdt%qmdot = dxdt%qmdot + u%Fm(1:p%nCB)
-   !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
-   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
-   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
-   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
-   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
+   ! --- Compute modal forcing
+   m%F2       = m%F_at_t(6+1:6+p%nCB) + u%Fm(1:p%nCB)
 
-   ! if ( p%hasRBMode ) then
-   ! ! --- Computation of qm and qmdot
-   ! ! >>> Latex formulae:
-   ! ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
-   ! ! >>> MATMUL IMPLEMENTATION
-   ! !dxdt%qm= x%qmdot
-   ! !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-   ! !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
-   ! ! >>> BLAS IMPLEMENTATION
-   ! !           COPY( N   , X                    , INCX, Y      , INCY)
-   ! CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
-   ! CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
-   ! dxdt%qmdot = dxdt%qmdot   &
-   !            + p%Forces0(6+1:6+p%nCB) - matmul(p%KG(7:6+p%nCB,:),[m%uFlat(1:6) x%qm])   &                        !        + F_G0  - KG*qm
-   !            + u%FHydro(1:p%nCB)                                                                                 !        + F_HD2
-   !
-   ! !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
-   ! CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
-   ! CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
-   ! CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
-   ! CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
-   !
-   ! end if
+   ! --- Compute qm and qmdot
+   dxdt%qm    = x%qmdot
+   dxdt%qmdot = matmul( p%A1Mat, x%qm ) + matmul( p%A2Mat, x%qmdot ) &
+              + matmul( p%B1Mat, m%uFlat(1:6) ) + matmul( p%B2Mat, m%uFlat(7:12) ) + matmul( p%B3Mat, m%uFlat(13:18) ) + matmul( p%B4Mat, m%F2 )
 
 CONTAINS
     logical function Failed()
@@ -1485,6 +1483,63 @@ SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, Er
    if (present(dZdz)) then
    end if
 END SUBROUTINE ExtPtfm_JacobianPConstrState
+
+SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+   use NWTC_LAPACK, only: LAPACK_GESVD, LAPACK_GEMM
+   real(ReKi), dimension(:,:), intent(in)  :: A
+   real(ReKi), dimension(:,:), allocatable :: Ainv
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg        ! < Error message if ErrStat /    = ErrID_None
+   !
+   real(ReKi), dimension(:),   allocatable :: S
+   real(ReKi), dimension(:,:), allocatable :: U
+   real(ReKi), dimension(:,:), allocatable :: Vt
+   real(ReKi), dimension(:),   allocatable :: WORK
+   real(ReKi), dimension(:,:), allocatable :: Acopy
+   integer :: j ! Loop indices
+   integer :: M !< The number of rows of the input matrix A
+   integer :: N !< The number of columns of the input matrix A
+   integer :: K !<
+   integer :: L !<
+   integer :: LWORK !<
+   M = size(A,1)
+   N = size(A,2)
+   K = min(M,N)
+   L = max(M,N)
+   LWORK = MAX(1,3*K +L,5*K)
+   allocate(S(K)); S = 0;
+   !! LWORK >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N)) for the other paths
+   allocate(Work(LWORK)); Work=0
+   allocate(U (M,K) ); U=0;
+   allocate(Vt(K,N) ); Vt=0;
+   allocate(Ainv(N,M)); Ainv=0;
+   allocate(Acopy(M,N)); Acopy=A;
+
+   ! --- Compute the SVD of A
+   ! [U,S,V] = svd(A)
+   !call DGESVD       ('S', 'S', M, N, A, M,  S, U, M  , Vt  , K,   WORK, LWORK, INFO)
+   call LAPACK_GESVD('S', 'S', M, N, Acopy, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
+
+   !--- Compute PINV = V**T * SIGMA * U**T in two steps
+   !  SIGMA = S^(-1)=1/S(j), S is diagonal
+   do j = 1, K
+      U(:,j) = U(:,j)/S(j)
+   end do
+   ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U'
+   !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
+   call LAPACK_GEMM( 'T', 'T', 1.0_ReKi, Vt, U, 0.0_ReKi, Ainv, ErrStat, ErrMsg)
+   ! --- Compute rank
+   !tol=maxval(shape(A))*epsilon(maxval(S))
+   !rank=0
+   !do i=1,K
+   !   if(S(i) .gt. tol)then
+   !      rank=rank+1
+   !   end if
+   !end do
+   !print*,'Rank',rank
+   !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),Vt(1:r,:)))
+   END SUBROUTINE PseudoInverse
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 END MODULE ExtPtfm_MCKF

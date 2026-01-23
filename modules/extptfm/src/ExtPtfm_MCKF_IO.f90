@@ -401,6 +401,8 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
 
    !---------------------- REDUCTION INPUTS ---------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: ReductionInputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! Rigid-body mode flag
+   CALL ReadVar(UnIn, InputFile, InputFileData%hasRBMode, "hasRBMode", "Flag for the presence of rigid-body modes", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! File Format switch
    CALL ReadVar(UnIn, InputFile, InputFileData%FileFormat, "FileFormat", "File format switch", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! Reduction Filename
@@ -861,11 +863,11 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp1r8(UnSu, 'qm'   ,x%qm)
    call disp1r8(UnSu, 'qmdot',x%qmdot)
 
-   write(UnSu,'(A)')'!State matrices'
-   call disp2r8(UnSu, 'A',p%AMat)
-   call disp2r8(UnSu, 'B',p%BMat)
-   call disp2r8(UnSu, 'C',p%CMat)
-   call disp2r8(UnSu, 'D',p%DMat)
+   !write(UnSu,'(A)')'!State matrices'
+   !call disp2r8(UnSu, 'A',p%AMat)
+   !call disp2r8(UnSu, 'B',p%BMat)
+   !call disp2r8(UnSu, 'C',p%CMat)
+   !call disp2r8(UnSu, 'D',p%DMat)
    write(UnSu,'(A)')'!Input matrices'
    call disp2r8(UnSu, 'M',p%Mass)
    call disp2r8(UnSu, 'K',p%Stff)
