@@ -1158,58 +1158,6 @@ SUBROUTINE ExtPtfm_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, Err
       end do
    end if
 
-   ! ! allocate and set dYdu
-   ! if (present(dYdu)) then
-   !
-   !    if (.not. allocated(dYdu)) then
-   !       call AllocAry(dYdu, N_OUTPUTS+p%NumOuts, N_INPUTS, 'dYdu', ErrStat, ErrMsg)
-   !       if(Failed()) return
-   !       dYdu = 0.0_ReKi
-   !    end if
-   !
-   !    dYdu(1:6, 1:N_INPUTS) = p%DMat(1:6, 1:N_INPUTS)
-   !
-   !     ! Check if outputs need to be processed
-   !    CalcOutputs = .false.
-   !    do i = 1, size(Vars%y)
-   !       if (MV_HasFlagsAll(Vars%y(i), VF_WriteOut)) CalcOutputs = .true.
-   !    end do
-   !
-   !    ! dYdu is zero except if WriteOutput is the interface loads
-   !    if (CalcOutputs) then
-   !       do i = 1, p%NumOuts
-   !          select case (p%OutParam(i)%Indx)
-   !          case (ID_PtfFx)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(1,1:N_INPUTS)
-   !          case (ID_PtfFy)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(2,1:N_INPUTS)
-   !          case (ID_PtfFz)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(3,1:N_INPUTS)
-   !          case (ID_PtfMx)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(4,1:N_INPUTS)
-   !          case (ID_PtfMy)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(5,1:N_INPUTS)
-   !          case (ID_PtfMz)
-   !             dYdu(6+i,1:N_INPUTS) = p%DMat(6,1:N_INPUTS)
-   !          case default
-   !             dYdu(6+i,1:N_INPUTS) = 0.0_ReKi
-   !          end select
-   !       end do
-   !    end if
-   ! end if
-   !
-   ! ! allocate and set dXdu
-   ! if (present(dXdu)) then
-   !
-   !    if (.not. allocated(dXdu)) then
-   !       call AllocAry(dXdu, 2*p%nCB, N_INPUTS, 'dXdu', ErrStat, ErrMsg)
-   !       if(Failed()) return
-   !       dXdu = 0.0_ReKi
-   !    end if
-   !
-   !    dXdu(1:2*p%nCB,1:N_INPUTS) = p%BMat(1:2*p%nCB,1:N_INPUTS)
-   ! end if
-
    if (present(dXddu)) then
    end if
 
@@ -1342,50 +1290,6 @@ SUBROUTINE ExtPtfm_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m,
          end do
       end do
    end if
-
-   ! if (present(dYdx)) then
-   !    ! allocate and set dYdx
-   !    if (.not. allocated(dYdx)) then
-   !        call AllocAry(dYdx, N_OUTPUTS+p%NumOuts, 2*p%nCB, 'dYdx', ErrStat, ErrMsg); if(Failed()) return
-   !        do i=1,size(dYdx,1); do j=1,size(dYdx,2); dYdx(i,j)=0.0_ReKi; enddo;enddo
-   !    end if
-   !    dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
-   !    ! WriteOutputs
-   !    do i = 1,p%NumOuts
-   !        idx  = p%OutParam(i)%Indx
-   !        iDOF = mod(idx-ID_QSTART, p%nCB)+1
-   !         ! if output is an interface load dYdx is a row of the Cmatrix
-   !         if     (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(1,1:2*p%nCB)
-   !         elseif (idx==ID_PtfFy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(2,1:2*p%nCB)
-   !         elseif (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(3,1:2*p%nCB)
-   !         elseif (idx==ID_PtfMx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(4,1:2*p%nCB)
-   !         elseif (idx==ID_PtfMy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(5,1:2*p%nCB)
-   !         elseif (idx==ID_PtfMz) then; dYdx(6+i,1:2*p%nCB) = p%CMat(6,1:2*p%nCB)
-   !         ! Below we look at the index, we assumed an order for the outputs
-   !         ! where after the index ID_Qstart, the AllOutputs are: Q,QDot and Qf
-   !         ! An alternative coulbe to look at the name of the DOF instead:
-   !         ! e.g. if (index(p%OutParam,'CBQ_')>0) then ... (see SetOutParam)
-   !         else if ((idx-ID_QStart>=  0    ) .and. (idx-ID_QStart<p%nCB) ) then
-   !             ! Output is a DOF position, dYdx has a 1 at the proper location
-   !             dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-   !             dYdx(6+i,        iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-   !         else if ((idx-ID_QStart>=  p%nCB) .and. (idx-ID_QStart<2*p%nCB) ) then
-   !             ! Output is a DOF velocity, dYdx has a 1 at the proper location
-   !             dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-   !             dYdx(6+i,p%nCB + iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-   !         else ! e.g. WaveElevation or CB Forces
-   !             dYdx(6+i,1:2*p%nCB  ) = 0.0_ReKi
-   !         endif
-   !    end do
-   ! end if
-   ! if (present(dXdx)) then
-   !    ! allocate and set dXdx
-   !    if (.not. allocated(dXdx)) then
-   !        call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', ErrStat, ErrMsg); if(Failed()) return
-   !        do i=1,size(dXdx,1); do j=1,size(dXdx,2); dXdx(i,j)=0.0_ReKi; enddo;enddo
-   !    end if
-   !    dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
-   ! end if
 
    if (present(dXddx)) then
    end if
