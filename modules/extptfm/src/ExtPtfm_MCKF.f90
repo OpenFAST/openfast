@@ -183,12 +183,17 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F1, 6,'Interface/rigid-body mode forcing', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F2, p%nCB,'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%DConn, 3_IntKi*p%nConn, 'Connection point displacement', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%VConn, 3_IntKi*p%nConn, 'Connection point velocity',     ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%AConn, 3_IntKi*p%nConn, 'Connection point acceleration', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConn, 3_IntKi*p%nConn, 'Connection force vector', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConnCB, p%nTot, 'Connection force vector', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,2*p%nCB; m%xFlat(I)=0; end do
-   do I=1,N_INPUTS; m%uFlat(I)=0; end do
+   m%xFlat=0.0_ReKi
+   m%uFlat=0.0_ReKi
    
    ! Define initial guess (set up mesh first) for the system inputs here:
-   call Init_meshes(u, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
+   call Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
    call AllocAry( u%Fm, p%nCB, 'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
    u%Fm = 0.0_ReKi
 
@@ -298,12 +303,20 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
                                  MaxTorque/100.0_R8Ki])   ! Moment
 
+    if ( p%nConn > 0_IntKi ) then
+      call MV_AddMeshVar(Vars%u, 'Connection load mesh', LoadFields, &
+                        DatLoc(ExtPtfm_u_ConnLDMesh), &
+                        Mesh=u%ConnLdMesh, &
+                        PerTurbs=[MaxThrust/100.0_R8Ki, &  ! Force
+                                  MaxTorque/100.0_R8Ki])   ! Moment
+    end if
+
     if ( p%nCB > 0_IntKi ) then
        call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
                       DL=DatLoc(ExtPtfm_u_Fm), &
                       Num=size(u%Fm), &
                       Flags = VF_Linearize, &
-                      Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to 1
+                      Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to O(1)
                       LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
     end if
 
@@ -318,6 +331,12 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     call MV_AddMeshVar(Vars%y, "Rigid-body motion mesh", MotionFields, &
                        DL=DatLoc(ExtPtfm_y_FBMesh), &
                        Mesh=y%FBMesh)
+
+    if ( p%nConn > 0_IntKi ) then
+       call MV_AddMeshVar(Vars%y, 'Connection point mesh', MotionFields, &
+                         DL=DatLoc(ExtPtfm_y_ConnMesh), &
+                         Mesh=y%ConnMesh)
+    end if
 
     if ( p%nCB>0_IntKi ) then
        call MV_AddVar(Vars%y, "qm", FieldScalar, &
@@ -463,12 +482,17 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
     end function Failed
 END SUBROUTINE SetStateMatrices
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
+SUBROUTINE Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg)
    TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
+   TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< All the parameter matrices stored in this input file
    TYPE(ExtPtfm_OutputType),          INTENT(INOUT)  :: y           !< System outputs
    TYPE(ExtPtfm_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! Local variables:
+   INTEGER(IntKi)                          :: I                                         ! loop counter
+
    ! Create the input and output meshes associated with platform loads
    CALL MeshCreate(  BlankMesh         = u%PtfmMesh       , &
                      IOS               = COMPONENT_INPUT  , &
@@ -510,13 +534,44 @@ SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
 
    ! the output mesh is a sibling of the input:
    CALL MeshCopy( SrcMesh=u%FBMesh, DestMesh=y%FBMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
-                  ErrStat=ErrStat, ErrMess=ErrMsg, TranslationDisp   = .TRUE.           , &
+                  ErrStat=ErrStat, ErrMess=ErrMsg      , &
+                  TranslationDisp   = .TRUE.           , &
                   Orientation       = .TRUE.           , &
                   TranslationVel    = .TRUE.           , &
                   RotationVel       = .TRUE.           , &
                   TranslationAcc    = .TRUE.           , &
                   RotationAcc       = .TRUE. )
    if(Failed()) return
+
+   if (p%nConn>0_IntKi) then
+      ! Create the input and output meshes associated with platform loads
+      CALL MeshCreate(  BlankMesh         = u%ConnLdMesh     , &
+                        IOS               = COMPONENT_INPUT  , &
+                        Nnodes            = p%nConn          , &
+                        ErrStat           = ErrStat          , &
+                        ErrMess           = ErrMsg           , &
+                        Force             = .TRUE.           , &
+                        Moment            = .TRUE.)
+      if(Failed()) return
+      do i = 1,p%nConn
+         ! Create the node on the mesh, the node is located at the user-defined connection points
+         CALL MeshPositionNode(u%ConnLdMesh, i, p%PosConn(i,:), ErrStat, ErrMsg ); if(Failed()) return
+         ! Create the mesh element
+         CALL MeshConstructElement(u%ConnLdMesh, ELEMENT_POINT, ErrStat, ErrMsg, i ); if(Failed()) return
+      end do
+      CALL MeshCommit ( u%ConnLdMesh, ErrStat, ErrMsg ); if(Failed()) return
+
+      ! the output mesh is a sibling of the input:
+      CALL MeshCopy( SrcMesh=u%ConnLdMesh, DestMesh=y%ConnMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
+                     ErrStat=ErrStat, ErrMess=ErrMsg      , &
+                     TranslationDisp   = .TRUE.           , &
+                     Orientation       = .TRUE.           , &
+                     TranslationVel    = .TRUE.           , &
+                     RotationVel       = .TRUE.           , &
+                     TranslationAcc    = .TRUE.           , &
+                     RotationAcc       = .TRUE. )
+      if(Failed()) return
+   end if
 
 CONTAINS
     logical function Failed()
@@ -841,13 +896,17 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    TYPE(ExtPtfm_ContinuousStateType)               :: xdot          ! time derivatives of continuous states
    real(R8Ki), dimension(3,3)                      :: Rg2b          ! Rotation matrix from global earth-fixed coordinate system to rigid-body coordinate system
    real(R8Ki), dimension(3,3)                      :: Rb2g          ! Rotation matrix from rigid-body coordinate system to global earth-fixed coordinate system
+   real(ReKi), dimension(3)                        :: RelPosConn
+   real(ReKi), dimension(3)                        :: RelPosConn0
+   real(ReKi), dimension(3)                        :: RelVelConn
+   real(ReKi), dimension(3)                        :: omega
+   real(ReKi), dimension(3)                        :: omega_dot
+   real(ReKi), dimension(3)                        :: RdU
+   real(ReKi), dimension(3)                        :: RdUdot
+   real(ReKi), dimension(3)                        :: RdUdotdot
 
-   y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
-   y%FBMesh%Orientation     = u%PtfmMesh%Orientation
-   y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
-   y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
-   y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
-   y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
    call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
@@ -862,7 +921,12 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
       m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
       m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) )
+      end do
    else
+      call eye(Rg2b,ErrStat,ErrMsg); if (failed()) return
+      call eye(Rb2g,ErrStat,ErrMsg); if (failed()) return
       ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
       m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
       m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcOutput')
@@ -870,34 +934,111 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
       m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
       m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i)
+      end do
    end if
 
-   !--- Computing output:  y = Cx + Du + Fy
+   !--- Compute external loads
+   ! Note: m%F1 is the interface/rigid-body mode forcing kept in earth-fixed system
+   !       m%F2 is the forcing to the internal elastic modes
+   m%F1(1:3) = u%FBMesh%Force(:,1)
+   m%F1(4:6) = u%FBMesh%Moment(:,1)
+   m%F1      = m%F1 + m%F_at_t(1:6)
    m%F2 = m%F_at_t(6+1:6+p%nCB) + u%Fm
-   Fc   = matmul( p%D1Mat, m%uFlat(1:6) ) + matmul( p%D2Mat, m%uFlat(7:12) ) + matmul( p%D3Mat, m%uFlat(13:18) ) + matmul( p%D4Mat, m%F2 )
+   if (p%nConn>0_IntKi) then      ! Loads from connection points
+      m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
+      if ( p%hasRBMode ) then
+         m%F1(1:3) = m%F1(1:3) + matmul( Rb2g, m%FConnCB(1:3) )
+         m%F1(4:6) = m%F1(4:6) + matmul( Rb2g, m%FConnCB(4:6) )
+      else
+         m%F1 = m%F1 + m%FConnCB(1:6)
+      end if
+      m%F2 = m%F2 + m%FConnCB(6+1:6+p%nCB)
+   end if
+
+   !--- Compute reaction load applied to tower base. Output y = Cx + Du + Fy
+   Fc   = matmul( p%D1Mat, m%uFlat(1:6) ) + matmul( p%D2Mat, m%uFlat(7:12) ) + matmul( p%D3Mat, m%uFlat(13:18) )
    if (p%nCB>0) then
-      Fc = Fc + matmul( p%C1Mat, x%qm ) + matmul( p%C2Mat, x%qmdot )
+      Fc = Fc + matmul( p%C1Mat, x%qm ) + matmul( p%C2Mat, x%qmdot ) + matmul( p%D4Mat, m%F2 )
    end if
    if ( p%hasRBMode ) then
       Fc(1:3) = matmul( Rb2g, Fc(1:3) )
       Fc(4:6) = matmul( Rb2g, Fc(4:6) )
    end if
+   Fc = -Fc + m%F1
 
-   !--- Compute reaction load applied to tower base
-   m%F1(1:3) = u%FBMesh%Force(:,1)
-   m%F1(4:6) = u%FBMesh%Moment(:,1)
-   m%F1      = m%F1 + m%F_at_t(1:6)
-   Fc        = -Fc + m%F1
+   ! Update output states
+   if (p%nCB>0) then
+      CALL ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
+      y%qm       = x%qm
+      y%qmdot    = x%qmdot
+      y%qmdotdot = xdot%qmdot
+   end if
 
    ! Update the output mesh
    y%PtfmMesh%Force(:,1)  = Fc(1:3)
    y%PtfmMesh%Moment(:,1) = Fc(4:6)
 
-   CALL ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-   if (p%nCB>0) then
-      y%qm       = x%qm
-      y%qmdot    = x%qmdot
-      y%qmdotdot = xdot%qmdot
+   y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
+   y%FBMesh%Orientation     = u%PtfmMesh%Orientation
+   y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
+   y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
+   y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
+   y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+
+   if (p%nConn > 0_IntKi) then
+      if (p%HasRBMode) then
+         if (p%nCB>0) then
+            ! Elastic mode contributions in rigid-body frame
+            m%DConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qm       )
+            m%VConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qmdot    )
+            m%AConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qmdotdot )
+         else
+            m%DConn = 0.0_ReKi
+            m%VConn = 0.0_ReKi
+            m%AConn = 0.0_ReKi
+         end if
+         do i = 1,p%nConn
+            RdU         = matmul( Rb2g, m%DConn(3*(i-1)+1:3*(i-1)+3) )
+            RdUdot      = matmul( Rb2g, m%VConn(3*(i-1)+1:3*(i-1)+3) )
+            RdUdotdot   = matmul( Rb2g, m%AConn(3*(i-1)+1:3*(i-1)+3) )
+            RelPosConn0 = y%ConnMesh%Position(:,i) - u%PtfmMesh%Position(:,1)
+            RelPosConn  = matmul( Rb2g, RelPosConn0 ) + RdU
+            omega       = u%PtfmMesh%RotationVel(:,1)
+            omega_dot   = u%PtfmMesh%RotationAcc(:,1)
+
+            ! Compute absolute translation displacement, velocity, and acceleration of connection points in earth-fixed frame
+            y%ConnMesh%TranslationDisp(:,i) = u%PtfmMesh%TranslationDisp(:,1) + RelPosConn - RelPosConn0
+            y%ConnMesh%TranslationVel (:,i) = u%PtfmMesh%TranslationVel (:,1) + RdUdot + cross_product( omega, RelPosConn )
+            RelVelConn = y%ConnMesh%TranslationVel(:,i) - u%PtfmMesh%TranslationVel(:,1)
+            y%ConnMesh%TranslationAcc (:,i) = u%PtfmMesh%TranslationAcc (:,1) + RdUdotdot + cross_product( omega_dot, RelPosConn ) + cross_product( omega, RdUdot + RelVelConn )
+
+            ! No contribution from elasticity to rotation for now
+            y%ConnMesh%Orientation(:,:,i)   = Rg2b
+            y%ConnMesh%RotationVel(:,i)     = u%PtfmMesh%RotationVel(:,1)
+            y%ConnMesh%RotationAcc(:,i)     = u%PtfmMesh%RotationAcc(:,1)
+         end do
+      else
+         ! Interface mode contributions
+         m%DConn = matmul( p%PhiConn(:,1:6), m%uFlat( 1: 6) )
+         m%VConn = matmul( p%PhiConn(:,1:6), m%uFlat( 7:12) )
+         m%AConn = matmul( p%PhiConn(:,1:6), m%uFlat(13:18) )
+         if (p%nCB>0) then ! Elastic mode contributions
+            m%DConn = m%DConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qm       )
+            m%VConn = m%VConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qmdot    )
+            m%AConn = m%AConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qmdotdot )
+         end if
+         do i = 1,p%nConn
+            ! No contribution from elasticity to rotation for now
+            y%ConnMesh%TranslationDisp(:,i) = m%DConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%Orientation(:,:,i)   = Rg2b
+            y%ConnMesh%TranslationVel(:,i)  = m%VConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%RotationVel(:,i)     = 0.0_ReKi
+            y%ConnMesh%TranslationAcc(:,i)  = m%AConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%RotationAcc(:,i)     = 0.0_ReKi
+         end do
+      end if
    end if
 
    ! --- All Outputs
@@ -928,6 +1069,11 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       endif
    enddo
 
+   CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -973,6 +1119,9 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
       m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
       m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
       m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) )
+      end do
    else
       ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
       m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
@@ -981,10 +1130,18 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
       m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
       m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
       m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i)
+      end do
    end if
 
    ! --- Compute modal forcing
-   m%F2       = m%F_at_t(6+1:6+p%nCB) + u%Fm(1:p%nCB)
+   m%F2 = m%F_at_t(6+1:6+p%nCB) & ! User prescribed forces
+        + u%Fm(1:p%nCB)           ! Modal forcing from HydroDyn generalized DOF
+   if (p%nConn>0_IntKi) then      ! Loads from connection points
+      m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
+      m%F2      = m%F2 + m%FConnCB(6+1:6+p%nCB)
+   end if
 
    ! --- Compute qm and qmdot
    dxdt%qm    = x%qmdot

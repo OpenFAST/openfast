@@ -27,7 +27,7 @@ typedef   ^                ^             CHARACTER(1024)   RootName   - - -     
 # ..... Primary Input file data ...........................................................................................................
 typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
 typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
-typedef        ^                     ^            LOGICAL            hasRBMode  -  - -  "True: has rigid-body modes/floating structure; False: no rigid-body modes" -
+typedef        ^                     ^            LOGICAL            HasRBMode  -  - -  "True: has rigid-body modes/floating structure; False: no rigid-body modes" -
 typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
@@ -35,6 +35,8 @@ typedef        ^                     ^            LOGICAL            EquilStart 
 typedef        ^                     ^            IntKi              ActiveCBDOF {:} - -  "List of active CB DOF"   -
 typedef        ^                     ^            ReKi               InitPosList {:}   - -  "Initial positions of the CB DOFs"   -
 typedef        ^                     ^            ReKi               InitVelList {:}   - -  "Initial velocities of the CB DOFs"   -
+typedef        ^                     ^            LOGICAL            HasConnections - - - "True: has connections; False: no connections" -
+typedef        ^                     ^            CHARACTER(1024)    ConnFile   -  - -  "File containing connection inputs"   -
 typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
 typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
 typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
@@ -77,10 +79,6 @@ typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness m
 typedef  ^                    ^          ReKi     Forces0   {:} - - "Prescribed constant external loads including selfweight" -
 typedef  ^                    ^          ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
-#typedef  ^                    ^          ReKi     AMat {:}{:}   - - "State matrix A" ""
-#typedef  ^                    ^          ReKi     BMat {:}{:}   - - "State matrix B" ""
-#typedef  ^                    ^          ReKi     CMat {:}{:}   - - "State matrix C" ""
-#typedef  ^                    ^          ReKi     DMat {:}{:}   - - "State matrix D" ""
 typedef  ^                    ^          ReKi     A1Mat {:}{:}  - - "State matrix A1" ""
 typedef  ^                    ^          ReKi     A2Mat {:}{:}  - - "State matrix A2" ""
 typedef  ^                    ^          ReKi     B1Mat {:}{:}  - - "State matrix B1" ""
@@ -93,8 +91,6 @@ typedef  ^                    ^          ReKi     D1Mat {:}{:}  - - "State matri
 typedef  ^                    ^          ReKi     D2Mat {:}{:}  - - "State matrix D2" ""
 typedef  ^                    ^          ReKi     D3Mat {:}{:}  - - "State matrix D3" ""
 typedef  ^                    ^          ReKi     D4Mat {:}{:}  - - "State matrix D4" ""
-#typedef  ^                    ^          ReKi     FX {:}        - - "State  constant Fx" ""
-#typedef  ^                    ^          ReKi     FY {:}        - - "Output constant Fy" ""
 typedef  ^                    ^          ReKi     M11 {:}{:}    - - "Matrix M11" ""
 typedef  ^                    ^          ReKi     M12 {:}{:}    - - "Matrix M12" ""
 typedef  ^                    ^          ReKi     M21 {:}{:}    - - "Matrix M21" ""
@@ -108,11 +104,14 @@ typedef  ^                    ^          ReKi     C11 {:}{:}    - - "Matrix C11"
 typedef  ^                    ^          ReKi     C12 {:}{:}    - - "Matrix C12" ""
 typedef  ^                    ^          ReKi     C22 {:}{:}    - - "Matrix C22" ""
 typedef  ^                    ^          ReKi     C21 {:}{:}    - - "Matrix C21" ""
+typedef  ^                    ^          ReKi     phiConn {:}{:} - - "Mode shapes of connection points" ""
+typedef  ^                    ^          ReKi     PosConn {3}{:} - - "Positions of connection points" "m"
 typedef  ^                    ^          DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
 typedef  ^                    ^          IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
 typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes active" -
-typedef  ^                    ^          IntKi    nCBFull     - - - "Totla number of CraigBampton modes given as input" -
+typedef  ^                    ^          IntKi    nCBFull     - - - "Total number of CraigBampton modes given as input" -
 typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
+typedef  ^                    ^          IntKi    nConn       - - - "Number of connection points on the structure" -
 typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
 typedef  ^                    ^          IntKi    ActiveCBDOF {:} - -  "List of active CB DOF"   -
@@ -143,6 +142,11 @@ typedef    ^                  ^                ReKi     uFlat   {18} - - "Flatte
 typedef    ^                  ^                ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
 typedef    ^                  ^                ReKi     F1       {:} - - "Interface/rigid-body mode forcing" -
 typedef    ^                  ^                ReKi     F2       {:} - - "Internal elastic mode forcing" -
+typedef    ^                  ^                ReKi     FConn    {:} - - "Connection forces" "N"
+typedef    ^                  ^                ReKi     FConnCB  {:} - - "Modal forces from connections" ""
+typedef    ^                  ^                ReKi     DConn  {:} - - "Connection point displacement" ""
+typedef    ^                  ^                ReKi     VConn  {:} - - "Connection point velocity"     ""
+typedef    ^                  ^                ReKi     AConn  {:} - - "Connection point acceleration" ""
 typedef    ^                  ^                IntKi    Indx       - - - "Index into times, to speed up interpolation" -
 typedef    ^                  ^                LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"

@@ -82,7 +82,7 @@ subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
   CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
   INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
-      print*,'ErrMess',ErrMess
+     print*,'ErrMess',TRIM(ErrMess)
      write(ErrMess,'(A)') TRIM(RoutineName)//':'//TRIM(ErrMess)
      if (present(LineNumber)) then
          ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
@@ -402,7 +402,7 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    !---------------------- REDUCTION INPUTS ---------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: ReductionInputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! Rigid-body mode flag
-   CALL ReadVar(UnIn, InputFile, InputFileData%hasRBMode, "hasRBMode", "Flag for the presence of rigid-body modes", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%hasRBMode, "RBMode", "Flag for the presence of rigid-body modes", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! File Format switch
    CALL ReadVar(UnIn, InputFile, InputFileData%FileFormat, "FileFormat", "File format switch", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! Reduction Filename
@@ -436,6 +436,10 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
        CALL AllocAry(InputFileData%InitVelList, N, 'InitVelList',  ErrStat, ErrMsg ); if (Failed()) return
        CALL ReadAry(UnIn, InputFile, InputFileData%InitVelList, N, 'InitVelList', 'Initial velocities', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    endif
+   !---------------------- CONNECTION INPUTS ---------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: Connections', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasConnections, 'Connections','Flag for connections', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%ConnFile, 'Conn_FileName', 'Path containing connections inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! SumPrint - Print summary data to <RootName>.sum (flag):
@@ -456,10 +460,16 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    call cleanup()
 
    ! --- Reading Reduced file
-   call ReadReducedFile(InputFileData%RedFile, p, InputFileData%FileFormat, ErrStat, ErrMsg); if(Failed()) return;
+   call ReadReducedFile(InputFileData%RedFile, p, InputFileData%FileFormat, ErrStat, ErrMsg); if(Failed()) return
    ! Checking that everyting was correctly read and set
    call CheckInputs(InputFileData, p, ErrStat, ErrMsg);  if(Failed()) return
 
+   ! --- Reading connection file
+   if (InputFileData%hasConnections) then
+      call ReadConnFile(InputFileData%ConnFile, p, ErrStat, ErrMsg); if(Failed()) return
+   else
+      p%NConn = 0_IntKi
+   end if
  
    ! --- Reducing the number of DOF if needed
    p%nCBFull=p%nCB
@@ -518,6 +528,9 @@ SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
    call SquareMatRed(p%Stff)
    call SquareMatRed(p%Damp)
    call TimeMatRed(p%Forces)
+   if (allocated(p%PhiConn)) then
+      call RectMatRed(p%PhiConn)
+   end if
 
    ! Trigger
    p%nCB = size(p%ActiveCBDOF)
@@ -541,6 +554,22 @@ CONTAINS
         enddo
         deallocate(tmp)
     end subroutine 
+    !> Takes M and returns M(:,I) where I is a list of indexes to keep
+    subroutine RectMatRed(M)
+        real(Reki), dimension(:,:), allocatable :: M
+        real(Reki), dimension(:,:), allocatable :: tmp
+        integer(IntKi) :: J
+        ! Storing M to a tmp array
+        call allocAry( tmp, size(M,1), size(M,2), 'Mtmp',  ErrStat, ErrMsg); if(Failed()) return
+        tmp=M
+        ! Reallocating M and storing only the desired DOF
+        deallocate(M)
+        call allocAry(M, size(tmp,1), nActive, 'M',  ErrStat, ErrMsg); if(Failed()) return
+        do J=1,nActive
+            M(:,J) = tmp(:, FullActiveCBDOF(J))
+        enddo
+        deallocate(tmp)
+    end subroutine
     !> Takes M and returns M(:,I) where I is a list of indexes to keep
     subroutine TimeMatRed(M)
         real(Reki), dimension(:,:), allocatable :: M
@@ -808,6 +837,69 @@ CONTAINS
    END SUBROUTINE ReadGuyanASCII
 END SUBROUTINE ReadReducedFile
 
+!..................................................................................................................................
+SUBROUTINE ReadConnFile( InputFile, p, ErrStat, ErrMsg )
+!..................................................................................................................................
+   ! Passed variables
+   CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+   ! Local variables:
+   INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                       :: iLine                                     ! Current position in file
+   CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Get an available unit number for the file.
+   CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
+   ! Open the Primary input file.
+   CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
+
+   ! --- Reading file line by line
+   ErrStat=0
+   iLine=0
+   do while (ErrStat==0)
+       iLine=iLine+1
+       read(UnIn,'(A)', iostat=ErrStat) Line
+       if (ErrStat/=0) then
+           if (ErrStat < 0) then
+               ErrStat=0 ! End of file is fine
+           else
+               ErrMsg='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
+           endif
+           exit
+       endif
+       ! Line content is analyzed as case incensitive
+       call Conv2UC(Line)
+       if (index(Line,'!NCONN:')==1) then
+           p%nConn = ReadIntFromStr(Line(8:), '`Nconn`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
+           if (p%nConn<=0_IntKi) return
+        else if (index(Line,'!CONNECTIONS')==1) then
+           call ReadRealMatrix(UnIn, InputFile, p%PosConn, 'Connections', p%nConn, 3_IntKi, ErrStat, ErrMsg, iLine)
+        else if (index(Line,'!DISPLACEMENT')==1) then
+           call ReadRealMatrix(UnIn, InputFile, p%PhiConn, 'Displacement', 3*p%nConn, p%nTot, ErrStat, ErrMsg, iLine)
+        ! else if (index(Line,'!')==1) then
+           !write(*,*) 'Ignored comment: '//trim(Line)
+        ! else
+           ! Ignore unsupported lines
+           !write(*,*) 'Ignored line: '//trim(Line)
+        end if
+    end do
+    close( UnIn )
+
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadReducedFile')
+        Failed =  ErrStat >= AbortErrLev
+        if(Failed) call cleanup()
+    end function Failed
+    subroutine cleanup()
+        close( UnIn )
+    end subroutine cleanup
+END SUBROUTINE ReadConnFile
+
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    ! passed variables
@@ -884,6 +976,11 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp2r8(UnSu, 'C12',p%C12)
    call disp2r8(UnSu, 'C21',p%C21)
    call disp2r8(UnSu, 'C22',p%C22)
+
+   write(UnSu,'(//,A,//)')  '!Connections:'
+   write(UnSu,'(A,I0)')     'Number of connections        : ',p%nConn
+   call disp2r8(UnSu, 'PosConn',p%PosConn)
+   call disp2r8(UnSu, 'PhiConn',p%PhiConn)
 
    OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    OutPFmtS = '( A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'

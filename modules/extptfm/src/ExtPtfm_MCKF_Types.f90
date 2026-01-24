@@ -45,7 +45,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_InputFile
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
-    LOGICAL  :: hasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
+    LOGICAL  :: HasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
     INTEGER(IntKi)  :: FileFormat = 0_IntKi      !< File format switch [-]
     CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
     CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
@@ -53,6 +53,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitPosList      !< Initial positions of the CB DOFs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitVelList      !< Initial velocities of the CB DOFs [-]
+    LOGICAL  :: HasConnections = .false.      !< True: has connections; False: no connections [-]
+    CHARACTER(1024)  :: ConnFile      !< File containing connection inputs [-]
     LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.sum [-]
     INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
     LOGICAL  :: TabDelim = .false.      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
@@ -126,11 +128,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C12      !< Matrix C12 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C22      !< Matrix C22 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C21      !< Matrix C21 []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phiConn      !< Mode shapes of connection points []
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PosConn      !< Positions of connection points [m]
     REAL(DbKi)  :: EP_DeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: nTimeSteps = 0_IntKi      !< Number of values of Forces and times [-]
     INTEGER(IntKi)  :: nCB = 0_IntKi      !< Number of CraigBampton modes active [-]
-    INTEGER(IntKi)  :: nCBFull = 0_IntKi      !< Totla number of CraigBampton modes given as input [-]
+    INTEGER(IntKi)  :: nCBFull = 0_IntKi      !< Total number of CraigBampton modes given as input [-]
     INTEGER(IntKi)  :: nTot = 0_IntKi      !< Total number of debrees of freedom (CB + interface) [-]
+    INTEGER(IntKi)  :: nConn = 0_IntKi      !< Number of connection points on the structure [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of values in WriteOutput [-]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
@@ -164,6 +169,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F1      !< Interface/rigid-body mode forcing [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F2      !< Internal elastic mode forcing [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FConn      !< Connection forces [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FConnCB      !< Modal forces from connections []
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DConn      !< Connection point displacement []
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VConn      !< Connection point velocity []
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AConn      !< Connection point acceleration []
     INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
@@ -250,7 +260,7 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    ErrMsg  = ''
    DstInputFileData%DT = SrcInputFileData%DT
    DstInputFileData%IntMethod = SrcInputFileData%IntMethod
-   DstInputFileData%hasRBMode = SrcInputFileData%hasRBMode
+   DstInputFileData%HasRBMode = SrcInputFileData%HasRBMode
    DstInputFileData%FileFormat = SrcInputFileData%FileFormat
    DstInputFileData%RedFile = SrcInputFileData%RedFile
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
@@ -291,6 +301,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
       end if
       DstInputFileData%InitVelList = SrcInputFileData%InitVelList
    end if
+   DstInputFileData%HasConnections = SrcInputFileData%HasConnections
+   DstInputFileData%ConnFile = SrcInputFileData%ConnFile
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%OutFile = SrcInputFileData%OutFile
    DstInputFileData%TabDelim = SrcInputFileData%TabDelim
@@ -339,7 +351,7 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%IntMethod)
-   call RegPack(RF, InData%hasRBMode)
+   call RegPack(RF, InData%HasRBMode)
    call RegPack(RF, InData%FileFormat)
    call RegPack(RF, InData%RedFile)
    call RegPack(RF, InData%RedFileCst)
@@ -347,6 +359,8 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%ActiveCBDOF)
    call RegPackAlloc(RF, InData%InitPosList)
    call RegPackAlloc(RF, InData%InitVelList)
+   call RegPack(RF, InData%HasConnections)
+   call RegPack(RF, InData%ConnFile)
    call RegPack(RF, InData%SumPrint)
    call RegPack(RF, InData%OutFile)
    call RegPack(RF, InData%TabDelim)
@@ -367,7 +381,7 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%hasRBMode); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasRBMode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FileFormat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFileCst); if (RegCheckErr(RF, RoutineName)) return
@@ -375,6 +389,8 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%ActiveCBDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%InitPosList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%InitVelList); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasConnections); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ConnFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
@@ -1110,11 +1126,36 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%C21 = SrcParamData%C21
    end if
+   if (allocated(SrcParamData%phiConn)) then
+      LB(1:2) = lbound(SrcParamData%phiConn)
+      UB(1:2) = ubound(SrcParamData%phiConn)
+      if (.not. allocated(DstParamData%phiConn)) then
+         allocate(DstParamData%phiConn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%phiConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%phiConn = SrcParamData%phiConn
+   end if
+   if (allocated(SrcParamData%PosConn)) then
+      LB(1:2) = lbound(SrcParamData%PosConn)
+      UB(1:2) = ubound(SrcParamData%PosConn)
+      if (.not. allocated(DstParamData%PosConn)) then
+         allocate(DstParamData%PosConn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PosConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PosConn = SrcParamData%PosConn
+   end if
    DstParamData%EP_DeltaT = SrcParamData%EP_DeltaT
    DstParamData%nTimeSteps = SrcParamData%nTimeSteps
    DstParamData%nCB = SrcParamData%nCB
    DstParamData%nCBFull = SrcParamData%nCBFull
    DstParamData%nTot = SrcParamData%nTot
+   DstParamData%nConn = SrcParamData%nConn
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%IntMethod = SrcParamData%IntMethod
    if (allocated(SrcParamData%ActiveCBDOF)) then
@@ -1263,6 +1304,12 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%C21)) then
       deallocate(ParamData%C21)
    end if
+   if (allocated(ParamData%phiConn)) then
+      deallocate(ParamData%phiConn)
+   end if
+   if (allocated(ParamData%PosConn)) then
+      deallocate(ParamData%PosConn)
+   end if
    if (allocated(ParamData%ActiveCBDOF)) then
       deallocate(ParamData%ActiveCBDOF)
    end if
@@ -1319,11 +1366,14 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%C12)
    call RegPackAlloc(RF, InData%C22)
    call RegPackAlloc(RF, InData%C21)
+   call RegPackAlloc(RF, InData%phiConn)
+   call RegPackAlloc(RF, InData%PosConn)
    call RegPack(RF, InData%EP_DeltaT)
    call RegPack(RF, InData%nTimeSteps)
    call RegPack(RF, InData%nCB)
    call RegPack(RF, InData%nCBFull)
    call RegPack(RF, InData%nTot)
+   call RegPack(RF, InData%nConn)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%IntMethod)
    call RegPackAlloc(RF, InData%ActiveCBDOF)
@@ -1381,11 +1431,14 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%C12); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%C22); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%C21); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%phiConn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PosConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EP_DeltaT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTimeSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCBFull); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ActiveCBDOF); if (RegCheckErr(RF, RoutineName)) return
@@ -1679,6 +1732,66 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F2 = SrcMiscData%F2
    end if
+   if (allocated(SrcMiscData%FConn)) then
+      LB(1:1) = lbound(SrcMiscData%FConn)
+      UB(1:1) = ubound(SrcMiscData%FConn)
+      if (.not. allocated(DstMiscData%FConn)) then
+         allocate(DstMiscData%FConn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FConn = SrcMiscData%FConn
+   end if
+   if (allocated(SrcMiscData%FConnCB)) then
+      LB(1:1) = lbound(SrcMiscData%FConnCB)
+      UB(1:1) = ubound(SrcMiscData%FConnCB)
+      if (.not. allocated(DstMiscData%FConnCB)) then
+         allocate(DstMiscData%FConnCB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FConnCB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FConnCB = SrcMiscData%FConnCB
+   end if
+   if (allocated(SrcMiscData%DConn)) then
+      LB(1:1) = lbound(SrcMiscData%DConn)
+      UB(1:1) = ubound(SrcMiscData%DConn)
+      if (.not. allocated(DstMiscData%DConn)) then
+         allocate(DstMiscData%DConn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%DConn = SrcMiscData%DConn
+   end if
+   if (allocated(SrcMiscData%VConn)) then
+      LB(1:1) = lbound(SrcMiscData%VConn)
+      UB(1:1) = ubound(SrcMiscData%VConn)
+      if (.not. allocated(DstMiscData%VConn)) then
+         allocate(DstMiscData%VConn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%VConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%VConn = SrcMiscData%VConn
+   end if
+   if (allocated(SrcMiscData%AConn)) then
+      LB(1:1) = lbound(SrcMiscData%AConn)
+      UB(1:1) = ubound(SrcMiscData%AConn)
+      if (.not. allocated(DstMiscData%AConn)) then
+         allocate(DstMiscData%AConn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AConn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AConn = SrcMiscData%AConn
+   end if
    DstMiscData%Indx = SrcMiscData%Indx
    DstMiscData%EquilStart = SrcMiscData%EquilStart
    if (allocated(SrcMiscData%AllOuts)) then
@@ -1731,6 +1844,21 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F2)) then
       deallocate(MiscData%F2)
    end if
+   if (allocated(MiscData%FConn)) then
+      deallocate(MiscData%FConn)
+   end if
+   if (allocated(MiscData%FConnCB)) then
+      deallocate(MiscData%FConnCB)
+   end if
+   if (allocated(MiscData%DConn)) then
+      deallocate(MiscData%DConn)
+   end if
+   if (allocated(MiscData%VConn)) then
+      deallocate(MiscData%VConn)
+   end if
+   if (allocated(MiscData%AConn)) then
+      deallocate(MiscData%AConn)
+   end if
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
@@ -1756,6 +1884,11 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%F_at_t)
    call RegPackAlloc(RF, InData%F1)
    call RegPackAlloc(RF, InData%F2)
+   call RegPackAlloc(RF, InData%FConn)
+   call RegPackAlloc(RF, InData%FConnCB)
+   call RegPackAlloc(RF, InData%DConn)
+   call RegPackAlloc(RF, InData%VConn)
+   call RegPackAlloc(RF, InData%AConn)
    call RegPack(RF, InData%Indx)
    call RegPack(RF, InData%EquilStart)
    call RegPackAlloc(RF, InData%AllOuts)
@@ -1780,6 +1913,11 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FConn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FConnCB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DConn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VConn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
