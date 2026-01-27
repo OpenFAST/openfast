@@ -28,7 +28,6 @@ typedef   ^                ^             CHARACTER(1024)   RootName   - - -     
 typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
 typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
 typedef        ^                     ^            LOGICAL            HasRBMode  -  - -  "True: has rigid-body modes/floating structure; False: no rigid-body modes" -
-typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
 typedef        ^                     ^            LOGICAL            EquilStart -  - -  "Flag to determine the equilibrium positions of the CB modes at initialization (first call)"   -
@@ -37,6 +36,8 @@ typedef        ^                     ^            ReKi               InitPosList
 typedef        ^                     ^            ReKi               InitVelList {:}   - -  "Initial velocities of the CB DOFs"   -
 typedef        ^                     ^            LOGICAL            HasConnections - - - "True: has connections; False: no connections" -
 typedef        ^                     ^            CHARACTER(1024)    ConnFile   -  - -  "File containing connection inputs"   -
+typedef        ^                     ^            LOGICAL            HasUserForcing - - - "True: has user forcing; False: no user forcing" -
+typedef        ^                     ^            CHARACTER(1024)    ForceFile  -  - -  "File containing user forcing inputs"   -
 typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
 typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
 typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
@@ -76,7 +77,8 @@ typedef  ^               ParameterType   Logical  hasRBMode   - - - "True: has r
 typedef  ^                    ^          ReKi     Mass   {:}{:} - - "Mass matrix" "kg, kg-m, kg-m^2"
 typedef  ^                    ^          ReKi     Damp   {:}{:} - - "Damping matrix" -
 typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness matrix" -
-typedef  ^                    ^          ReKi     Forces0   {:} - - "Prescribed constant external loads including selfweight" -
+typedef  ^                    ^          ReKi     W0     {:}    - - "Prescribed constant external loads including selfweight" -
+typedef  ^                    ^          ReKi     WStff  {:}{:} - - "Self-weight stiffness matrix" -
 typedef  ^                    ^          ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
 typedef  ^                    ^          ReKi     A1Mat {:}{:}  - - "State matrix A1" ""
@@ -138,10 +140,11 @@ typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Ex
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
-typedef    ^                  ^                ReKi     uFlat   {18} - - "Flattened vector of inputs"
+typedef    ^                  ^                R8Ki     uFlat   {18} - - "Flattened vector of inputs"
 typedef    ^                  ^                ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
 typedef    ^                  ^                ReKi     F1       {:} - - "Interface/rigid-body mode forcing" -
 typedef    ^                  ^                ReKi     F2       {:} - - "Internal elastic mode forcing" -
+typedef    ^                  ^                ReKi     Weight   {:} - - "Structure self-weight" -
 typedef    ^                  ^                ReKi     FConn    {:} - - "Connection forces" "N"
 typedef    ^                  ^                ReKi     FConnCB  {:} - - "Modal forces from connections" ""
 typedef    ^                  ^                ReKi     DConn  {:} - - "Connection point displacement" ""

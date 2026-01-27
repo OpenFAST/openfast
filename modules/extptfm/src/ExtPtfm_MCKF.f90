@@ -183,6 +183,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F1, 6,'Interface/rigid-body mode forcing', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F2, p%nCB,'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%Weight, p%nTot,'Structure self-weight', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%DConn, 3_IntKi*p%nConn, 'Connection point displacement', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%VConn, 3_IntKi*p%nConn, 'Connection point velocity',     ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%AConn, 3_IntKi*p%nConn, 'Connection point acceleration', ErrStat,ErrMsg); if(Failed()) return
@@ -945,8 +946,23 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%F1(1:3) = u%FBMesh%Force(:,1)
    m%F1(4:6) = u%FBMesh%Moment(:,1)
    m%F1      = m%F1 + m%F_at_t(1:6)
-   m%F2 = m%F_at_t(6+1:6+p%nCB) + u%Fm
-   if (p%nConn>0_IntKi) then      ! Loads from connection points
+   m%F2      = u%Fm + m%F_at_t(6+1:6+p%nCB)
+
+   ! Structure self-weight
+   m%Weight(1:6)         = p%W0(1:6)
+   m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB)
+   if ( p%hasRBMode ) then
+      m%Weight = m%Weight - matmul( p%WStff(:,4:5) , m%uFlat(4:5) ) - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
+      m%F1(1:3) = m%F1(1:3) + matmul( Rb2g, m%Weight(1:3) )
+      m%F1(4:6) = m%F1(4:6) + matmul( Rb2g, m%Weight(4:6) )
+   else
+      m%Weight = m%Weight - matmul( p%WStff(:,1:6) , m%uFlat(1:6) ) - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
+      m%F1 = m%F1 + m%Weight(1:6)
+   end if
+   m%F2 = m%F2 + m%Weight(6+1:6+p%nCB)
+
+   ! Loads from connection points
+   if (p%nConn>0_IntKi) then
       m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
       if ( p%hasRBMode ) then
          m%F1(1:3) = m%F1(1:3) + matmul( Rb2g, m%FConnCB(1:3) )
@@ -1138,7 +1154,17 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    ! --- Compute modal forcing
    m%F2 = m%F_at_t(6+1:6+p%nCB) & ! User prescribed forces
         + u%Fm(1:p%nCB)           ! Modal forcing from HydroDyn generalized DOF
-   if (p%nConn>0_IntKi) then      ! Loads from connection points
+   ! Structure self-weight
+   if ( p%hasRBMode ) then
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB) &
+                            - matmul( p%WStff(6+1:6+p%nCB,4:5) , m%uFlat(4:5) ) - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
+   else
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB) &
+                            - matmul( p%WStff(6+1:6+p%nCB,1:6) , m%uFlat(1:6) ) - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
+   end if
+   m%F2 = m%F2 + m%Weight(6+1:6+p%nCB)
+   ! Loads from connection points
+   if (p%nConn>0_IntKi) then
       m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
       m%F2      = m%F2 + m%FConnCB(6+1:6+p%nCB)
    end if

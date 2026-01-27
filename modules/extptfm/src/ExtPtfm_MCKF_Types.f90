@@ -46,7 +46,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
     LOGICAL  :: HasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
-    INTEGER(IntKi)  :: FileFormat = 0_IntKi      !< File format switch [-]
     CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
     CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium positions of the CB modes at initialization (first call) [-]
@@ -55,6 +54,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitVelList      !< Initial velocities of the CB DOFs [-]
     LOGICAL  :: HasConnections = .false.      !< True: has connections; False: no connections [-]
     CHARACTER(1024)  :: ConnFile      !< File containing connection inputs [-]
+    LOGICAL  :: HasUserForcing = .false.      !< True: has user forcing; False: no user forcing [-]
+    CHARACTER(1024)  :: ForceFile      !< File containing user forcing inputs [-]
     LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.sum [-]
     INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
     LOGICAL  :: TabDelim = .false.      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
@@ -100,7 +101,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mass      !< Mass matrix [kg, kg-m, kg-m^2]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Damp      !< Damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Stff      !< Stiffness matrix [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Forces0      !< Prescribed constant external loads including selfweight [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W0      !< Prescribed constant external loads including selfweight [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WStff      !< Self-weight stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Forces      !< Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion. [N, N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: times      !< the time associated with each row of Forces [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A1Mat      !< State matrix A1 []
@@ -165,10 +167,11 @@ IMPLICIT NONE
 ! =========  ExtPtfm_MiscVarType  =======
   TYPE, PUBLIC :: ExtPtfm_MiscVarType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
-    REAL(ReKi) , DIMENSION(1:18)  :: uFlat = 0.0_ReKi      !< Flattened vector of inputs [-]
+    REAL(R8Ki) , DIMENSION(1:18)  :: uFlat = 0.0_R8Ki      !< Flattened vector of inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F1      !< Interface/rigid-body mode forcing [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F2      !< Internal elastic mode forcing [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Weight      !< Structure self-weight [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FConn      !< Connection forces [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FConnCB      !< Modal forces from connections []
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DConn      !< Connection point displacement []
@@ -261,7 +264,6 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%DT = SrcInputFileData%DT
    DstInputFileData%IntMethod = SrcInputFileData%IntMethod
    DstInputFileData%HasRBMode = SrcInputFileData%HasRBMode
-   DstInputFileData%FileFormat = SrcInputFileData%FileFormat
    DstInputFileData%RedFile = SrcInputFileData%RedFile
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
    DstInputFileData%EquilStart = SrcInputFileData%EquilStart
@@ -303,6 +305,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    end if
    DstInputFileData%HasConnections = SrcInputFileData%HasConnections
    DstInputFileData%ConnFile = SrcInputFileData%ConnFile
+   DstInputFileData%HasUserForcing = SrcInputFileData%HasUserForcing
+   DstInputFileData%ForceFile = SrcInputFileData%ForceFile
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%OutFile = SrcInputFileData%OutFile
    DstInputFileData%TabDelim = SrcInputFileData%TabDelim
@@ -352,7 +356,6 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%IntMethod)
    call RegPack(RF, InData%HasRBMode)
-   call RegPack(RF, InData%FileFormat)
    call RegPack(RF, InData%RedFile)
    call RegPack(RF, InData%RedFileCst)
    call RegPack(RF, InData%EquilStart)
@@ -361,6 +364,8 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%InitVelList)
    call RegPack(RF, InData%HasConnections)
    call RegPack(RF, InData%ConnFile)
+   call RegPack(RF, InData%HasUserForcing)
+   call RegPack(RF, InData%ForceFile)
    call RegPack(RF, InData%SumPrint)
    call RegPack(RF, InData%OutFile)
    call RegPack(RF, InData%TabDelim)
@@ -382,7 +387,6 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasRBMode); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%FileFormat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFileCst); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
@@ -391,6 +395,8 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%InitVelList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasConnections); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConnFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasUserForcing); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ForceFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
@@ -790,17 +796,29 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%Stff = SrcParamData%Stff
    end if
-   if (allocated(SrcParamData%Forces0)) then
-      LB(1:1) = lbound(SrcParamData%Forces0)
-      UB(1:1) = ubound(SrcParamData%Forces0)
-      if (.not. allocated(DstParamData%Forces0)) then
-         allocate(DstParamData%Forces0(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcParamData%W0)) then
+      LB(1:1) = lbound(SrcParamData%W0)
+      UB(1:1) = ubound(SrcParamData%W0)
+      if (.not. allocated(DstParamData%W0)) then
+         allocate(DstParamData%W0(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Forces0.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%W0.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%Forces0 = SrcParamData%Forces0
+      DstParamData%W0 = SrcParamData%W0
+   end if
+   if (allocated(SrcParamData%WStff)) then
+      LB(1:2) = lbound(SrcParamData%WStff)
+      UB(1:2) = ubound(SrcParamData%WStff)
+      if (.not. allocated(DstParamData%WStff)) then
+         allocate(DstParamData%WStff(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WStff.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WStff = SrcParamData%WStff
    end if
    if (allocated(SrcParamData%Forces)) then
       LB(1:2) = lbound(SrcParamData%Forces)
@@ -1220,8 +1238,11 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Stff)) then
       deallocate(ParamData%Stff)
    end if
-   if (allocated(ParamData%Forces0)) then
-      deallocate(ParamData%Forces0)
+   if (allocated(ParamData%W0)) then
+      deallocate(ParamData%W0)
+   end if
+   if (allocated(ParamData%WStff)) then
+      deallocate(ParamData%WStff)
    end if
    if (allocated(ParamData%Forces)) then
       deallocate(ParamData%Forces)
@@ -1338,7 +1359,8 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%Mass)
    call RegPackAlloc(RF, InData%Damp)
    call RegPackAlloc(RF, InData%Stff)
-   call RegPackAlloc(RF, InData%Forces0)
+   call RegPackAlloc(RF, InData%W0)
+   call RegPackAlloc(RF, InData%WStff)
    call RegPackAlloc(RF, InData%Forces)
    call RegPackAlloc(RF, InData%times)
    call RegPackAlloc(RF, InData%A1Mat)
@@ -1403,7 +1425,8 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Mass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Damp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Stff); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Forces0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%W0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WStff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Forces); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%times); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%A1Mat); if (RegCheckErr(RF, RoutineName)) return
@@ -1732,6 +1755,18 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F2 = SrcMiscData%F2
    end if
+   if (allocated(SrcMiscData%Weight)) then
+      LB(1:1) = lbound(SrcMiscData%Weight)
+      UB(1:1) = ubound(SrcMiscData%Weight)
+      if (.not. allocated(DstMiscData%Weight)) then
+         allocate(DstMiscData%Weight(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Weight.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Weight = SrcMiscData%Weight
+   end if
    if (allocated(SrcMiscData%FConn)) then
       LB(1:1) = lbound(SrcMiscData%FConn)
       UB(1:1) = ubound(SrcMiscData%FConn)
@@ -1844,6 +1879,9 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F2)) then
       deallocate(MiscData%F2)
    end if
+   if (allocated(MiscData%Weight)) then
+      deallocate(MiscData%Weight)
+   end if
    if (allocated(MiscData%FConn)) then
       deallocate(MiscData%FConn)
    end if
@@ -1884,6 +1922,7 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%F_at_t)
    call RegPackAlloc(RF, InData%F1)
    call RegPackAlloc(RF, InData%F2)
+   call RegPackAlloc(RF, InData%Weight)
    call RegPackAlloc(RF, InData%FConn)
    call RegPackAlloc(RF, InData%FConnCB)
    call RegPackAlloc(RF, InData%DConn)
@@ -1913,6 +1952,7 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Weight); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%FConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%FConnCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DConn); if (RegCheckErr(RF, RoutineName)) return
