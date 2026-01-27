@@ -19,7 +19,9 @@ include Registry_NWTC_Library.txt
 #   e.g., the name of the input file, the file root name, etc.
 typedef ExtPtfm_MCKF/ExtPtfm InitInputType CHARACTER(1024) InputFile  - - -        "Name of the input file; remove if there is no file" -
 typedef   ^                ^             LOGICAL           Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
-typedef   ^                ^             ReKi              PtfmRefzt  - - -        "Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point" meters
+typedef   ^                ^             ReKi              PtfmRefxt  - - -        "Longitudinal distance from PRP to the platform reference point" "m"
+typedef   ^                ^             ReKi              PtfmRefyt  - - -        "Laterl distance from PRP to the platform reference point" "m"
+typedef   ^                ^             ReKi              PtfmRefzt  - - -        "Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point" "m"
 typedef   ^                ^             CHARACTER(1024)   RootName   - - -        "RootName for writing output files"
 
 # ..... Input file data ...........................................................................................................
@@ -27,6 +29,7 @@ typedef   ^                ^             CHARACTER(1024)   RootName   - - -     
 # ..... Primary Input file data ...........................................................................................................
 typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
 typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef        ^                     ^            IntKi              RBMod      -  - -  "Method for handling rigid-body modes" -
 typedef        ^                     ^            LOGICAL            HasRBMode  -  - -  "True: has rigid-body modes/floating structure; False: no rigid-body modes" -
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
@@ -74,6 +77,7 @@ typedef   ^                     ^               IntKi                    n      
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^               ParameterType   Logical  hasRBMode   - - - "True: has rigid-body modes/floating structure; False: no rigid-body modes"
+typedef  ^                    ^          IntKi    RBMod       - - -  "Method for handling rigid-body modes" -
 typedef  ^                    ^          ReKi     Mass   {:}{:} - - "Mass matrix" "kg, kg-m, kg-m^2"
 typedef  ^                    ^          ReKi     Damp   {:}{:} - - "Damping matrix" -
 typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness matrix" -
@@ -107,7 +111,10 @@ typedef  ^                    ^          ReKi     C12 {:}{:}    - - "Matrix C12"
 typedef  ^                    ^          ReKi     C22 {:}{:}    - - "Matrix C22" ""
 typedef  ^                    ^          ReKi     C21 {:}{:}    - - "Matrix C21" ""
 typedef  ^                    ^          ReKi     phiConn {:}{:} - - "Mode shapes of connection points" ""
-typedef  ^                    ^          ReKi     PosConn {3}{:} - - "Positions of connection points" "m"
+typedef  ^                    ^          ReKi     PosConn {:}{:} - - "Positions of connection points" "m"
+typedef  ^                    ^          ReKi     RBMass      - - - "Rigid-body mass" "kg"
+typedef  ^                    ^          ReKi     RBCoG     {3} - - "Rigid-body center of mass" "m"
+typedef  ^                    ^          ReKi     RBInertia {3}{3} - - "Rigid-body moment of inertia matrix" "kgm^2"
 typedef  ^                    ^          DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
 typedef  ^                    ^          IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
 typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes active" -

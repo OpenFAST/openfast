@@ -930,6 +930,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_ExtPtfm%InputFile = p_FAST%SubFile
       Init%InData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//y_FAST%Module_Abrev(Module_ExtPtfm)
       Init%InData_ExtPtfm%Linearize = p_FAST%Linearize
+      Init%InData_ExtPtfm%PtfmRefxt = ED%p(1)%PtfmRefxt
+      Init%InData_ExtPtfm%PtfmRefyt = ED%p(1)%PtfmRefyt
       Init%InData_ExtPtfm%PtfmRefzt = ED%p(1)%PtfmRefzt ! Required
 
       ! Call module initialization routine

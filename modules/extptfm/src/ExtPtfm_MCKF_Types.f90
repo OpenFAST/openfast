@@ -37,7 +37,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
-    REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
+    REAL(ReKi)  :: PtfmRefxt = 0.0_ReKi      !< Longitudinal distance from PRP to the platform reference point [m]
+    REAL(ReKi)  :: PtfmRefyt = 0.0_ReKi      !< Laterl distance from PRP to the platform reference point [m]
+    REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [m]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
   END TYPE ExtPtfm_InitInputType
 ! =======================
@@ -45,6 +47,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ExtPtfm_InputFile
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
+    INTEGER(IntKi)  :: RBMod = 0_IntKi      !< Method for handling rigid-body modes [-]
     LOGICAL  :: HasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
     CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
     CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
@@ -98,6 +101,7 @@ IMPLICIT NONE
 ! =========  ExtPtfm_ParameterType  =======
   TYPE, PUBLIC :: ExtPtfm_ParameterType
     LOGICAL  :: hasRBMode = .false.      !< True: has rigid-body modes/floating structure; False: no rigid-body modes [-]
+    INTEGER(IntKi)  :: RBMod = 0_IntKi      !< Method for handling rigid-body modes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Mass      !< Mass matrix [kg, kg-m, kg-m^2]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Damp      !< Damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Stff      !< Stiffness matrix [-]
@@ -132,6 +136,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C21      !< Matrix C21 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phiConn      !< Mode shapes of connection points []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PosConn      !< Positions of connection points [m]
+    REAL(ReKi)  :: RBMass = 0.0_ReKi      !< Rigid-body mass [kg]
+    REAL(ReKi) , DIMENSION(1:3)  :: RBCoG = 0.0_ReKi      !< Rigid-body center of mass [m]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RBInertia = 0.0_ReKi      !< Rigid-body moment of inertia matrix [kgm^2]
     REAL(DbKi)  :: EP_DeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: nTimeSteps = 0_IntKi      !< Number of values of Forces and times [-]
     INTEGER(IntKi)  :: nCB = 0_IntKi      !< Number of CraigBampton modes active [-]
@@ -214,6 +221,8 @@ subroutine ExtPtfm_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    ErrMsg  = ''
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
+   DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
    DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
    DstInitInputData%RootName = SrcInitInputData%RootName
 end subroutine
@@ -234,6 +243,8 @@ subroutine ExtPtfm_PackInitInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%InputFile)
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%PtfmRefxt)
+   call RegPack(RF, InData%PtfmRefyt)
    call RegPack(RF, InData%PtfmRefzt)
    call RegPack(RF, InData%RootName)
    if (RegCheckErr(RF, RoutineName)) return
@@ -246,6 +257,8 @@ subroutine ExtPtfm_UnPackInitInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -263,6 +276,7 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    ErrMsg  = ''
    DstInputFileData%DT = SrcInputFileData%DT
    DstInputFileData%IntMethod = SrcInputFileData%IntMethod
+   DstInputFileData%RBMod = SrcInputFileData%RBMod
    DstInputFileData%HasRBMode = SrcInputFileData%HasRBMode
    DstInputFileData%RedFile = SrcInputFileData%RedFile
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
@@ -355,6 +369,7 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%IntMethod)
+   call RegPack(RF, InData%RBMod)
    call RegPack(RF, InData%HasRBMode)
    call RegPack(RF, InData%RedFile)
    call RegPack(RF, InData%RedFileCst)
@@ -386,6 +401,7 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasRBMode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RedFileCst); if (RegCheckErr(RF, RoutineName)) return
@@ -760,6 +776,7 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%hasRBMode = SrcParamData%hasRBMode
+   DstParamData%RBMod = SrcParamData%RBMod
    if (allocated(SrcParamData%Mass)) then
       LB(1:2) = lbound(SrcParamData%Mass)
       UB(1:2) = ubound(SrcParamData%Mass)
@@ -1168,6 +1185,9 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%PosConn = SrcParamData%PosConn
    end if
+   DstParamData%RBMass = SrcParamData%RBMass
+   DstParamData%RBCoG = SrcParamData%RBCoG
+   DstParamData%RBInertia = SrcParamData%RBInertia
    DstParamData%EP_DeltaT = SrcParamData%EP_DeltaT
    DstParamData%nTimeSteps = SrcParamData%nTimeSteps
    DstParamData%nCB = SrcParamData%nCB
@@ -1356,6 +1376,7 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%hasRBMode)
+   call RegPack(RF, InData%RBMod)
    call RegPackAlloc(RF, InData%Mass)
    call RegPackAlloc(RF, InData%Damp)
    call RegPackAlloc(RF, InData%Stff)
@@ -1390,6 +1411,9 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%C21)
    call RegPackAlloc(RF, InData%phiConn)
    call RegPackAlloc(RF, InData%PosConn)
+   call RegPack(RF, InData%RBMass)
+   call RegPack(RF, InData%RBCoG)
+   call RegPack(RF, InData%RBInertia)
    call RegPack(RF, InData%EP_DeltaT)
    call RegPack(RF, InData%nTimeSteps)
    call RegPack(RF, InData%nCB)
@@ -1422,6 +1446,7 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%hasRBMode); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Mass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Damp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Stff); if (RegCheckErr(RF, RoutineName)) return
@@ -1456,6 +1481,9 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%C21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%phiConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PosConn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBMass); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBCoG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBInertia); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EP_DeltaT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTimeSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCB); if (RegCheckErr(RF, RoutineName)) return

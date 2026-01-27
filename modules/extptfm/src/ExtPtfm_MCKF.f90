@@ -123,7 +123,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    p%nTot      = -1
    p%nCB       = -1
 
-   call ReadPrimaryFile(InitInp%InputFile, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
+   call ReadPrimaryFile(InitInp%InputFile, InitInp, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Setting Params from Input file data
    p%IntMethod = InputFileData%IntMethod
@@ -133,6 +133,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
        p%EP_DeltaT = InputFileData%DT
    endif
    ! Switch for modeling rigid-body modes
+   p%RBMod     = InputFileData%RBMod
    p%hasRBMode = InputFileData%hasRBMode
    ! Setting p%OutParam from OutList
    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, ErrStat, ErrMsg); if(Failed()) return
@@ -528,7 +529,7 @@ SUBROUTINE Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg)
                      Moment            = .TRUE.)
    if(Failed()) return
    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-   CALL MeshPositionNode (u%FBMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
+   CALL MeshPositionNode (u%FBMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
    ! Create the mesh element
    CALL MeshConstructElement (  u%FBMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%FBMesh, ErrStat, ErrMsg ); if(Failed()) return
@@ -943,22 +944,36 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    !--- Compute external loads
    ! Note: m%F1 is the interface/rigid-body mode forcing kept in earth-fixed system
    !       m%F2 is the forcing to the internal elastic modes
-   m%F1(1:3) = u%FBMesh%Force(:,1)
+   m%F1(1:3) = u%FBMesh%Force (:,1)
    m%F1(4:6) = u%FBMesh%Moment(:,1)
    m%F1      = m%F1 + m%F_at_t(1:6)
    m%F2      = u%Fm + m%F_at_t(6+1:6+p%nCB)
 
    ! Structure self-weight
-   m%Weight(1:6)         = p%W0(1:6)
-   m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB)
    if ( p%hasRBMode ) then
-      m%Weight = m%Weight - matmul( p%WStff(:,4:5) , m%uFlat(4:5) ) - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
-      m%F1(1:3) = m%F1(1:3) + matmul( Rb2g, m%Weight(1:3) )
-      m%F1(4:6) = m%F1(4:6) + matmul( Rb2g, m%Weight(4:6) )
+      select case (p%RBMod)
+         case (1_IntKi)
+            ! Compute self-weight based on stiffness and convert to earth-fixed frame
+            m%Weight(1:6) = p%W0(1:6) &
+                          - matmul( p%WStff(1:6,4:5) , m%uFlat(4:5) ) &
+                          - matmul( p%WStff(1:6,6+1:6+p%nCB) , x%qm )
+            m%Weight(1:3) = matmul( Rb2g, m%Weight(1:3))
+            m%Weight(4:6) = matmul( Rb2g, m%Weight(4:6))
+         case (2_IntKi)
+            ! Compute exact self-weight in earth-fixed frame
+            m%Weight(1:3) = [0.0_ReKi,0.0_ReKi,p%W0(3)]
+            m%Weight(4:6) = cross_product( matmul( Rb2g , p%RBCoG), m%Weight(1:3) )
+      end select
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB)                                 &
+                            - matmul( p%WStff(6+1:6+p%nCB,4:5) , m%uFlat(4:5) ) &
+                            - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
    else
-      m%Weight = m%Weight - matmul( p%WStff(:,1:6) , m%uFlat(1:6) ) - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
-      m%F1 = m%F1 + m%Weight(1:6)
+      ! Fully linearized formulation
+      m%Weight = p%W0                                    &
+               - matmul( p%WStff(:,1:6) , m%uFlat(1:6) ) &
+               - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
    end if
+   m%F1 = m%F1 + m%Weight(1:6)
    m%F2 = m%F2 + m%Weight(6+1:6+p%nCB)
 
    ! Loads from connection points
@@ -979,6 +994,10 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       Fc = Fc + matmul( p%C1Mat, x%qm ) + matmul( p%C2Mat, x%qmdot ) + matmul( p%D4Mat, m%F2 )
    end if
    if ( p%hasRBMode ) then
+      if (p%RBMod==2_IntKi) then
+         Fc(1:3) = Fc(1:3) + p%RBMass*cross_product( m%uFlat(10:12), cross_product( m%uFlat(10:12), p%RBCoG ) )
+         Fc(4:6) = Fc(4:6) + cross_product( m%uFlat(10:12), matmul( p%RBInertia, m%uFlat(10:12)) )
+      end if
       Fc(1:3) = matmul( Rb2g, Fc(1:3) )
       Fc(4:6) = matmul( Rb2g, Fc(4:6) )
    end if
@@ -1070,7 +1089,6 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_InpMx) = m%F_at_t(4)
    m%AllOuts(ID_InpMy) = m%F_at_t(5)
    m%AllOuts(ID_InpMz) = m%F_at_t(6)
-   !y%WriteOutput(ID_WaveElev) = .. ! TODO
    do i=1,p%nCB
       m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qm   (I)    ! CBQ  - DOF Positions
       m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
