@@ -329,7 +329,7 @@ subroutine CheckReducedInputs(Inp, p, ErrStat, ErrMsg)
     do i = 1,p%nTot
         do j = i+1,p%nTot
             if ( ABS( p%Mass(i,j) - p%Mass(j,i) ) > MAX(RelTol*ABS(p%Mass(i,j)),AbsTol) ) then
-                   ErrStat=ErrID_Fatal; ErrMsg='Mass matrix is not symmetric'; return;
+                   ErrStat=ErrID_Warn; ErrMsg='Mass matrix is not symmetric'; IF (ErrStat >= AbortErrLev) RETURN
             end if
         end do
     end do
@@ -338,14 +338,14 @@ subroutine CheckReducedInputs(Inp, p, ErrStat, ErrMsg)
         do i = 1,p%nTot
             do j = 1,6
                 if ( ABS( p%Stff(i,j) ) > AbsTol ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; IF (ErrStat >= AbortErrLev) RETURN
                 end if
             end do
         end do
         do i = 1,6
             do j = 7,p%nTot
                 if ( ABS( p%Stff(i,j) ) > AbsTol ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; IF (ErrStat >= AbortErrLev) RETURN
                 end if
             end do
         end do
@@ -359,36 +359,36 @@ subroutine CheckReducedInputs(Inp, p, ErrStat, ErrMsg)
             do j = i,3
                 if ( i == j ) then
                     if ( ABS( p%Mass(i,j) - p%RBMass ) > MAX( RelTol*ABS(p%RBMass), AbsTol) ) then
-                        ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+                        ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
                     end if
                 else
                     if ( ABS( p%Mass(i,j) ) > AbsTol ) then
-                        ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+                        ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
                     end if
                 end if
             end do
             if ( ABS( p%Mass(i,i+3) ) > AbsTol ) then
-                ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+                ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
         end do
         if ( ABS( p%Mass(1,5) + p%Mass(2,4) ) > MAX( RelTol*ABS(p%Mass(1,5)), AbsTol ) ) then
-            ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
         end if
         if ( ABS( p%Mass(1,6) + p%Mass(3,4) ) > MAX( RelTol*ABS(p%Mass(1,6)), AbsTol ) ) then
-            ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
         end if
         if ( ABS( p%Mass(2,6) + p%Mass(3,5) ) > MAX( RelTol*ABS(p%Mass(2,6)), AbsTol ) ) then
-            ErrStat=ErrID_Fatal; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; return;
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
         end if
         ! Check W0
         if (     ABS(p%W0(1)) > AbsTol &
             .or. ABS(p%W0(2)) > AbsTol &
             .or. ABS(p%W0(6)) > AbsTol ) then
-            ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, constant self-weight can only have non-zero entires in the (3) heave, (4) roll, and (5) pitch directions.'; return;
+            ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, constant self-weight can only have non-zero entires in the (3) heave, (4) roll, and (5) pitch directions.'; IF (ErrStat >= AbortErrLev) RETURN
         end if
         if ( ABS( p%W0(4) - p%W0(3)*p%RBCoG(2) ) > MAX(RelTol*ABS(p%W0(4)), AbsTol) .or. &
              ABS( p%W0(5) + p%W0(3)*p%RBCoG(1) ) > MAX(RelTol*ABS(p%W0(4)), AbsTol) ) then
-            ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, rigid-body center of mass inconsistent between constant self-weight and mass matrix.'; return;
+            ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, rigid-body center of mass inconsistent between constant self-weight and mass matrix.'; IF (ErrStat >= AbortErrLev) RETURN
         end if
         ! Check WStff
         do i = 1,p%nTot
@@ -396,38 +396,38 @@ subroutine CheckReducedInputs(Inp, p, ErrStat, ErrMsg)
                .or. ABS(p%WStff(i,2)) > AbsTol &
                .or. ABS(p%WStff(i,3)) > AbsTol &
                .or. ABS(p%WStff(i,6)) > AbsTol ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix must contain only zeros in the first (surge), second (sway), third (heave), and sixth (yaw) columns.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix must contain only zeros in the first (surge), second (sway), third (heave), and sixth (yaw) columns.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
         end do
         do i = 1,6
             do j = 4,5
                if (i==1 .and. j==5) then
                   if ( ABS( p%WStff(i,j) - p%W0(3)) > MAX( RelTol * ABS(p%W0(3)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (1,5) must be equal to  W0(3).'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (1,5) must be equal to  W0(3).'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else if (i==2 .and. j==4) then
                   if ( ABS( p%WStff(i,j) + p%W0(3)) > MAX( RelTol * ABS(p%W0(3)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (2,4) must be equal to -W0(3).'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (2,4) must be equal to -W0(3).'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else if (i==4 .and. j==4) then 
                   if ( ABS( p%WStff(i,j) - p%W0(3)*p%RBCoG(3) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(3)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (4,4) must be equal to  W0(3)*zCG.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (4,4) must be equal to  W0(3)*zCG.'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else if (i==5 .and. j==5) then
                   if ( ABS( p%WStff(i,j) - p%W0(3)*p%RBCoG(3) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(3)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (5,5) must be equal to  W0(3)*zCG.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (5,5) must be equal to  W0(3)*zCG.'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else if (i==6 .and. j==4) then 
                   if ( ABS( p%WStff(i,j) + p%W0(3)*p%RBCoG(1) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(1)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,4) must be equal to -W0(3)*xCG.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,4) must be equal to -W0(3)*xCG.'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else if (i==6 .and. j==5) then
                   if ( ABS( p%WStff(i,j) + p%W0(3)*p%RBCoG(2) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(2)), AbsTol) ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,5) must be equal to -W0(3)*yCG.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,5) must be equal to -W0(3)*yCG.'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                else
                   if ( ABS( p%WStff(i,j) ) > AbsTol ) then
-                     ErrStat=ErrID_Fatal; ErrMsg='With RBMod>0, self-weight stiffness matrix entry ('//TRIM(num2lstr(i))//','//TRIM(num2lstr(j))//') should be zero.'; return;
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry ('//TRIM(num2lstr(i))//','//TRIM(num2lstr(j))//') should be zero.'; IF (ErrStat >= AbortErrLev) RETURN
                   end if
                end if
             end do
@@ -455,35 +455,35 @@ subroutine CheckConnInputs(Inp, InitInp, p, ErrStat, ErrMsg)
                do j = 1,3
                   if ( i == j ) then
                      if ( ABS( p%PhiConn(3*(iConn-1)+i,j) - 1.0_ReKi ) > AbsTol ) then
-                        ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 1.'; return;
+                        ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 1.'; IF (ErrStat >= AbortErrLev) RETURN
                      end if
                   else
                      if ( ABS( p%PhiConn(3*(iConn-1)+i,j) ) > AbsTol ) then
-                        ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 0.'; return;
+                        ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 0.'; IF (ErrStat >= AbortErrLev) RETURN
                      end if
                   end if
                end do
                if ( ABS( p%PhiConn(3*(iConn-1)+i,i+3) ) > AbsTol ) then
-                  ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(i+3))//') of the connection displacement matrix should be 0.'; return;
+                  ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(i+3))//') of the connection displacement matrix should be 0.'; IF (ErrStat >= AbortErrLev) RETURN
                end if
             end do
             if ( ABS( p%PhiConn(3*(iConn-1)+1,5) - RelPosConn0(3) ) > MAX( RelTol*ABS(RelPosConn0(3)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(3)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(3)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
             if ( ABS( p%PhiConn(3*(iConn-1)+1,6) + RelPosConn0(2) ) > MAX( RelTol*ABS(RelPosConn0(2)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(2)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(2)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
             if ( ABS( p%PhiConn(3*(iConn-1)+2,4) + RelPosConn0(3) ) > MAX( RelTol*ABS(RelPosConn0(3)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(3)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(3)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
             if ( ABS( p%PhiConn(3*(iConn-1)+2,6) - RelPosConn0(1) ) > MAX( RelTol*ABS(RelPosConn0(1)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(1)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(1)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
             if ( ABS( p%PhiConn(3*(iConn-1)+3,4) - RelPosConn0(2) ) > MAX( RelTol*ABS(RelPosConn0(2)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(2)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(2)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
             if ( ABS( p%PhiConn(3*(iConn-1)+3,5) + RelPosConn0(1) ) > MAX( RelTol*ABS(RelPosConn0(1)) , AbsTol) ) then
-               ErrStat=ErrID_Fatal; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(1)))//'.'; return;
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(1)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
             end if
         end do
     end if
