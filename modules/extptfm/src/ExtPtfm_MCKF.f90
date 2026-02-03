@@ -358,7 +358,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     end if
 
     if ( p%NumOuts > 0_IntKi ) then
-       call MV_AddVar(Vars%y, p%OutParam(i)%Name, FieldScalar, &
+       call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, &
                       DL=DatLoc(ExtPtfm_y_WriteOutput), &
                       Num=p%NumOuts, &
                       Flags=VF_WriteOut, &
