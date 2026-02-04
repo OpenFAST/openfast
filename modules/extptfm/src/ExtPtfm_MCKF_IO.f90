@@ -252,12 +252,14 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
       if (Indx>0) then
           p%OutParam(I)%Indx  = ParamIndxAry(Indx)
           p%OutParam(I)%Units = ParamUnitsAry(Indx)
-      else if (index(OutListTmp,'CBQ_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+0*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
-      else if (index(OutListTmp,'CBQD_') > 0 ) then
-          call setDOFChannel(6,ID_QStart+1*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
-      else if (index(OutListTmp,'CBF_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+2*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBD') > 0 ) then
+          call setDOFChannel(4,ID_QStart+0*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBV') > 0 ) then
+          call setDOFChannel(4,ID_QStart+1*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBA') > 0 ) then
+          call setDOFChannel(4,ID_QStart+2*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBF') > 0 ) then
+          call setDOFChannel(4,ID_QStart+3*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
       else
           call setInvalidChannel() ! INVALID
       endif
@@ -573,8 +575,8 @@ SUBROUTINE ReadPrimaryFile(InputFile, InitInp, p, OutFileRoot, InputFileData, Er
    ! Reduction Filename
    CALL ReadVar(UnIn, InputFile, InputFileData%RedFile   , 'Red_FileName', 'Path containing Guyan/Craig-Bampton inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    IF ( PathIsRelative(InputFileData%RedFile) ) InputFileData%RedFile = TRIM(PriPath)//TRIM(InputFileData%RedFile)
-   CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
-   IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
+   !CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   !IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
    CALL ReadVar(UnIn, InputFile, N , 'NActiveCBDOF','Number of active CB mode listed in ActiveCBDOF, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    if (N<0) then
        CALL ReadCom(UnIn, InputFile, 'ActiveCBDOF', ErrStat, ErrMsg, UnEc); if(LineFailed()) return

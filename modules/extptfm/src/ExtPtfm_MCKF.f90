@@ -207,8 +207,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    y%qmdot    = x%qmdot
    y%qmdotdot = 0.0_ReKi
 
-   CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
-   m%AllOuts(1:ID_QStart+3*p%nCBFull-1) = 0.0
+   CALL AllocAry( m%AllOuts, ID_QStart+4*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
+   m%AllOuts(1:ID_QStart+4*p%nCBFull-1) = 0.0
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
@@ -1083,16 +1083,17 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_PtfMx) = y%PtfmMesh%Moment(1,1)
    m%AllOuts(ID_PtfMy) = y%PtfmMesh%Moment(2,1)
    m%AllOuts(ID_PtfMz) = y%PtfmMesh%Moment(3,1)
-   m%AllOuts(ID_InpFx) = m%F_at_t(1)
-   m%AllOuts(ID_InpFy) = m%F_at_t(2)
-   m%AllOuts(ID_InpFz) = m%F_at_t(3)
-   m%AllOuts(ID_InpMx) = m%F_at_t(4)
-   m%AllOuts(ID_InpMy) = m%F_at_t(5)
-   m%AllOuts(ID_InpMz) = m%F_at_t(6)
+   m%AllOuts(ID_InpFx) = m%F1(1)
+   m%AllOuts(ID_InpFy) = m%F1(2)
+   m%AllOuts(ID_InpFz) = m%F1(3)
+   m%AllOuts(ID_InpMx) = m%F1(4)
+   m%AllOuts(ID_InpMy) = m%F1(5)
+   m%AllOuts(ID_InpMz) = m%F1(6)
    do i=1,p%nCB
-      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qm   (I)    ! CBQ  - DOF Positions
-      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
-      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
+      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qm      (I)    ! CBD - DOF Displacements
+      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qmdot   (I)    ! CBV - DOF Velocities
+      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qmdotdot(I)    ! CBA - DOF Accelerations
+      m%AllOuts(ID_QStart + 3*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F2      (I)    ! CBF - DOF External Forces
    enddo
    ! --- Selected output channels only
    do I = 1,p%NumOuts
