@@ -180,8 +180,10 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    !m%EquilStart = InputFileData%EquilStart
    m%EquilStart = .False. ! Feature not yet implemented
 
-   m%Indx = 1 ! used to optimize interpolation of loads in time
-   call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
+   m%Indx_UsrModeF = 1 ! used to optimize interpolation of loads in time
+   m%Indx_UsrConnF = 1 ! used to optimize interpolation of loads in time
+   call AllocAry( m%F_at_t, p%nTot,'User-defined modal loads at t', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConn_at_t, 3*p%nConn,'User-defined connection loads at t', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F1, 6,'Interface/rigid-body mode forcing', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%F2, p%nCB,'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%Weight, p%nTot,'Structure self-weight', ErrStat,ErrMsg); if(Failed()) return
@@ -910,8 +912,9 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
-   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%UsrModeF%Forces
+   call InterpStpMat(REAL(t,ReKi), p%UsrModeF%times, p%UsrModeF%Forces, m%Indx_UsrModeF, p%UsrModeF%nTimeSteps, m%F_at_t)
+   call InterpStpMat(REAL(t,ReKi), p%UsrConnF%times, p%UsrConnF%Forces, m%Indx_UsrConnF, p%UsrConnF%nTimeSteps, m%FConn_at_t)
 
    if ( p%hasRBMode ) then
       Rg2b = u%PtfmMesh%Orientation(:,:,1)
@@ -924,7 +927,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
       m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
       do i=1,p%nConn
-         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) )
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3) )
       end do
    else
       call eye(Rg2b,ErrStat,ErrMsg); if (failed()) return
@@ -937,7 +940,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
       m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
       do i=1,p%nConn
-         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i)
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3)
       end do
    end if
 
@@ -1141,8 +1144,9 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    dxdt%qm   =0.0_ReKi
    dxdt%qmdot=0.0_ReKi
 
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%F
-   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%UsrModeF%Forces
+   call InterpStpMat(REAL(t,ReKi), p%UsrModeF%times, p%UsrModeF%Forces, m%Indx_UsrModeF, p%UsrModeF%nTimeSteps, m%F_at_t)
+   call InterpStpMat(REAL(t,ReKi), p%UsrConnF%times, p%UsrConnF%Forces, m%Indx_UsrConnF, p%UsrConnF%nTimeSteps, m%FConn_at_t)
 
    if ( p%hasRBMode ) then
       Rg2b = u%PtfmMesh%Orientation(:,:,1)
@@ -1155,7 +1159,7 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
       m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
       m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
       do i=1,p%nConn
-         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) )
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3) )
       end do
    else
       ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
@@ -1166,7 +1170,7 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
       m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
       m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
       do i=1,p%nConn
-         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i)
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3)
       end do
    end if
 

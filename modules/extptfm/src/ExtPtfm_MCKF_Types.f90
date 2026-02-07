@@ -33,6 +33,13 @@ MODULE ExtPtfm_MCKF_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+! =========  UserForcingType  =======
+  TYPE, PUBLIC :: UserForcingType
+    INTEGER(IntKi)  :: nTimeSteps = 0_IntKi      !< Number of values of Forces and times [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: times      !< the time associated with each row of Forces [s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Forces      !< Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion. [N, N-m]
+  END TYPE UserForcingType
+! =======================
 ! =========  ExtPtfm_InitInputType  =======
   TYPE, PUBLIC :: ExtPtfm_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -59,6 +66,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ConnFile      !< File containing connection inputs [-]
     LOGICAL  :: HasUserForcing = .false.      !< True: has user forcing; False: no user forcing [-]
     CHARACTER(1024)  :: ForceFile      !< File containing user forcing inputs [-]
+    LOGICAL  :: HasConnForcing = .false.      !< True: has user forcing; False: no user forcing [-]
+    CHARACTER(1024)  :: FConnFile      !< File containing user forcing inputs [-]
     LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.sum [-]
     INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
     LOGICAL  :: TabDelim = .false.      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
@@ -107,8 +116,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Stff      !< Stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W0      !< Prescribed constant external loads including selfweight [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WStff      !< Self-weight stiffness matrix [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Forces      !< Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion. [N, N-m]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: times      !< the time associated with each row of Forces [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A1Mat      !< State matrix A1 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A2Mat      !< State matrix A2 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B1Mat      !< State matrix B1 []
@@ -140,7 +147,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: RBCoG = 0.0_ReKi      !< Rigid-body center of mass [m]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RBInertia = 0.0_ReKi      !< Rigid-body moment of inertia matrix [kgm^2]
     REAL(DbKi)  :: EP_DeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
-    INTEGER(IntKi)  :: nTimeSteps = 0_IntKi      !< Number of values of Forces and times [-]
     INTEGER(IntKi)  :: nCB = 0_IntKi      !< Number of CraigBampton modes active [-]
     INTEGER(IntKi)  :: nCBFull = 0_IntKi      !< Total number of CraigBampton modes given as input [-]
     INTEGER(IntKi)  :: nTot = 0_IntKi      !< Total number of debrees of freedom (CB + interface) [-]
@@ -148,6 +154,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of values in WriteOutput [-]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
+    TYPE(UserForcingType)  :: UsrModeF      !< User-defined modal forcing time series [-]
+    TYPE(UserForcingType)  :: UsrConnF      !< User-defined connection forcing time series [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutParamLinIndx      !< Index into WriteOutput for linearization analysis [-]
   END TYPE ExtPtfm_ParameterType
@@ -176,6 +184,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
     REAL(R8Ki) , DIMENSION(1:18)  :: uFlat = 0.0_R8Ki      !< Flattened vector of inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FConn_at_t      !< The 3DOF forces at each connection point defined by the user [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F1      !< Interface/rigid-body mode forcing [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F2      !< Internal elastic mode forcing [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Weight      !< Structure self-weight [-]
@@ -184,7 +193,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DConn      !< Connection point displacement []
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VConn      !< Connection point velocity []
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AConn      !< Connection point acceleration []
-    INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
+    INTEGER(IntKi)  :: Indx_UsrModeF = 0_IntKi      !< Index into times, to speed up interpolation [-]
+    INTEGER(IntKi)  :: Indx_UsrConnF = 0_IntKi      !< Index into times, to speed up interpolation [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
     TYPE(ModJacType)  :: Jac      !< Data structure for calculating module Jacobians [-]
@@ -209,6 +219,83 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ExtPtfm_y_WriteOutput            =  13 ! ExtPtfm%WriteOutput
 
 contains
+
+subroutine ExtPtfm_CopyUserForcingType(SrcUserForcingTypeData, DstUserForcingTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(UserForcingType), intent(in) :: SrcUserForcingTypeData
+   type(UserForcingType), intent(inout) :: DstUserForcingTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'ExtPtfm_CopyUserForcingType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstUserForcingTypeData%nTimeSteps = SrcUserForcingTypeData%nTimeSteps
+   if (allocated(SrcUserForcingTypeData%times)) then
+      LB(1:1) = lbound(SrcUserForcingTypeData%times)
+      UB(1:1) = ubound(SrcUserForcingTypeData%times)
+      if (.not. allocated(DstUserForcingTypeData%times)) then
+         allocate(DstUserForcingTypeData%times(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUserForcingTypeData%times.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUserForcingTypeData%times = SrcUserForcingTypeData%times
+   end if
+   if (allocated(SrcUserForcingTypeData%Forces)) then
+      LB(1:2) = lbound(SrcUserForcingTypeData%Forces)
+      UB(1:2) = ubound(SrcUserForcingTypeData%Forces)
+      if (.not. allocated(DstUserForcingTypeData%Forces)) then
+         allocate(DstUserForcingTypeData%Forces(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUserForcingTypeData%Forces.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUserForcingTypeData%Forces = SrcUserForcingTypeData%Forces
+   end if
+end subroutine
+
+subroutine ExtPtfm_DestroyUserForcingType(UserForcingTypeData, ErrStat, ErrMsg)
+   type(UserForcingType), intent(inout) :: UserForcingTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyUserForcingType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(UserForcingTypeData%times)) then
+      deallocate(UserForcingTypeData%times)
+   end if
+   if (allocated(UserForcingTypeData%Forces)) then
+      deallocate(UserForcingTypeData%Forces)
+   end if
+end subroutine
+
+subroutine ExtPtfm_PackUserForcingType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(UserForcingType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'ExtPtfm_PackUserForcingType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%nTimeSteps)
+   call RegPackAlloc(RF, InData%times)
+   call RegPackAlloc(RF, InData%Forces)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ExtPtfm_UnPackUserForcingType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(UserForcingType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackUserForcingType'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%nTimeSteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%times); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Forces); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
 subroutine ExtPtfm_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtPtfm_InitInputType), intent(in) :: SrcInitInputData
@@ -321,6 +408,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%ConnFile = SrcInputFileData%ConnFile
    DstInputFileData%HasUserForcing = SrcInputFileData%HasUserForcing
    DstInputFileData%ForceFile = SrcInputFileData%ForceFile
+   DstInputFileData%HasConnForcing = SrcInputFileData%HasConnForcing
+   DstInputFileData%FConnFile = SrcInputFileData%FConnFile
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%OutFile = SrcInputFileData%OutFile
    DstInputFileData%TabDelim = SrcInputFileData%TabDelim
@@ -381,6 +470,8 @@ subroutine ExtPtfm_PackInputFile(RF, Indata)
    call RegPack(RF, InData%ConnFile)
    call RegPack(RF, InData%HasUserForcing)
    call RegPack(RF, InData%ForceFile)
+   call RegPack(RF, InData%HasConnForcing)
+   call RegPack(RF, InData%FConnFile)
    call RegPack(RF, InData%SumPrint)
    call RegPack(RF, InData%OutFile)
    call RegPack(RF, InData%TabDelim)
@@ -413,6 +504,8 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%ConnFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasUserForcing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ForceFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasConnForcing); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FConnFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
@@ -837,30 +930,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%WStff = SrcParamData%WStff
    end if
-   if (allocated(SrcParamData%Forces)) then
-      LB(1:2) = lbound(SrcParamData%Forces)
-      UB(1:2) = ubound(SrcParamData%Forces)
-      if (.not. allocated(DstParamData%Forces)) then
-         allocate(DstParamData%Forces(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Forces.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Forces = SrcParamData%Forces
-   end if
-   if (allocated(SrcParamData%times)) then
-      LB(1:1) = lbound(SrcParamData%times)
-      UB(1:1) = ubound(SrcParamData%times)
-      if (.not. allocated(DstParamData%times)) then
-         allocate(DstParamData%times(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%times.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%times = SrcParamData%times
-   end if
    if (allocated(SrcParamData%A1Mat)) then
       LB(1:2) = lbound(SrcParamData%A1Mat)
       UB(1:2) = ubound(SrcParamData%A1Mat)
@@ -1189,7 +1258,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%RBCoG = SrcParamData%RBCoG
    DstParamData%RBInertia = SrcParamData%RBInertia
    DstParamData%EP_DeltaT = SrcParamData%EP_DeltaT
-   DstParamData%nTimeSteps = SrcParamData%nTimeSteps
    DstParamData%nCB = SrcParamData%nCB
    DstParamData%nCBFull = SrcParamData%nCBFull
    DstParamData%nTot = SrcParamData%nTot
@@ -1208,6 +1276,12 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%ActiveCBDOF = SrcParamData%ActiveCBDOF
    end if
+   call ExtPtfm_CopyUserForcingType(SrcParamData%UsrModeF, DstParamData%UsrModeF, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ExtPtfm_CopyUserForcingType(SrcParamData%UsrConnF, DstParamData%UsrConnF, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
       UB(1:1) = ubound(SrcParamData%OutParam)
@@ -1263,12 +1337,6 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%WStff)) then
       deallocate(ParamData%WStff)
-   end if
-   if (allocated(ParamData%Forces)) then
-      deallocate(ParamData%Forces)
-   end if
-   if (allocated(ParamData%times)) then
-      deallocate(ParamData%times)
    end if
    if (allocated(ParamData%A1Mat)) then
       deallocate(ParamData%A1Mat)
@@ -1354,6 +1422,10 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%ActiveCBDOF)) then
       deallocate(ParamData%ActiveCBDOF)
    end if
+   call ExtPtfm_DestroyUserForcingType(ParamData%UsrModeF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyUserForcingType(ParamData%UsrConnF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%OutParam)) then
       LB(1:1) = lbound(ParamData%OutParam)
       UB(1:1) = ubound(ParamData%OutParam)
@@ -1382,8 +1454,6 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%Stff)
    call RegPackAlloc(RF, InData%W0)
    call RegPackAlloc(RF, InData%WStff)
-   call RegPackAlloc(RF, InData%Forces)
-   call RegPackAlloc(RF, InData%times)
    call RegPackAlloc(RF, InData%A1Mat)
    call RegPackAlloc(RF, InData%A2Mat)
    call RegPackAlloc(RF, InData%B1Mat)
@@ -1415,7 +1485,6 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPack(RF, InData%RBCoG)
    call RegPack(RF, InData%RBInertia)
    call RegPack(RF, InData%EP_DeltaT)
-   call RegPack(RF, InData%nTimeSteps)
    call RegPack(RF, InData%nCB)
    call RegPack(RF, InData%nCBFull)
    call RegPack(RF, InData%nTot)
@@ -1423,6 +1492,8 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%IntMethod)
    call RegPackAlloc(RF, InData%ActiveCBDOF)
+   call ExtPtfm_PackUserForcingType(RF, InData%UsrModeF) 
+   call ExtPtfm_PackUserForcingType(RF, InData%UsrConnF) 
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -1452,8 +1523,6 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Stff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%W0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WStff); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Forces); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%times); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%A1Mat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%A2Mat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%B1Mat); if (RegCheckErr(RF, RoutineName)) return
@@ -1485,7 +1554,6 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%RBCoG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RBInertia); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EP_DeltaT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%nTimeSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCBFull); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTot); if (RegCheckErr(RF, RoutineName)) return
@@ -1493,6 +1561,8 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ActiveCBDOF); if (RegCheckErr(RF, RoutineName)) return
+   call ExtPtfm_UnpackUserForcingType(RF, OutData%UsrModeF) ! UsrModeF 
+   call ExtPtfm_UnpackUserForcingType(RF, OutData%UsrConnF) ! UsrConnF 
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -1759,6 +1829,18 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_at_t = SrcMiscData%F_at_t
    end if
+   if (allocated(SrcMiscData%FConn_at_t)) then
+      LB(1:1) = lbound(SrcMiscData%FConn_at_t)
+      UB(1:1) = ubound(SrcMiscData%FConn_at_t)
+      if (.not. allocated(DstMiscData%FConn_at_t)) then
+         allocate(DstMiscData%FConn_at_t(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FConn_at_t.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FConn_at_t = SrcMiscData%FConn_at_t
+   end if
    if (allocated(SrcMiscData%F1)) then
       LB(1:1) = lbound(SrcMiscData%F1)
       UB(1:1) = ubound(SrcMiscData%F1)
@@ -1855,7 +1937,8 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%AConn = SrcMiscData%AConn
    end if
-   DstMiscData%Indx = SrcMiscData%Indx
+   DstMiscData%Indx_UsrModeF = SrcMiscData%Indx_UsrModeF
+   DstMiscData%Indx_UsrConnF = SrcMiscData%Indx_UsrConnF
    DstMiscData%EquilStart = SrcMiscData%EquilStart
    if (allocated(SrcMiscData%AllOuts)) then
       LB(1:1) = lbound(SrcMiscData%AllOuts)
@@ -1900,6 +1983,9 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
    if (allocated(MiscData%F_at_t)) then
       deallocate(MiscData%F_at_t)
+   end if
+   if (allocated(MiscData%FConn_at_t)) then
+      deallocate(MiscData%FConn_at_t)
    end if
    if (allocated(MiscData%F1)) then
       deallocate(MiscData%F1)
@@ -1948,6 +2034,7 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%xFlat)
    call RegPack(RF, InData%uFlat)
    call RegPackAlloc(RF, InData%F_at_t)
+   call RegPackAlloc(RF, InData%FConn_at_t)
    call RegPackAlloc(RF, InData%F1)
    call RegPackAlloc(RF, InData%F2)
    call RegPackAlloc(RF, InData%Weight)
@@ -1956,7 +2043,8 @@ subroutine ExtPtfm_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%DConn)
    call RegPackAlloc(RF, InData%VConn)
    call RegPackAlloc(RF, InData%AConn)
-   call RegPack(RF, InData%Indx)
+   call RegPack(RF, InData%Indx_UsrModeF)
+   call RegPack(RF, InData%Indx_UsrConnF)
    call RegPack(RF, InData%EquilStart)
    call RegPackAlloc(RF, InData%AllOuts)
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
@@ -1978,6 +2066,7 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%xFlat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%uFlat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FConn_at_t); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Weight); if (RegCheckErr(RF, RoutineName)) return
@@ -1986,7 +2075,8 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%DConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%VConn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AConn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx_UsrModeF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx_UsrConnF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 

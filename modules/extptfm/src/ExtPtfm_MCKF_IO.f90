@@ -609,8 +609,10 @@ SUBROUTINE ReadPrimaryFile(InputFile, InitInp, p, OutFileRoot, InputFileData, Er
    CALL ReadVar(UnIn, InputFile, InputFileData%ConnFile, 'Conn_FileName', 'Path containing connections inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    !---------------------- USER FORCING INPUTS ---------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: User Forcing', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
-   CALL ReadVar(UnIn, InputFile, InputFileData%HasUserForcing, 'UserForcing','Flag for user prescribed forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
-   CALL ReadVar(UnIn, InputFile, InputFileData%ForceFile, 'Force_FileName', 'Path containing user forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasUserForcing, 'UserForcing','Flag for user prescribed modal forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%ForceFile, 'Force_FileName', 'Path containing user modal forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasConnForcing, 'ConnForcing','Flag for user prescribed connection forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%FConnFile, 'FConn_FileName', 'Path containing user connection forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! SumPrint - Print summary data to <RootName>.sum (flag):
@@ -643,15 +645,26 @@ SUBROUTINE ReadPrimaryFile(InputFile, InitInp, p, OutFileRoot, InputFileData, Er
       p%NConn = 0_IntKi
    end if
 
-   ! --- Reading user forcing file
+   ! --- Reading user modal forcing file
    if (InputFileData%HasUserForcing) then
-      call ReadForceFile(InputFileData%ForceFile, p, ErrStat, ErrMsg); if(Failed()) return
+      call ReadForceFile(InputFileData%ForceFile, p%nTot, p%UsrModeF, ErrStat, ErrMsg); if(Failed()) return
    else
-      p%nTimeSteps = 1_IntKi
-      call allocAry( p%Forces, 1_IntKi, p%nTot, 'p%Forces', ErrStat, ErrMsg); if(Failed()) return
-      call allocAry( p%times , 1_IntKi,         'p%times' , ErrStat, ErrMsg); if(Failed()) return
-      p%Forces= 0.0_ReKi
-      p%times = 0.0_ReKi
+      p%UsrModeF%nTimeSteps = 1_IntKi
+      call allocAry( p%UsrModeF%Forces, 1_IntKi, p%nTot, 'p%UsrModeF%Forces', ErrStat, ErrMsg); if(Failed()) return
+      call allocAry( p%UsrModeF%times , 1_IntKi,         'p%UsrModeF%times' , ErrStat, ErrMsg); if(Failed()) return
+      p%UsrModeF%Forces= 0.0_ReKi
+      p%UsrModeF%times = 0.0_ReKi
+   end if
+
+   ! --- Reading user connection forcing file
+   if (InputFileData%HasConnForcing) then
+      call ReadForceFile(InputFileData%FConnFile, p%nConn*3, p%UsrConnF, ErrStat, ErrMsg); if(Failed()) return
+   else
+      p%UsrConnF%nTimeSteps = 1_IntKi
+      call allocAry( p%UsrConnF%Forces, 1_IntKi, p%nConn*3, 'p%UsrConnF%Forces', ErrStat, ErrMsg); if(Failed()) return
+      call allocAry( p%UsrConnF%times , 1_IntKi,            'p%UsrConnF%times' , ErrStat, ErrMsg); if(Failed()) return
+      p%UsrConnF%Forces= 0.0_ReKi
+      p%UsrConnF%times = 0.0_ReKi
    end if
  
    ! --- Reducing the number of DOF if needed
@@ -710,7 +723,7 @@ SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
    call SquareMatRed(p%Mass)
    call SquareMatRed(p%Stff)
    call SquareMatRed(p%Damp)
-   call TimeMatRed(p%Forces)
+   call TimeMatRed(p%UsrModeF%Forces)
    if (allocated(p%PhiConn)) then
       call RectMatRed(p%PhiConn)
    end if
@@ -921,15 +934,16 @@ CONTAINS
 END SUBROUTINE ReadConnFile
 
 !..................................................................................................................................
-SUBROUTINE ReadForceFile( InputFile, p, ErrStat, ErrMsg )
+SUBROUTINE ReadForceFile( InputFile, n, UserForcing, ErrStat, ErrMsg )
 !..................................................................................................................................
    ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
-   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(IN)    :: n                                   !< Number of load components expected
+   TYPE(UserForcingType),       INTENT(INOUT) :: UserForcing                         !< User-specified forcing time series
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
-   REAL(ReKi), dimension(:),allocatable :: TmpAry                                 ! temporary array for reading row from file
+   REAL(ReKi), dimension(:),allocatable :: TmpAry                                    ! temporary array for reading row from file
    INTEGER(IntKi)                       :: I                                         ! loop counter
    INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                       :: iLine                                     ! Current position in file
@@ -942,7 +956,7 @@ SUBROUTINE ReadForceFile( InputFile, p, ErrStat, ErrMsg )
    foundNSteps  = .false.
    foundForcing = .false.
 
-   p%nTimeSteps = 0_IntKi
+   UserForcing%nTimeSteps = 0_IntKi
 
    ! Get an available unit number for the file.
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if (Failed()) return
@@ -967,32 +981,32 @@ SUBROUTINE ReadForceFile( InputFile, p, ErrStat, ErrMsg )
         call Conv2UC(Line)
         if (index(Line,'!NSTEPS')==1) then
             foundNSteps = .true.
-            p%nTimeSteps =  ReadIntFromStr(Line(9:), '`Nsteps`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (Failed()) return
+            UserForcing%nTimeSteps =  ReadIntFromStr(Line(9:), '`Nsteps`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (Failed()) return
         else if (index(Line,'!FORCING')==1) then
             foundForcing = .true.
-            if (p%nTot<0 .or. p%nTimeSteps==0) exit
-            call allocAry( p%Forces, max(1,p%nTimeSteps), p%nTot, 'p%Forces', ErrStat, ErrMsg); if (Failed()) return
-            call allocAry( p%times , max(1,p%nTimeSteps),         'p%times' , ErrStat, ErrMsg); if (Failed()) return
-            allocate(TmpAry(1:p%nTot+1))
-            do i=1,p%nTimeSteps
+            if (n<0 .or. UserForcing%nTimeSteps==0) exit
+            call allocAry( UserForcing%Forces, max(1,UserForcing%nTimeSteps), n, 'UserForcing%Forces', ErrStat, ErrMsg); if (Failed()) return
+            call allocAry( UserForcing%times , max(1,UserForcing%nTimeSteps),    'UserForcing%times' , ErrStat, ErrMsg); if (Failed()) return
+            allocate(TmpAry(1:n+1))
+            do i=1,UserForcing%nTimeSteps
                 iLine=iLine+1
-                TmpAry(1:p%nTot+1)=-999.9E-09
+                TmpAry(1:n+1)=-999.9E-09
                 read(UnIn, fmt='(A)', iostat=ErrStat) Line
                 if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
-                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
+                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(UserForcing%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
                 exit
                 end if
                 ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
-                CALL ReadAry(Line, TmpAry, p%nTot+1, 'Forces', 'Forces', ErrStat, ErrMsg)
+                CALL ReadAry(Line, TmpAry, n+1, 'Forces', 'Forces', ErrStat, ErrMsg)
                 if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
                 ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
                 exit
                 end if
                 if (ErrStat /= 0) exit
-                p%times(i)    = TmpAry(1)
-                p%Forces(i,:) = TmpAry(2:p%nTot+1)
+                UserForcing%times(i)    = TmpAry(1)
+                UserForcing%Forces(i,:) = TmpAry(2:n+1)
             end do
         ! elseif (index(Line,'!')==1) then
             !write(*,*) 'Ignored comment: '//trim(Line)
@@ -1015,12 +1029,12 @@ SUBROUTINE ReadForceFile( InputFile, p, ErrStat, ErrMsg )
         if(Failed()) return
     end if
 
-    if (p%nTimeSteps <= 0_IntKi) then
-        p%nTimeSteps = 1_IntKi
-        call allocAry( p%Forces, 1_IntKi, p%nTot, 'p%Forces', ErrStat, ErrMsg); if(Failed()) return
-        call allocAry( p%times , 1_IntKi,         'p%times' , ErrStat, ErrMsg); if(Failed()) return
-        p%Forces= 0.0_ReKi
-        p%times = 0.0_ReKi
+    if (UserForcing%nTimeSteps <= 0_IntKi) then
+        UserForcing%nTimeSteps = 1_IntKi
+        call allocAry( UserForcing%Forces, 1_IntKi, n, 'UserForcing%Forces', ErrStat, ErrMsg); if(Failed()) return
+        call allocAry( UserForcing%times , 1_IntKi,    'UserForcing%times' , ErrStat, ErrMsg); if(Failed()) return
+        UserForcing%Forces= 0.0_ReKi
+        UserForcing%times = 0.0_ReKi
     end if
 
 CONTAINS
@@ -1072,9 +1086,9 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    write(UnSu,'(A,A)')    'Time integration method      : ',StrIntMethod(p%IntMethod)
    write(UnSu,'(A,F13.8)')'Integration time step        : ',p%EP_DeltaT
    write(UnSu,'(A)')      '!Reduction input file'
-   write(UnSu,'(A,I0)')   'Number of time steps         : ',p%nTimeSteps
-   write(UnSu,'(A,F13.8)')'Start time                   : ',p%times(1)
-   write(UnSu,'(A,F13.8)')'End time                     : ',p%times(p%nTimeSteps)
+   !write(UnSu,'(A,I0)')   'Number of time steps         : ',p%nTimeSteps
+   !write(UnSu,'(A,F13.8)')'Start time                   : ',p%times(1)
+   !write(UnSu,'(A,F13.8)')'End time                     : ',p%times(p%nTimeSteps)
    write(UnSu,'(A,I0)')   'Total number of DOF (input)  : ',p%nCBFull+6
    write(UnSu,'(A,I0)')   'Number of CB modes (input)   : ',p%nCBFull
    write(UnSu,'(A)')      '!Degrees of freedom'

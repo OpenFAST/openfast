@@ -13,6 +13,10 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include Registry_NWTC_Library.txt
 
+# ..... User-defined forcing .................................................................................................
+typedef ExtPtfm_MCKF/ExtPtfm UserForcingType   IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
+typedef    ^                  ^                ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
+typedef    ^                  ^                ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"  
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -41,6 +45,8 @@ typedef        ^                     ^            LOGICAL            HasConnecti
 typedef        ^                     ^            CHARACTER(1024)    ConnFile   -  - -  "File containing connection inputs"   -
 typedef        ^                     ^            LOGICAL            HasUserForcing - - - "True: has user forcing; False: no user forcing" -
 typedef        ^                     ^            CHARACTER(1024)    ForceFile  -  - -  "File containing user forcing inputs"   -
+typedef        ^                     ^            LOGICAL            HasConnForcing - - - "True: has user forcing; False: no user forcing" -
+typedef        ^                     ^            CHARACTER(1024)    FConnFile  -  - -  "File containing user forcing inputs"   -
 typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
 typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
 typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
@@ -83,8 +89,6 @@ typedef  ^                    ^          ReKi     Damp   {:}{:} - - "Damping mat
 typedef  ^                    ^          ReKi     Stff   {:}{:} - - "Stiffness matrix" -
 typedef  ^                    ^          ReKi     W0     {:}    - - "Prescribed constant external loads including selfweight" -
 typedef  ^                    ^          ReKi     WStff  {:}{:} - - "Self-weight stiffness matrix" -
-typedef  ^                    ^          ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
-typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
 typedef  ^                    ^          ReKi     A1Mat {:}{:}  - - "State matrix A1" ""
 typedef  ^                    ^          ReKi     A2Mat {:}{:}  - - "State matrix A2" ""
 typedef  ^                    ^          ReKi     B1Mat {:}{:}  - - "State matrix B1" ""
@@ -116,7 +120,6 @@ typedef  ^                    ^          ReKi     RBMass      - - - "Rigid-body 
 typedef  ^                    ^          ReKi     RBCoG     {3} - - "Rigid-body center of mass" "m"
 typedef  ^                    ^          ReKi     RBInertia {3}{3} - - "Rigid-body moment of inertia matrix" "kgm^2"
 typedef  ^                    ^          DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
-typedef  ^                    ^          IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
 typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes active" -
 typedef  ^                    ^          IntKi    nCBFull     - - - "Total number of CraigBampton modes given as input" -
 typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
@@ -124,6 +127,8 @@ typedef  ^                    ^          IntKi    nConn       - - - "Number of c
 typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
 typedef  ^                    ^          IntKi    ActiveCBDOF {:} - -  "List of active CB DOF"   -
+typedef  ^                    ^ UserForcingType   UsrModeF    - - -  "User-defined modal forcing time series" -
+typedef  ^                    ^ UserForcingType   UsrConnF    - - -  "User-defined connection forcing time series" -
 typedef  ^                    ^          OutParmType   OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for linearization analysis" -
 
@@ -149,6 +154,7 @@ typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Ex
 typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
 typedef    ^                  ^                R8Ki     uFlat   {18} - - "Flattened vector of inputs"
 typedef    ^                  ^                ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
+typedef    ^                  ^                ReKi     FConn_at_t {:} - - "The 3DOF forces at each connection point defined by the user" "N"
 typedef    ^                  ^                ReKi     F1       {:} - - "Interface/rigid-body mode forcing" -
 typedef    ^                  ^                ReKi     F2       {:} - - "Internal elastic mode forcing" -
 typedef    ^                  ^                ReKi     Weight   {:} - - "Structure self-weight" -
@@ -157,7 +163,8 @@ typedef    ^                  ^                ReKi     FConnCB  {:} - - "Modal 
 typedef    ^                  ^                ReKi     DConn  {:} - - "Connection point displacement" ""
 typedef    ^                  ^                ReKi     VConn  {:} - - "Connection point velocity"     ""
 typedef    ^                  ^                ReKi     AConn  {:} - - "Connection point acceleration" ""
-typedef    ^                  ^                IntKi    Indx       - - - "Index into times, to speed up interpolation" -
+typedef    ^                  ^                IntKi    Indx_UsrModeF - - - "Index into times, to speed up interpolation" -
+typedef    ^                  ^                IntKi    Indx_UsrConnF - - - "Index into times, to speed up interpolation" -
 typedef    ^                  ^                LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef    ^                  ^              ModJacType Jac       - - - "Data structure for calculating module Jacobians" -
