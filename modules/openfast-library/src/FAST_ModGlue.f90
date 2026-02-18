@@ -467,6 +467,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
                  pack(modIdx, ModIDs == Module_AD), &
                  pack(modIdx, ModIDs == Module_HD), &
                  pack(modIdx, ModIDs == Module_SD), &
+                 pack(modIdx, ModIDs == Module_ExtPtfm), &
                  pack(modIdx, ModIDs == Module_MAP), &
                  pack(modIdx, ModIDs == Module_MD)]
 

@@ -2076,7 +2076,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       ! now, make sure we haven't asked for any modules that we can't yet linearize:
       if (p%CompAero == MODULE_ADsk) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDisk module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompInflow == MODULE_ExtInfw) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the ExternalInflow coupling.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None .and. p%CompSub /= MODULE_SD )     call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the ExtPtfm_MCKF substructure module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None .and. p%CompMooring == MODULE_FEAM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the FEAMooring mooring module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
 
