@@ -28,6 +28,8 @@ if (AMREX_READER)
   target_include_directories(amrex_reader PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/dependencies/amrex/mod_files_3d/>
     $<INSTALL_INTERFACE:include>)
+  set_target_properties(amrex_reader PROPERTIES
+    Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dependencies/amrex/mod_files_3d/)
 endif()
 
 

@@ -315,7 +315,7 @@ if (AMREX_READER AND BUILD_FASTFARM)
   include(ExternalProject)
   ExternalProject_Add(amrex
     GIT_REPOSITORY    https://github.com/AMReX-Codes/amrex.git
-    GIT_TAG           25.06
+    GIT_TAG           26.02
     GIT_SHALLOW       On
     GIT_PROGRESS      On
     SOURCE_DIR        "${CMAKE_SOURCE_DIR}/dependencies/amrex"
