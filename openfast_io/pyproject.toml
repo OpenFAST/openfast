@@ -5,19 +5,19 @@ build-backend = "hatchling.build"
 [project]
 name = "openfast_io"
 # dynamic = ["version"]
-version = "4.1.2"
+version = "4.2.0"
 description = "Readers and writers for OpenFAST files."
 license = {file = "../LICENSE"}
 authors = [
-    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
-    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
-    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
-    { name = "NREL WISDEM Team", email = "systems.engineering@nrel.gov"    },
+    {name = "Mayank Chetan", email = "mayank.chetan@nlr.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nlr.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nlr.gov"  },
+    { name = "NLR WISDEM Team", email = "systems.engineering@nlr.gov"    },
 ]
 maintainers = [
-    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
-    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
-    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
+    {name = "Mayank Chetan", email = "mayank.chetan@nlr.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nlr.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nlr.gov"  },
 ]  
 readme = "README.md"
 requires-python = ">3.10"
@@ -42,7 +42,11 @@ classifiers = [  # Optional
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python",
 ]
 
 dependencies = [
@@ -63,8 +67,8 @@ Issues = "https://github.com/OpenFAST/openfast/issues"
 [project.optional-dependencies]
 
 rosco = ["rosco>2.9.2"]
-xlrd = ["xlrd>2"]
-all = ["rosco>2.9.2", "xlrd>2"]
+xlrd = ["xlrd>2.0"]
+all = ["rosco>2.9.2", "xlrd>2.0"]
 
 [tool.hatch.version]
 source = "vcs"

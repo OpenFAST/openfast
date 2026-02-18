@@ -17,6 +17,17 @@ from ctypes import (
 
 class OpenFASTInterfaceType(CDLL):
 
+    #--------------------------------------
+    # Constants
+    #--------------------------------------
+    # NOTE: The length of the error message in Fortran is determined by the
+    #       ErrMsgLen variable in the NWTC_Base.f90 file. If ErrMsgLen is modified,
+    #       the corresponding size here must also be updated to match.
+    ERROR_MESSAGE_LENGTH: int = 8197
+    DEFAULT_STRING_LENGTH: int = 1025
+    CHANNEL_NAME_LENGTH: int = 20
+    MAX_CHANNELS: int = 8000
+
     # Human readable error levels
     error_levels = {
         0: "None",
@@ -26,6 +37,9 @@ class OpenFASTInterfaceType(CDLL):
         4: "Fatal Error"
     }
 
+    # NWTC Library sets the length of file names passed through the interfaces
+    IntfStrLen = 1025
+
     #   NOTE:   the error message length in Fortran is controlled by the
     #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
     #           changes, it may be necessary to update the corresponding size
@@ -33,10 +47,15 @@ class OpenFASTInterfaceType(CDLL):
     ERROR_MSG_C_LEN = 8197
 
     #   NOTE:   the length of the name used for any output file written by the
-    #           HD Fortran code is 1025.
+    #           Fortran code is 1025.
     default_str_c_len = 1025
 
+    # error handling
     abort_error_level = c_int(4)
+    error_status_c = c_int(0)
+    error_message_c = create_string_buffer(ERROR_MESSAGE_LENGTH)
+
+
 
     def __init__(self, library_path: str):
         super().__init__(library_path)

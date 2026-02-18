@@ -9,13 +9,13 @@ options_debug_release = {"Debug": {}, "Release": {}}
 
 cfg_names = [
     "Debug|x64",
-    "Debug_Double|x64",
-    "Debug_Matlab|x64",
+    "Double_Debug|x64",
+    "Matlab_Debug|x64",
     "Release|x64",
-    "Release_Double|x64",
-    "Release_Matlab|x64",
-    "Release_OpenMP|x64",
-    "Release_Double_OpenMP|x64",
+    "Double_Release|x64",
+    "Matlab_Release|x64",
+    "OpenMP_Release|x64",
+    "Double_OpenMP_Release|x64",
 ]
 
 for path in Path(".").rglob("*.vfproj"):

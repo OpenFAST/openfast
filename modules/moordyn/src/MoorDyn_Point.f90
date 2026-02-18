@@ -359,11 +359,13 @@ CONTAINS
  
    ! this function handles assigning a line to a connection node
    !--------------------------------------------------------------
-   SUBROUTINE Point_AddLine(Point, lineID, TopOfLine)
+   SUBROUTINE Point_AddLine(Point, lineID, TopOfLine, ErrStat, ErrMsg)
 
       Type(MD_Point), INTENT (INOUT)   :: Point        ! the Point object
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
+      integer(IntKi),      intent(  out) :: ErrStat
+      character(ErrMsgLen),intent(  out) :: ErrMsg
 
       IF (wordy > 0) Print*, "L", lineID, "->C", Point%IdNum
       
@@ -371,7 +373,10 @@ CONTAINS
          Point%nAttached = Point%nAttached + 1  ! add the line to the number connected
          Point%Attached(Point%nAttached) = lineID
          Point%Top(Point%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
+         ErrStat = ErrID_None
+         ErrMsg  = ''
       ELSE
+         ErrStat = ErrID_Fatal
          call WrScr("Too many lines connected to Point "//trim(num2lstr(Point%IdNum))//" in MoorDyn!")
       END IF
 

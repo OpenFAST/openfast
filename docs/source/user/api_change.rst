@@ -35,8 +35,10 @@ Added in OpenFAST `dev`
 Module                                        Line     Flag Name            Example Value
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 OpenFAST                                      8        ModCoupling          3   ModCoupling  - Module coupling method (switch) {1=loose; 2=tight with fixed Jacobian updates (DT_UJac); 3=tight with automatic Jacobian updates}
+OpenFAST                                      20       CompSoil             0   CompSoil     - Compute soil-structural dynamics (switch) {0=None; 1=SoilDyn}
 OpenFAST                                      17       NRotors              2   NRotors      - Number of rotors in turbine (-)
 OpenFAST                                      28       MirrorRotor          F   MirrorRotor  - Flag to reverse rotor rotation direction [1 to NRotors] {F=Normal, T=Mirror}
+OpenFAST                                      45       SoilFile             "SoilDyn.dat"     SoilFile        - Name of the file containing the SoilDyn input parameters (quoted string)
 OpenFAST                                      52                            ---------------------- INPUT FILES Rotor 2 -------------------------------------
 OpenFAST                                      53       EDFile               "ElastoDyn.dat"   EDFile          - Name of file containing ElastoDyn input parameters (quoted string)
 OpenFAST                                      54       BDBldFile(1)         "BeamDyn.dat"     BDBldFile(1)    - Name of file containing BeamDyn input parameters for blade 1 (quoted string)
@@ -105,6 +107,36 @@ BeamDyn                                       \*       PitchK               2000
 BeamDyn                                       \*       PitchC               500000        PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
 ElastoDyn Blade Input File                    \*                            The PitchAxis column has been removed from the DISTRIBUTED BLADE PROPERTIES table. The table should now only have 5 columns: BlFract, StrcTwst, BMassDen, FlpStff, and EdgStff
 ============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+OpenFAST v4.1.x to OpenFAST v4.2.0
+----------------------------------
+
+
+============================================= ==== ================== ================================================================= =====================================================================================================================================================================================================================================================================================
+Modified in OpenFAST `v4.2.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name         Change                                                             Example Value
+============================================= ==== ================== ================================================================= =====================================================================================================================================================================================================================================================================================
+FAST.Farm.fstf                                72   WAT_ScaleBox       default changed from `false` to `true`                            default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=True] (flag)
+HydroDyn                                      na   Members section    Added optional `FDMod` `VnCOffA` `VnCOffB` `FDLoFScA` `FDLoFScB` 
+                                                                                                                                        .. code-block::   
+
+                                                                                                                                           -------------------- MEMBERS -------------------------------------------------
+                                                                                                                                              2            NMembers       - Number of members (-)
+                                                                                                                                           MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MSecGeom    MSpinOrient   MDivSize   MCoefMod  MHstLMod   PropPot   FDMod    VnCOffA  VnCOffB  FDLoFScA FDLoFScB   [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table]
+                                                                                                                                             (-)        (-)        (-)         (-)          (-)      (switch)       (deg)        (m)      (switch)  (switch)   (flag)   (switch)   (Hz)     (Hz)       (-)      (-)
+============================================= ==== ================== ================================================================= =====================================================================================================================================================================================================================================================================================
+
+
+============================================= ==== ================== ====================================================================================================================================================================================================================
+Added in OpenFAST `v4.2.0`
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name         Example Value
+============================================= ==== ================== ====================================================================================================================================================================================================================
+ElastoDyn                                     72   HubIner_Teeter     0   HubIner_Teeter - Hub inertia about teeter axis (2-blades) (kg m^2)
+============================================= ==== ================== ====================================================================================================================================================================================================================
+
 
 
 OpenFAST v4.1.1 to OpenFAST v4.1.2

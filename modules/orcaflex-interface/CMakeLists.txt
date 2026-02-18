@@ -18,12 +18,18 @@ if (GENERATE_TYPES)
   generate_f90_types(src/OrcaFlexInterface.txt ${CMAKE_CURRENT_LIST_DIR}/src/OrcaFlexInterface_Types.f90)
 endif()
 
+if (WIN_DLL_LOAD)
+  add_definitions(-DLibLoad)
+else (WIN_DLL_LOAD)
+  add_definitions(-DNO_LibLoad)
+endif (WIN_DLL_LOAD)
+
 add_library(orcaflexlib STATIC
   src/OrcaFlexInterface.f90
   src/OrcaFlexInterface_Types.f90
 )
 target_link_libraries(orcaflexlib nwtclibs)
-if (ORCA_DLL_LOAD)
+if (WIN_DLL_LOAD)
   target_compile_definitions(orcaflexlib PUBLIC LibLoad)
 else ()
   target_compile_definitions(orcaflexlib PUBLIC NO_LibLoad)

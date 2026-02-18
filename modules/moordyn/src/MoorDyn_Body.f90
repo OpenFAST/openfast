@@ -613,21 +613,26 @@ CONTAINS
 
    ! this function handles assigning a point to a body
    !--------------------------------------------------------------
-   SUBROUTINE Body_AddPoint(Body, pointID, coords)
+   SUBROUTINE Body_AddPoint(Body, pointID, coords, ErrStat, ErrMsg)
 
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Point object
-      Integer(IntKi),     INTENT(IN   )  :: pointID
-      REAL(DbKi),         INTENT(IN   )  :: coords(3)
+      Type(MD_Body),       INTENT(INOUT)  :: Body        ! the Point object
+      Integer(IntKi),      INTENT(IN   )  :: pointID
+      REAL(DbKi),          INTENT(IN   )  :: coords(3)
+      integer(IntKi),      intent(  out)  :: ErrStat
+      character(ErrMsgLen),intent(  out)  :: ErrMsg
 
 
       IF (wordy > 0) Print*, "P", pointID, "->B", Body%IdNum
       
-      IF(Body%nAttachedP < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
+      IF(Body%nAttachedP < MD_MaxBdAtch) THEN      ! this is currently just a maximum imposed by a fixed array size.  could be improved.
          Body%nAttachedP = Body%nAttachedP + 1     ! increment the number pointed
          Body%AttachedC(Body%nAttachedP) = pointID
          Body%rPointRel(:,Body%nAttachedP) = coords  ! store relative position of point on body
+         ErrStat = ErrID_None
+         ErrMsg  = ''
       ELSE
-         call WrScr("too many Points attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn!")
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "too many Points attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn!"
       END IF
 
    END SUBROUTINE Body_AddPoint
@@ -635,18 +640,20 @@ CONTAINS
 
    ! this function handles assigning a rod to a body
    !--------------------------------------------------------------
-   SUBROUTINE Body_AddRod(Body, rodID, coords)
+   SUBROUTINE Body_AddRod(Body, rodID, coords, ErrStat, ErrMsg)
 
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Point object
-      Integer(IntKi),     INTENT(IN   )  :: rodID
-      REAL(DbKi),         INTENT(IN   )  :: coords(6)  ! positions of rod ends A and B relative to body
+      Type(MD_Body),       INTENT(INOUT)  :: Body        ! the Point object
+      Integer(IntKi),      INTENT(IN   )  :: rodID
+      REAL(DbKi),          INTENT(IN   )  :: coords(6)  ! positions of rod ends A and B relative to body
+      integer(IntKi),      intent(  out)  :: ErrStat
+      character(ErrMsgLen),intent(  out)  :: ErrMsg
       
       REAL(DbKi)                         :: tempUnitVec(3)
       REAL(DbKi)                         :: dummyLength
 
       IF (wordy > 0) Print*, "R", rodID, "->B", Body%IdNum
       
-      IF(Body%nAttachedR < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
+      IF(Body%nAttachedR < MD_MaxBdAtch) THEN      ! this is currently just a maximum imposed by a fixed array size.  could be improved.
          Body%nAttachedR = Body%nAttachedR + 1     ! increment the number connected
          
          ! store rod ID
@@ -657,8 +664,11 @@ CONTAINS
          Body%r6RodRel(1:3, Body%nAttachedR) = coords(1:3)
          Body%r6RodRel(4:6, Body%nAttachedR) = tempUnitVec
          
+         ErrStat = ErrID_None
+         ErrMsg  = ''
       ELSE
-         call WrScr("too many rods attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn")
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "too many rods attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn"
       END IF
 
    END SUBROUTINE Body_AddRod

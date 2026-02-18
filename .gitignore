@@ -36,7 +36,7 @@ __init__.py
 build*/
 _build*/
 install/
-vs-build-old/
+vs-build/
 
 # OS and IDE specific files
 .DS_Store

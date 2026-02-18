@@ -366,10 +366,12 @@ jobs:
           path: |
             ${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp
             ${{github.workspace}}/build/reg_tests/glue-codes/python
+            ${{github.workspace}}/build/reg_tests/glue-codes/other
             ${{github.workspace}}/build/reg_tests/modules/aerodyn
             ${{github.workspace}}/build/reg_tests/modules/moordyn
             ${{github.workspace}}/build/reg_tests/modules/inflowwind
             ${{github.workspace}}/build/reg_tests/modules/hydrodyn
+            ${{github.workspace}}/build/reg_tests/modules/seastate
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
 
 
@@ -529,7 +531,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF-offshore
+          name: rtest-OF-multirotor
           path: |
             ${{github.workspace}}/build/reg_tests/glue-codes/openfast
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline

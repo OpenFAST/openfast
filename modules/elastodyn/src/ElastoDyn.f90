@@ -3344,6 +3344,7 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
 
    !p%Twr2Shft  = InputFileData%Twr2Shft
    !p%HubIner   = InputFileData%HubIner
+   !p%HubIner_Teeter   = InputFileData%HubIner_Teeter
    !p%NacYIner  = InputFileData%NacYIner
 
 
@@ -4643,7 +4644,8 @@ END SUBROUTINE SetOutParam
 !> This routine is used to compute rotor (blade and hub) properties:
 !!   KBF(), KBE(), CBF(), CBE(), FreqBF(), FreqBE(), AxRedBld(),
 !!   TwistedSF(), BldMass(), FirstMom(), SecondMom(), BldCG(),
-!!   RotMass, RotIner, Hubg1Iner, Hubg2Iner, and BElmtMass()
+!!   RotMass, RotIner, Hubf1Iner, Hubf2Iner, rSAerCenn1(), and
+!!   rSAerCenn2(), BElmtMass()
 !! tower properties:
 !!   KTFA(), KTSS(), CTFA(), CTSS(), FreqTFA(), FreqTSS(),
 !!   AxRedTFA(), AxRedTSS(), TwrFASF(), TwrSSSF(), TwrMass, and
@@ -4747,28 +4749,32 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
    END IF
 
       ! Calculate hub inertia about its centerline passing through its c.g..
-      !   This calculation assumes that the hub for a 2-blader is essentially
-      !   a uniform cylinder whose centerline is transverse through the cylinder
-      !   passing through its c.g..  That is, for a 2-blader, Hubg1Iner =
-      !   Hubg2Iner is the inertia of the hub about both the g1- and g2- axes.  For
-      !   3-bladers, Hubg1Iner is simply equal to HubIner and Hubg2Iner is zero.
+      ! For a 2-bladed turbine:
+      !   - Hub interia about the rotor axis: Hubf1Iner is equal to HubIner
+      !   - Hub inertia about the teeter axis: Hubf2Iner is obtained by applying
+      !     parallel-axis theorem to HubIner_Teeter
+      !   Note that f-axes are used and therefore, inertias are not corrected
+      !   for the delta-3 angle
+      ! For a 3-bladed turbine:
+      !   - Hub interia about the rotor axis: Hubf1Iner is equal to HubIner
+      !   - Hub inertia about the teeter axis: Hubf2Iner is zero
       ! Also, Initialize RotMass and RotIner to associated hub properties:
 
    IF ( p%NumBl == 2 )  THEN ! 2-blader
-      p%Hubg1Iner = ( InputFileData%HubIner - p%HubMass*( ( p%UndSling - p%HubCM )**2 ) )/( p%CosDel3**2 )
-      p%Hubg2Iner = p%Hubg1Iner
-      IF ( p%Hubg1Iner < 0.0 ) THEN
+      p%Hubf1Iner = InputFileData%HubIner
+      p%Hubf2Iner = InputFileData%HubIner_Teeter - p%HubMass*( ( p%UndSling - p%HubCM )**2 )
+      IF ( p%Hubf1Iner < 0.0 ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = ' HubIner must not be less than HubMass*( UndSling - HubCM )^2 for 2-blader.'
+         ErrMsg = ' HubIner_Teeter must not be less than HubMass*( UndSling - HubCM )^2 for 2-blader.'
          RETURN
       END IF
    ELSE                    ! 3-blader
-      p%Hubg1Iner = InputFileData%HubIner
-      p%Hubg2Iner = 0.0
+      p%Hubf1Iner = InputFileData%HubIner
+      p%Hubf2Iner = 0.0
    ENDIF
 
    p%RotMass   = p%HubMass
-   p%RotIner   = p%Hubg1Iner
+   p%RotIner   = p%Hubf1Iner
 
 
    !...............................................................................................................................
@@ -7692,8 +7698,8 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
       TmpVec2 = CROSS_PRODUCT( RtHSdat%rPC, TmpVec1 )      ! The portion of PMomLPRot associated with the HubMass
 
       RtHSdat%PFrcPRot (:,p%DOFs%PCE(I)) = TmpVec1
-      RtHSdat%PMomLPRot(:,p%DOFs%PCE(I)) = TmpVec2 - p%Hubg1Iner*CoordSys%g1*DOT_PRODUCT( CoordSys%g1, RtHSdat%PAngVelEH(p%DOFs%PCE(I),0,:) ) &
-                                                   - p%Hubg2Iner*CoordSys%g2*DOT_PRODUCT( CoordSys%g2, RtHSdat%PAngVelEH(p%DOFs%PCE(I),0,:) )
+      RtHSdat%PMomLPRot(:,p%DOFs%PCE(I)) = TmpVec2 - p%Hubf1Iner*CoordSys%f1*DOT_PRODUCT( CoordSys%f1, RtHSdat%PAngVelEH(p%DOFs%PCE(I),0,:) ) &
+                                                   - p%Hubf2Iner*CoordSys%f2*DOT_PRODUCT( CoordSys%f2, RtHSdat%PAngVelEH(p%DOFs%PCE(I),0,:) )
 
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the hub center of mass (point C)
 
@@ -7726,17 +7732,17 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
 
    TmpVec1 = -p%HubMass*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccECt )                     ! The portion of FrcPRott  associated with the HubMass
    TmpVec2 = CROSS_PRODUCT( RtHSdat%rPC, TmpVec1 )                                        ! The portion of MomLPRott associated with the HubMass
-   TmpVec  = p%Hubg1Iner*CoordSys%g1*DOT_PRODUCT( CoordSys%g1, RtHSdat%AngVelEH ) &       ! = ( Hub inertia dyadic ) dot ( angular velocity of hub in the inertia frame )
-           + p%Hubg2Iner*CoordSys%g2*DOT_PRODUCT( CoordSys%g2, RtHSdat%AngVelEH )
+   TmpVec  = p%Hubf1Iner*CoordSys%f1*DOT_PRODUCT( CoordSys%f1, RtHSdat%AngVelEH ) &       ! = ( Hub inertia dyadic ) dot ( angular velocity of hub in the inertia frame )
+           + p%Hubf2Iner*CoordSys%f2*DOT_PRODUCT( CoordSys%f2, RtHSdat%AngVelEH )
    TmpVec3 = CROSS_PRODUCT( -RtHSdat%AngVelEH, TmpVec )                                   ! = ( -angular velocity of hub in the inertia frame ) cross ( TmpVec )
 
    RtHSdat%FrcPRott(1)  = TmpVec1(1) + u%HubPtLoad%Force(1,1)
    RtHSdat%FrcPRott(2)  = TmpVec1(2) + u%HubPtLoad%Force(3,1)
    RtHSdat%FrcPRott(3)  = TmpVec1(3) - u%HubPtLoad%Force(2,1)
-
-   RtHSdat%MomLPRott    = TmpVec2 + TmpVec3 - p%Hubg1Iner*CoordSys%g1*DOT_PRODUCT( CoordSys%g1, RtHSdat%AngAccEHt ) &
-                                            - p%Hubg2Iner*CoordSys%g2*DOT_PRODUCT( CoordSys%g2, RtHSdat%AngAccEHt )                                          
-
+   
+   RtHSdat%MomLPRott    = TmpVec2 + TmpVec3 - p%Hubf1Iner*CoordSys%f1*DOT_PRODUCT( CoordSys%f1, RtHSdat%AngAccEHt ) &
+                                            - p%Hubf2Iner*CoordSys%f2*DOT_PRODUCT( CoordSys%f2, RtHSdat%AngAccEHt )                                          
+      
    RtHSdat%MomLPRott(1) = RtHSdat%MomLPRott(1) + u%HubPtLoad%Moment(1,1)
    RtHSdat%MomLPRott(2) = RtHSdat%MomLPRott(2) + u%HubPtLoad%Moment(3,1)
    RtHSdat%MomLPRott(3) = RtHSdat%MomLPRott(3) - u%HubPtLoad%Moment(2,1)

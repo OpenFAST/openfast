@@ -43,6 +43,7 @@ SET ExtPtfm_Loc=%Modules_Loc%\extptfm\src
 SET AD_Loc=%Modules_Loc%\aerodyn\src
 SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
+SET SlD_Loc=%Modules_Loc%\soildyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
 SET ADsk_Loc=%Modules_Loc%\aerodisk\src
 
@@ -53,7 +54,7 @@ SET WD_Loc=%Modules_Loc%\wakedynamics\src
 SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SED_Loc%" -I^
- "%SrvD_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
+ "%SrvD_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SlD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%SEAST_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
  "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I "%ExtLoads_Loc%" 
 
@@ -69,6 +70,12 @@ REM ----------------------------------------------------------------------------
 SET CURR_LOC=%NWTC_Lib_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap
+GOTO checkError
+
+:GridInterp
+SET CURR_LOC=%NWTC_Lib_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\GridInterp.txt "  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :MAP
@@ -98,7 +105,19 @@ GOTO checkError
 :BeamDyn
 SET CURR_LOC=%BD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry_BeamDyn.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\Registry_BeamDyn.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:SoilDyn
+SET CURR_LOC=%SlD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\SoilDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:SuperController
+SET CURR_LOC=%SC_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\SuperController_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode
 GOTO checkError
 
 :SCDataEx:

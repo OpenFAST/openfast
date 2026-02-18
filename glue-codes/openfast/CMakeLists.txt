@@ -40,5 +40,3 @@ if(BUILD_OPENFAST_LIB_DRIVER)
   install(TARGETS openfast_lib_driver
     RUNTIME DESTINATION bin)
 endif()
-
-

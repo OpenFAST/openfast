@@ -31,9 +31,6 @@ MODULE MoorDyn_IO
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
-  INTEGER, PARAMETER :: nCoef = 30  ! maximum number of entries to allow in nonlinear coefficient lookup tables
-  ! it would be nice if the above worked for everything, but I think it needs to also be matched in the Registry
-
   ! --------------------------- Output definitions -----------------------------------------
 
   ! The following are some definitions for use with the output options in MoorDyn.
@@ -249,8 +246,8 @@ CONTAINS
       CHARACTER(40),    INTENT(IN   )  :: inputString
       REAL(DbKi),       INTENT(INOUT)  :: LineProp_c
       INTEGER(IntKi),   INTENT(  OUT)  :: LineProp_nPoints
-      REAL(DbKi),       INTENT(  OUT)  :: LineProp_Xs (nCoef)
-      REAL(DbKi),       INTENT(  OUT)  :: LineProp_Ys (nCoef)
+      REAL(DbKi),       INTENT(  OUT)  :: LineProp_Xs (MD_MaxNCoef)  ! MD_MaxNCoef set in registry
+      REAL(DbKi),       INTENT(  OUT)  :: LineProp_Ys (MD_MaxNCoef)  ! MD_MaxNCoef set in registry
       
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
@@ -289,7 +286,7 @@ CONTAINS
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
-         DO I = 1, nCoef
+         DO I = 1, MD_MaxNCoef
             
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2      !read into a line
 
@@ -1320,22 +1317,20 @@ CONTAINS
       INTEGER,                      INTENT(   OUT )  :: ErrStat              ! a non-zero value indicates an error occurred
       CHARACTER(*),                 INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(IntKi)       :: I  ! generic counter
-
+      INTEGER(IntKi)          :: I  ! generic counter
+      integer(IntKi)          :: ErrStat2
+      character(ErrMsgLen)    :: ErrMsg2
+      character(*), parameter :: RoutineName = 'MDIO_CloseOutput'
 
       ErrStat = 0
       ErrMsg  = ""
 
-
-!FIXME: make sure thes are actually open before trying to close them. Segfault will occur otherwise!!!!
-!  This bug can be triggered by an early failure of the parsing routines, before these files were ever opened
-!  which returns MD to OpenFAST as ErrID_Fatal, then OpenFAST calls MD_End, which calls this.
-
       ! close main MoorDyn output file
       if (p%MDUnOut > 0) then
-         CLOSE( p%MDUnOut, IOSTAT = ErrStat )
-         IF ( ErrStat /= 0 ) THEN
-            ErrMsg = 'Error closing output file'
+         CLOSE( p%MDUnOut, IOSTAT = ErrStat2 )
+         p%MDUnOut = -1
+         IF ( ErrStat2 /= 0 ) THEN
+            call SetErrStat(ErrID_Severe,'Error closing output file',ErrStat,ErrMsg,RoutineName)
          END IF
       end if 
       
@@ -1343,9 +1338,10 @@ CONTAINS
       DO I=1,p%NRods
          if (allocated(m%RodList)) then
             if (m%RodList(I)%RodUnOut > 0) then
-               CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat )
-               IF ( ErrStat /= 0 ) THEN
-                  ErrMsg = 'Error closing rod output file'
+               CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat2 )
+               m%RodList(I)%RodUnOut = -1
+               IF ( ErrStat2 /= 0 ) THEN
+                  call SetErrStat(ErrID_Severe,'Error closing rod output file',ErrStat,ErrMsg,RoutineName)
                END IF
             end if 
          end if 
@@ -1355,9 +1351,10 @@ CONTAINS
       DO I=1,p%NLines
          if (allocated(m%LineList)) then
             if (m%LineList(I)%LineUnOut > 0) then
-               CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
-               IF ( ErrStat /= 0 ) THEN
-                  ErrMsg = 'Error closing line output file'
+               CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat2 )
+               m%LineList(I)%LineUnOut = -1
+               IF ( ErrStat2 /= 0 ) THEN
+                  call SetErrStat(ErrID_Severe,'Error closing line output file',ErrStat,ErrMsg,RoutineName)
                END IF
             end if 
          end if

@@ -41,7 +41,7 @@ option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
-option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
+option(WIN_DLL_LOAD "Enable loading of Windows only DLL's (OrcaFlex, SoilDyn)" on)  # This is mostly for testing purposes
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ CFD API" off)
@@ -125,6 +125,11 @@ if (OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     link_libraries("${OpenMP_CXX_LIBRARIES}")
   endif()
+elseif (NOT BLA_VENDOR)
+  # If we're not using OpenMP, and a specific BLAS vendor has not been set, 
+  # set MKL threading to sequential to avoid potential issues with 
+  # small calculations taking longer due to threading overhead (turbsim).
+  set(MKL_THREADING "sequential")
 endif()
 
 #-------------------------------------------------------------------------------
@@ -192,6 +197,7 @@ set(OPENFAST_MODULES
   aerodyn
   aerodisk
   servodyn
+  soildyn
   elastodyn
   beamdyn
   subdyn

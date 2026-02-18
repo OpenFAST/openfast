@@ -352,8 +352,7 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
       call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
       write(sDummy, '(3(I8,1X))') p%WAT_NxNyNz
       call WrScr('  WAT: NxNyNz set to: '//trim(sDummy)//' (inferred from filename)')
-      write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
-      call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (based on rotor diameter)')
+      call Set_WAT_DxDyDz()      ! Use turbine high res deltas if all same
    endif
    ! Sanity check
    if (any(p%WAT_NxNyNz<2)) then
@@ -488,7 +487,7 @@ contains
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
 
-      ! Set Dxyz
+      ! Calculate Dxyz based on guidance
       Dxyz=real(RotorDiamRef,ReKi)*ScaleFact
 
       ! --- Create a string made of digits and "x" only, starting from the end of the filename
@@ -525,6 +524,38 @@ contains
       ErrStat3=ErrID_None
       ErrMsg3 =""
    end subroutine MannLibDims
+   subroutine Set_WAT_DxDyDz()
+      real(ReKi) :: TmpDx,TmpDy,TmpDz
+      logical    :: HResDimsSame
+      ! If Mod_AmbWind<2, we don't read high res discretizations
+      if (AWAE_InitInput%InputFileData%Mod_AmbWind < 2) then
+         write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
+         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (calculated based on guidance for Mod_AmbWind==1)')
+         return
+      endif
+      ! Check if all turbines use the same high res deltas
+      HResDimsSame = .true.
+      TmpDx = AWAE_InitInput%InputFileData%dX_high(1)
+      TmpDy = AWAE_InitInput%InputFileData%dY_high(1)
+      TmpDz = AWAE_InitInput%InputFileData%dZ_high(1)
+      do i=2,size(AWAE_InitInput%InputFileData%dX_high)
+         if (.not. EqualRealNos(TmpDx,AWAE_InitInput%InputFileData%dX_high(i))) HResDimsSame = .false.
+         if (.not. EqualRealNos(TmpDy,AWAE_InitInput%InputFileData%dY_high(i))) HResDimsSame = .false.
+         if (.not. EqualRealNos(TmpDz,AWAE_InitInput%InputFileData%dZ_high(i))) HResDimsSame = .false.
+      enddo
+      ! if all turbines use same high res spacing, use that for WAT spacing
+      if (HResDimsSame) then
+         p%WAT_DxDyDz(1) = TmpDx
+         p%WAT_DxDyDz(2) = TmpDy
+         p%WAT_DxDyDz(3) = TmpDz
+         write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
+         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (using high res grid resolution)')
+      ! otherwise fall back to calculated values from MannLibDims
+      else
+         write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
+         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (high res grids are not identical for all turbines, calculated based on guidance instead)')
+      endif
+   end subroutine Set_WAT_DxDyDz
 end subroutine WAT_init
 
 !> Remove mean from all grid nodes and set standard deviation to 1 at all nodes

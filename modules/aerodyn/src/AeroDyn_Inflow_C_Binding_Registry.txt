@@ -11,8 +11,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include    Registry_NWTC_Library.txt
-#
-# ..... Table of combined cases to run .......................................................................................................
+# ADI c-bind types
 param    AeroDyn_Inflow_C_Binding/ADI_cbind  -                 IntKi                         NumPtsDiskAvg        -                    144   -  "Number of points for disk average velocity calculations" -
 typedef  ^                                   DiskAvgVelData    ReKi                          DiskWindPosRel       {3}{NumPtsDiskAvg}   -     -  "Position points for disk average sampling, relative to hub" -
 typedef  ^                                         ^           ReKi                          DiskWindPosAbs       {3}{NumPtsDiskAvg}   -     -  "Position points for disk average sampling, absolute/global/interial" -

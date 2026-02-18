@@ -16,7 +16,7 @@ OpenFAST is a wind turbine simulation tool which builds on FAST v8. FAST.Farm
 extends the capability of OpenFAST to simulate multi-turbine wind farms. They were
 created with the goal of being community models developed and used by research
 laboratories, academia, and industry. They are managed by a dedicated team at the
-National Renewable Energy Lab. Our objective is to ensure that OpenFAST and FAST.Farm
+National Laboratory of the Rockies. Our objective is to ensure that OpenFAST and FAST.Farm
 are sustainable software that are well tested and well documented. If you'd like
 to contribute, see the `Developer Documentation <https://openfast.readthedocs.io/en/dev/source/dev/index.html>`_
 and any open GitHub issues with the
@@ -30,11 +30,11 @@ tag.
 Part of the WETO Stack
 ----------------------
 
-OpenFAST is primarily developed with the support of the U.S. Department of Energy and is part of the `WETO Software Stack <https://nrel.github.io/WETOStack>`_. For more information and other integrated modeling software, see:
+OpenFAST is primarily developed with the support of the U.S. Department of Energy and is part of the `WETO Software Stack <https://NatLabRockies.github.io/WETOStack>`_. For more information and other integrated modeling software, see:
 
-* `Portfolio Overview <https://nrel.github.io/WETOStack/portfolio_analysis/overview.html>`_
-* `Entry Guide <https://nrel.github.io/WETOStack/_static/entry_guide/index.html>`_
-* `OpenFAST Workshop <https://nrel.github.io/WETOStack/workshops/user_workshops_2024.html#openfast-ecosystem>`_
+* `Portfolio Overview <https://NatLabRockies.github.io/WETOStack/portfolio_analysis/overview.html>`_
+* `Entry Guide <https://NatLabRockies.github.io/WETOStack/_static/entry_guide/index.html>`_
+* `OpenFAST Workshop <https://NatLabRockies.github.io/WETOStack/workshops/user_workshops_2024.html#openfast-ecosystem>`_
 
 
 FAST v8 - OpenFAST
@@ -155,8 +155,8 @@ Please use `GitHub Issues <https://github.com/OpenFAST/OpenFAST/issues>`_ to:
 * report bugs
 * request code enhancements
 
-Users and developers may also be interested in the NREL National Wind
-Technology Center (NWTC) `phpBB Forum <https://wind.nrel.gov/forum/wind/>`_,
+Users and developers may also be interested in the NLR National Wind
+Technology Center (NWTC) `Forum <https://forums.nrel.gov/>`_,
 which is still maintained and has a long history of FAST-related questions
 and answers.
 
@@ -164,9 +164,9 @@ Acknowledgments
 ---------------
 
 OpenFAST and FAST.Farm are maintained and developed by researchers and software
-engineers at the `National Renewable Energy Laboratory <http://www.nrel.gov/>`_
-(NREL), with support from the US Department of Energy's Wind Energy Technology
-Office. NREL gratefully acknowledges development contributions from the following
+engineers at the `National Laboratory of the Rockies <http://www.nlr.gov/>`_
+(NLR), with support from the US Department of Energy's Wind Energy Technology
+Office. NLR gratefully acknowledges development contributions from the following
 organizations:
 
 * Envision Energy USA, Ltd

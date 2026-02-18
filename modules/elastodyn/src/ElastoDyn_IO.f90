@@ -3156,8 +3156,16 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-      ! HubIner - Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) (kg m^2):
-   CALL ReadVar( UnIn, InputFile, InputFileData%HubIner, "HubIner", "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) (kg m^2)", ErrStat2, ErrMsg2, UnEc)
+      ! HubIner - Hub inertia about rotor axis (2 or 3-blader) (kg m^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%HubIner, "HubIner", "Hub inertia about rotor axis (2 or 3-blader) (kg m^2)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      ! HubIner_teeter - Hub inertia about teeter axis (2-blader) (kg m^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%HubIner_Teeter, "HubIner_Teeter", "Hub inertia about teeter axis (2-blader) (kg m^2)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -4330,6 +4338,9 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    IF ( InputFileData%NacYIner < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'NacYIner must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%GenIner  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'GenIner must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%HubIner  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubIner must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%NumBl == 2 ) THEN
+     IF ( InputFileData%HubIner_Teeter  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubIner_Teeter must not be negative.',ErrStat,ErrMsg,RoutineName)
+   ENDIF
 
       ! Check that TowerHt is in the range [0,inf):
    IF ( MHK /= MHK_Floating ) THEN

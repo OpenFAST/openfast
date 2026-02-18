@@ -19,6 +19,7 @@
 set(MEX_LIBS
   $<TARGET_FILE:openfast_prelib>
   $<TARGET_FILE:basicaerolib>
+  $<TARGET_FILE:aeroacousticslib>
   $<TARGET_FILE:aerodynlib>
   $<TARGET_FILE:beamdynlib>
   $<TARGET_FILE:elastodynlib>
@@ -32,6 +33,7 @@ set(MEX_LIBS
   $<TARGET_FILE:orcaflexlib>
   $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
   $<TARGET_FILE:subdynlib>
+  $<TARGET_FILE:soildynlib>
   $<TARGET_FILE:extinflowlib>
   $<TARGET_FILE:extloadslib>
   $<TARGET_FILE:ifwlib>

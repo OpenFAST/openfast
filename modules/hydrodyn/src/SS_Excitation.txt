@@ -43,7 +43,7 @@ typedef ^                      ^                   SS_Exc_ContinuousStateType   
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef ^                      MiscVarType         INTEGER                      LastIndWave      -  1 -   "last used index in the WaveTime array" -
-typedef   ^                      ^                 SeaSt_WaveField_MiscVarType  WaveField_m      -  - -   "misc var information from the SeaState Interpolation module"   -
+typedef ^                      ^                   GridInterp_MiscVarType       WaveField_m      -  - -   "misc var information from the Grid Interpolation module"   -
 
 
 # ..... Parameters .........................

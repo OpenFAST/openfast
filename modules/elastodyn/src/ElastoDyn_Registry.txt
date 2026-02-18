@@ -141,7 +141,8 @@ typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
 typedef	^	ED_InputFile	ReKi	PBrIner	{:}	-	-	"Pitch bearing inertia about the pitch axis"	kg m^2
 typedef	^	ED_InputFile	ReKi	BlPIner	{:}	-	-	"Blade inertia about the pitch axis"	kg m^2
 typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
-typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about rotor axis (2 or 3-blader)"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	HubIner_Teeter	-	-	-	"Hub inertia about teeter axis (2-blader)"	"kg m^2"
 typedef	^	ED_InputFile	ReKi	GenIner	-	-	-	"Generator inertia about HSS"	"kg m^2"
 typedef	^	ED_InputFile	ReKi	NacMass	-	-	-	"Nacelle mass"	kg
 typedef	^	ED_InputFile	ReKi	NacYIner	-	-	-	"Nacelle yaw inertia"	"kg m^2"
@@ -652,8 +653,8 @@ typedef	^	ParameterType	ReKi	BldMass	{:}	-	-	"Blade masses"
 typedef	^	ParameterType	ReKi	BoomMass	-	-	-	"Tail boom mass"
 typedef	^	ParameterType	ReKi	FirstMom	{:}	-	-	"First mass moment of inertia of blades wrt the root"
 typedef	^	ParameterType	ReKi	GenIner	-	-	-	"Generator inertia about HSS"
-typedef	^	ParameterType	ReKi	Hubg1Iner	-	-	-	"Inertia of hub about g1-axis (rotor centerline)"
-typedef	^	ParameterType	ReKi	Hubg2Iner	-	-	-	"Inertia of hub about g2-axis (transverse to the cyclinder and passing through its c.g.)"
+typedef	^	ParameterType	ReKi	Hubf1Iner	-	-	-	"Inertia of hub about f1-axis (rotor centerline)"
+typedef	^	ParameterType	ReKi	Hubf2Iner	-	-	-	"Inertia of hub about f2-axis (teeter axis)"
 typedef	^	ParameterType	ReKi	HubMass	-	-	-	"Hub mass"
 typedef	^	ParameterType	ReKi	Nacd2Iner	-	-	-	"Inertia of nacelle about the d2-axis whose origin is the nacelle center of mass"
 typedef	^	ParameterType	ReKi	NacMass	-	-	-	"Nacelle mass"

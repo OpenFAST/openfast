@@ -93,22 +93,31 @@ file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
 foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/inflowwind modules/moordyn modules/subdyn openfast_io)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
-
-## openfast seed
-foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
+foreach(srcDir BAR_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/aerodyn/${srcDir}"
+       DESTINATION "${CTEST_BINARY_DIR}/modules/aerodyn/")
+endforeach()
+foreach(srcDir seastate_wr_kin1)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/seastate/${srcDir}"
+       DESTINATION "${CTEST_BINARY_DIR}/modules/seastate/")
 endforeach()
 
-foreach(turbineDirectory 5MW_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/python/")
+## openfast test directories
+foreach(srcDir 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${srcDir}"
+       DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
+endforeach()
+
+## python test directories
+foreach(srcDir 5MW_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${srcDir}"
+       DESTINATION "${CTEST_BINARY_DIR}/glue-codes/python/")
 endforeach()
 
 ## fastfarm seed
-foreach(turbineDirectory 5MW_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast-farm/")
+foreach(srcDir 5MW_Baseline WAT_MannBoxDB)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/${srcDir}"
+       DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast-farm/")
 endforeach()
 
 # add the tests

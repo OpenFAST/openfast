@@ -56,7 +56,6 @@ typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - 
 typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
 # wake added turbulence (WAT) inputs
 typedef  ^                 WD_InputFileType  Logical         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
-#typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def     {5} - - "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_k_c  -  - - "Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6]" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -
@@ -189,7 +188,6 @@ typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent di
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
 # wake added turbulence (WAT) parameters
 typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
-#typedef  ^ ParameterType  ReKi            WAT_k_Def     {5} - - "Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def , FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]" -
 typedef  ^ ParameterType  ReKi            WAT_k_Def_k_c  -  - - "Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6]" -
 typedef  ^ ParameterType  ReKi            WAT_k_Def_FMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]" -
 typedef  ^ ParameterType  ReKi            WAT_k_Def_DMin - - -  "Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0]" -

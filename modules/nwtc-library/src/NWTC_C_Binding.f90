@@ -32,17 +32,18 @@ IMPLICIT NONE
 !     to correctly handle different lengths of the strings
 INTEGER(IntKi), PARAMETER   :: ErrMsgLen_C = ErrMsgLen + 1  ! Currently, this is 8197
 INTEGER(IntKi), PARAMETER   :: IntfStrLen  = 1025           ! length of other strings through the C interface such as file paths
+integer(c_int), PARAMETER   :: AbortErrLev_C = 4_c_int
 
 CONTAINS
 
 !> This routine sets the error status in C_CHAR for export to calling code.
 SUBROUTINE SetErrStat_F2C(ErrStat_F, ErrMsg_F, ErrStat_C, ErrMsg_C)
-    INTEGER,                INTENT(IN   )  :: ErrStat_F             !< aggregated error status  (fortran type)
+    INTEGER(IntKi),         INTENT(IN   )  :: ErrStat_F             !< aggregated error status  (fortran type)
     CHARACTER(ErrMsgLen),   INTENT(IN   )  :: ErrMsg_F              !< aggregated error message (fortran type)
     INTEGER(C_INT),         INTENT(  OUT)  :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT)  :: ErrMsg_C(ErrMsgLen_C)
 
-    ErrStat_C = ErrStat_F     ! We will send back the same error status that is used in OpenFAST
+    ErrStat_C = int(ErrStat_F,c_int)     ! We will send back the same error status that is used in OpenFAST
     if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
         ErrMsg_C = TRANSFER( TRIM(ErrMsg_F(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
     else

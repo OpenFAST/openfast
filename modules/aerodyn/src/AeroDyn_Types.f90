@@ -278,7 +278,6 @@ IMPLICIT NONE
 ! =========  RotContinuousStateType  =======
   TYPE, PUBLIC :: RotContinuousStateType
     TYPE(BEMT_ContinuousStateType)  :: BEMT      !< Continuous states from the BEMT module [-]
-    TYPE(AA_ContinuousStateType)  :: AA      !< Continuous states from the AA module [-]
   END TYPE RotContinuousStateType
 ! =======================
 ! =========  AD_ContinuousStateType  =======
@@ -302,7 +301,6 @@ IMPLICIT NONE
 ! =========  RotConstraintStateType  =======
   TYPE, PUBLIC :: RotConstraintStateType
     TYPE(BEMT_ConstraintStateType)  :: BEMT      !< Constraint states from the BEMT module [-]
-    TYPE(AA_ConstraintStateType)  :: AA      !< Constraint states from the AA module [-]
   END TYPE RotConstraintStateType
 ! =======================
 ! =========  AD_ConstraintStateType  =======
@@ -570,7 +568,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState WaveField module [-]
+    TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState WaveField module [-]
     TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
     TYPE(AD_InputType)  :: u_perturb      !< input perturbation for linearization [-]
     TYPE(AD_OutputType)  :: y_lin      !< output perturbation for linearization [-]
@@ -580,20 +578,19 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind     =   2 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind
    integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind_1   =   3 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
    integer(IntKi), public, parameter :: AD_x_BEMT_V_w                    =   4 ! AD%BEMT%V_w
-   integer(IntKi), public, parameter :: AD_x_AA_DummyContState           =   5 ! AD%AA%DummyContState
-   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   6 ! AD%NacelleMotion
-   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   7 ! AD%TowerMotion
-   integer(IntKi), public, parameter :: AD_u_HubMotion                   =   8 ! AD%HubMotion
-   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =   9 ! AD%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  10 ! AD%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  11 ! AD%TFinMotion
-   integer(IntKi), public, parameter :: AD_u_UserProp                    =  12 ! AD%UserProp
-   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  13 ! AD%NacelleLoad
-   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  14 ! AD%HubLoad
-   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  15 ! AD%TowerLoad
-   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  16 ! AD%BladeLoad(DL%i1)
-   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  17 ! AD%TFinLoad
-   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  18 ! AD%WriteOutput
+   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   5 ! AD%NacelleMotion
+   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   6 ! AD%TowerMotion
+   integer(IntKi), public, parameter :: AD_u_HubMotion                   =   7 ! AD%HubMotion
+   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =   8 ! AD%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =   9 ! AD%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  10 ! AD%TFinMotion
+   integer(IntKi), public, parameter :: AD_u_UserProp                    =  11 ! AD%UserProp
+   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  12 ! AD%NacelleLoad
+   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  13 ! AD%HubLoad
+   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  14 ! AD%TowerLoad
+   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  15 ! AD%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  16 ! AD%TFinLoad
+   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  17 ! AD%WriteOutput
 
 contains
 
@@ -2480,9 +2477,6 @@ subroutine AD_CopyRotContinuousStateType(SrcRotContinuousStateTypeData, DstRotCo
    call BEMT_CopyContState(SrcRotContinuousStateTypeData%BEMT, DstRotContinuousStateTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call AA_CopyContState(SrcRotContinuousStateTypeData%AA, DstRotContinuousStateTypeData%AA, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyRotContinuousStateType(RotContinuousStateTypeData, ErrStat, ErrMsg)
@@ -2496,8 +2490,6 @@ subroutine AD_DestroyRotContinuousStateType(RotContinuousStateTypeData, ErrStat,
    ErrMsg  = ''
    call BEMT_DestroyContState(RotContinuousStateTypeData%BEMT, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AA_DestroyContState(RotContinuousStateTypeData%AA, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotContinuousStateType(RF, Indata)
@@ -2506,7 +2498,6 @@ subroutine AD_PackRotContinuousStateType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotContinuousStateType'
    if (RF%ErrStat >= AbortErrLev) return
    call BEMT_PackContState(RF, InData%BEMT) 
-   call AA_PackContState(RF, InData%AA) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2516,7 +2507,6 @@ subroutine AD_UnPackRotContinuousStateType(RF, OutData)
    character(*), parameter            :: RoutineName = 'AD_UnPackRotContinuousStateType'
    if (RF%ErrStat /= ErrID_None) return
    call BEMT_UnpackContState(RF, OutData%BEMT) ! BEMT 
-   call AA_UnpackContState(RF, OutData%AA) ! AA 
 end subroutine
 
 subroutine AD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -2792,9 +2782,6 @@ subroutine AD_CopyRotConstraintStateType(SrcRotConstraintStateTypeData, DstRotCo
    call BEMT_CopyConstrState(SrcRotConstraintStateTypeData%BEMT, DstRotConstraintStateTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call AA_CopyConstrState(SrcRotConstraintStateTypeData%AA, DstRotConstraintStateTypeData%AA, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyRotConstraintStateType(RotConstraintStateTypeData, ErrStat, ErrMsg)
@@ -2808,8 +2795,6 @@ subroutine AD_DestroyRotConstraintStateType(RotConstraintStateTypeData, ErrStat,
    ErrMsg  = ''
    call BEMT_DestroyConstrState(RotConstraintStateTypeData%BEMT, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AA_DestroyConstrState(RotConstraintStateTypeData%AA, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotConstraintStateType(RF, Indata)
@@ -2818,7 +2803,6 @@ subroutine AD_PackRotConstraintStateType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotConstraintStateType'
    if (RF%ErrStat >= AbortErrLev) return
    call BEMT_PackConstrState(RF, InData%BEMT) 
-   call AA_PackConstrState(RF, InData%AA) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2828,7 +2812,6 @@ subroutine AD_UnPackRotConstraintStateType(RF, OutData)
    character(*), parameter            :: RoutineName = 'AD_UnPackRotConstraintStateType'
    if (RF%ErrStat /= ErrID_None) return
    call BEMT_UnpackConstrState(RF, OutData%BEMT) ! BEMT 
-   call AA_UnpackConstrState(RF, OutData%AA) ! AA 
 end subroutine
 
 subroutine AD_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -6189,7 +6172,7 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%WindAcc = SrcMiscData%WindAcc
    end if
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%Inflow)) then
@@ -6258,7 +6241,7 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%WindAcc)) then
       deallocate(MiscData%WindAcc)
    end if
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%Inflow)) then
       LB(1:1) = lbound(MiscData%Inflow)
@@ -6305,7 +6288,7 @@ subroutine AD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%WindPos)
    call RegPackAlloc(RF, InData%WindVel)
    call RegPackAlloc(RF, InData%WindAcc)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call GridInterp_PackMisc(RF, InData%WaveField_m) 
    call RegPack(RF, allocated(InData%Inflow))
    if (allocated(InData%Inflow)) then
       call RegPackBounds(RF, 1, lbound(InData%Inflow), ubound(InData%Inflow))
@@ -6360,7 +6343,7 @@ subroutine AD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
    if (allocated(OutData%Inflow)) deallocate(OutData%Inflow)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -7140,8 +7123,6 @@ subroutine AD_VarPackContState(V, x, ValAry)
          VarVals = x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)     ! Rank 1 Array
       case (AD_x_BEMT_V_w)
          VarVals = x%BEMT%V_w(V%iLB:V%iUB)                                    ! Rank 1 Array
-      case (AD_x_AA_DummyContState)
-         VarVals(1) = x%AA%DummyContState                                     ! Scalar
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -7172,8 +7153,6 @@ subroutine AD_VarUnpackContState(V, ValAry, x)
          x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB) = VarVals     ! Rank 1 Array
       case (AD_x_BEMT_V_w)
          x%BEMT%V_w(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
-      case (AD_x_AA_DummyContState)
-         x%AA%DummyContState = VarVals(1)                                     ! Scalar
       end select
    end associate
 end subroutine
@@ -7190,8 +7169,6 @@ function AD_ContinuousStateFieldName(DL) result(Name)
        Name = "x%BEMT%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
    case (AD_x_BEMT_V_w)
        Name = "x%BEMT%V_w"
-   case (AD_x_AA_DummyContState)
-       Name = "x%AA%DummyContState"
    case default
        Name = "Unknown Field"
    end select
@@ -7221,8 +7198,6 @@ subroutine AD_VarPackContStateDeriv(V, x, ValAry)
          VarVals = x%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)     ! Rank 1 Array
       case (AD_x_BEMT_V_w)
          VarVals = x%BEMT%V_w(V%iLB:V%iUB)                                    ! Rank 1 Array
-      case (AD_x_AA_DummyContState)
-         VarVals(1) = x%AA%DummyContState                                     ! Scalar
       case default
          VarVals = 0.0_R8Ki
       end select

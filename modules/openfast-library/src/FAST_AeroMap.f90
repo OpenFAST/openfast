@@ -116,9 +116,15 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
                            T%ED, T%SED, T%BD, T%SrvD, T%AD, T%ADsk, &
                            T%ExtLd, T%IfW, T%ExtInfw, &
                            T%SeaSt, T%HD, T%SD, T%ExtPtfm, T%MAP, &
-                           T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, &
+                           T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, T%SlD, &
                            CompAeroMaps, ErrStat2, ErrMsg2)
    if (Failed()) return
+
+   ! If BeamDyn blades are being used, return error
+   if (T%p_FAST%CompElast == Module_BD) then
+      call SetErrStat(ErrID_Fatal, "AeroMap does not currently work with BeamDyn blades, support will be added in a future version of OpenFAST", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
 
    ! Initialize module data transfer mappings
    call FAST_InitMappings(m%Mappings, m%ModData, T, ErrStat2, ErrMsg2)
@@ -305,7 +311,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
 
       call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y, UnusedAry, &
                         T%AD%y, UnusedAry, T%SrvD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
-                        UnusedAry, UnusedAry, UnusedAry, UnusedAry, T%IceD%y, T%BD%y, ErrStat2, ErrMsg2)
+                        UnusedAry, UnusedAry, UnusedAry, UnusedAry, T%IceD%y, T%SlD%y%WriteOutput, T%BD%y, ErrStat2, ErrMsg2)
       if (Failed()) return
 
       !-------------------------------------------------------------------------

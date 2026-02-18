@@ -144,6 +144,7 @@ typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High {:} - -  "InflowWi
 
 #wake added turbulence
 typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
+typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:} 0 -  "Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed" -
 
 # Low-resolution grid chunk data
 typedef   ^ LRGChunkType     IntKi    iChunk                  {3} -  -  "XYZ index of chunk" -

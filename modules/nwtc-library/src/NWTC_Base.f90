@@ -100,9 +100,12 @@ contains
       CHARACTER(*),   INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
       
       IF ( ErrStatLcl /= ErrID_None ) THEN
-         IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//new_line('a')
-         ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
-         ErrStat = MAX(ErrStat,ErrStatLcl)
+         IF (ErrStat /= ErrID_None) then
+            ErrMess = TRIM(ErrMess)//new_line('a')//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
+         else
+            ErrMess = TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
+         END IF
+         ErrStat = MAX(ErrStat, ErrStatLcl)
       END IF
          
    end subroutine    

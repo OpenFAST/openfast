@@ -7,8 +7,6 @@ for /f "tokens=* usebackq" %%f in (`dir /b "C:\Program Files (x86)\Intel\oneAPI\
 @REM since building the Visual Studio projects modifies files
 powershell -command "(Get-Content -Path '.\vs-build\CreateGitVersion.bat') -replace '--dirty', '' | Set-Content -Path '.\vs-build\CreateGitVersion.bat'"
 
-
-
 setlocal enabledelayedexpansion
 
 :: Initialize a variable to store failed solutions
@@ -16,56 +14,65 @@ set "FailedSolutions="
 set "OverallErrorLevel=0"
 
 
-echo on
-@REM Build all solutions (release 64)
+echo "Build all projects (Release|64)"
 devenv vs-build/OpenFAST.sln /Build "Release|x64"
-echo off
 if %ERRORLEVEL% NEQ 0 (
     set "FailedSolutions=!FailedSolutions!Release  "
     set "OverallErrorLevel=1"
     echo Build of OpenFAST.sln Release failed!
 )
-echo on
 
 
-@REM Build all OpenMP solutions (release 64 OpenMP)
-echo on
-devenv vs-build/OpenFAST.sln /Build "Release_OpenMP|x64"
-echo off
+echo "Build all OpenMP projects (OpenMP_Release|64)"
+devenv vs-build/OpenFAST.sln /Build "OpenMP_Release|x64"
 if %ERRORLEVEL% NEQ 0 (
-    set "FailedSolutions=!FailedSolutions!Release_OpenMP  "
+    set "FailedSolutions=!FailedSolutions!OpenMP_Release  "
     set "OverallErrorLevel=1"
-    echo Build of OpenFAST.sln Release_OpenMP failed!
+    echo Build of OpenFAST.sln OpenMP_Release failed!
 )
-echo on
 
 
-@REM Build MATLAB solution last
-echo on
-devenv vs-build/OpenFAST.sln /Build "Release_Matlab|x64"
-echo off
+echo "Build OpenFAST-Simulink shared library (Matlab_Release|x64)"
+devenv vs-build/OpenFAST.sln /Build "Matlab_Release|x64"
 if %ERRORLEVEL% NEQ 0 (
-    set "FailedSolutions=!FailedSolutions!Release_Matlab  "
+    set "FailedSolutions=!FailedSolutions!Matlab_Release  "
     set "OverallErrorLevel=1"
-    echo Build of OpenFAST.sln Release_Matlab failed!
+    echo Build of OpenFAST.sln Matlab_Release failed!
 )
-echo on
 
 
-
-@REM Copy controllers to bin directory
-@REM xcopy .\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData\*.dll .\build\bin\ /y
-
-echo.
-echo Build Summary:
-echo off
+echo "Build Summary:"
 if defined FailedSolutions (
     echo The following solutions failed to build:
     echo %FailedSolutions%
 ) else (
     echo All solutions built successfully.
 )
-echo on
+
+@echo off
+setlocal enabledelayedexpansion
+
+cd /d build\bin || exit /b 1
+
+for %%F in (*_Release*) do (
+    set "name=%%~nxF"
+    set "newname=!name:_Release=!"
+    if not "!name!"=="!newname!" (
+        ren "%%F" "!newname!"
+    )
+)
+for %%F in (*_Matlab*) do (
+    set "name=%%~nxF"
+    set "newname=!name:_Matlab=!"
+    if not "!name!"=="!newname!" (
+        ren "%%F" "!newname!"
+    )
+)
+
+endlocal
+
+echo "List executables in build\bin"
+dir build\bin
 
 :: Set the final error level based on the overall build status
 exit /b %OverallErrorLevel%

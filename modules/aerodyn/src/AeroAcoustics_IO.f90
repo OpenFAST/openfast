@@ -41,28 +41,28 @@ MODULE AeroAcoustics_IO
    integer(intKi), parameter        :: X_BLMethod_BPM     = 1  !
    integer(intKi), parameter        :: X_BLMethod_Tables  = 2  !
 
-   integer(intKi), parameter        :: TICalc_Interp  = 1  ! interpolate from pretabulated
-   integer(intKi), parameter        :: TICalc_Every   = 2  ! calculate ti automatically
+   integer(intKi), parameter        :: TICalc_Interp  = 1  ! interpolate from pretabulated (TICalcMethod)
+   integer(intKi), parameter        :: TICalc_Every   = 2  ! calculate ti automatically (TICalcMethod)
 
    integer(intKi), parameter        :: ITURB_None           = 0  ! TBLTE noise is not calculated
    integer(intKi), parameter        :: ITURB_BPM            = 1  ! TBLTE noise is calculated with BPM
    integer(intKi), parameter        :: ITURB_TNO            = 2  ! TBLTE noise is calculated with TNO
 
-   integer(intKi), parameter        :: IInflow_None                 = 0  ! IInflow noise is not calculated
-   integer(intKi), parameter        :: IInflow_BPM                  = 1  ! IInflow noise is calculated with BPM
-   integer(intKi), parameter        :: IInflow_FullGuidati         = 2  ! IInflow noise is calculated with FullGuidati
+   integer(intKi), parameter        :: IInflow_None             = 0  ! IInflow noise is not calculated
+   integer(intKi), parameter        :: IInflow_BPM              = 1  ! IInflow noise is calculated with BPM
+   integer(intKi), parameter        :: IInflow_FullGuidati      = 2  ! IInflow noise is calculated with FullGuidati
    integer(intKi), parameter        :: IInflow_SimpleGuidati    = 3  ! IInflow noise is calculated with SimpleGuidati
 
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFileRoot, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, AFInfo, InputFileData, Default_DT, OutFileRoot, ErrStat, ErrMsg )
     ! This subroutine reads the input file and stores all the data in the AA_InputFile structure.
     ! It does not perform data validation.
     !..................................................................................................................................
     ! Passed variables
     REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
     CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the aeroacoustics input file
-    TYPE(AFI_ParameterType), INTENT(IN)    :: AFI(:)          ! airfoil array: contains names of the BL input file
+    TYPE(AFI_ParameterType), INTENT(IN)    :: AFInfo(:)          ! airfoil array: contains names of the BL input file
     CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
     TYPE(AA_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
     INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
@@ -83,7 +83,7 @@ SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFil
     if(Failed()) return
 
     ! get the blade input-file data
-    ALLOCATE( InputFileData%BladeProps( size(AFI) ), STAT = ErrStat2 )
+    ALLOCATE( InputFileData%BladeProps( size(AFInfo) ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
         call cleanup()
@@ -92,7 +92,7 @@ SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFil
 
     if (InputFileData%ITURB==ITURB_TNO .or. InputFileData%X_BLMethod==X_BLMethod_Tables .or. InputFileData%IBLUNT==IBLUNT_BPM) then
         ! We need to read the BL tables
-        CALL ReadBLTables( InputFileName, AFI, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+        CALL ReadBLTables( InputFileName, AFInfo, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
         if (Failed()) return
     endif
 
@@ -122,7 +122,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     integer(IntKi)                :: I                                         ! loop counter
     integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
     character(1024)               :: ObserverFile                              ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
+    integer(IntKi)                :: ErrStat2, cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
@@ -279,10 +279,10 @@ END SUBROUTINE ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
 
 ! ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBLTables( InputFile, AFInfo, InputFileData, UnEc, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    TYPE(AFI_ParameterType), INTENT(IN) :: AFI(:)                              ! airfoil array: contains names of the BL input file
+    TYPE(AFI_ParameterType), INTENT(IN) :: AFInfo(:)                              ! airfoil array: contains names of the BL input file
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(in)      :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
@@ -306,10 +306,10 @@ SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, UnEc, ErrStat, ErrMsg )
     UnIn = -1
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-    nAirfoils = size(AFI)
+    nAirfoils = size(AFInfo)
     do iAF=1,nAirfoils
 
-        FileName = trim(AFI(iAF)%BL_file)
+        FileName = trim(AFInfo(iAF)%BL_file)
 
         call WrScr('AeroAcoustics_IO: reading BL table:'//trim(Filename))
 
@@ -442,48 +442,58 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    character(*),             intent(out)    :: ErrMsg                              !< Error message
    ! local variables
    character(*), parameter                  :: RoutineName = 'ValidateInputData'
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
+   
    if (InputFileData%DT_AA <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DT_AA must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   
    if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
        call SetErrStat ( ErrID_Fatal, &
            'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName )
    endif
    if (InputFileData%ILAM /= ILAM_None .and. InputFileData%ilam /= ILAM_BPM) then
-       call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
+      call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
            trim(num2lstr(ILAM_BPM))//' (ILAM Calculated).', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%ITIP /= ITIP_None .and. InputFileData%ITIP /= ITIP_ON) then
-       call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
+      call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
            trim(num2lstr(ITIP_On))//' (ITIP On).', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%ITRIP /= ITRIP_None .and. InputFileData%ITRIP /= ITRIP_Heavy .and. InputFileData%ITRIP /= ITRIP_Light) then
-       call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
+      call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
            ' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%ITURB /= ITURB_None .and. InputFileData%ITURB /= ITURB_BPM .and. InputFileData%ITURB /= ITURB_TNO) then
-       call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName )
+      call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%IInflow /= IInflow_None .and. InputFileData%IInflow /= IInflow_BPM &
        .and. InputFileData%IInflow /= IInflow_FullGuidati .and. InputFileData%IInflow /= IInflow_SimpleGuidati ) then
-       call SetErrStat ( ErrID_Fatal, 'IInflow must be 0 (off) or 1 (only Amiet)  or 2 (Full Guidati)'//&
+      call SetErrStat ( ErrID_Fatal, 'IInflow must be 0 (off) or 1 (only Amiet)  or 2 (Full Guidati)'//&
            'or 3 (Simple Guidati).', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%TICalcMeth /= TICalc_Every .and. InputFileData%TICalcMeth /= TICalc_Interp ) then
-       call SetErrStat ( ErrID_Fatal, 'TICalcMeth must be '//trim(num2lstr(TICalc_Every))//' TICalc automatic  or '//&
+      call SetErrStat ( ErrID_Fatal, 'TICalcMeth must be '//trim(num2lstr(TICalc_Every))//' (TICalc automatic)  or '//&
            trim(num2lstr(TICalc_Interp))//' (TICalcMeth interp).', ErrStat, ErrMsg, RoutineName )
    end if
 
    if (InputFileData%X_BLMethod /= X_BLMethod_BPM .and. InputFileData%X_BLMethod /= X_BLMethod_Tables) then
-       call SetErrStat ( ErrID_Fatal, 'X_BLMethod must be '//trim(num2lstr(X_BLMethod_BPM))//' X_BLMethod_ with BPM or '//&
+      call SetErrStat ( ErrID_Fatal, 'X_BLMethod must be '//trim(num2lstr(X_BLMethod_BPM))//' X_BLMethod_ with BPM or '//&
            trim(num2lstr(X_BLMethod_Tables))//' (X_BLMethod with BL tables).', ErrStat, ErrMsg, RoutineName )
    end if
+   
    if (InputFileData%NrObsLoc <= 0.0) call SetErrStat ( ErrID_Fatal, 'Number of Observer Locations should be greater than zero', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
-       .and. InputFileData%NrOutFile /= 4) then
-       call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName )
+   
+   if (InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 .and. InputFileData%NrOutFile /= 4) then
+      call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName )
    end if
+
+   if (InputFileData%AA_Bl_Prcntge > 100.0 .or. InputFileData%AA_Bl_Prcntge < 0.0) then
+      call SetErrStat ( ErrID_Fatal, ' AA_Bl_Prcntge must be between 0 and 100%', ErrStat, ErrMsg, RoutineName )
+   end if
+   
 END SUBROUTINE ValidateInputData
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -747,9 +757,8 @@ subroutine AA_WriteOutputLine(y, t, p, errStat, errMsg)
     ENDIF
 end subroutine AA_WriteOutputLine
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, m, y, ErrStat, ErrMsg )
    TYPE(AA_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-   TYPE(AA_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AA_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AA_OutputType),       INTENT(INOUT)  :: y                                 ! outputs
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code

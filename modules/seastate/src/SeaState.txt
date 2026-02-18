@@ -76,6 +76,7 @@ typedef   ^                  ^                      ReKi                     def
 typedef   ^                  ^                      ReKi                     defMSL2SWL                      -          -          -         "Default mean sea level to still water level from the driver; may be overwritten"  "m"
 typedef   ^                  ^                      IntKi                    MHK                             -          -          -         "MHK flag"  -
 typedef   ^                  ^                      DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
+typedef   ^                  ^                      DbKi                     WaveTimeShift                   -          0          -         "Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time)" (s)
 typedef   ^                  ^                      INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef   ^                  ^                      ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
 typedef   ^                  ^                      ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
@@ -167,9 +168,20 @@ typedef   ^                  OutputType             ReKi                     Wri
 typedef   ^                  MiscVarType            INTEGER                        Decimate           -       -      -  "The output decimation counter" -
 typedef   ^                  ^                      DbKi                           LastOutTime        -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                        LastIndWave        -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
-typedef   ^                  ^                      SeaSt_WaveField_MiscVarType    WaveField_m        -       -      -  "misc var information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      GridInterp_MiscVarType         WaveField_m        -       -      -  "misc var information from the SeaState Interpolation module"   -
 
 # .... Linearization .......................................................................................................
 typedef   ^                  ^                      ModJacType                     Jac                -       -      -  "Values corresponding to module variables"  -
 typedef	  ^                  ^                      SeaSt_InputType                u_perturb          -       -      -  "Input type for linearization perturbation"   -
 typedef	  ^                  ^                      SeaSt_OutputType               y_lin              -       -      -  "Output type for linearization perturbation"   -
+
+# typedef   ^                  Jac_u_idxStarts        IntKi                          Extended           -       1      -  "Index to first point in u jacobian for Extended" -
+# typedef   ^                  Jac_y_idxStarts        IntKi                          Extended           -       1      -  "Index to first point in y jacobian for Extended" -
+# typedef   ^                  Jac_y_idxStarts        IntKi                          WrOuts             -       2      -  "Index to first point in y jacobian for WrOuts" -
+# typedef   ^                  SeaSt_LinParams        IntKi                          NumExtendedInputs  -       1      -  "number of extended inputs" -
+# typedef   ^                  ^                      IntKi                          NumExtendedOutputs -       1      -  "number of extended outputs" -
+# typedef   ^                  ^                      Jac_u_idxStarts                Jac_u_idxStartList -       -      -  "Starting indices for all Jac_u components" -
+# typedef   ^                  ^                      Jac_y_idxStarts                Jac_y_idxStartList -       -      -  "Starting indices for all Jac_y components" -
+# typedef   ^                  ^                      ReKi                           du                 {:}     -      -  "vector that determines size of perturbation for u (inputs)"
+# typedef   ^                  ^                      IntKi                          Jac_nu             -       -      -  "number of inputs  in jacobian matrix"   -
+# typedef   ^                  ^                      IntKi                          Jac_ny             -       -      -  "number of outputs in jacobian matrix"   -

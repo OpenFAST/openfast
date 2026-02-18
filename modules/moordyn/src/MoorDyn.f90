@@ -1116,12 +1116,13 @@ CONTAINS
                   if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
                      
                      m%RodList(l)%typeNum = 2
-                     CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
-                           
+                     CALL Body_AddRod(m%GroundBody, l, tempArray, ErrStat2, ErrMsg2)   ! add rod l to Ground body
+                     if (Failed()) return
 
                   else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
                      m%RodList(l)%typeNum = 1
-                     CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
+                     CALL Body_AddRod(m%GroundBody, l, tempArray, ErrStat2, ErrMsg2)   ! add rod l to Ground body
+                     if (Failed()) return
                      
                      p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
                      
@@ -1139,7 +1140,8 @@ CONTAINS
                         
                         if ((J <= p%nBodies) .and. (J > 0)) then 
                         
-                           CALL Body_AddRod(m%BodyList(J), l, tempArray)   ! add rod l to the body
+                           CALL Body_AddRod(m%BodyList(J), l, tempArray, ErrStat2, ErrMsg2)   ! add rod l to the body
+                           if (Failed()) return
                            
                            if ( (let2 == "PINNED") .or. (let2 == "PIN") ) then
                               m%RodList(l)%typeNum = 1
@@ -1363,7 +1365,8 @@ CONTAINS
                      
                      !m%PointList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                     CALL Body_AddPoint(m%GroundBody, l, tempArray(1:3))   ! add point l to Ground body                     
+                     CALL Body_AddPoint(m%GroundBody, l, tempArray(1:3), ErrStat2, ErrMsg2)   ! add point l to Ground body                     
+                     if (Failed()) return
 
                      else if (let1 == "BODY") then ! attached to a body
                      if (len_trim(num1) > 0) then                     
@@ -1372,7 +1375,8 @@ CONTAINS
                         if ((J <= p%nBodies) .and. (J > 0)) then
                            m%PointList(l)%typeNum = 1    
 
-                           CALL Body_AddPoint(m%BodyList(J), l, tempArray(1:3))   ! add point l to Ground body
+                           CALL Body_AddPoint(m%BodyList(J), l, tempArray(1:3), ErrStat2, ErrMsg2)   ! add point l to Ground body
+                           if (Failed()) return
                            
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Point "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
@@ -1549,9 +1553,11 @@ CONTAINS
                   
                      if ((J <= p%nRods) .and. (J > 0)) then                  
                         if (let2 == "A") then
-                           CALL Rod_AddLine(m%RodList(J), l, 0, 0)   ! add line l (end A, denoted by 0) to rod J (end A, denoted by 0)
+                           CALL Rod_AddLine(m%RodList(J), l, 0, 0, ErrStat2, ErrMsg2)   ! add line l (end A, denoted by 0) to rod J (end A, denoted by 0)
+                           if (Failed()) return
                         else if (let2 == "B") then 
-                           CALL Rod_AddLine(m%RodList(J), l, 0, 1)   ! add line l (end A, denoted by 0) to rod J (end B, denoted by 1)
+                           CALL Rod_AddLine(m%RodList(J), l, 0, 1, ErrStat2, ErrMsg2)   ! add line l (end A, denoted by 0) to rod J (end B, denoted by 1)
+                           if (Failed()) return
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                            CALL CleanUp()  
@@ -1567,7 +1573,8 @@ CONTAINS
                   else if ((len_trim(let1)==0) .or. (let1 == "P") .or. (let1 == "POINT")) then 
 
                      if ((J <= p%nPoints) .and. (J > 0)) then                  
-                        CALL Point_AddLine(m%PointList(J), l, 0)   ! add line l (end A, denoted by 0) to point J
+                        CALL Point_AddLine(m%PointList(J), l, 0, ErrStat2, ErrMsg2)   ! add line l (end A, denoted by 0) to point J
+                        if (Failed()) return
                      else
                         CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         CALL CleanUp() 
@@ -1594,9 +1601,11 @@ CONTAINS
 
                      if ((J <= p%nRods) .and. (J > 0)) then                  
                         if (let2 == "A") then
-                           CALL Rod_AddLine(m%RodList(J), l, 1, 0)   ! add line l (end B, denoted by 1) to rod J (end A, denoted by 0)
+                           CALL Rod_AddLine(m%RodList(J), l, 1, 0, ErrStat2, ErrMsg2)   ! add line l (end B, denoted by 1) to rod J (end A, denoted by 0)
+                           if (Failed()) return
                         else if (let2 == "B") then 
-                           CALL Rod_AddLine(m%RodList(J), l, 1, 1)   ! add line l (end B, denoted by 1) to rod J (end B, denoted by 1)
+                           CALL Rod_AddLine(m%RodList(J), l, 1, 1, ErrStat2, ErrMsg2)   ! add line l (end B, denoted by 1) to rod J (end B, denoted by 1)
+                           if (Failed()) return
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                            CALL CleanUp()
@@ -1612,7 +1621,8 @@ CONTAINS
                   else if ((len_trim(let1)==0) .or. (let1 == "P") .or. (let1 == "POINT")) then 
 
                      if ((J <= p%nPoints) .and. (J > 0)) then                  
-                        CALL Point_AddLine(m%PointList(J), l, 1)   ! add line l (end B, denoted by 1) to point J
+                        CALL Point_AddLine(m%PointList(J), l, 1, ErrStat2, ErrMsg2)   ! add line l (end B, denoted by 1) to point J
+                        if (Failed()) return
                      else
                         CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         CALL CleanUp()
@@ -2018,6 +2028,13 @@ CONTAINS
 
                      ! get lines 
                      m%FailList(l)%nLinesToDetach = N 
+
+                     ! Check that N is less than MD_MaxFailLines -- this would result in an out bounds array access
+                     if (m%FailList(l)%nLinesToDetach > MD_MaxFailLines) then
+                        call SetErrStat( ErrID_Fatal, ' More than hard coded limit of '//trim(Num2LStr(MD_MaxFailLines))//' lines to detach specified for line failure '//trim(Num2LStr(l))//'.', ErrStat, ErrMsg, RoutineName )
+                        call CleanUp()
+                        return
+                     endif
                      
                      DO il = 1, m%FailList(l)%nLinesToDetach
                         if (TempIDnums(il) <= p%nLines) then      ! ensure line ID is in range
@@ -3574,6 +3591,8 @@ CONTAINS
          REAL(DbKi), INTENT(IN   ) :: time
          INTEGER(IntKi) :: k        ! index
          REAL(DbKi) :: dummyPointState(6) = 0.0_DbKi  ! dummy state array to hold kinematics of old attachment point (format in terms of part of point state vector: r[J]  = X[3 + J]; rd[J] = X[J]; )
+         integer(IntKi)       :: ErrStat3
+         character(ErrMsgLen) :: ErrMsg3
 
          ! add point to list of free ones and add states for it
          p%nPoints = p%nPoints + 1  ! add 1 to the number of points (this is now the number of the new point)
@@ -3626,7 +3645,9 @@ CONTAINS
          
          ! attach lines to new point
          DO k=1,nLinesToDetach ! for each relevant line 
-            CALL Point_AddLine(m%PointList(p%nPoints), lineIDs(k), lineTops(k))
+            CALL Point_AddLine(m%PointList(p%nPoints), lineIDs(k), lineTops(k), ErrStat3, ErrMsg3)
+            call CheckError(ErrStat3, ErrMsg3)
+            if (ErrStat >= AbortErrLev) return
          ENDDO
          
          ! update point kinematics to match old line attachment point kinematics and set positions of attached line ends
@@ -4222,15 +4243,10 @@ CONTAINS
       CALL MD_DestroyMisc(m, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          
-      IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )  ! close log file if it's open
-         !TODO: any need to specifically deallocate things like m%xTemp%states in the above? <<<<
-
- !     IF ( ErrStat==ErrID_None) THEN
- !        CALL WrScr('MoorDyn closed without errors')
- !     ELSE
- !        CALL WrScr('MoorDyn closed with errors')
- !     END IF
-
+      IF (p%UnLog > 0_IntKi) then
+         CLOSE( p%UnLog )  ! close log file if it's open
+         p%UnLog = -1      ! in case we call end a second time for whatever reason
+      endif
 
    CONTAINS
 

@@ -64,6 +64,7 @@ target_link_libraries(openfast_prelib
   seastlib
   sedlib
   servodynlib
+  soildynlib
   subdynlib
 )
 

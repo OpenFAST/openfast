@@ -161,6 +161,7 @@ program SeaStateDriver
    InitInData%OutRootName  = drvrInitInp%OutRootName
    InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    InitInData%HasIce       = .false.
+   InitInData%WaveTimeShift = 0.0_DbKi       ! for phase shifting wave field in time (positive value only)
   
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation

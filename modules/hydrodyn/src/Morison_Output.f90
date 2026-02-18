@@ -8037,7 +8037,9 @@ END IF
             ! Need to search mesh for the two markers which surround the requested output location and then store those marker indices and compute the
             ! scale factor based on how far they are from the requested output location.
             ! Since this is being done on markers and not nodes, the subroutine must be called after the Morison_Init() subroutine is called
-
+            IF (p%Members(memberIndx)%Flipped) THEN
+               p%MOutLst(I)%NodeLocs(J) = 1.0 - p%MOutLst(I)%NodeLocs(J)
+            END IF
             CALL GetNeighboringNodes(p%Members(memberIndx), p%MOutLst(I)%NodeLocs(J),  m1, m2, i1, i2, s, ErrStat, ErrMsg)
                   
             p%MOutLst(I)%MeshIndx1(J) = m1

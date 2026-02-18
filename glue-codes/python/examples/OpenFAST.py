@@ -1,4 +1,6 @@
-
+# NOTE: this file is not complete, but can serve as a starting point for
+# calling OpenFAST through the library interface.  Modification will be
+# necessary
 from pyOpenFAST import fast
 
 project_root = '/Users/rmudafor/Development/openfast'

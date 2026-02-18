@@ -76,25 +76,9 @@ from ctypes import (
 import numpy as np
 import datetime
 
-class HydroDynLib(CDLL):
-    # Human readable error levels from IfW.
-    error_levels = {
-        0: "None",
-        1: "Info",
-        2: "Warning",
-        3: "Severe Error",
-        4: "Fatal Error"
-    }
+from .interface_abc import OpenFASTInterfaceType
 
-    #   NOTE:   the error message length in Fortran is controlled by the
-    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
-    #           changes, it may be necessary to update the corresponding size
-    #           here.
-    error_msg_c_len = 1025
-
-    #   NOTE:   the length of the name used for any output file written by the
-    #           HD Fortran code is 1025.
-    default_str_c_len = 1025
+class HydroDynLib(OpenFASTInterfaceType):
 
     def __init__(self, library_path):
         super().__init__(library_path)
@@ -106,11 +90,6 @@ class HydroDynLib(CDLL):
         # Input file handling configuration
         self.seastate_inputs_passed_as_string: bool = True  # Pass input file as string
         self.hydrodyn_inputs_passed_as_string: bool = True  # Pass input file as string
-
-        # Create buffers for class data
-        self.abort_error_level = 4
-        self.error_status_c = c_int(0)
-        self.error_message_c = create_string_buffer(self.error_msg_c_len)
 
         # This is not sufficient for HD
         #FIXME: ChanLen may not always be 20 -- could be as much as 256

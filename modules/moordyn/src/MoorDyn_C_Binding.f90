@@ -33,7 +33,9 @@ PUBLIC :: MD_C_Init
 PUBLIC :: MD_C_UpdateStates
 PUBLIC :: MD_C_CalcOutput
 PUBLIC :: MD_C_End
+PUBLIC :: MD_C_SetWaveFieldData
 
+PRIVATE
 
 !------------------------------------------------------------------------------------
 !  Version info for display
@@ -129,6 +131,7 @@ CONTAINS
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
+!FIXME: add ShowPassed and DebugLevel
 SUBROUTINE MD_C_Init(                                             &
    InputFilePassed, InputFileString_C, InputFileStringLength_C,   &
    DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C,                         &
@@ -147,11 +150,12 @@ SUBROUTINE MD_C_Init(                                             &
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: G_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: RHO_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: DEPTH_C
+!FIXME: PtfmInit_C should be resized for N nodes (6xN position), but can stay as euler angle for angles
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6) ! TODO: make this more flexible, can we not have 6 DOF only coupling?
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
-   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
-   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
+   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(ChanLen*1000)   ! The size of these arrays was chosen as a "big number", it isn't set by MoorDyn. Watch out, it might be bigger than this!
+   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(ChanLen*1000)
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
 
@@ -171,7 +175,28 @@ SUBROUTINE MD_C_Init(                                             &
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
 
-
+   ! Destroy global memory
+   if (allocated(u)) then
+      do i = 1, size(u)
+         call MD_DestroyInput(u(i), ErrStat_F, ErrMsg_F)
+      end do
+      deallocate(u)
+   end if
+   call MD_DestroyParam(p, ErrStat_F, ErrMsg_F)
+   do i = 0, 2
+      call MD_DestroyContState(x(i), ErrStat_F, ErrMsg_F)
+   end do
+   do i = 0, 2
+      call MD_DestroyDiscState(xd(i), ErrStat_F, ErrMsg_F)
+   end do
+   do i = 0, 2
+      call MD_DestroyConstrState(z(i), ErrStat_F, ErrMsg_F)
+   end do
+   do i = 0, 2
+      call MD_DestroyOtherState(other(i), ErrStat_F, ErrMsg_F)
+   end do
+   call MD_DestroyOutput(y, ErrStat_F, ErrMsg_F)
+   call MD_DestroyMisc(m, ErrStat_F, ErrMsg_F)
 
    ! Convert the MD input file to FileInfoType
    !----------------------------------------------------------------------------------------------------------------------------------------------
@@ -530,8 +555,13 @@ SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
    ErrMsg_F = ''
 
    ! Call the main subroutine MD_End
-   CALL MD_End(u(1), p, x(1), xd(1), z(1), other(1), y, m, ErrStat_F2, ErrMsg_F2)
-   call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   !     If u is not allocated, then we didn't get far at all in initialization,
+   !     or AD_C_End got called before Init.  We don't want a segfault, so check
+   !     for allocation.
+   if (allocated(u)) then
+      CALL MD_End(u(1), p, x(1), xd(1), z(1), other(1), y, m, ErrStat_F2, ErrMsg_F2)
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   endif
 
    !  NOTE: MoorDyn_End only takes 1 instance of u, not the array.  So extra
    !        logic is required here (this isn't necessary in the fortran driver
@@ -585,7 +615,6 @@ END SUBROUTINE MD_C_End
 !----------------------------------------------- MD SetWaveFieldData -------------------------------------------
 !===============================================================================================================
 !> Set the wave field data pointer from an external source such as SeaState
-!! Assumes that MD_C_Init has been run since it uses those values to check that there's a valid pointer
 SUBROUTINE MD_C_SetWaveFieldData(WaveFieldData_C) BIND (C, NAME='MD_C_SetWaveFieldData')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: MD_C_SetWaveFieldData

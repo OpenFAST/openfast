@@ -41,6 +41,7 @@ USE AeroDisk_Types
 USE ExtLoads_Types
 USE SubDyn_Types
 USE SeaState_Types
+USE SoilDyn_Types
 USE HydroDyn_Types
 USE IceFloe_Types
 USE ExternalInflow_Types
@@ -77,7 +78,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceD                      = 19      ! IceDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ADsk                      = 20      ! AeroDisk [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SED                       = 21      ! Simplified-ElastoDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules                       = 21      ! The number of modules available in FAST [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SlD                       = 22      ! SoilDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules                       = 22      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxBladesBD                      = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs                     = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch                    = 1      ! pitch [-]
@@ -154,9 +156,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompServo = 0_IntKi      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
     INTEGER(IntKi)  :: CompHydro = 0_IntKi      !< Compute hydrodynamic loads (switch) {Module_None; Module_HD} [-]
-    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm} [-]
+    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm, Module_SlD} [-]
     INTEGER(IntKi)  :: CompMooring = 0_IntKi      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce = 0_IntKi      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
+    INTEGER(IntKi)  :: CompSoil = 0_IntKi      !< Compute soil-structural dynamics (switch) {Module_None; Module_SlD} [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
     LOGICAL  :: UseDWM = .false.      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize = .false.      !< Linearization analysis (flag) [-]
@@ -182,6 +185,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: SubFile      !< sub-structural input file path [-]
     CHARACTER(1024)  :: MooringFile      !< mooring system input file path [-]
     CHARACTER(1024)  :: IceFile      !< ice loading input file path [-]
+    CHARACTER(1024)  :: SoilFile      !< Name of file containing soil-structure input parameters [-]
     REAL(DbKi)  :: TStart = 0.0_R8Ki      !< Time to begin tabular output [s]
     REAL(DbKi)  :: DT_Out = 0.0_R8Ki      !< Time step for tabular output [s]
     LOGICAL  :: WrSttsTime = .false.      !< Whether we should write the status times to the screen [-]
@@ -423,6 +427,21 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE SubDyn_Data
 ! =======================
+! =========  SoilDyn_Data  =======
+  TYPE, PUBLIC :: SoilDyn_Data
+    TYPE(SlD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous states [-]
+    TYPE(SlD_ContinuousStateType)  :: dxdt      !< Continuous state derivatives [-]
+    TYPE(SlD_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: xd      !< Discrete states [-]
+    TYPE(SlD_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z      !< Constraint states [-]
+    TYPE(SlD_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: OtherSt      !< Other states [-]
+    TYPE(SlD_ParameterType)  :: p      !< Parameters [-]
+    TYPE(SlD_InputType)  :: u      !< System inputs [-]
+    TYPE(SlD_OutputType)  :: y      !< System outputs [-]
+    TYPE(SlD_MiscVarType)  :: m      !< Misc/optimization variables [-]
+    TYPE(SlD_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
+  END TYPE SoilDyn_Data
+! =======================
 ! =========  ExtPtfm_Data  =======
   TYPE, PUBLIC :: ExtPtfm_Data
     TYPE(ExtPtfm_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous states [-]
@@ -595,6 +614,8 @@ IMPLICIT NONE
     TYPE(IceFloe_InitOutputType)  :: OutData_IceF      !< IceF Initialization output data [-]
     TYPE(IceD_InitInputType)  :: InData_IceD      !< IceD Initialization input data [-]
     TYPE(IceD_InitOutputType)  :: OutData_IceD      !< IceD Initialization output data (each instance will have the same output channels) [-]
+    TYPE(SlD_InitInputType)  :: InData_SlD      !< SlD Initialization input data [-]
+    TYPE(SlD_InitOutputType)  :: OutData_SlD      !< SlD Initialization output data [-]
   END TYPE FAST_InitData
 ! =======================
 ! =========  FAST_ExternInitType  =======
@@ -639,6 +660,7 @@ IMPLICIT NONE
     TYPE(SeaState_Data)  :: SeaSt      !< Data for the SeaState module [-]
     TYPE(HydroDyn_Data)  :: HD      !< Data for the HydroDyn module [-]
     TYPE(SubDyn_Data)  :: SD      !< Data for the SubDyn module [-]
+    TYPE(SoilDyn_Data)  :: SlD      !< Data for the SoilDyn module [-]
     TYPE(MAP_Data)  :: MAP      !< Data for the MAP (Mooring Analysis Program) module [-]
     TYPE(FEAMooring_Data)  :: FEAM      !< Data for the FEAMooring module [-]
     TYPE(MoorDyn_Data)  :: MD      !< Data for the MoorDyn module [-]
@@ -1154,6 +1176,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%CompSub = SrcParamData%CompSub
    DstParamData%CompMooring = SrcParamData%CompMooring
    DstParamData%CompIce = SrcParamData%CompIce
+   DstParamData%CompSoil = SrcParamData%CompSoil
    DstParamData%MHK = SrcParamData%MHK
    DstParamData%UseDWM = SrcParamData%UseDWM
    DstParamData%Linearize = SrcParamData%Linearize
@@ -1212,6 +1235,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%SubFile = SrcParamData%SubFile
    DstParamData%MooringFile = SrcParamData%MooringFile
    DstParamData%IceFile = SrcParamData%IceFile
+   DstParamData%SoilFile = SrcParamData%SoilFile
    DstParamData%TStart = SrcParamData%TStart
    DstParamData%DT_Out = SrcParamData%DT_Out
    DstParamData%WrSttsTime = SrcParamData%WrSttsTime
@@ -1381,6 +1405,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%CompSub)
    call RegPack(RF, InData%CompMooring)
    call RegPack(RF, InData%CompIce)
+   call RegPack(RF, InData%CompSoil)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%UseDWM)
    call RegPack(RF, InData%Linearize)
@@ -1406,6 +1431,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%SubFile)
    call RegPack(RF, InData%MooringFile)
    call RegPack(RF, InData%IceFile)
+   call RegPack(RF, InData%SoilFile)
    call RegPack(RF, InData%TStart)
    call RegPack(RF, InData%DT_Out)
    call RegPack(RF, InData%WrSttsTime)
@@ -1501,6 +1527,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%CompSub); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompMooring); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompIce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CompSoil); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseDWM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
@@ -1526,6 +1553,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%SubFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MooringFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IceFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SoilFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT_Out); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrSttsTime); if (RegCheckErr(RF, RoutineName)) return
@@ -5772,6 +5800,342 @@ subroutine FAST_UnPackSubDyn_Data(RF, OutData)
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine FAST_CopySoilDyn_Data(SrcSoilDyn_DataData, DstSoilDyn_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(SoilDyn_Data), intent(inout) :: SrcSoilDyn_DataData
+   type(SoilDyn_Data), intent(inout) :: DstSoilDyn_DataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_CopySoilDyn_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcSoilDyn_DataData%x)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%x)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%x)
+      if (.not. allocated(DstSoilDyn_DataData%x)) then
+         allocate(DstSoilDyn_DataData%x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_CopyContState(SrcSoilDyn_DataData%x(i1), DstSoilDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call SlD_CopyContState(SrcSoilDyn_DataData%dxdt, DstSoilDyn_DataData%dxdt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcSoilDyn_DataData%xd)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%xd)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%xd)
+      if (.not. allocated(DstSoilDyn_DataData%xd)) then
+         allocate(DstSoilDyn_DataData%xd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%xd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_CopyDiscState(SrcSoilDyn_DataData%xd(i1), DstSoilDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcSoilDyn_DataData%z)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%z)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%z)
+      if (.not. allocated(DstSoilDyn_DataData%z)) then
+         allocate(DstSoilDyn_DataData%z(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%z.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_CopyConstrState(SrcSoilDyn_DataData%z(i1), DstSoilDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcSoilDyn_DataData%OtherSt)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%OtherSt)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%OtherSt)
+      if (.not. allocated(DstSoilDyn_DataData%OtherSt)) then
+         allocate(DstSoilDyn_DataData%OtherSt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%OtherSt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_CopyOtherState(SrcSoilDyn_DataData%OtherSt(i1), DstSoilDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call SlD_CopyParam(SrcSoilDyn_DataData%p, DstSoilDyn_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SlD_CopyInput(SrcSoilDyn_DataData%u, DstSoilDyn_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SlD_CopyOutput(SrcSoilDyn_DataData%y, DstSoilDyn_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SlD_CopyMisc(SrcSoilDyn_DataData%m, DstSoilDyn_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcSoilDyn_DataData%Input)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%Input)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%Input)
+      if (.not. allocated(DstSoilDyn_DataData%Input)) then
+         allocate(DstSoilDyn_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%Input.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_CopyInput(SrcSoilDyn_DataData%Input(i1), DstSoilDyn_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcSoilDyn_DataData%InputTimes)) then
+      LB(1:1) = lbound(SrcSoilDyn_DataData%InputTimes)
+      UB(1:1) = ubound(SrcSoilDyn_DataData%InputTimes)
+      if (.not. allocated(DstSoilDyn_DataData%InputTimes)) then
+         allocate(DstSoilDyn_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSoilDyn_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSoilDyn_DataData%InputTimes = SrcSoilDyn_DataData%InputTimes
+   end if
+end subroutine
+
+subroutine FAST_DestroySoilDyn_Data(SoilDyn_DataData, ErrStat, ErrMsg)
+   type(SoilDyn_Data), intent(inout) :: SoilDyn_DataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_DestroySoilDyn_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SoilDyn_DataData%x)) then
+      LB(1:1) = lbound(SoilDyn_DataData%x)
+      UB(1:1) = ubound(SoilDyn_DataData%x)
+      do i1 = LB(1), UB(1)
+         call SlD_DestroyContState(SoilDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SoilDyn_DataData%x)
+   end if
+   call SlD_DestroyContState(SoilDyn_DataData%dxdt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(SoilDyn_DataData%xd)) then
+      LB(1:1) = lbound(SoilDyn_DataData%xd)
+      UB(1:1) = ubound(SoilDyn_DataData%xd)
+      do i1 = LB(1), UB(1)
+         call SlD_DestroyDiscState(SoilDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SoilDyn_DataData%xd)
+   end if
+   if (allocated(SoilDyn_DataData%z)) then
+      LB(1:1) = lbound(SoilDyn_DataData%z)
+      UB(1:1) = ubound(SoilDyn_DataData%z)
+      do i1 = LB(1), UB(1)
+         call SlD_DestroyConstrState(SoilDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SoilDyn_DataData%z)
+   end if
+   if (allocated(SoilDyn_DataData%OtherSt)) then
+      LB(1:1) = lbound(SoilDyn_DataData%OtherSt)
+      UB(1:1) = ubound(SoilDyn_DataData%OtherSt)
+      do i1 = LB(1), UB(1)
+         call SlD_DestroyOtherState(SoilDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SoilDyn_DataData%OtherSt)
+   end if
+   call SlD_DestroyParam(SoilDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SlD_DestroyInput(SoilDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SlD_DestroyOutput(SoilDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SlD_DestroyMisc(SoilDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(SoilDyn_DataData%Input)) then
+      LB(1:1) = lbound(SoilDyn_DataData%Input)
+      UB(1:1) = ubound(SoilDyn_DataData%Input)
+      do i1 = LB(1), UB(1)
+         call SlD_DestroyInput(SoilDyn_DataData%Input(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SoilDyn_DataData%Input)
+   end if
+   if (allocated(SoilDyn_DataData%InputTimes)) then
+      deallocate(SoilDyn_DataData%InputTimes)
+   end if
+end subroutine
+
+subroutine FAST_PackSoilDyn_Data(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SoilDyn_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackSoilDyn_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%x))
+   if (allocated(InData%x)) then
+      call RegPackBounds(RF, 1, lbound(InData%x), ubound(InData%x))
+      LB(1:1) = lbound(InData%x)
+      UB(1:1) = ubound(InData%x)
+      do i1 = LB(1), UB(1)
+         call SlD_PackContState(RF, InData%x(i1)) 
+      end do
+   end if
+   call SlD_PackContState(RF, InData%dxdt) 
+   call RegPack(RF, allocated(InData%xd))
+   if (allocated(InData%xd)) then
+      call RegPackBounds(RF, 1, lbound(InData%xd), ubound(InData%xd))
+      LB(1:1) = lbound(InData%xd)
+      UB(1:1) = ubound(InData%xd)
+      do i1 = LB(1), UB(1)
+         call SlD_PackDiscState(RF, InData%xd(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%z))
+   if (allocated(InData%z)) then
+      call RegPackBounds(RF, 1, lbound(InData%z), ubound(InData%z))
+      LB(1:1) = lbound(InData%z)
+      UB(1:1) = ubound(InData%z)
+      do i1 = LB(1), UB(1)
+         call SlD_PackConstrState(RF, InData%z(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%OtherSt))
+   if (allocated(InData%OtherSt)) then
+      call RegPackBounds(RF, 1, lbound(InData%OtherSt), ubound(InData%OtherSt))
+      LB(1:1) = lbound(InData%OtherSt)
+      UB(1:1) = ubound(InData%OtherSt)
+      do i1 = LB(1), UB(1)
+         call SlD_PackOtherState(RF, InData%OtherSt(i1)) 
+      end do
+   end if
+   call SlD_PackParam(RF, InData%p) 
+   call SlD_PackInput(RF, InData%u) 
+   call SlD_PackOutput(RF, InData%y) 
+   call SlD_PackMisc(RF, InData%m) 
+   call RegPack(RF, allocated(InData%Input))
+   if (allocated(InData%Input)) then
+      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
+      LB(1:1) = lbound(InData%Input)
+      UB(1:1) = ubound(InData%Input)
+      do i1 = LB(1), UB(1)
+         call SlD_PackInput(RF, InData%Input(i1)) 
+      end do
+   end if
+   call RegPackAlloc(RF, InData%InputTimes)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackSoilDyn_Data(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SoilDyn_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackSoilDyn_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   if (allocated(OutData%x)) deallocate(OutData%x)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%x(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%x.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_UnpackContState(RF, OutData%x(i1)) ! x 
+      end do
+   end if
+   call SlD_UnpackContState(RF, OutData%dxdt) ! dxdt 
+   if (allocated(OutData%xd)) deallocate(OutData%xd)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%xd(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xd.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
+      end do
+   end if
+   if (allocated(OutData%z)) deallocate(OutData%z)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%z(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%z.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_UnpackConstrState(RF, OutData%z(i1)) ! z 
+      end do
+   end if
+   if (allocated(OutData%OtherSt)) deallocate(OutData%OtherSt)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OtherSt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OtherSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+      end do
+   end if
+   call SlD_UnpackParam(RF, OutData%p) ! p 
+   call SlD_UnpackInput(RF, OutData%u) ! u 
+   call SlD_UnpackOutput(RF, OutData%y) ! y 
+   call SlD_UnpackMisc(RF, OutData%m) ! m 
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SlD_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
+   call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine FAST_CopyExtPtfm_Data(SrcExtPtfm_DataData, DstExtPtfm_DataData, CtrlCode, ErrStat, ErrMsg)
    type(ExtPtfm_Data), intent(inout) :: SrcExtPtfm_DataData
    type(ExtPtfm_Data), intent(inout) :: DstExtPtfm_DataData
@@ -8624,6 +8988,12 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call IceD_CopyInitOutput(SrcInitDataData%OutData_IceD, DstInitDataData%OutData_IceD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call SlD_CopyInitInput(SrcInitDataData%InData_SlD, DstInitDataData%InData_SlD, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SlD_CopyInitOutput(SrcInitDataData%OutData_SlD, DstInitDataData%OutData_SlD, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
@@ -8734,6 +9104,10 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call IceD_DestroyInitOutput(InitDataData%OutData_IceD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SlD_DestroyInitInput(InitDataData%InData_SlD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SlD_DestroyInitOutput(InitDataData%OutData_SlD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackInitData(RF, Indata)
@@ -8805,6 +9179,8 @@ subroutine FAST_PackInitData(RF, Indata)
    call IceFloe_PackInitOutput(RF, InData%OutData_IceF) 
    call IceD_PackInitInput(RF, InData%InData_IceD) 
    call IceD_PackInitOutput(RF, InData%OutData_IceD) 
+   call SlD_PackInitInput(RF, InData%InData_SlD) 
+   call SlD_PackInitOutput(RF, InData%OutData_SlD) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -8891,6 +9267,8 @@ subroutine FAST_UnPackInitData(RF, OutData)
    call IceFloe_UnpackInitOutput(RF, OutData%OutData_IceF) ! OutData_IceF 
    call IceD_UnpackInitInput(RF, OutData%InData_IceD) ! InData_IceD 
    call IceD_UnpackInitOutput(RF, OutData%OutData_IceD) ! OutData_IceD 
+   call SlD_UnpackInitInput(RF, OutData%InData_SlD) ! InData_SlD 
+   call SlD_UnpackInitOutput(RF, OutData%OutData_SlD) ! OutData_SlD 
 end subroutine
 
 subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -9054,6 +9432,9 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call FAST_CopySubDyn_Data(SrcTurbineTypeData%SD, DstTurbineTypeData%SD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call FAST_CopySoilDyn_Data(SrcTurbineTypeData%SlD, DstTurbineTypeData%SlD, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call FAST_CopyMAP_Data(SrcTurbineTypeData%MAP, DstTurbineTypeData%MAP, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -9122,6 +9503,8 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroySubDyn_Data(TurbineTypeData%SD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroySoilDyn_Data(TurbineTypeData%SlD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyMAP_Data(TurbineTypeData%MAP, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyFEAMooring_Data(TurbineTypeData%FEAM, ErrStat2, ErrMsg2)
@@ -9162,6 +9545,7 @@ subroutine FAST_PackTurbineType(RF, Indata)
    call FAST_PackSeaState_Data(RF, InData%SeaSt) 
    call FAST_PackHydroDyn_Data(RF, InData%HD) 
    call FAST_PackSubDyn_Data(RF, InData%SD) 
+   call FAST_PackSoilDyn_Data(RF, InData%SlD) 
    call FAST_PackMAP_Data(RF, InData%MAP) 
    call FAST_PackFEAMooring_Data(RF, InData%FEAM) 
    call FAST_PackMoorDyn_Data(RF, InData%MD) 
@@ -9196,6 +9580,7 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call FAST_UnpackSeaState_Data(RF, OutData%SeaSt) ! SeaSt 
    call FAST_UnpackHydroDyn_Data(RF, OutData%HD) ! HD 
    call FAST_UnpackSubDyn_Data(RF, OutData%SD) ! SD 
+   call FAST_UnpackSoilDyn_Data(RF, OutData%SlD) ! SlD 
    call FAST_UnpackMAP_Data(RF, OutData%MAP) ! MAP 
    call FAST_UnpackFEAMooring_Data(RF, OutData%FEAM) ! FEAM 
    call FAST_UnpackMoorDyn_Data(RF, OutData%MD) ! MD 

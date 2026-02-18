@@ -72,6 +72,7 @@ function SPL_integrate(Omega,limits,ISSUCTION,   &
    co       = real(SpdSound,  TNOKi)
    rho      = real(AirDens,   TNOKi)
    nu       = real(KinVisc,   TNOKi)
+   
    ! Blade node values
    Cf       = real(Cfall,     TNOKi)
    d99      = real(d99all,    TNOKi)

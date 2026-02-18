@@ -18,6 +18,7 @@ usefrom	UnsteadyAero_Registry.txt
 usefrom AeroAcoustics_Registry.txt
 usefrom InflowWind.txt
 usefrom SeaSt_WaveField.txt
+usefrom GridInterp.txt
 
 param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
 param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model - none"                                      -
@@ -259,7 +260,6 @@ typedef  ^  AD_InputFile   RotInputFile  rotors {:} - - "Rotor (blades and tower
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	RotContinuousStateType	BEMT_ContinuousStateType	BEMT	-	-	-	"Continuous states from the BEMT module"	-
-typedef	^	RotContinuousStateType	AA_ContinuousStateType	AA	-	-	-	"Continuous states from the AA module"	-
 
 typedef	^	ContinuousStateType	RotContinuousStateType	rotors	{:}	-	-	"Continuous states for each rotor"	-
 typedef	^	ContinuousStateType	FVW_ContinuousStateType	FVW	-	-	-	"Continuous states from the FVW module"	-
@@ -274,7 +274,6 @@ typedef	^	DiscreteStateType	FVW_DiscreteStateType	FVW	-	-	-	"Discrete states fro
 
 # Define constraint states here:
 typedef	^	RotConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
-typedef	^	RotConstraintStateType	AA_ConstraintStateType	AA	-	-	-	"Constraint states from the AA module"	-
 
 typedef	^	ConstraintStateType	RotConstraintStateType	rotors	{:}	-	-	"Constraint states for each rotor"	-
 typedef	^	ConstraintStateType	FVW_ConstraintStateType	FVW	-	-	-	"Constraint states from the FVW module"	-
@@ -526,7 +525,7 @@ typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
 typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
-typedef ^   MiscVarType SeaSt_WaveField_MiscVarType WaveField_m - - - "misc var information from the SeaState WaveField module"   -
+typedef ^   MiscVarType GridInterp_MiscVarType WaveField_m - - - "misc var information from the SeaState WaveField module"   -
 typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
 typedef	^	MiscVarType	AD_InputType	u_perturb	-	-	-	"input perturbation for linearization"	-
 typedef	^	MiscVarType	AD_OutputType	y_lin	-	-	-	"output perturbation for linearization"	-

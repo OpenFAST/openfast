@@ -561,9 +561,9 @@ flow is directed away from the endplate where flow separation is
 expected, not when the relative flow is impinging on the endplate 
 where flow separation is unlikely. Option 0 is suitable for 
 strip-theory-only members, whereas option 1 might be better suited for 
-hybrid potential-flow members with drag force. Note that option 1 
+hybrid potential-flow members with drag force. Note that option 0 
 uses a leading coefficient of 1/4 when computing the drag force, while 
-option 2 uses the more common leading coefficient of 1/2 since drag 
+option 1 uses the more common leading coefficient of 1/2 since drag 
 is usually only applied to one of the two endplates of the member 
 instead of on both.
 

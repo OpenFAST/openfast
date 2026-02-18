@@ -120,6 +120,8 @@ subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, iInput, ErrSta
       Mesh => SD_InputMeshPointer(Turbine%SD%Input(iInput), MeshLoc)
    case (Module_SeaSt)
       Mesh => SeaSt_InputMeshPointer(Turbine%SeaSt%Input(iInput), MeshLoc)
+   case (Module_SlD)
+      Mesh => SlD_InputMeshPointer(Turbine%SlD%Input(iInput), MeshLoc)
    case (Module_SrvD)
       Mesh => SrvD_InputMeshPointer(Turbine%SrvD%Input(iInput, ModData%Ins), MeshLoc)
    case default
@@ -189,6 +191,8 @@ subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrM
       Mesh => SD_OutputMeshPointer(Turbine%SD%y, MeshLoc)
    case (Module_SeaSt)
       Mesh => SeaSt_OutputMeshPointer(Turbine%SeaSt%y, MeshLoc)
+   case (Module_SlD)
+      Mesh => SlD_OutputMeshPointer(Turbine%SlD%y, MeshLoc)
    case (Module_SrvD)
       Mesh => SrvD_OutputMeshPointer(Turbine%SrvD%y(ModData%Ins), MeshLoc)
    case default
@@ -490,6 +494,8 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
             call InitMappings_SD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SeaSt)
             call InitMappings_SeaSt(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+         case (Module_SlD)
+            call InitMappings_SlD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SrvD)
             call InitMappings_SrvD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          end select
@@ -2017,6 +2023,15 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstDispDL=DatLoc(SD_y_y3Mesh), &                  ! SD%y%y3Mesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
+   case (Module_SlD)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(SlD_y_SoilMesh), &                   ! SlD%y%SoilMesh
+                       SrcDispDL=DatLoc(SlD_u_SoilMesh), &               ! SlD%u%SoilMesh
+                       DstDL=DatLoc(SD_u_LMesh), &                       ! SD%u%LMesh
+                       DstDispDL=DatLoc(SD_y_y3Mesh), &                  ! SD%y%y3Mesh
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
    case (Module_SrvD)
 
       call MapCustom(Mappings, Custom_SrvD_to_SD, SrcMod, DstMod)
@@ -2058,6 +2073,38 @@ subroutine InitMappings_SeaSt(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
    select case (SrcMod%ID)
 
       ! No inputs to SeaState currently
+
+   end select
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine InitMappings_SlD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
+   type(MappingType), allocatable      :: Mappings(:)
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'InitMappings_SlD'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   select case (SrcMod%ID)
+
+   case (Module_SD)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(SD_y_Y3Mesh), &                       ! SD%y%y3Mesh
+                         DstDL=DatLoc(SlD_u_SoilMesh), &                    ! SlD%u%SoilMesh
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
 

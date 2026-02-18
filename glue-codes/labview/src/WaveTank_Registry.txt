@@ -1,0 +1,160 @@
+###################################################################################################################################
+# Registry for WaveTank module 
+# This Registry file is used to create WaveTank_Types.f90
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>    <ModuleName/ModName>    <TypeName>    <FieldType>    <FieldName>    <Dims>    <IO>    <DNAME>    <DESCRIP>    <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include    Registry_NWTC_Library.txt
+#
+
+typedef  WaveTank/WT          SimType        c_double          DT                   -  -  -  "timestep" -
+typedef  ^                    ^              c_double          TMax                 -  -  -  "Max sim time" -
+typedef  ^                    ^              c_int             MHK                  -  -  -  "MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}" (-)
+typedef  ^                    ^              c_int             InterpOrd            -  1  -  "Interpolation order" -
+typedef  ^                    ^              c_float           ScaleFact            -  1  -  "scaling factor for scaling full size model to wavetank scale results (Froude scaling: lambda = full_dimension / scale_dimension) (>1 expected) (-)
+typedef  ^                    ^              c_float           DensFact             -  1  -  "ratio of density - Density_full/Density_model (rho_F/rho_M).  Used with Froude scaling of forces/moments" (-)
+typedef  ^                    ^              c_int             DebugLevel           -  -  -  "Debug level for outputs" -
+typedef  ^                    ^              character(1024)   OutRootName          -  -  -  "Rootname for outputs" -
+
+typedef  ^                    EnvType        c_float           Gravity              -  -  -  "gravitational constant (positive for down)" (m/s^2)
+typedef  ^                    ^              ^                 WtrDens              -  -  -  "Water density" (kg/m^3)
+typedef  ^                    ^              ^                 WtrVisc              -  -  -  "fluid viscosity" (m^2/s)
+typedef  ^                    ^              ^                 SpdSound             -  -  -  "Speed of sound in working fluid" (m/s)
+typedef  ^                    ^              ^                 Patm                 -  -  -  "Atmospheric pressure  [used only for an MHK turbine cavitation check]" (Pa)
+typedef  ^                    ^              ^                 Pvap                 -  -  -  "Vapour pressure of working fluid [used only for an MHK turbine cavitation check]" (Pa)
+typedef  ^                    ^              ^                 WtrDpth              -  -  -  "Water depth" (m)
+typedef  ^                    ^              ^                 MSL2SWL              -  -  -  "Mean sea level to still water level" (m)
+
+typedef  ^                 TurbConfigType    IntKi             NumBl                -  -  -  "Number of blades" (-)
+typedef  ^                    ^              SiKi              HubRad               -  -  -  "The distance from the rotor apex to the blade root" (m)
+typedef  ^                    ^              ^                 PreCone              -  -  -  "Blade cone angle" (deg)
+typedef  ^                    ^              ^                 OverHang             -  -  -  "Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades]" (m)
+typedef  ^                    ^              ^                 ShftTilt             -  -  -  "Rotor shaft tilt angle" (deg)
+typedef  ^                    ^              ^                 Twr2Shft             -  -  -  "Vertical distance from the tower-top to the rotor shaft" (m)
+typedef  ^                    ^              ^                 TowerHt              -  -  -  "Height of tower relative MSL" (m)
+typedef  ^                    ^              ^                 TowerBsPt            3  -  -  "Tower base location relative to MSL. Consider absolute difference to PtfmRef [floating MHK]" (m)
+typedef  ^                    ^              ^                 PtfmRefPos           3  -  -  "Location of platform reference point, relative to MSL.  Motions and loads all connect to this point" (m)
+typedef  ^                    ^              ^                 PtfmRefOrient        3  -  -  "Orientation of platform reference point, Euler angle set of roll,pitch,yaw" (rad)
+
+typedef  ^                 TurbInitCondType  ReKi              RotSpeed             -  -  -  "Rotor speed" (RPM)
+typedef  ^                    ^              ^                 NacYaw               -  -  -  "Initial or fixed nacelle-yaw angle - read as deg, convert to rad" (rad)
+typedef  ^                    ^              ^                 BldPitch             -  -  -  "Fixed blade pitch for full simulation - read as deg, convert to rad" (rad)
+typedef  ^                    ^              ^                 Azimuth              -  0  -  "Initial azimuth (actual azimuth calculated and not stored) - read as deg, convert to rad" (rad)
+
+typedef  ^                    WaveBuoyType   ReKi              XYLoc                2  -  -  "Location of the wave elevation measurement buoy. SeaState data returned at every timestep at this location" (m)
+
+typedef  ^                    OutFilesType   logical           SendScreenToFile     -  -  -  "send to file <OutRootName>.screen.log if true" (-)
+typedef  ^                    ^              c_int             OutFile              -  -  -  "0: no output file of channels, 1: output file in text format (at DT)" (-)
+typedef  ^                    ^              character(20)     OutFmt               -  -  -  "Format used for text tabular output, excluding the time channel. (quoted string)" (-)
+
+typedef  ^                    VizType        c_int             WrVTK                -  -  -  "Write VTK?" -
+typedef  ^                    ^              ^                 WrVTK_type           -  -  -  "Write VTK outputs as [1: surface, 2: lines, 3: both]" -
+typedef  ^                    ^              c_double          WrVTK_DT             -  -  -  "Time step between VTK writes" -
+typedef  ^                    ^              character(1024)   WrVTK_dir            -  -  -  "Directory for VTK writing" -
+typedef  ^                    ^              c_float           VTKNacDim            6  -  -  "Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz]" (m)
+typedef  ^                    ^              IntKi             Twidth               -  6  -  "Time width -- hard coded for now" (-)
+
+typedef  ^                    ModSettings    character(1024)   SS_InputFile         -  -  -  "SeaState   input file" (-)
+typedef  ^                    ^              DbKi              WaveTimeShift        -  -  -  "Shift the SeaState wavetime by this amount (for phase shifting waves to match tank)" (s)
+typedef  ^                    ^              character(1024)   MD_InputFile         -  -  -  "MoorDyn    input file" (-)
+typedef  ^                    ^              ^                 AD_InputFile         -  -  -  "AeroDyn    input file" (-)
+typedef  ^                    ^              ^                 IfW_InputFile        -  -  -  "InflowWind input file" (-)
+
+
+typedef  ^                 SimSettingsType   SimType          Sim                  -  -  -  "Simulation settings" -
+typedef  ^                    ^              EnvType          Env                  -  -  -  "Environment settings" -
+typedef  ^                    ^              TurbConfigType   TrbCfg               -  -  -  "Turbine configuration" -
+typedef  ^                    ^              TurbInitCondType TrbInit              -  -  -  "Turbine initial operating point" -
+typedef  ^                    ^              WaveBuoyType     WaveBuoy             -  -  -  "Wave elevation buoy locat (x-y)" (m)
+typedef  ^                    ^              OutFilesType     Outs                 -  -  -  "Output settings" -
+typedef  ^                    ^              VizType          Viz                  -  -  -  "Vizualization settings" -
+typedef  ^                    ^              ModSettings      ModSettings          -  -  -  "Input files for each module" -
+
+
+# Storage for IO to CalcStep
+typedef  ^              CalcStepIOdataType   c_double          Time_c               -  -  -  "IN:  time"                                        "(s)"
+typedef  ^                    ^              c_float           PosAng_c             6  -  -  "IN:  Position + Euler Ang [x,y,z,phi,theta,psi]"  "[(m) (rad)]"
+typedef  ^                    ^              ^                 Vel_c                6  -  -  "IN:  Velocity             [Vx,Vy,Vz,RVx,RVy,RVz]" "[(m/s) (rad/s)]"
+typedef  ^                    ^              ^                 Acc_c                6  -  -  "IN:  Acceleration         [Ax,Ay,Az,RAx,RAy,RAz]" "[(m/s^2) (rad/s^2)]"
+typedef  ^                    ^              ^                 FrcMom_c             6  -  -  "OUT: Acceleration         [Fx,Fy,Fz,Mx,My,Mz]"    "[(N) (N-m)]"
+typedef  ^                    ^              ^                 FrcMom_MD_c          6  -  -  "calculated forces/moments from MD" -
+typedef  ^                    ^              ^                 FrcMom_ADI_c         :  -  -  "calculated forces/moments from ADI" -
+typedef  ^                    ^              ^                 HubVel_ADI_c         3  -  -  "hub height wind vel from ADI" -
+typedef  ^                    ^              ReKi              BuoyWaveElev         -  -  -  "calculated wave elevation at buoy" -
+
+
+# storage for output file data (num chans, WriteOutputHdr, out arrays per module, etc)
+typedef  ^                 WrOutputDataType  IntKi             NumChans_cbind       -  0  -  "Number of output channels from c-bind" -
+typedef  ^                    ^              ^                 NumChans_SS          -  0  -  "Number of output channels from SS" -
+typedef  ^                    ^              ^                 NumChans_MD          -  0  -  "Number of output channels from MD" -
+typedef  ^                    ^              ^                 NumChans_ADI         -  0  -  "Number of output channels from ADI" -
+typedef  ^                    ^              ^                 NumChans_all         -  0  -  "Total number of channels (sum of above)" -
+typedef  ^                    ^           character(ChanLen)   WriteOutputHdr_SS    :  -  -  "output file header names from SS" -
+typedef  ^                    ^              ^                 WriteOutputUnt_SS    :  -  -  "output file header units from SS" -
+typedef  ^                    ^              ^                 WriteOutputHdr_MD    :  -  -  "output file header names from MD" -
+typedef  ^                    ^              ^                 WriteOutputUnt_MD    :  -  -  "output file header units from MD" -
+typedef  ^                    ^              ^                 WriteOutputHdr_ADI   :  -  -  "output file header names from ADI" -
+typedef  ^                    ^              ^                 WriteOutputUnt_ADI   :  -  -  "output file header units from ADI" -
+typedef  ^                    ^              c_float           OutData_SS_c         :  -  -  "output data from SS as passed c_float" -
+typedef  ^                    ^              ^                 OutData_MD_c         :  -  -  "output data from MD as passed c_float" -
+typedef  ^                    ^              ^                 OutData_ADI_c        :  -  -  "output data from ADI as passed c_float" -
+typedef  ^                    ^              SiKi              OutData_SS           :  -  -  "output data from SS" -
+typedef  ^                    ^              ^                 OutData_MD           :  -  -  "output data from MD" -
+typedef  ^                    ^              ^                 OutData_ADI          :  -  -  "output data from ADI" -
+typedef  ^                    ^              character(1024)   OutName              -  -  -  "Output file name" -
+typedef  ^                    ^              IntKi             OutUn                -  -1 -  "Output unit" -
+
+
+# Mesh structures and mappings
+typedef  ^                 MeshesMotionType  MeshType    PtfmPtMotion               -  -  -  "Platform principle ref point. Also serves as tower base" -
+typedef  ^                    ^              ^           TowerMotion                -  -  -  "Tower mesh (used only for vis)" -
+typedef  ^                    ^              ^           HubMotion                  -  -  -  "Hub mesh (for mappings, no loadings)" -
+typedef  ^                    ^              ^           BladeRootMotion            :  -  -  "Blade root motions" -
+typedef  ^                    ^              ^           WaveBuoyMotion             -  -  -  "wave measurement buoy motion (sensor only)" -
+
+typedef  ^                 MeshesLoadsType   MeshType    PtfmPtLoads                -  -  -  "Platform principle ref point loads output" -
+typedef  ^                    ^              ^           PtfmPtLoadsTmp             -  -  -  "Platform principle ref point loads output - temp var for load summation" -
+typedef  ^                    ^              ^           MooringLoads               -  -  -  "Mooring loads (always at PtfmPt, but separated for simplicity)" -
+typedef  ^                    ^              ^           TowerLoads                 -  -  -  "Tower mesh (unused)" -
+typedef  ^                    ^              ^           HubLoads                   -  -  -  "Hub mesh (for mappings, intermediate loads)" -
+typedef  ^                    ^              ^           BladeRootLoads             :  -  -  "Blade root loads" -
+
+# NOTE: rigid geometry, no yaw, static pitch
+typedef  ^                 MeshesMapsType    MeshMapType Motion_PRP_2_Twr           -  -  -  "PRP to tower motion" -
+typedef  ^                    ^              ^           Motion_PRP_2_Hub           -  -  -  "Twrtop to nacelle - add rotation afterwards" -
+typedef  ^                    ^              ^           Motion_Hub_2_BldRoot       :  -  -  "Hub to blade root motion transfer" -
+typedef  ^                    ^              ^           Load_BldRoot_2_Hub         :  -  -  "Blade root loads to hub" -
+typedef  ^                    ^              ^           Load_Hub_2_PRP             -  -  -  "Hub to nacelle load transfer" -
+typedef  ^                    ^              ^           Load_Twr_2_PRP             -  -  -  "Tower loads to PRP (unused)" -
+typedef  ^                    ^              ^           Load_Moor_2_PRP            -  -  -  "Mooring loads to PRP" -
+
+# temporary data storage for structural model
+typedef  ^                    StructTmpType  ReKi        Azimuth                    -  0  -  "Current Azimuth" (rad)
+typedef  ^                    ^              ^           RotSpeed                   -  -  -  "Rotor speed" (RPM)
+typedef  ^                    ^              ^           BldPitch                   -  -  -  "Blade pitch" (rad)
+typedef  ^                    ^              ^           NacYaw                     -  -  -  "Nacelle-yaw angle" (rad)
+typedef  ^                    ^              ^           FrcMom_ADI_at_Ptfm         6  -  -  "Total aero loading summed to Ptfm point" (N, N-m)
+typedef  ^                    ^              ^           FrcMom_MD_at_Ptfm          6  -  -  "MoorDyn loading at Ptfm point" (N, N-m)
+typedef  ^                    ^              c_float     BuoyPos_c                  2  -  -  "Buoy XY position" (m)
+typedef  ^                    ^              ^           PtfmPosAng_c               6  -  -  "Temp position and euler angle" (m, rad)
+typedef  ^                    ^              ^           PtfmVel_c                  6  -  -  "Temp velocity " (m/s, rad/s)
+typedef  ^                    ^              ^           PtfmAcc_c                  6  -  -  "Temp acceleration " (m/s^2, rad/s^2)
+typedef  ^                    ^              ^           NacPos_c                   3  -  -  "Temp nacelle position " (m, rad)
+typedef  ^                    ^              c_double    NacDCM_c                   9  -  -  "Temp nacelle orientation DCM" (-)
+typedef  ^                    ^              c_float     NacVel_c                   6  -  -  "Temp nacelle velocity " (m/s, rad/s)
+typedef  ^                    ^              ^           NacAcc_c                   6  -  -  "Temp nacelle acceleration " (m/s^2, rad/s^2)
+typedef  ^                    ^              ^           HubPos_c                   3  -  -  "Temp hub position " (m, rad)
+typedef  ^                    ^              c_double    HubDCM_c                   9  -  -  "Temp hub orientation DCM" (-)
+typedef  ^                    ^              c_float     HubVel_c                   6  -  -  "Temp hub velocity " (m/s, rad/s)
+typedef  ^                    ^              ^           HubAcc_c                   6  -  -  "Temp hub acceleration " (m/s^2, rad/s^2)
+typedef  ^                    ^              ^           BldPos_c                   :  -  -  "Temp blade position -- sequential by blade" (m)
+typedef  ^                    ^              c_double    BldDCM_c                   :  -  -  "Temp blade orientation DCM -- flat sequential by blade" (-)
+typedef  ^                    ^              c_float     BldVel_c                   :  -  -  "Temp blade velocity -- sequential by blade" (m/s, rad/s)
+typedef  ^                    ^              ^           BldAcc_c                   :  -  -  "Temp blade acceleration -- sequential by blade" (m/s^2, rad/s^2)
+

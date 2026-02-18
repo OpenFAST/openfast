@@ -39,14 +39,31 @@ add_library(seastlib STATIC
 )
 target_link_libraries(seastlib ifwlib nwtclibs versioninfolib)
 
+
 # C-bindings interface library
-add_library(seastate_c_binding SHARED 
-  src/SeaState_C_Binding.f90
-)
-target_link_libraries(seastate_c_binding seastlib versioninfolib)
+#   create object instead of directly linking into shared and static -- causes issues in parallel builds
+#   This is only required because we are static linking the library for wavetank
+#   NOTE: target linking at the object, static, and shared libraries.  Different CMake versions handle this
+#         slightly differently with unpredictable results if I don't.
+add_library(seastate_c_binding_object OBJECT src/SeaState_C_Binding.f90)
+target_link_libraries(seastate_c_binding_object seastlib nwtclibs versioninfolib)
+set_property(TARGET seastate_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 1) # required for shared libs
+
+#   shared
+add_library(seastate_c_binding SHARED $<TARGET_OBJECTS:seastate_c_binding_object>)
+target_link_libraries(seastate_c_binding seastlib nwtclibs versioninfolib)
 if(APPLE OR UNIX)
   target_compile_definitions(seastate_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
+
+# C-bindings static interface
+# This is a workaround for building wavetank into a single DLL (also allows setting CU globaly for sending screen to file for labview integration)
+add_library(seastate_c_bind_static STATIC $<TARGET_OBJECTS:seastate_c_binding_object>)
+target_link_libraries(seastate_c_bind_static seastlib nwtclibs versioninfolib)
+if(APPLE OR UNIX)
+  target_compile_definitions(seastate_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+
 
 # Driver
 add_executable(seastate_driver 
@@ -54,7 +71,7 @@ add_executable(seastate_driver
 )
 target_link_libraries(seastate_driver seastlib)
 
-install(TARGETS seastate_driver seastlib seastate_c_binding
+install(TARGETS seastate_driver seastlib seastate_c_binding seastate_c_bind_static
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

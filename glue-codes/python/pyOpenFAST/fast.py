@@ -17,7 +17,6 @@ from pathlib import Path
 from .interface_abc import OpenFASTInterfaceType
 
 
-IntfStrLen = 1025    # FAST_Library global
 NumFixedInputs = 51  # FAST_Library global
 
 
@@ -127,7 +126,7 @@ class FastLibAPI(OpenFASTInterfaceType):
 
     def init(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(IntfStrLen)
+        _error_message = create_string_buffer(self.IntfStrLen)
 
         self.FAST_AllocateTurbines(
             byref(self.n_turbines),
@@ -172,7 +171,7 @@ class FastLibAPI(OpenFASTInterfaceType):
 
     def sim(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(IntfStrLen)
+        _error_message = create_string_buffer(self.IntfStrLen)
 
         self.FAST_Start(
             byref(self.i_turb),
@@ -213,7 +212,7 @@ class FastLibAPI(OpenFASTInterfaceType):
 
     def deinit(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(IntfStrLen)
+        _error_message = create_string_buffer(self.IntfStrLen)
 
         if not self.ended:
             self.ended = True
@@ -265,7 +264,7 @@ class FastLibAPI(OpenFASTInterfaceType):
 
     def get_hub_position(self) -> Tuple:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(IntfStrLen)
+        _error_message = create_string_buffer(self.IntfStrLen)
 
         # Data buffers
         absolute_position = (c_float * 3)(0.0, )

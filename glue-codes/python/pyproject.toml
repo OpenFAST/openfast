@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyOpenFAST"
-version = "4.1.2"
+version = "4.2.0"
 description = "Python interface to OpenFAST FAST Library and physics modules."
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     { name = "Rafael Mudafort", email = "Rafael.Mudafort@nrel.gov" },
+    { name = "Andy Platt",      email = "Andy.Platt@nrel.gov"      },
 ]
 license = { file = "LICENSE.txt" }
 keywords = ["openfast"]
@@ -22,20 +23,21 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy"
 ]
 dependencies = [
-    "numpy~=2.0",
-    "matplotlib~=3.0",
+    "numpy>=1.26",
+    "matplotlib>=3.0",
 ]
 
 [project.optional-dependencies]
 windio = [
-    "windio~=1.0",
+    "windio",
 ]
 develop = [
-    "pytest~=8.0",
+    "pytest>=8.0",
 ]
 
 [tool.setuptools.packages.find]

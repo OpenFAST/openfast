@@ -31,6 +31,7 @@ MODULE HydroDyn_C_BINDING
 
    PUBLIC :: HydroDyn_C_Init
    PUBLIC :: HydroDyn_C_CalcOutput
+   PUBLIC :: HydroDyn_C_CalcOutput_and_AddedMass
    PUBLIC :: HydroDyn_C_UpdateStates
    PUBLIC :: HydroDyn_C_End
 
@@ -304,6 +305,7 @@ SUBROUTINE HydroDyn_C_Init(                                                     
    call AllocAry( tmpNodeVel, 6, NumNodePts, "tmpNodeVel", ErrStat2, ErrMsg2 );     if (Failed())  return
    call AllocAry( tmpNodeAcc, 6, NumNodePts, "tmpNodeAcc", ErrStat2, ErrMsg2 );     if (Failed())  return
    call AllocAry( tmpNodeFrc, 6, NumNodePts, "tmpNodeFrc", ErrStat2, ErrMsg2 );     if (Failed())  return
+   ! structural mesh reference position
    tmpNodePos(1:6,1:NumNodePts)   = reshape( real(InitNodePositions_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
    !----------------------------------------------------
@@ -441,6 +443,10 @@ SUBROUTINE HydroDyn_C_Init(                                                     
    HD%InitInp%Gravity            = REAL(Gravity_C,    ReKi)
    HD%InitInp%TMax               = REAL(TMax_C,       DbKi)
 
+!FIXME: initial platform position does not work!!!
+   ! Initial platform position
+!   HD%InitInp%PlatformPos        = (/ REAL(PtfmRefPtPositionX_C, ReKi), REAL(PtfmRefPtPositionX_C, ReKi), 0 /)
+
    ! Transfer data from SeaState
    ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
@@ -500,6 +506,7 @@ SUBROUTINE HydroDyn_C_Init(                                                     
 
    !--------------------------------------------------------------------------------------------------------------------------------
    ! Set the interface meshes and outputs
+   !  -- uses the InitNodePositions_C location/orientation to set the structural mesh reference location
    !--------------------------------------------------------------------------------------------------------------------------------
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
 
@@ -684,6 +691,11 @@ CONTAINS
    !!    If more than one input node was passed in, but only a single HD node
    !!    exits (single Morison or single WAMIT), then give error that too many
    !!    nodes passed.
+   !!    More than one node is passed in (NumNodePts>1) indicates that the structure
+   !!    is modeled as flexible.  This requires more than one destination node on
+   !!    either the Morison or WAMIT meshes.  Note that some nodes may be
+   !!    co-located, so checking that the total number of nodes is the same does
+   !!    not work.
    subroutine CheckNodes(ErrStat3,ErrMsg3)
       integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
@@ -691,19 +703,19 @@ CONTAINS
       ErrMsg3  = ""
       if ( NumNodePts > 1 ) then
          if ( HD%u(1)%Morison%Mesh%Committed .and. HD%u(1)%WAMITMesh%Committed ) then
-            if ( (HD%u(1)%Morison%Mesh%Nnodes + HD%u(1)%WAMITMesh%Nnodes) < NumNodePts ) then
+            if ( (HD%u(1)%Morison%Mesh%Nnodes + HD%u(1)%WAMITMesh%Nnodes) < 2_IntKi) then
                ErrStat3 = ErrID_Fatal
-               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model"
+               ErrMsg3  = "More than one node passed into library, but only one HydroDyn node exists."
             endif
          elseif ( HD%u(1)%Morison%Mesh%Committed ) then     ! No WAMIT
-            if ( HD%u(1)%Morison%Mesh%Nnodes < NumNodePts ) then
+            if ( HD%u(1)%Morison%Mesh%Nnodes < 2_IntKi ) then
                ErrStat3 = ErrID_Fatal
-               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model Morison mesh"
+               ErrMsg3  = "More than one node passed into library, but only one HydroDyn node exists on Morison mesh."
             endif
          elseif ( HD%u(1)%WAMITMesh%Committed    ) then     ! No Morison
-            if ( HD%u(1)%WAMITMesh%Nnodes < NumNodePts ) then
+            if ( HD%u(1)%WAMITMesh%Nnodes  < 2_IntKi ) then
                ErrStat3 = ErrID_Fatal
-               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model WAMIT mesh"
+               ErrMsg3  = "More than one node passed into library, but only one HydroDyn node exists on the WAMIT mesh."
             endif
          endif
       endif
@@ -842,8 +854,11 @@ CONTAINS
    end function Failed
 END SUBROUTINE HydroDyn_C_CalcOutput
 
+
 !===============================================================================================================
 !-------------------------------------- HydroDyn CalcOutput_and_AddedMass --------------------------------------
+!> This routine is similar to the HydroDyn_C_CalcOutput, but splits the forces returned from HydroDyn_CalcOutput
+!! into the hydrodynamic forces without added mass, and a separate added mass matrix.
 !===============================================================================================================
 
 SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, &

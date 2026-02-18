@@ -33,6 +33,8 @@
 3. delete `rc-` branch if merging from one
 
 ### Windows executables build and upload
+NOTE: if available, use the `deploy` action on GitHub to build all the executables and upload those instead of this process.  This manual process is for when the GH action doesn't work.
+
 After posting and tagging release
 1. Pull main and tags
    * `git fetch --tags OpenFAST`

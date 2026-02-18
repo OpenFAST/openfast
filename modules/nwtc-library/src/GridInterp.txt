@@ -1,0 +1,11 @@
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+#<Key Word> <Module>      <TypeName>       <FieldType>    <FieldName>       <Dims>         <Ctrl>   <DNA ME> <Description> <Units>
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+typedef     GridInterp    ParameterType    IntKi          n                 {4}              -        -      "number of evenly-spaced grid points in each dimension"  -
+typedef     ^             ParameterType    ReKi           delta             {4}              -        -      "size between 2 consecutive grid points in each grid direction"  -
+typedef     ^             ParameterType    ReKi           pZero             {4}              -        -      "fixed position of the grid starting corner (i.e., XYZW coordinates of m%V(0,0,0,0,:))" -
+typedef     ^             ParameterType    logical        IsPeriodic        {4}            .false.    -      "flag to indicate whether this dimension should be treated as periodic" -
+typedef     ^             MiscVarType      ReKi           N3D               {4}{4}{4}        -        -      "this is the weights for 3D grid values" -
+typedef     ^             MiscVarType      ReKi           N4D               {4}{4}{4}{4}     -        -      "this is the weights for 4D grid values" -
+typedef     ^             MiscVarType      integer        Indx              {4}{4}           -        -      "this is the neighboring node index into the grid" -
+typedef     ^             MiscVarType      logical        FirstWarn_Clamp    -             .true.     -      "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -

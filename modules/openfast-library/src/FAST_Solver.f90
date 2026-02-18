@@ -142,7 +142,8 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &
                  pack(modInds, ModIDs == Module_IceF), &
-                 pack(modInds, ModIDs == Module_MAP)]
+                 pack(modInds, ModIDs == Module_MAP), &
+                 pack(modInds, ModIDs == Module_SlD)]
 
    ! Indices of modules to perform InputSolves after the Option 1 solve
    p%iModPost = [pack(modInds, ModIDs == Module_SrvD), &

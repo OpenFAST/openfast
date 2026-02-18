@@ -39,20 +39,24 @@ CONTAINS
 !! real array) of the simulated velocity (wind/water speed). It returns
 !! values FOR ONLY the velocity components that use the IEC method for
 !! computing spatial coherence; i.e., for i where SCMod(i) == CohMod_IEC
-SUBROUTINE CalcFourierCoeffs_IEC( p, U, PhaseAngles, S, V, TRH, ErrStat, ErrMsg )
+!!
+!! OpenMP:  This makes a copy of the TRH array for each thread to use, which
+!!          is a little inefficient, but the speedup from parallelization
+!!          should outweigh the memory overhead. In the single threaded case,
+!!          a single copy is made, which is relatively negligible.
+SUBROUTINE CalcFourierCoeffs_IEC( p, U, PhaseAngles, S, V, TRH_in, ErrStat, ErrMsg )
 
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
 REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
+REAL(ReKi),                  INTENT(INOUT)  :: TRH_in(:)                       !< The transfer function matrix.  just used as a work array
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
-   
-   ! Internal variables
-
+REAL(ReKi), allocatable, save :: TRH(:)         ! Each OMP thread gets its own copy of this array
+!$OMP THREADPRIVATE(TRH)
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
    
@@ -64,25 +68,22 @@ INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
                               
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
-   
-
-   
+    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   IF (.NOT. ANY(p%met%SCMod == CohMod_IEC) ) RETURN
+   IF (.NOT. ANY(p%met%SCMod == CohMod_IEC)) RETURN
 
    !--------------------------------------------------------------------------------
    ! allocate arrays
    !--------------------------------------------------------------------------------
-   CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
-   CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-   
-   
+
+   CALL AllocAry( Dist, p%grid%NPacked, 'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
+   CALL AllocAry( DistU, p%grid%NPacked, 'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   TRH = TRH_in  ! point the PRIVATE array to the passed in array for single thread case
+      
    !--------------------------------------------------------------------------------
    ! Calculate the distances and other parameters that don't change with frequency
    !---------------------------------------------------------------------------------
@@ -115,7 +116,13 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
       ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
       !---------------------------------------------------------------------------------
 
-      DO IFREQ = 1,p%grid%NumFreq
+      !$OMP PARALLEL DO &
+      !$OMP DEFAULT(None) &
+      !$OMP SHARED(p, PhaseAngles, S, V, Dist, DistU, IVec, ErrStat, ErrMsg, AbortErrLev) &
+      !$OMP PRIVATE(Indx, I, J, ErrStat2, ErrMsg2) &
+      !$OMP COPYIN(TRH)
+      DO IFREQ = 1, p%grid%NumFreq
+
          ! -----------------------------------------------
          ! Create the coherence matrix for this frequency
          ! -----------------------------------------------
@@ -149,27 +156,18 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
          !   use H matrix to calculate coefficients
          ! -----------------------------------------------
          
-         CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
+         CALL Coh2H(p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2)
+         if (ErrStat2 >= AbortErrLev) then
+            !$OMP CRITICAL 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
-         CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
-      END DO !IFreq
+            !$OMP END CRITICAL
+         else
+            CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
+         endif
 
+      END DO !IFreq
    END DO !IVec   
                
-   CALL Cleanup()
-   RETURN
-   
-!............................................
-CONTAINS
-   SUBROUTINE Cleanup()
-
-      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
-      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
-   END SUBROUTINE Cleanup
 !............................................   
 END SUBROUTINE CalcFourierCoeffs_IEC  
 !=======================================================================
@@ -720,18 +718,17 @@ integer                          :: Indx, J, I
       ! -----------------------------------------------------------------------------------
 
    Indx = 1
+   TRH = 0.0
    DO J = 1,NPoints ! The column number
 
          ! The diagonal entries of the matrix:
 
       TRH(Indx) = SQRT( ABS( S(IFreq,J,IVec) ) )
 
-         ! The off-diagonal values:
-      Indx = Indx + 1
-      DO I = J+1,NPoints ! The row number
-         TRH(Indx) = 0.0
-         Indx = Indx + 1
-      ENDDO ! I
+      ! skip rest of row (NPoints-1) -- these are off diagonal elements that are zero.
+      ! Then add 1 to get to next diagonal entry
+      Indx = Indx + (NPoints - J) + 1
+
    ENDDO ! J
 
 END SUBROUTINE EyeCoh2H
@@ -751,8 +748,9 @@ CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
 
 integer                          :: Indx, J, I, NPts
-
+integer                          :: old_max_levels    ! maximum nesting levels for OPENMP
          
+
       ! -------------------------------------------------------------
       ! Calculate the Cholesky factorization for the coherence matrix
       ! -------------------------------------------------------------      
@@ -872,115 +870,81 @@ END SUBROUTINE H2Coeffs
 !> This routine takes the Fourier coefficients and converts them to velocity
 !! note that the resulting time series has zero mean.
 SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, NUsrPoints, ErrStat, ErrMsg )
-
-
-   !USE NWTC_FFTPACK
-
-   IMPLICIT NONE 
-   
-
-   ! passed variables
    INTEGER(IntKi),   INTENT(IN)     :: NumSteps                     !< Size of dimension 1 of V (number of time steps)
    INTEGER(IntKi),   INTENT(IN)     :: NPoints                      !< Size of dimension 2 of V (number of grid points)
    INTEGER(IntKi),   INTENT(IN)     :: NUsrPoints                   !< number of user-defined time series
-
    REAL(ReKi),       INTENT(INOUT)  :: V     (NumSteps,NPoints,3)   !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-
    INTEGER(IntKi),   intent(  out)  :: ErrStat                      !< Error level
    CHARACTER(*),     intent(  out)  :: ErrMsg                       !< Message describing error
    
-   
-   ! local variables
    TYPE(FFT_DataType)               :: FFT_Data                      ! data for applying FFT
    REAL(SiKi), ALLOCATABLE          :: Work ( : )                    ! working array to hold coefficients of fft  !bjj: made it allocatable so it doesn't take stack space
-
-   
-   INTEGER(IntKi)                   :: ITime                         ! loop counter for time step/frequency 
    INTEGER(IntKi)                   :: IVec                          ! loop counter for velocity components
    INTEGER(IntKi)                   :: IPoint                        ! loop counter for grid points
-   
+   logical                          :: ExitOMPlooping                ! flag to indicate skipping other loops
    INTEGER(IntKi)                   :: ErrStat2                      ! Error level (local)
-  !CHARACTER(MaxMsgLen)             :: ErrMsg2                       ! Message describing error (local)
    
 
-   ! initialize variables
-
- !ErrStat = ErrID_None
- !ErrMsg = ""
-   
    CALL AllocAry(Work, NumSteps, 'Work',ErrStat,ErrMsg)
    if (ErrStat >= AbortErrLev) return
    
-   !  Allocate the FFT working storage and initialize its variables
-
-CALL InitFFT( NumSteps, FFT_Data, ErrStat=ErrStat2 )
-   CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-
    ! Get the stationary-point time series.
 
-CALL WrScr ( ' Generating time series for all points:' )
+   CALL WrScr ( ' Generating time series for all points:' )
 
-DO IVec=1,3
+   ! Since we are potentially using OpenMP here, we cannot
+   ExitOMPlooping = .false.
 
-   CALL WrScr ( '    '//Comp(IVec)//'-component' )
+   DO IVec=1,3
 
-   DO IPoint=1,NPoints    !NTotB
+      ! make sure we didn't have a failure on prior OMP loop
+      if (ExitOMPlooping) cycle
 
-         ! Overwrite the first point with zero.  This sets the real (and 
-         ! imaginary) part of the steady-state value to zero so that we 
-         ! can add in the mean value later.
+      CALL WrScr ( '    '//Comp(IVec)//'-component' )
 
-      Work(1) = 0.0_ReKi
+      ! The FFT_Data is not thread safe with the allocation inside.
+      CALL InitFFT( NumSteps, FFT_Data, ErrStat=ErrStat2 )
+      CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
 
-!      DO ITime = 2,NumSteps-1
-      DO ITime = 2,NumSteps
-         Work(ITime) = V(ITime-1, IPoint, IVec)
-      ENDDO ! ITime
-
-      IF (iPoint > NUsrPoints) THEN
-         ! BJJ: we can't override this for the user-input spectra or we don't get the correct time series out.
-         ! Per JMJ, I will keep this here for the other points, but I personally think it could be skipped, too.
+      ! Proceed only if the InitFFT worked.
+      ! NOTE: this is to allow for OpenMP - can't return from inside loop
+      if (ErrStat2 < AbortErrLev) then ! check ErrStat2 for this OMPthread
+         DO IPoint=1,NPoints    !NTotB
+            ! Overwrite the first point with zero.  This sets the real (and 
+            ! imaginary) part of the steady-state value to zero so that we 
+            ! can add in the mean value later.
+            Work(1) = 0.0_ReKi
+            Work(2:NumSteps) = V(1:NumSteps-1, IPoint, IVec)
          
-         ! Now, let's add a complex zero to the end to set the power in the Nyquist
-         ! frequency to zero.
+            IF (iPoint > NUsrPoints) THEN
+               ! BJJ: we can't override this for the user-input spectra or we don't get the correct time series out.
+               ! Per JMJ, I will keep this here for the other points, but I personally think it could be skipped, too.
+               
+               ! Now, let's add a complex zero to the end to set the power in the Nyquist
+               ! frequency to zero.
+               Work(NumSteps) = 0.0
+            END IF
          
-         Work(NumSteps) = 0.0
-      END IF
+            ! perform FFT
+            CALL ApplyFFT( Work, FFT_Data, ErrStat2 )
+               IF (ErrStat2 /= ErrID_None ) THEN
+                  CALL SetErrStat(ErrStat2, 'Error in ApplyFFT for point '//TRIM(Num2LStr(IPoint))//'.', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
+                  IF (ErrStat >= AbortErrLev) EXIT
+               END IF
+              
+            V(:,IPoint,IVec) = Work
+         ENDDO ! IPoint
       
-      
+         ! Clean up memory from FFT_Data.
+         CALL ExitFFT( FFT_Data, ErrStat2 )
+         CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
 
-         ! perform FFT
+         ! skip further OMP loops if any sequential (or if OMP not used).
+         ! NOTE: OMP doesn't allow return inside OMP thread
+         if (ErrStat2 >= AbortErrLev) ExitOMPlooping = .true.
+      endif
+   ENDDO ! IVec 
 
-      CALL ApplyFFT( Work, FFT_Data, ErrStat2 )
-         IF (ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat(ErrStat2, 'Error in ApplyFFT for point '//TRIM(Num2LStr(IPoint))//'.', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
-            IF (ErrStat >= AbortErrLev) EXIT
-         END IF
-        
-      V(:,IPoint,IVec) = Work
-
-   ENDDO ! IPoint
-
-ENDDO ! IVec 
-
-CALL Cleanup()
-
-RETURN
-CONTAINS
-!...........................................
-SUBROUTINE Cleanup()
-   
-   CALL ExitFFT( FFT_Data, ErrStat2 )
-   CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
-
-   if (allocated(work)) deallocate(work)
-   
-   END SUBROUTINE Cleanup
 END SUBROUTINE Coeffs2TimeSeries
 !=======================================================================
 !> This routine calculates the two-sided Fourier amplitudes of the frequencies
@@ -2030,28 +1994,28 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir, VWindDir)
    REAL(ReKi)                                  ::  v3(3)             ! temporary 3-component array containing velocity
    INTEGER(IntKi)                              ::  ITime             ! loop counter for time step 
    INTEGER(IntKi)                              ::  IPoint            ! loop counter for grid points
-                                                                     
-                                                                     
-                                                                     
-                                                                     
+
    !..............................................................................
-   ! Add mean wind to u' components and rotate to inertial reference  
+   ! Add mean wind to u' components and rotate to inertial reference
    !  frame coordinate system
-   !..............................................................................        
+   !..............................................................................
+
+   !$OMP PARALLEL DO &
+   !$OMP COLLAPSE(2) &
+   !$OMP DEFAULT(None) &
+   !$OMP PRIVATE(v3) &
+   !$OMP SHARED(p, U, V, HWindDir, VWindDir)
    DO IPoint=1,p%grid%Npoints   
       DO ITime=1,p%grid%NumSteps
 
-            ! Add mean wind speed to the streamwise component and
-            ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
-            
+         ! Add mean wind speed to the streamwise component and
+         ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
          v3 = V(ITime,IPoint,:) 
          CALL CalculateWindComponents( v3, U(IPoint), HWindDir(IPoint), VWindDir(IPoint), V(ITime,IPoint,:) )
                         
       ENDDO ! ITime
-         
    ENDDO ! IPoint   
-                                                                     
-                                                                     
+
 END SUBROUTINE AddMeanAndRotate
 !=======================================================================
 SUBROUTINE TS_ValidateInput(P, ErrStat, ErrMsg)

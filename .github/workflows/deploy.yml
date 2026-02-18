@@ -149,18 +149,14 @@ jobs:
         shell: cmd
         run: .github/scripts/windows_devenv_test.bat
 
-      - name: Install Intel oneAPI BaseKit (Windows)
+      - name: Install Intel Fortran Essentials (Windows)
         shell: cmd
         env:
-          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/0ba263f5-de00-4e91-a780-fdb9e131c1e8/intel-oneapi-hpc-toolkit-2025.1.0.665_offline.exe
-          COMPONENTS: intel.oneapi.win.ifort-compiler:intel.oneapi.win.mkl.devel
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/33676fcf-14a3-4e96-a9b9-72976b1145d9/intel-fortran-essentials-2025.3.1.25_offline.exe
         run: |
           curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
-          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
-          del %TEMP%\webimage.exe
-          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+          %TEMP%\webimage.exe -s -a --silent --eula accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
           set installer_exit_code=%ERRORLEVEL%
-          rd /s/q "webimage_extracted"
           exit /b %installer_exit_code%
 
       - name: Set up MATLAB
@@ -169,7 +165,7 @@ jobs:
         with:
           products: Simulink
 
-      - name: Build Executables
+      - name: Build Executabless
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
         run: .github/scripts/build_windows_executables.bat
@@ -182,17 +178,14 @@ jobs:
         with:
           command: |
             mexname = 'FAST_SFunc';
-            mex('-largeArrayDims', ...
-                '-v', ...
+            mex('-largeArrayDims', '-v', ...
                 ['-L' fullfile('build','bin')], ...
                 ['-I' fullfile('modules','openfast-library','src')], ... % "FAST_Library.h"
                 ['-I' fullfile('modules','supercontroller','src')], ...  % "SuperController_Types.h"
                 ['-I' fullfile('modules','externalinflow','src')],  ...  % "ExternalInflow_Types.h"
                 ['-I' fullfile('modules','extloads','src')], ...         % "ExtLoadsDX_Types.h"
-                ['-I' fullfile(matlabroot,'simulink','include')], ...
-                ['-I' fullfile(matlabroot,'extern','include')], ...
                 ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
-                '-lOpenFAST-Simulink_x64', ...
+                '-lOpenFAST-Simulink', ...
                 '-outdir', fullfile('build','bin'), ...
                 '-output', mexname, ...
                 fullfile('glue-codes','simulink','src','FAST_SFunc.c'));

@@ -90,6 +90,8 @@ class TurbsimReader(object):
         self.CTLz = inpf.readline().split()[0]
         self.CTStartTime = inpf.readline().split()[0]
 
+        inpf.close()
+
 
 class TurbsimWriter(object):
 

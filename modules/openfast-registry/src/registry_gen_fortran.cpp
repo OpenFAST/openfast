@@ -100,6 +100,10 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     // Write preamble
     w << std::regex_replace(FAST_preamble, std::regex("ModuleName"), mod.name);
 
+    // Output USE statements for literal passthroughs (i.e. ISO_C_BINDING)
+    if (this->use_isocbinding)
+        w << "USE ISO_C_BINDING\n";
+
     // Output USE statements for non-root modules
     for (auto const &mod : this->use_modules)
         if (tolower(mod).compare("nwtc_library") != 0)
@@ -711,15 +715,6 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
     }
 
     w << indent << "if (RF%ErrStat >= AbortErrLev) return";
-
-    if (gen_c_code)
-    {
-        w << indent << "if (c_associated(InData%C_obj%object)) then";
-        w << indent << "   RF%ErrStat = ErrID_Fatal";
-        w << indent << "   RF%ErrMsg = RoutineName//': C_obj%object cannot be packed.'";
-        w << indent << "   return";
-        w << indent << "end if";
-    }
 
     // Pack data
     for (auto &field : ddt.fields)

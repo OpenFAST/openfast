@@ -88,17 +88,6 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# Special case, copy the seastate_wr_kin1 files first since seastate_wavemod5 requires them
-dst = os.path.join(buildDirectory, "seastate_wr_kin1")
-src = os.path.join(moduleDirectory, "seastate_wr_kin1")
-try:
-    rtl.copyTree(src, dst)
-except:
-    # This can fail if two processes are copying the file at the same time
-    print('>>> Copy failed')
-    import time
-    time.sleep(1)
-
 # create the local output directory and initialize it with input files 
 if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'seastate.SeaSt.out':'seastate.SeaSt.Ref.out'})

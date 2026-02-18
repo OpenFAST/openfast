@@ -19,18 +19,23 @@
 !**********************************************************************************************************************************
 MODULE InflowWind_C_BINDING
 
-   USE ISO_C_BINDING
-   USE InflowWind
-   USE InflowWind_Subs, only: MaxOutPts
-   USE InflowWind_Types
-   USE NWTC_Library
-   USE VersionInfo
+   use ISO_C_BINDING
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   use InflowWind
+   use InflowWind_Subs, only: MaxOutPts
+   use InflowWind_Types
+   use NWTC_Library
+   use VersionInfo
+   use NWTC_C_Binding, only: ErrMsgLen_C, IntfStrLen, SetErrStat_F2C
 
    IMPLICIT NONE
 
    PUBLIC :: IfW_C_Init
    PUBLIC :: IfW_C_CalcOutput
    PUBLIC :: IfW_C_End
+   PUBLIC :: IfW_C_GetFlowFieldPointer
+   PUBLIC :: IfW_C_SetFlowFieldPointer
+   PUBLIC :: IfW_C_GetWindVel
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -58,43 +63,14 @@ MODULE InflowWind_C_BINDING
    type(InflowWind_OutputType)                   :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
    type(InflowWind_MiscVarType)                  :: m                 !< Misc variables for optimization (not copied in glue code)
 
-   !------------------------------------------------------------------------------------
-   !  Error handling
-   !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
-   !     some point in the nwtc-library, this should be updated, but the logic exists
-   !     to correctly handle different lengths of the strings
-   integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
-   integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
-
-
-
 CONTAINS
-
-!> This routine sets the error status in C_CHAR for export to calling code.
-!! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-!! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-!! inadvertant buffer overrun -- that can lead to bad things.
-subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
-   integer,                intent(in   )  :: ErrStat                 !< aggregated error message (fortran type)
-   character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
-   integer(c_int),         intent(  out)  :: ErrStat_C
-   character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
-   ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-   if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
-   else
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-   endif
-end subroutine SetErr
-
 
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
-                     NumWindPts_C, DT_C, DebugLevel_in, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,         &
+SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,           &
+                     NumWindPts_C, DT_C, DebugLevel_in, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,   &
                      ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_C_Init')
-   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
@@ -129,6 +105,9 @@ SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStri
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+   ! clear out any leftover memory that might be allocated from a previous call
+   call MemClear(ErrStat2, ErrMsg2);   if (Failed()) return
+
    CALL NWTC_Init( ProgNameIn=version%Name )
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
@@ -160,9 +139,7 @@ SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStri
    endif
 
    ! For debugging the interface:
-   if (DebugLevel > 0) then
-      call ShowPassedData()
-   endif
+   if (DebugLevel > 0) call ShowPassedData()
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
    CALL C_F_pointer(IfWinputFileString_C, IfWinputFileString)
@@ -217,7 +194,8 @@ SUBROUTINE IfW_C_Init(IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStri
 
 
    call Cleanup()
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
 
 CONTAINS
    logical function Failed()
@@ -225,7 +203,7 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
          call Cleanup()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
    subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
@@ -238,8 +216,7 @@ CONTAINS
       integer      :: i,j
       call WrSCr("")
       call WrScr("-----------------------------------------------------------")
-      call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   IfW_C_Init")
+      call WrScr("Interface debugging:  IfW_C_Init")
       call WrScr("   --------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (IfWinputFilePassed==1_c_int) TmpFlag="T"
@@ -260,15 +237,14 @@ END SUBROUTINE IfW_C_Init
 !--------------------------------------------- IFW CALCOUTPUT --------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IfW_C_CalcOutput(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_CalcOutput')
-   IMPLICIT NONE
+SUBROUTINE IfW_C_CalcOutput(Time_C,Pos_C,Vel_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_CalcOutput')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
 #endif
    REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
-   REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
-   REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
+   REAL(C_FLOAT)                 , INTENT(IN   )      :: Pos_C(3*InitInp%NumWindPoints)
+   REAL(C_FLOAT)                 , INTENT(  OUT)      :: Vel_C(3*InitInp%NumWindPoints)
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
@@ -285,52 +261,238 @@ SUBROUTINE IfW_C_CalcOutput(Time_C,Positions_C,Velocities_C,OutputChannelValues_
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+   ! Interface debugging
+   if (DebugLevel > 0) call ShowPassedData()
+
    ! Convert the inputs from C to Fortran
    Time = REAL(Time_C,DbKi)
-   InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
+   InputData%PositionXYZ = reshape( real(Pos_C,ReKi), (/3, InitInp%NumWindPoints/) )
 
    ! Call the main subroutine InflowWind_CalcOutput to get the velocities
    CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
    ! Get velocities out of y and flatten them (still in same spot in memory)
-   Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
+   Vel_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
+
+   ! Interface debugging
+   if (DebugLevel > 0) call ShowReturnData()
 
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      if (Failed)    call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      integer(IntKi) :: i
+      character(4)   :: TmpCh
+      call WrSCr("")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  IfW_C_CalcOutput")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   Time_C                 -> "//trim(Num2LStr(Time_C)))
+      do i=1,InitInp%NumWindPoints
+         write(TmpCh, '(i4)') i
+         call WrScr("   Pos_C("//TmpCh//")            -> ("//trim(Num2LStr(Pos_C((i-1)*3+1)))//","//trim(Num2LStr(Pos_C((i-1)*3+2)))//","//trim(Num2LStr(Pos_C((i-1)*3+3)))//")")
+      enddo
+   end subroutine ShowPassedData
+   subroutine ShowReturnData()
+      integer(IntKi) :: i
+      character(4)   :: TmpCh
+      do i=1,InitInp%NumWindPoints
+         call WrScr("   Vel_C("//TmpCh//")            <- ("//trim(Num2LStr(Vel_C((i-1)*3+1)))//","//trim(Num2LStr(Vel_C((i-1)*3+2)))//","//trim(Num2LStr(Vel_C((i-1)*3+3)))//")")
+      enddo
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowReturnData
 END SUBROUTINE IfW_C_CalcOutput
 
 !===============================================================================================================
 !--------------------------------------------------- IFW END ---------------------------------------------------
 !===============================================================================================================
-
-SUBROUTINE IfW_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_End')
-   IMPLICIT NONE
+subroutine IfW_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_End')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
 !GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
 #endif
-   INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
+   integer(c_int),         intent(  out)  :: ErrStat_C
+   character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   integer                                :: ErrStat,ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg,ErrMsg2
+   character(*), parameter                :: RoutineName = 'IfW_C_End'
 
-   ! Local variables
-   INTEGER                                            :: ErrStat
-   CHARACTER(ErrMsgLen)                               :: ErrMsg
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
    ! Call the main subroutine InflowWind_End
-   CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
+   call InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   ! Clear extra memory within library
+   call MemClear(ErrStat2, ErrMsg2)
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-END SUBROUTINE IfW_C_End
+   call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+end subroutine IfW_C_End
+
+
+!> basic routine to get the wind velocity at a single point in time and space
+subroutine IfW_C_GetWindVel(Time_C,Pos_C,Vel_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_GetWindVel')
+   real(c_double),               intent(in   )  :: Time_C
+   real(c_float),                intent(in   )  :: Pos_C(3)
+   real(c_float),                intent(  out)  :: Vel_C(3)
+   integer(c_int),               intent(  out)  :: ErrStat_C
+   character(kind=c_char),       intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   real(dbki)                                   :: Time
+   integer                                      :: ErrStat, ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg,  ErrMsg2
+   character(*), parameter                      :: RoutineName = 'IfW_C_GetWindVel'
+   integer(intKi)                               :: StartNode
+   real(ReKi)                                   :: Pos(3,1), Vel(3,1), PosOffset(3)
+   real(ReKi), allocatable                      :: NoAcc(:,:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Interface debugging
+   if (DebugLevel > 0) call ShowPassedData()
+
+   if (.not. associated(p%FlowField)) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "Invalid pointer to FlowField data. Is the data initialized?"
+      Vel_C   = 0.0_c_float
+   endif
+
+   ! Initialize node. Since this is standalone, set to 1.
+   StartNode = 1
+   ! no offset
+   PosOffset = 0.0_ReKi
+
+   ! Convert the inputs from C to Fortran
+   Time = REAL(Time_C,DbKi)
+   Pos(1:3,1) = real(Pos_C,ReKi)
+
+   ! call wind routine to get single point velocity
+   call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, Time, Pos, Vel,  NoAcc, ErrStat2, ErrMsg2)
+   if (Failed()) return
+   Vel_C = real(Vel(1:3,1), c_float)
+
+   ! Interface debugging
+   if (DebugLevel > 0) call ShowReturnData()
+
+   call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   end function Failed
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      call WrSCr("")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  IfW_C_GetWindVel")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   Time_C                 -> "//trim(Num2LStr(Time_C)))
+      call WrScr("   Pos_C                  -> ("//trim(Num2LStr(Pos_C(1)))//","//trim(Num2LStr(Pos_C(2)))//","//trim(Num2LStr(Pos_C(3)))//")")
+   end subroutine ShowPassedData
+   subroutine ShowReturnData()
+      call WrScr("   Vel_C                  <- ("//trim(Num2LStr(Vel_C(1)))//","//trim(Num2LStr(Vel_C(2)))//","//trim(Num2LStr(Vel_C(3)))//")")
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowReturnData
+end subroutine IfW_C_GetWindVel
+
+
+!> clear local memory that isn't stored in `_End` routine
+subroutine MemClear(ErrStat,ErrMsg)
+   integer,                intent(  out)  :: ErrStat
+   character(ErrMsgLen),   intent(  out)  :: ErrMsg
+   call InflowWind_DestroyInitInput( InitInp,     ErrStat, ErrMsg)
+   call InflowWind_DestroyInitOutput(InitOutData, ErrStat, ErrMsg)
+end subroutine MemClear
+
+
+
+!> return the pointer to the WaveField data
+subroutine IfW_C_GetFlowFieldPointer(FlowFieldPointer_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_GetFlowFieldPointer')
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_GetFlowFieldPointer
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_GetFlowFieldPointer
+#endif
+   type(c_ptr),               intent(  out)  :: FlowFieldPointer_C
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   integer                                   :: ErrStat
+   character(ErrMsgLen)                      :: ErrMsg
+   character(*),              parameter      :: RoutineName = 'IfW_C_GetFlowFieldPointer'
+   ErrStat = ErrID_None
+   ErrMSg = ""
+   if (associated(p%FlowField)) then
+      FlowFieldPointer_C = C_LOC(p%FlowField)
+   else
+      FlowFieldPointer_C = C_NULL_PTR
+      call SetErrStat(ErrID_Fatal,"Pointer to FlowField data not valid: data not initialized",ErrStat,ErrMsg,RoutineName)
+   endif
+   call SetErrStat_F2C( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
+   if (DebugLevel > 1) call ShowPassedData()
+   return
+contains
+   subroutine ShowPassedData()
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  IfW_C_GetFlowFieldPointer")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   FlowFieldPointer_C       -> "//trim(Num2LStr(loc(p%FlowField))))
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine
+
+
+!FIXME: this will require changes to IfW_C_Init to instantiate an empty IfW instance
+!        so before exposing this publicly, the initialization should be updated.
+!> set the pointer to the FlowField data
+subroutine IfW_C_SetFlowFieldPointer(FlowFieldPointer_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_SetFlowFieldPointer')
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_SetFlowFieldPointer
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_SetFlowFieldPointer
+#endif
+   type(c_ptr),               intent(in   )  :: FlowFieldPointer_C
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   integer                                   :: ErrStat
+   character(ErrMsgLen)                      :: ErrMsg
+   character(*),              parameter      :: RoutineName = 'IfW_C_SetFlowFieldPointer'
+   ErrStat = ErrID_None
+   ErrMSg = ""
+   call C_F_POINTER(FlowFieldPointer_C, p%FlowField)
+   if (associated(p%FlowField)) then
+      ! basic sanity check
+      if (p%FlowField%FieldType <= 0_IntKi) then
+         call SetErrStat(ErrID_Fatal,"Invalid pointer passed in, or FlowField not initialized",ErrStat,ErrMsg,RoutineName)
+      endif
+   else
+      call SetErrStat(ErrID_Fatal,"Invalid pointer passed in, or FlowField not initialized",ErrStat,ErrMsg,RoutineName)
+   endif
+   call SetErrStat_F2C( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
+   if (DebugLevel > 1) call ShowPassedData()
+   return
+contains
+   subroutine ShowPassedData()
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  IfW_C_SetFlowFieldPointer")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   FlowFieldPointer_C       <- "//trim(Num2LStr(loc(p%FlowField))))
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine
+
+
 
 END MODULE

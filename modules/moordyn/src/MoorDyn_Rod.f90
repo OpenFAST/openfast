@@ -1148,13 +1148,15 @@ CONTAINS
    
 
    ! this function handles assigning a line to a point node
-   SUBROUTINE Rod_AddLine(Rod, lineID, TopOfLine, endB)
+   SUBROUTINE Rod_AddLine(Rod, lineID, TopOfLine, endB, ErrStat, ErrMsg)
 
       Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Point object
 
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
       Integer(IntKi),   INTENT( IN )     :: endB   ! add line to end B if 1, end A if 0
+      integer(IntKi),      intent(  out) :: ErrStat
+      character(ErrMsgLen),intent(  out) :: ErrMsg
 
       if (endB==1) then   ! attaching to end B
 
@@ -1164,8 +1166,11 @@ CONTAINS
             Rod%nAttachedB = Rod%nAttachedB + 1  ! add the line to the number connected
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
+            ErrStat = ErrID_None
+            ErrMsg  = ""
          ELSE
-            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!"
          END IF
 
       else              ! attaching to end A
@@ -1176,8 +1181,11 @@ CONTAINS
             Rod%nAttachedA = Rod%nAttachedA + 1  ! add the line to the number connected
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
+            ErrStat = ErrID_None
+            ErrMsg  = ""
          ELSE
-            call WrScr("too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!")
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "too many lines connected to Rod "//trim(num2lstr(Rod%IdNum))//" in MoorDyn!"
          END IF
          
       end if

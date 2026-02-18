@@ -38,10 +38,9 @@ pushing new commits will trigger the tests.
 Obtaining and configuring the test suite
 ----------------------------------------
 Portions of the test suite are linked to the OpenFAST repository through a
-`git submodule`. Specifically, the following two repositories are included:
+`git submodule`. Specifically, the following repository is included:
 
 - `r-test <https://github.com/openfast/r-test>`__
-- `pFUnit <https://github.com/Goddard-Fortran-Ecosystem/pFUnit>`__
 
 .. tip::
 
@@ -56,8 +55,8 @@ build process with an additional CMake flag:
     # BUILD_TESTING     - Build the testing tree (Default: OFF)
     cmake .. -DBUILD_TESTING:BOOL=ON
 
-Aside from this flag, the default CMake configuration is suitable for most systems.
-See the :ref:`understanding_cmake` section for more details on configuring
-the CMake targets. While the unit tests must be built with CMake due to its external
-dependencies, the regression test may be executed without CMake, as described in
-:ref:`python_driver`.
+Aside from this flag, the default CMake configuration is suitable for most
+systems.  See the :ref:`understanding_cmake` section for more details on
+configuring the CMake targets. While the unit tests must be built with CMake due
+to its dependency on `test_drive` (included in the source code), the regression
+test may be executed without CMake, as described in :ref:`python_driver`.

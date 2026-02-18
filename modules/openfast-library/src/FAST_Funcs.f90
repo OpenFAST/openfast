@@ -137,6 +137,10 @@ use SubDyn, only:       SD_JacobianPInput, &
                         SD_CalcOutput, &
                         SD_End
 
+use SoilDyn, only:      SlD_UpdateStates, &
+                        SlD_CalcOutput, &
+                        SlD_End
+
 implicit none
 
 private
@@ -289,6 +293,13 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
       end do
       call ShiftInputTimes(T%SD%InputTimes)
 
+   case (Module_SlD)
+      call SlD_Input_ExtrapInterp(T%SlD%Input(1:), T%SlD%InputTimes, T%SlD%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call SlD_CopyInput(T%SlD%Input(j), T%SlD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%SlD%InputTimes)
+
    case (Module_SeaSt)
       ! call SeaSt_Input_ExtrapInterp(T%SeaSt%Input(1:), T%SeaSt%InputTimes, T%SeaSt%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       ! do j = T%p_FAST%InterpOrder, 1, -1
@@ -403,6 +414,8 @@ subroutine FAST_InitInputStateArrays(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
             T%SD%InputTimes = InputTimes
          case (Module_SeaSt)
             T%SeaSt%InputTimes = InputTimes
+         case (Module_SlD)
+            T%SlD%InputTimes = InputTimes
          case (Module_SrvD)
             T%SrvD%InputTimes(:, ModData%Ins) = InputTimes
          case default
@@ -669,6 +682,20 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
          if (Failed()) return
       end do
 
+   case (Module_SlD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call SlD_UpdateStates(t_module, n_t_module, T%SlD%Input(1:), T%SlD%InputTimes, T%SlD%p, &
+                                 T%SlD%x(STATE_PRED), T%SlD%xd(STATE_PRED), &
+                                 T%SlD%z(STATE_PRED), T%SlD%OtherSt(STATE_PRED), &
+                                 T%SlD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
    case (Module_SrvD)
       call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -817,6 +844,11 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
       call SeaSt_CalcOutput(ThisTime, T%SeaSt%Input(iInput), T%SeaSt%p, &
                             T%SeaSt%x(iState), T%SeaSt%xd(iState), T%SeaSt%z(iState), T%SeaSt%OtherSt(iState), &
                             T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2)
+
+   case (Module_SlD)
+      call SlD_CalcOutput(ThisTime, T%SlD%Input(iInput), T%SlD%p, &
+                            T%SlD%x(iState), T%SlD%xd(iState), T%SlD%z(iState), T%SlD%OtherSt(iState), &
+                            T%SlD%y, T%SlD%m, ErrStat2, ErrMsg2)
 
    case (Module_SrvD)
       call SrvD_CalcOutput(ThisTime, T%SrvD%Input(iInput,ModData%Ins), T%SrvD%p(ModData%Ins), &
@@ -1707,6 +1739,13 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       call SeaSt_CopyConstrState(T%SeaSt%z(iSrc), T%SeaSt%z(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
       call SeaSt_CopyOtherState(T%SeaSt%OtherSt(iSrc), T%SeaSt%OtherSt(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
 
+   case (Module_SlD)
+
+      call SlD_CopyContState(T%SlD%x(iSrc), T%SlD%x(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SlD_CopyDiscState(T%SlD%xd(iSrc), T%SlD%xd(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SlD_CopyConstrState(T%SlD%z(iSrc), T%SlD%z(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SlD_CopyOtherState(T%SlD%OtherSt(iSrc), T%SlD%OtherSt(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+
    case (Module_SrvD)
 
       call SrvD_CopyContState(T%SrvD%x(ModData%Ins, iSrc), T%SrvD%x(ModData%Ins, iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1816,6 +1855,9 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_SeaSt)
       call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
+
+   case (Module_SlD)
+      call SlD_CopyInput(T%SlD%Input(iSrc), T%SlD%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
 
    case (Module_SrvD)
       call SrvD_CopyInput(T%SrvD%Input(iSrc, ModData%Ins), T%SrvD%Input(iDst, ModData%Ins), CtrlCode, ErrStat2, ErrMsg2)
@@ -1978,6 +2020,11 @@ subroutine FAST_ModEnd(Mods, T, ErrStat, ErrMsg)
             call SeaSt_End(T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(STATE_CURR), T%SeaSt%xd(STATE_CURR), &
                            T%SeaSt%z(STATE_CURR), T%SeaSt%OtherSt(STATE_CURR), &
                            T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2)
+
+         case (Module_SlD)
+            call SlD_End(T%SlD%Input(1), T%SlD%p, T%SlD%x(STATE_CURR), T%SlD%xd(STATE_CURR), &
+                           T%SlD%z(STATE_CURR), T%SlD%OtherSt(STATE_CURR), &
+                           T%SlD%y, T%SlD%m, ErrStat2, ErrMsg2)
 
          case (Module_SrvD)
             call SrvD_End(T%SrvD%Input(1, ModData%Ins), T%SrvD%p(ModData%Ins), T%SrvD%x(ModData%Ins, STATE_CURR), T%SrvD%xd(ModData%Ins, STATE_CURR), &

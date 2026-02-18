@@ -32,6 +32,7 @@ This section contains documentation for the OpenFAST module-coupling environment
    TurbSim <turbsim/index.rst>
    FAST.Farm <fast.farm/index.rst>
    C++ API <cppapi/index.rst>
+   WaveTank <other/index.rst>
 
 
 Additional module documentation

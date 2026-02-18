@@ -32,6 +32,7 @@ MODULE SeaState
    USE SeaState_Output
    USE Current
    USE Waves2
+   USE GridInterp
    
    IMPLICIT NONE
    PRIVATE
@@ -184,6 +185,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
       
+      ! Store the WaveTimeShift
+      p%WaveField%WaveTimeShift = InitInp%WaveTimeShift
+      if (p%WaveField%WaveTimeShift < 0.0_DbKi) then
+         call SetErrStat(ErrID_Fatal, 'WaveTimeShift from driver code cannot be negative', ErrStat, ErrMsg, RoutineName)
+         return
+      endif
+
       ! Copy Waves initialization output into the initialization input type for the WAMIT module
       p%WaveDT       = InputFileData%Waves%WaveDT
       
@@ -274,16 +282,28 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
           
       CALL SeaStOut_WrSummaryFile(InitInp, InputFileData, p, ErrStat2, ErrMsg2); if(Failed()) return;
 
-      
 
-      ! Setup the 4D grid information for the Interpolation Module
-      p%WaveField%GridParams%n        = (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
-      p%WaveField%GridParams%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
-      p%WaveField%GridParams%pZero(1) = 0.0  !Time
-      p%WaveField%GridParams%pZero(2) = -InputFileData%X_HalfWidth
-      p%WaveField%GridParams%pZero(3) = -InputFileData%Y_HalfWidth
-      p%WaveField%GridParams%pZero(4) = -InputFileData%Z_Depth  ! zi
-      p%WaveField%GridParams%Z_Depth  =  InputFileData%Z_Depth
+      ! Setup the 3D and 4D grid information for the Interpolation Module
+      p%WaveField%GridDepth = InputFileData%Z_Depth
+
+      ! Set the parameters of the 3D free surface grid
+      CALL GridInterp_SetParams(3_IntKi,                                                       & ! dimension
+                                (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2)/),               & ! n
+                                (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2)/),         & ! delta
+                                (/0.0,-InputFileData%X_HalfWidth,-InputFileData%Y_HalfWidth/), & ! pZero
+                                (/.true.,.false.,.false./),                                    & ! periodicity
+                                p%WaveField%SrfGridParams, ErrStat2, ErrMsg2 )
+      if(Failed()) return;
+
+      ! Set the parameters of the 4D volume grid
+      CALL GridInterp_SetParams(4_IntKi,                                                              & ! dimension
+                                (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/),           & ! n
+                                (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/), & ! delta
+                                (/0.0,-InputFileData%X_HalfWidth,-InputFileData%Y_HalfWidth,0.0/),    & ! pZero
+                                (/.true.,.false.,.false.,.false./),                                   & ! periodicity
+                                p%WaveField%VolGridParams, ErrStat2, ErrMsg2 )
+      if(Failed()) return;
+
 
       IF ( p%OutSwtch == 1 ) THEN ! Only SeaSt-level output writing
          ! HACK  WE can tell FAST not to write any SeaState outputs by simply deallocating the WriteOutputHdr array!
@@ -404,15 +424,15 @@ CONTAINS
       ErrMsg3  = ""
 
       ! Grid half width from the WaveField
-      HWidX = (real(p%WaveField%GridParams%n(2)-1,SiKi)) / 2.0_SiKi * p%WaveField%GridParams%delta(2)
-      HWidY = (real(p%WaveField%GridParams%n(3)-1,SiKi)) / 2.0_SiKi * p%WaveField%GridParams%delta(3)
+      HWidX = (real(p%WaveField%SrfGridParams%n(2)-1,SiKi)) / 2.0_SiKi * p%WaveField%SrfGridParams%delta(2)
+      HWidY = (real(p%WaveField%SrfGridParams%n(3)-1,SiKi)) / 2.0_SiKi * p%WaveField%SrfGridParams%delta(3)
 
       if ((InitInp%SurfaceVisNx <= 0) .or. (InitInp%SurfaceVisNy <= 0))then      ! use the SeaState points exactly
          ! Set number of points to the number of seastate grid points in each direction
-         Nx = p%WaveField%GridParams%n(2)
-         Ny = p%WaveField%GridParams%n(3)
-         dx = p%WaveField%GridParams%delta(2)
-         dy = p%WaveField%GridParams%delta(3)
+         Nx = p%WaveField%SrfGridParams%n(2)
+         Ny = p%WaveField%SrfGridParams%n(3)
+         dx = p%WaveField%SrfGridParams%delta(2)
+         dy = p%WaveField%SrfGridParams%delta(3)
          call SetErrStat(ErrID_Info,"Setting wavefield visualization grid to "//trim(Num2LStr(Nx))//" x "//trim(Num2LStr(Ny))//"points",ErrStat3,ErrMsg3,RoutineName)
       elseif ((InitInp%SurfaceVisNx < 3) .or. (InitInp%SurfaceVisNx < 3)) then   ! Set to 3 for minimum
          Nx = 3

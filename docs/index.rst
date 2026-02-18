@@ -27,7 +27,7 @@ and underlying modules are mostly written in Fortran
 (adhering to the 2003 standard), and modules can also be written in C or
 C++. It was created with the goal of being a community model developed
 and used by research laboratories, academia, and industry. It is
-managed by a dedicated team at the National Renewable Energy Lab.
+managed by a dedicated team at the National Lab of the Rockies.
 Our objective is to ensure that OpenFAST is well tested, well
 documented, and self-sustaining software. To that end, we are continually
 improving the documentation and test coverage for existing code, and we
@@ -41,7 +41,11 @@ The following links provide more insight into OpenFAST as a software
 package:
 
 - `OpenFAST Github Organization <https://github.com/OpenFAST>`_
+
+Source code, releases, and example regression tests are available on Github at
 - `Github Repository <https://github.com/OpenFAST/OpenFAST>`_
+- `OpenFAST release notes and Windows executables <https://github.com/OpenFAST/openfast/releases>`_
+- `OpenFAST input files <https://github.com/OpenFAST/r-test/releases>`_
 
 **Documentation Directory**
 

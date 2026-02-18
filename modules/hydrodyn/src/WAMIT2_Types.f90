@@ -65,7 +65,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT2_MiscVarType
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LastIndWave      !< Index for last interpolation step of 2nd order forces [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves2      !< 2nd order force from this timestep [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the Grid Interpolation module [-]
   END TYPE WAMIT2_MiscVarType
 ! =======================
 ! =========  WAMIT2_ParameterType  =======
@@ -73,7 +73,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveExctn2Grid      !< Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component) [(N)]
-    TYPE(SeaSt_WaveField_ParameterType)  :: Exctn2GridParams      !< Parameters of WaveExctn2Grid [-]
+    TYPE(GridInterp_ParameterType)  :: Exctn2GridParams      !< Parameters of WaveExctn2Grid [-]
     LOGICAL , DIMENSION(1:6)  :: MnDriftDims = .false.      !< Flags for which dimensions to calculate in MnDrift   calculations [-]
     LOGICAL , DIMENSION(1:6)  :: NewmanAppDims = .false.      !< Flags for which dimensions to calculate in NewmanApp calculations [-]
     LOGICAL , DIMENSION(1:6)  :: DiffQTFDims = .false.      !< Flags for which dimensions to calculate in DiffQTF   calculations [-]
@@ -323,7 +323,7 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_Waves2 = SrcMiscData%F_Waves2
    end if
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -343,7 +343,7 @@ subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_Waves2)) then
       deallocate(MiscData%F_Waves2)
    end if
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -354,7 +354,7 @@ subroutine WAMIT2_PackMisc(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%LastIndWave)
    call RegPackAlloc(RF, InData%F_Waves2)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call GridInterp_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -368,7 +368,7 @@ subroutine WAMIT2_UnPackMisc(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_Waves2); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -397,7 +397,7 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
       end if
       DstParamData%WaveExctn2Grid = SrcParamData%WaveExctn2Grid
    end if
-   call SeaSt_WaveField_CopyParam(SrcParamData%Exctn2GridParams, DstParamData%Exctn2GridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyParam(SrcParamData%Exctn2GridParams, DstParamData%Exctn2GridParams, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%MnDriftDims = SrcParamData%MnDriftDims
@@ -424,7 +424,7 @@ subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%WaveExctn2Grid)) then
       deallocate(ParamData%WaveExctn2Grid)
    end if
-   call SeaSt_WaveField_DestroyParam(ParamData%Exctn2GridParams, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyParam(ParamData%Exctn2GridParams, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -436,7 +436,7 @@ subroutine WAMIT2_PackParam(RF, Indata)
    call RegPack(RF, InData%NBody)
    call RegPack(RF, InData%NBodyMod)
    call RegPackAlloc(RF, InData%WaveExctn2Grid)
-   call SeaSt_WaveField_PackParam(RF, InData%Exctn2GridParams) 
+   call GridInterp_PackParam(RF, InData%Exctn2GridParams) 
    call RegPack(RF, InData%MnDriftDims)
    call RegPack(RF, InData%NewmanAppDims)
    call RegPack(RF, InData%DiffQTFDims)
@@ -461,7 +461,7 @@ subroutine WAMIT2_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveExctn2Grid); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackParam(RF, OutData%Exctn2GridParams) ! Exctn2GridParams 
+   call GridInterp_UnpackParam(RF, OutData%Exctn2GridParams) ! Exctn2GridParams 
    call RegUnpack(RF, OutData%MnDriftDims); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NewmanAppDims); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTFDims); if (RegCheckErr(RF, RoutineName)) return

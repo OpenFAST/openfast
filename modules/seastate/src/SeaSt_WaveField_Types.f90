@@ -32,6 +32,7 @@
 MODULE SeaSt_WaveField_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE Current_Types
+USE GridInterp_Types
 USE IfW_FlowField_Types
 USE NWTC_Library
 IMPLICIT NONE
@@ -52,14 +53,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Superpose              = 0      ! WvCrntMod = 0 [Simpler superposition] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Doppler                = 1      ! WvCrntMod = 1 [Doppler effect] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Full                   = 2      ! WvCrntMod = 2 [Doppler effect and amplitude/spectrum scaling] [-]
-! =========  SeaSt_WaveField_ParameterType  =======
-  TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
-  END TYPE SeaSt_WaveField_ParameterType
-! =======================
 ! =========  SeaSt_WaveField_MiscVarType  =======
   TYPE, PUBLIC :: SeaSt_WaveField_MiscVarType
     REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the weighting function for 3-d velocity field [-]
@@ -83,7 +76,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point (NOTE THAT THIS CAN GET MODIFIED IN WAMIT) [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev1      !< First order wave elevation [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev2      !< Second order wave elevation [(m)]
-    TYPE(SeaSt_WaveField_ParameterType)  :: GridParams      !< Parameters for grid spacing [(-)]
+    TYPE(GridInterp_ParameterType)  :: SrfGridParams      !< Parameters of the wave free surface grid needed for interpolation [-]
+    TYPE(GridInterp_ParameterType)  :: VolGridParams      !< Parameters of the wave field volume grid needed for interpolation [-]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Wave stretching model [-]
     REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Water depth [(-)]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Vertical distance from mean sea level to still water level [(m)]
@@ -111,58 +105,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WvCrntMod = 0_IntKi      !< Wave-current modeling option. [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
+    REAL(SiKi)  :: GridDepth = 0.0_R4Ki      !< Depth (>0) of wave grid below SWL [m]
+    REAL(DbKi)  :: WaveTimeShift = 0      !< Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time) [(s)]
     TYPE(Current_InitInputType)  :: Current_InitInput      !< InitInputs in the Current Module. For coupling with MD. [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 
 contains
-
-subroutine SeaSt_WaveField_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
-   type(SeaSt_WaveField_ParameterType), intent(in) :: SrcParamData
-   type(SeaSt_WaveField_ParameterType), intent(inout) :: DstParamData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopyParam'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstParamData%n = SrcParamData%n
-   DstParamData%delta = SrcParamData%delta
-   DstParamData%pZero = SrcParamData%pZero
-   DstParamData%Z_Depth = SrcParamData%Z_Depth
-end subroutine
-
-subroutine SeaSt_WaveField_DestroyParam(ParamData, ErrStat, ErrMsg)
-   type(SeaSt_WaveField_ParameterType), intent(inout) :: ParamData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_DestroyParam'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine SeaSt_WaveField_PackParam(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SeaSt_WaveField_ParameterType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackParam'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%n)
-   call RegPack(RF, InData%delta)
-   call RegPack(RF, InData%pZero)
-   call RegPack(RF, InData%Z_Depth)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_WaveField_UnPackParam(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SeaSt_WaveField_ParameterType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_WaveField_UnPackParam'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Z_Depth); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
 
 subroutine SeaSt_WaveField_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_WaveField_MiscVarType), intent(in) :: SrcMiscData
@@ -370,7 +319,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       end if
       DstSeaSt_WaveFieldTypeData%WaveElev2 = SrcSeaSt_WaveFieldTypeData%WaveElev2
    end if
-   call SeaSt_WaveField_CopyParam(SrcSeaSt_WaveFieldTypeData%GridParams, DstSeaSt_WaveFieldTypeData%GridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyParam(SrcSeaSt_WaveFieldTypeData%SrfGridParams, DstSeaSt_WaveFieldTypeData%SrfGridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call GridInterp_CopyParam(SrcSeaSt_WaveFieldTypeData%VolGridParams, DstSeaSt_WaveFieldTypeData%VolGridParams, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstSeaSt_WaveFieldTypeData%WaveStMod = SrcSeaSt_WaveFieldTypeData%WaveStMod
@@ -433,6 +385,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WvCrntMod = SrcSeaSt_WaveFieldTypeData%WvCrntMod
    DstSeaSt_WaveFieldTypeData%NStepWave = SrcSeaSt_WaveFieldTypeData%NStepWave
    DstSeaSt_WaveFieldTypeData%NStepWave2 = SrcSeaSt_WaveFieldTypeData%NStepWave2
+   DstSeaSt_WaveFieldTypeData%GridDepth = SrcSeaSt_WaveFieldTypeData%GridDepth
+   DstSeaSt_WaveFieldTypeData%WaveTimeShift = SrcSeaSt_WaveFieldTypeData%WaveTimeShift
    call Current_CopyInitInput(SrcSeaSt_WaveFieldTypeData%Current_InitInput, DstSeaSt_WaveFieldTypeData%Current_InitInput, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -483,7 +437,9 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, E
    if (allocated(SeaSt_WaveFieldTypeData%WaveElev2)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveElev2)
    end if
-   call SeaSt_WaveField_DestroyParam(SeaSt_WaveFieldTypeData%GridParams, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyParam(SeaSt_WaveFieldTypeData%SrfGridParams, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call GridInterp_DestroyParam(SeaSt_WaveFieldTypeData%VolGridParams, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SeaSt_WaveFieldTypeData%WaveElevC)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveElevC)
@@ -517,7 +473,8 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPackAlloc(RF, InData%WaveElev0)
    call RegPackAlloc(RF, InData%WaveElev1)
    call RegPackAlloc(RF, InData%WaveElev2)
-   call SeaSt_WaveField_PackParam(RF, InData%GridParams) 
+   call GridInterp_PackParam(RF, InData%SrfGridParams) 
+   call GridInterp_PackParam(RF, InData%VolGridParams) 
    call RegPack(RF, InData%WaveStMod)
    call RegPack(RF, InData%EffWtrDpth)
    call RegPack(RF, InData%MSL2SWL)
@@ -551,6 +508,8 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPack(RF, InData%WvCrntMod)
    call RegPack(RF, InData%NStepWave)
    call RegPack(RF, InData%NStepWave2)
+   call RegPack(RF, InData%GridDepth)
+   call RegPack(RF, InData%WaveTimeShift)
    call Current_PackInitInput(RF, InData%Current_InitInput) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -577,7 +536,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WaveElev0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveElev1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveElev2); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackParam(RF, OutData%GridParams) ! GridParams 
+   call GridInterp_UnpackParam(RF, OutData%SrfGridParams) ! SrfGridParams 
+   call GridInterp_UnpackParam(RF, OutData%VolGridParams) ! VolGridParams 
    call RegUnpack(RF, OutData%WaveStMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EffWtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
@@ -622,6 +582,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%WvCrntMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GridDepth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveTimeShift); if (RegCheckErr(RF, RoutineName)) return
    call Current_UnpackInitInput(RF, OutData%Current_InitInput) ! Current_InitInput 
 end subroutine
 

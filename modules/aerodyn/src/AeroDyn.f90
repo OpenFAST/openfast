@@ -492,7 +492,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
             ! Initialize the AeroAcoustics Module if the CompAA flag is set
             !............................................................................................
          if (p%rotors(iR)%CompAA) then
-            call Init_AAmodule( InitInp%rotors(iR), InputFileData, InputFileData%rotors(iR), u%rotors(iR), m%rotors(iR)%AA_u, p%rotors(iR), p, x%rotors(iR)%AA, xd%rotors(iR)%AA, z%rotors(iR)%AA, OtherState%rotors(iR)%AA, m%rotors(iR)%AA_y, m%rotors(iR)%AA, AA_InitOut, ErrStat2, ErrMsg2 )
+            call Init_AAmodule( InitInp%rotors(iR), InputFileData, InputFileData%rotors(iR), u%rotors(iR), m%rotors(iR)%AA_u, p%rotors(iR), p, xd%rotors(iR)%AA, OtherState%rotors(iR)%AA, m%rotors(iR)%AA_y, m%rotors(iR)%AA, AA_InitOut, ErrStat2, ErrMsg2 )
             if (Failed()) return;
          end if   
       enddo
@@ -1784,7 +1784,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             do iR = 1, SIZE(p%rotors)
 
                if (p%rotors(iR)%CompAA) then
-                  call AA_End( m%rotors(iR)%AA_u, p%rotors(iR)%AA,  x%rotors(iR)%AA, xd%rotors(iR)%AA, z%rotors(iR)%AA, OtherState%rotors(iR)%AA, m%rotors(iR)%AA_y, m%rotors(iR)%AA, ErrStat, ErrMsg )
+                  call AA_End( m%rotors(iR)%AA_u, p%rotors(iR)%AA, xd%rotors(iR)%AA, OtherState%rotors(iR)%AA, m%rotors(iR)%AA_y, m%rotors(iR)%AA, ErrStat, ErrMsg )
                end if
 
             enddo
@@ -2284,7 +2284,7 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
          ! Also,  SetInputs() [called above] calls SetInputsForBEMT() which in turn establishes current versions of the Global to local transformations we need as inputs to AA
          call SetInputsForAA(p, u, RotInflow, m, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         call AA_CalcOutput(t, m%AA_u, p%AA, x%AA, xd%AA,  z%AA, OtherState%AA,  m%AA_y, m%AA, errStat2, errMsg2)
+         call AA_CalcOutput(t, m%AA_u, p%AA, xd%AA, OtherState%AA, m%AA_y, m%AA, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! 
       end if     
@@ -4774,7 +4774,7 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, RootName, ErrStat, ErrMsg
 END SUBROUTINE Init_AFIparams
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the Airfoil Noise module from within AeroDyn.
-SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, u, p, p_AD, x, xd, z, OtherState, y, m, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, u, p, p_AD, xd, OtherState, y, m, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
    type(RotInitInputType),       intent(in   ) :: DrvInitInp    !< AeroDyn-level initialization inputs
    type(AD_InputFile),           intent(in   ) :: AD_InputFileData  !< All the data in the AeroDyn input file
@@ -4783,9 +4783,9 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, 
    type(AA_InputType),           intent(  out) :: u              !< An initial guess for the input; input mesh must be defined
    type(RotParameterType),       intent(inout) :: p              !< Parameters ! intent out b/c we set the AA parameters here
    type(AD_ParameterType),       intent(inout) :: p_AD           !< Parameters ! intent out b/c we set the AA parameters here
-   type(AA_ContinuousStateType), intent(  out) :: x              !< Initial continuous states
+   !type(AA_ContinuousStateType), intent(  out) :: x              !< Initial continuous states
    type(AA_DiscreteStateType),   intent(  out) :: xd             !< Initial discrete states
-   type(AA_ConstraintStateType), intent(  out) :: z              !< Initial guess of the constraint states
+   !type(AA_ConstraintStateType), intent(  out) :: z              !< Initial guess of the constraint states
    type(AA_OtherStateType),      intent(  out) :: OtherState     !< Initial other states
    type(AA_OutputType),          intent(  out) :: y              !< Initial system outputs (outputs are not calculated;
                                                                  !!   only the output mesh is initialized)
@@ -4821,17 +4821,6 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, 
    InitInp%SpdSound         = AD_InputFileData%SpdSound
    InitInp%HubHeight        = DrvInitInp%HubPosition(3)
 
-   ! --- Transfer of airfoil info
-   ALLOCATE ( InitInp%AFInfo( size(p_AD%AFI) ), STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the InitInp%AFInfo array.', ErrStat2, ErrMsg2, RoutineName )
-      RETURN
-   ENDIF
-   do i=1,size(p_AD%AFI)
-      call AFI_CopyParam( p_AD%AFI(i), InitInp%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   end do
-  
    ! --- Allocate and set AirfoilID, chord and Span for each blades
    ! note here that each blade is required to have the same number of nodes
    call AllocAry( InitInp%BlAFID, p%NumBlNds, p%NumBlades,'InitInp%BlAFID', errStat2, ErrMsg2 )
@@ -4846,14 +4835,14 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, 
    end if
    do k = 1, p%NumBlades
       do j=1, RotInputFileData%BladeProps(k)%NumBlNds
-         InitInp%BlChord(j,k)  = RotInputFileData%BladeProps(k)%BlChord(  j)
+         InitInp%BlChord(j,k)  = RotInputFileData%BladeProps(k)%BlChord(j)
          InitInp%BlSpn  (j,k)  = RotInputFileData%BladeProps(k)%BlSpn(j)
-         InitInp%BlAFID(j,k)   = RotInputFileData%BladeProps(k)%BlAFID(j)           
+         InitInp%BlAFID(j,k)   = RotInputFileData%BladeProps(k)%BlAFID(j)
       end do
    end do
    
    ! --- AeroAcoustics initialization call
-   call AA_Init(InitInp, u, p%AA,  x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call AA_Init(InitInp, u, p%AA, xd, OtherState, y, m, Interval, p_AD%AFI, InitOut, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
 
    call Cleanup()
@@ -4861,7 +4850,7 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, RotInputFileData, u_AD, 
 contains   
 
    subroutine Cleanup()
-      call AA_DestroyInitInput ( InitInp, ErrStat2, ErrMsg2 )   
+      call AA_DestroyInitInput ( InitInp, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
    
 END SUBROUTINE Init_AAmodule

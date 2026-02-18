@@ -307,6 +307,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompSub'], 'CompSub', '- Compute sub-structural dynamics (switch) {0=None; 1=SubDyn; 2=External Platform MCKF}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompMooring'], 'CompMooring', '- Compute mooring system (switch) {0=None; 1=MAP++; 2=FEAMooring; 3=MoorDyn; 4=OrcaFlex}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompIce'], 'CompIce', '- Compute ice loads (switch) {0=None; 1=IceFloe; 2=IceDyn}\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompSoil'], 'CompSoil', '- Compute soil-structural dynamics (switch) {0=None; 1=SoilDyn}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['MHK'], 'MHK', '- MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}\n'))
         f.write('{:<22} {:<11} {:}'.format(' '.join([str(b)[0] for b in np.array(self.fst_vt['Fst']['MirrorRotor'], dtype=bool)]), 'MirrorRotor', '- List of rotor rotation directions [1 to NRotors] {0=CCW, 1=CW}\n'))
         f.write('---------------------- ENVIRONMENTAL CONDITIONS --------------------------------\n')
@@ -332,6 +333,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['SubFile']+'"', 'SubFile', '- Name of file containing sub-structural input parameters (quoted string)\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['MooringFile']+'"', 'MooringFile', '- Name of file containing mooring system input parameters (quoted string)\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['IceFile']+'"', 'IceFile', '- Name of file containing ice input parameters (quoted string)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['SoilFile']+'"', 'SoilFile', '- Name of file containing soil input parameters (quoted string)\n'))
         # for i in range(1, self.fst_vt['Fst']['NRotors']):
         #     f.write('---------------------- INPUT FILES Rotor '+str(i+1)+' -------------------------------------\n')
         #     f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['Fst']['EDFiles'][i]+'"', 'EDFile', '- Name of file containing ElastoDyn input parameters (quoted string)\n'))
@@ -463,7 +465,8 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['BlPIner(2)'], 'BlPIner(2)', '- Blade pitch inertia, blade 2 (kg m^2)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['BlPIner(3)'], 'BlPIner(3)', '- Blade pitch inertia, blade 3 (kg m^2) [unused for 2 blades]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['HubMass'], 'HubMass', '- Hub mass (kg)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['HubIner'], 'HubIner', '- Hub inertia about rotor axis [3 blades] or teeter axis [2 blades] (kg m^2)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['HubIner'], 'HubIner', 'Hub inertia about rotor axis (2 or 3-blades) (kg m^2)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['HubIner_Teeter'], 'HubIner_Teeter', 'Hub inertia about teeter axis (2-blades) (kg m^2)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['GenIner'], 'GenIner', '- Generator inertia about HSS (kg m^2)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['NacMass'], 'NacMass', '- Nacelle mass (kg)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDyn']['NacYIner'], 'NacYIner', '- Nacelle inertia about yaw axis (kg m^2)\n'))
@@ -838,6 +841,9 @@ class InputWriter_OpenFAST(object):
             f.write('\n')
 
         f.write('\n')
+        f.flush()
+        os.fsync(f)
+        f.close()
 
     def write_InflowWind(self):
         self.fst_vt['Fst']['InflowFile'] = self.FAST_namingOut + '_InflowWind.dat'

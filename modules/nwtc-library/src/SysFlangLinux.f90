@@ -55,7 +55,7 @@ MODULE SysSubs
     END INTERFACE
  
     INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-    INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+    INTEGER, PUBLIC               :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
     INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
     LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
     CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
@@ -107,7 +107,15 @@ MODULE SysSubs
  
  CONTAINS
  
- 
+ !=======================================================================
+ SUBROUTINE SetConsoleUnit( Unit )
+   ! This subroutine sets the console unit for output.
+   
+   INTEGER, INTENT(IN)  :: Unit  !< The new I/O unit number for the console.
+   CU = Unit
+   
+ END SUBROUTINE SetConsoleUnit
+ !=======================================================================
  FUNCTION Is_NaN( DblNum )
  
     ! This routine determines if a REAL(DbKi) variable holds a proper number.

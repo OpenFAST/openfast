@@ -101,8 +101,7 @@ subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
-   character(1000)      :: inputFile     ! String to hold the file name.
-   character(200)       :: git_commit    ! String containing the current git commit hash
+   character(1000)      :: InputFile     ! String to hold the file name.
    character(20)        :: FlagArg       ! flag argument from command line
    integer              :: iWT           ! Index on wind turbines/rotors
    errStat = ErrID_None
@@ -113,7 +112,7 @@ subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
    
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop() ! stop if user set a flag argument (like '-h' or '-v')
    
    ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )

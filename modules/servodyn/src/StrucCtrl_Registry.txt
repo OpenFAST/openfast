@@ -105,6 +105,7 @@ typedef	^	StC_CtrlChanInitInfoType	SiKi	InitStiff			{:}{:}	-	-	"StC stiffness at
 typedef	^	StC_CtrlChanInitInfoType	SiKi	InitDamp			{:}{:}	-	-	"StC damping at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init"	"N/(m/s)"
 typedef	^	StC_CtrlChanInitInfoType	SiKi	InitBrake			{:}{:}	-	-	"StC braking signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init"	"N"
 typedef	^	StC_CtrlChanInitInfoType	SiKi	InitForce			{:}{:}	-	-	"StC external force signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init (should be zero)"	"N"
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitMoment			{:}{:}	-	-	"StC external moment signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init (should be zero)"	"N-m"
 typedef	^	StC_CtrlChanInitInfoType	SiKi	InitMeasDisp			{:}{:}	-	-	"StC measured local displacement signal from StC at initialization  (3,NumStC_Control)"	"m"
 typedef	^	StC_CtrlChanInitInfoType	SiKi	InitMeasVel			{:}{:}	-	-	"StC measured local velocity     signal from StC at initialization (3,NumStC_Control)"	"m/s"
 
@@ -126,6 +127,7 @@ typedef ^ 		OtherStateType 	Reki DummyOtherState - - - "Remove this variable if 
 # at a given time, etc.) or other data that do not depend on time
 typedef ^ 		MiscVarType  Reki			F_stop   {:}{:} - - "Stop forces" -
 typedef	^		MiscVarType  ReKi			F_ext	{:}{:}	-	-	"External forces (user defined or from controller)"	-
+typedef	^		MiscVarType  ReKi			M_ext	{:}{:}	-	-	"External moments (user defined or from controller)"	-
 typedef	^		MiscVarType  ReKi			F_fr	{:}{:}	-	-	"Friction forces"	-
 typedef	^		MiscVarType  ReKi			K	{:}{:}	-	-	"Stiffness -- might be changed if controller controls this" N/m
 typedef	^		MiscVarType  ReKi			C_ctrl	{:}{:}	-	-	"Controlled Damping (On/Off)"	-
@@ -205,6 +207,7 @@ typedef	^		^				ReKi	CmdStiff	{:}{:}	-	-	"StC stiffness from controller"	"N/m"
 typedef	^		^				ReKi	CmdDamp	{:}{:}	-	-	"StC damping   from controller"	"N/(m/s)"
 typedef	^		^				ReKi	CmdBrake	{:}{:}	-	-	"StC braking   from controller"	"N/(m/s)"
 typedef	^		^				ReKi	CmdForce	{:}{:}	-	-	"StC force     from controller"	"N"
+typedef	^		^				ReKi	CmdMoment	{:}{:}	-	-	"StC moment     from controller"	"N-m"
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^   OutputType          MeshType        Mesh                     {:}         -         -         "Loads at the StC reference points in the inertial frame" -

@@ -97,6 +97,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: defMSL2SWL = 0.0_ReKi      !< Default mean sea level to still water level from the driver; may be overwritten [m]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK flag [-]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
+    REAL(DbKi)  :: WaveTimeShift = 0      !< Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time) [(s)]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
@@ -183,7 +184,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
     TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
     TYPE(SeaSt_InputType)  :: u_perturb      !< Input type for linearization perturbation [-]
     TYPE(SeaSt_OutputType)  :: y_lin      !< Output type for linearization perturbation [-]
@@ -484,6 +485,7 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%TMax = SrcInitInputData%TMax
+   DstInitInputData%WaveTimeShift = SrcInitInputData%WaveTimeShift
    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
@@ -528,6 +530,7 @@ subroutine SeaSt_PackInitInput(RF, Indata)
    call RegPack(RF, InData%defMSL2SWL)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%TMax)
+   call RegPack(RF, InData%WaveTimeShift)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%PtfmLocationX)
    call RegPack(RF, InData%PtfmLocationY)
@@ -569,6 +572,7 @@ subroutine SeaSt_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%defMSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaveTimeShift); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmLocationX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmLocationY); if (RegCheckErr(RF, RoutineName)) return
@@ -1302,7 +1306,7 @@ subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
@@ -1325,7 +1329,7 @@ subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1343,7 +1347,7 @@ subroutine SeaSt_PackMisc(RF, Indata)
    call RegPack(RF, InData%Decimate)
    call RegPack(RF, InData%LastOutTime)
    call RegPack(RF, InData%LastIndWave)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call GridInterp_PackMisc(RF, InData%WaveField_m) 
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call SeaSt_PackInput(RF, InData%u_perturb) 
    call SeaSt_PackOutput(RF, InData%y_lin) 
@@ -1358,7 +1362,7 @@ subroutine SeaSt_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call SeaSt_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
    call SeaSt_UnpackOutput(RF, OutData%y_lin) ! y_lin 

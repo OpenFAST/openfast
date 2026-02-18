@@ -17,6 +17,7 @@
 if (GENERATE_TYPES)
   generate_f90_types(src/Registry_NWTC_Library_base.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_Types.f90 -noextrap)
   generate_f90_types(src/Registry_NWTC_Library_mesh.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90 -incsubs -noextrap)
+  generate_f90_types(src/GridInterp.txt                 ${CMAKE_CURRENT_SOURCE_DIR}/src/GridInterp_Types.f90 -noextrap)
   # Generate Registry_NWTC_Library.txt by concatenating _base.txt and _mesh.txt
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
     src/Registry_NWTC_Library_mesh.txt 
@@ -86,6 +87,9 @@ set(NWTCLIBS_SOURCES
   src/YAML.f90
   src/JSON.f90
   src/KdTree.f90
+
+  src/GridInterp.f90
+  src/GridInterp_Types.f90
 
   # RanLux sources
   src/ranlux/RANLUX.f90

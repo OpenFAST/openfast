@@ -168,6 +168,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_IfW_Low      !< InflowWind module outputs for the low-resolution grid [-]
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: planeDomainExit      !< Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed [-]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  LRGChunkType  =======
@@ -1429,6 +1430,18 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%V_amb_low_disk = SrcMiscData%V_amb_low_disk
    end if
+   if (allocated(SrcMiscData%planeDomainExit)) then
+      LB(1:2) = lbound(SrcMiscData%planeDomainExit)
+      UB(1:2) = ubound(SrcMiscData%planeDomainExit)
+      if (.not. allocated(DstMiscData%planeDomainExit)) then
+         allocate(DstMiscData%planeDomainExit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%planeDomainExit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%planeDomainExit = SrcMiscData%planeDomainExit
+   end if
 end subroutine
 
 subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -1538,6 +1551,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%V_amb_low_disk)) then
       deallocate(MiscData%V_amb_low_disk)
    end if
+   if (allocated(MiscData%planeDomainExit)) then
+      deallocate(MiscData%planeDomainExit)
+   end if
 end subroutine
 
 subroutine AWAE_PackMisc(RF, Indata)
@@ -1599,6 +1615,7 @@ subroutine AWAE_PackMisc(RF, Indata)
       end do
    end if
    call RegPackAlloc(RF, InData%V_amb_low_disk)
+   call RegPackAlloc(RF, InData%planeDomainExit)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1675,6 +1692,7 @@ subroutine AWAE_UnPackMisc(RF, OutData)
       end do
    end if
    call RegUnpackAlloc(RF, OutData%V_amb_low_disk); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%planeDomainExit); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyLRGChunkType(SrcLRGChunkTypeData, DstLRGChunkTypeData, CtrlCode, ErrStat, ErrMsg)

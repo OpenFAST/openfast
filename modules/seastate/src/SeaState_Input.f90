@@ -705,9 +705,18 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
        ! WavePkShp - Peak shape parameter
-   if ( ( InputFileData%Waves%WavePkShp < 1.0 ) .OR. ( InputFileData%Waves%WavePkShp > 7.0 ) )  then
-      call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
-      return
+   if ( InputFileData%WaveMod == WaveMod_JONSWAP ) then   ! Only used for JONSWAP/Pierson-Moskowitz spectrum
+
+      if ( ( InputFileData%Waves%WavePkShp < 1.0_SiKi ) .OR. ( InputFileData%Waves%WavePkShp > 7.0_SiKi ) )  then
+         call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+
+   else
+
+      ! For nonJONSWAP/Pierson-Moskowitz spectrum, WavePkShp is not used. Force it to 1.0.
+      InputFileData%Waves%WavePkShp = 1.0_SiKi
+
    end if
 
 
@@ -927,10 +936,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       return
    end if
 
-   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= MHK_None ) ) then
-      call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 for an MHK turbine.',ErrStat,ErrMsg,RoutineName)
-      return
-   end if
+   ! if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= MHK_None ) ) then
+   !    call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 for an MHK turbine.',ErrStat,ErrMsg,RoutineName)
+   !    return
+   ! end if
 
 
    if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.

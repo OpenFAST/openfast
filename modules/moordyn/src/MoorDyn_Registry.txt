@@ -16,6 +16,13 @@
 include Registry_NWTC_Library.txt
 usefrom SeaSt_WaveField.txt
 
+
+## ====== parameters =======
+param     MoorDyn/MD  -                IntKi              MD_MaxNCoef     -   30    -   "maximum number of entries to allow in nonlinear coefficient lookup tables" -
+param     MoorDyn/MD  -                IntKi              MD_MaxBdAtch    -  100    -   "maximum number of attachments to a body" -
+param     MoorDyn/MD  -                IntKi              MD_MaxPtAtch    -  100    -   "maximum number of attachments to a point" -
+param     MoorDyn/MD  -                IntKi              MD_MaxFailLines -   30    -   "maximum number of line failures that can be simulated" -
+
 ## ====== some data read from the input file, but not needed after init ======
 typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    0.5   -   "convergence check time step for IC generation"              "[s]"
 typedef   ^           ^                DbKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
@@ -68,14 +75,14 @@ typedef  ^            ^                DbKi               dF             -      
 typedef  ^            ^                DbKi               cF             -       -  -   "Center VIV synchronization in non-dimensional frequency"
 typedef  ^            ^                IntKi              ElasticMod     -       -  -   "Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload} "     -
 typedef  ^            ^                IntKi              nEApoints      -       -  -   "number of values in stress-strain lookup table (0 means using constant E)"
-typedef  ^            ^                DbKi               stiffXs        {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               stiffYs        {30}    -  -   "y array for stress-strain lookup table"
+typedef  ^            ^                DbKi               stiffXs  {MD_MaxNCoef} -  -   "x array for stress-strain lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               stiffYs  {MD_MaxNCoef} -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                IntKi              nBApoints      -       -  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
-typedef  ^            ^                DbKi               dampXs         {30}    -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs         {30}    -  -   "y array for stress-strainrate lookup table"
+typedef  ^            ^                DbKi               dampXs   {MD_MaxNCoef} -  -   "x array for stress-strainrate lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               dampYs   {MD_MaxNCoef} -  -   "y array for stress-strainrate lookup table"
 typedef  ^            ^                IntKi              nEIpoints      -       -  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
-typedef  ^            ^                DbKi               bstiffXs       {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               bstiffYs       {30}    -  -   "y array for stress-strain lookup table"
+typedef  ^            ^                DbKi               bstiffXs {MD_MaxNCoef} -  -   "x array for stress-strain lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               bstiffYs {MD_MaxNCoef} -  -   "y array for stress-strain lookup table"
 
 # rod properties from rod dictionary input
 typedef  ^            MD_RodProp       IntKi              IdNum          -       -  -   "integer identifier of this set of rod properties"
@@ -92,12 +99,12 @@ typedef  ^            ^                DbKi               CaEnd          -      
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned"
-typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
-typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
+typedef  ^            ^                IntKi              AttachedC   {MD_MaxBdAtch} - - "list of IdNums of points attached to this body"
+typedef  ^            ^                IntKi              AttachedR   {MD_MaxBdAtch} - - "list of IdNums of rods attached to this body"
 typedef  ^            ^                IntKi              nAttachedP     -       -  -   "number of attached points"
 typedef  ^            ^                IntKi              nAttachedR     -       -  -   "number of attached rods"
-typedef  ^            ^                DbKi               rPointRel    {3}{30}   -  -   "relative position of point on body"
-typedef  ^            ^                DbKi               r6RodRel     {6}{30}   -  -   "relative position and orientation of rod on body"
+typedef  ^            ^                DbKi               rPointRel  {3}{MD_MaxBdAtch} - - "relative position of point on body"
+typedef  ^            ^                DbKi               r6RodRel   {6}{MD_MaxBdAtch} - - "relative position and orientation of rod on body"
 typedef  ^            ^                DbKi               bodyM          -       -  -   "body mass (separate from attached objects)" "[kg]"
 typedef  ^            ^                DbKi               bodyV          -       -  -   "body volume (for buoyancy calculation)" "[m^3]"
 typedef  ^            ^                DbKi               bodyI          {3}     -  -   "body 3x3 inertia matrix diagonals" "[kg-m^2]"
@@ -127,8 +134,8 @@ typedef  ^            ^                DbKi               BquadL         {3}    
 typedef  ^            MD_Point       IntKi              IdNum            -       -  -   "integer identifier of this point"
 typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of point: fix, vessel, point"
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=coupled, 0=free"
-typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this point node"
-typedef  ^            ^                IntKi              Top            {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
+typedef  ^            ^                IntKi              Attached   {MD_MaxPtAtch} - - "list of IdNums of lines attached to this point node"
+typedef  ^            ^                IntKi              Top        {MD_MaxPtAtch} - - "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttached      -       -  -   "number of attached lines"
 typedef  ^            ^                DbKi               pointM         -       -  -   "point mass" "[kg]"
 typedef  ^            ^                DbKi               pointV         -       -  -   "point volume" "[m^3]"
@@ -156,10 +163,10 @@ typedef  ^            MD_Rod           IntKi              IdNum          -      
 typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of Rod.  should match one of RodProp names"
 typedef  ^            ^                IntKi              PropsIdNum     -       -  -   "the IdNum of the associated rod properties"     -
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled"
-typedef  ^            ^                IntKi              AttachedA      {10}    -  -   "list of IdNums of lines attached to end A"
-typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
-typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
-typedef  ^            ^                IntKi              TopB           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
+typedef  ^            ^                IntKi              AttachedA  {MD_MaxPtAtch} - - "list of IdNums of lines attached to end A"
+typedef  ^            ^                IntKi              AttachedB  {MD_MaxPtAtch} - - "list of IdNums of lines attached to end B"
+typedef  ^            ^                IntKi              TopA       {MD_MaxPtAtch} - - "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
+typedef  ^            ^                IntKi              TopB       {MD_MaxPtAtch} - - "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttachedA     -       -  -   "number of attached lines to Rod end A"
 typedef  ^            ^                IntKi              nAttachedB     -       -  -   "number of attached lines to Rod end B"
 typedef  ^            ^                IntKi              OutFlagList   {55}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
@@ -249,14 +256,14 @@ typedef  ^            ^                DbKi               Cl             -      
 typedef  ^            ^                DbKi               dF             -       -  -   "+- range of VIV synchronization in non-dimensional frequency"
 typedef  ^            ^                DbKi               cF             -       -  -   "Center VIV synchronization in non-dimensional frequency"
 typedef  ^            ^                IntKi              nEApoints     -        -  -   "number of values in stress-strain lookup table (0 means using constant E)"
-typedef  ^            ^                DbKi               stiffXs       {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               stiffYs       {30}     -  -   "y array for stress-strain lookup table"
+typedef  ^            ^                DbKi               stiffXs  {MD_MaxNCoef} -  -   "x array for stress-strain lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               stiffYs  {MD_MaxNCoef} -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                IntKi              nBApoints     -        -  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
-typedef  ^            ^                DbKi               dampXs        {30}     -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs        {30}     -  -   "y array for stress-strainrate lookup table"
+typedef  ^            ^                DbKi               dampXs   {MD_MaxNCoef} -  -   "x array for stress-strainrate lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               dampYs   {MD_MaxNCoef} -  -   "y array for stress-strainrate lookup table"
 typedef  ^            ^                IntKi              nEIpoints     -        -  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
-typedef  ^            ^                DbKi               bstiffXs      {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               bstiffYs      {30}     -  -   "y array for stress-strain lookup table"
+typedef  ^            ^                DbKi               bstiffXs {MD_MaxNCoef} -  -   "x array for stress-strain lookup table (up to MD_MaxNCoef)"
+typedef  ^            ^                DbKi               bstiffYs {MD_MaxNCoef} -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               r            {:}{:}    -  -   "node positions"    -
 typedef  ^            ^                DbKi               rd           {:}{:}    -  -   "node velocities"  -
@@ -312,8 +319,8 @@ typedef  ^            ^                LOGICAL            isGlobal        -     
 typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"
 typedef  ^            ^                IntKi              attachID        -        -  -   "ID of connection or Rod the lines are attached to" "-"
 typedef  ^            ^                IntKi              isRod           -        -  -   "1 Rod end A, 2 Rod end B, 0 if point" "-"
-typedef  ^            ^                IntKi              lineIDs         {30}     -  -   "array of one or more lines to detach (starting from 1...)" "-"
-typedef  ^            ^                IntKi              lineTops        {30}     -  -   "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
+typedef  ^            ^                IntKi              lineIDs         {MD_MaxFailLines} - - "array of one or more lines to detach (starting from 1...)" "-"
+typedef  ^            ^                IntKi              lineTops        {MD_MaxFailLines} - - "an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)" "-"
 typedef  ^            ^                IntKi              nLinesToDetach  -        -  -   "how many lines to dettach" "-"
 typedef  ^            ^                DbKi               failTime        -        -  -   "time of failure" "s"
 typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
@@ -493,5 +500,5 @@ typedef   ^       ^                    DbKi             BathymetryGrid   {:}{:} 
 typedef   ^       ^                    DbKi                BathGrid_Xs      {:}  -  -   "array of x-coordinates in the bathymetry grid"
 typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
 typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"
-typedef   ^       ^          SeaSt_WaveField_MiscVarType   WaveField_m       -   -  -   "misc var information from the SeaState Interpolation module"   -
+typedef   ^       ^          GridInterp_MiscVarType        WaveField_m       -   -  -   "misc var information from the SeaState Interpolation module"   -
 typedef  ^        ^                    LOGICAL             IC_gen           - .FALSE. -   "boolean to indicate dynamic relaxation occuring"  "-"

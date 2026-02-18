@@ -49,19 +49,23 @@ module AeroAcoustics
    
    REAL(ReKi), parameter :: AA_u_min = 0.1_ReKi
    REAL(ReKi), parameter :: AA_EPSILON = 1.E-16 ! EPSILON(AA_EPSILON)
+   
+   REAL(ReKi), parameter :: RotorRegionAlph_delta = 60.0_ReKi ! degrees : size of bin, must be a number that evenly divides 360 degrees
+   REAL(ReKi), parameter :: RotorRegionRad_delta  =  5.0_ReKi ! meters : size of bin along blade span (rotor radius)
+   REAL(ReKi), parameter :: RotorRegionTimeSampling  =  5.0_ReKi ! seconds (for Num_total_sampleTI)
 
    contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-   type(AA_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
+subroutine AA_Init( InitInp, u, p, xd, OtherState, y, m, Interval, AFInfo, InitOut, ErrStat, ErrMsg )
+   type(AA_InitInputType),       intent(inout) :: InitInp       !< Input data for initialization routine; out because we move allocated array
    type(AA_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
    type(AA_ParameterType),       intent(  out) :: p             !< Parameters
-   type(AA_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
+   !type(AA_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(AA_DiscreteStateType),   intent(  out) :: xd            !< Initial discrete states
-   type(AA_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
+   !type(AA_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
    type(AA_OtherStateType),      intent(  out) :: OtherState    !< Initial other states
    type(AA_OutputType),          intent(  out) :: y             !< Initial system outputs (outputs are not calculated;
                                                                 !!   only the output mesh is initialized)
@@ -75,6 +79,9 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(AA_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+   type(AFI_ParameterType),      intent(in   ) :: AFInfo(:)   !< The airfoil parameter data
+!   integer(IntKi),               intent(in   ) :: AFIndx(:,:)
+   
    ! Local variables
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
@@ -90,15 +97,15 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call DispNVD( AA_Ver )
 
    ! To get rid of a compiler warning.
-   x%DummyContState           = 0.0_SiKi
-   z%DummyConstrState         = 0.0_SiKi
+   !x%DummyContState           = 0.0_SiKi
+   !z%DummyConstrState         = 0.0_SiKi
 
    !bjj: note that we haven't validated p%NumBlades before using it below!
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    p%RootName  = TRIM(InitInp%RootName)//'.'//trim(AA_Nickname)
    
    ! Read the primary AeroAcoustics input file in AeroAcoustics_IO
-   call ReadInputFiles( InitInp%InputFile, InitInp%AFInfo, InputFileData, interval, p%RootName, ErrStat2, ErrMsg2 )
+   call ReadInputFiles( InitInp%InputFile, AFInfo, InputFileData, interval, p%RootName, ErrStat2, ErrMsg2 )
    if (Failed()) return
       
    ! Validate the inputs
@@ -108,19 +115,20 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    if (InitInp%AirDens <= 0.0)  call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%KinVisc <= 0.0)  call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )  
+   if (InitInp%NumBlNds < 1) call SetErrStat ( ErrID_Fatal, 'AeroAcoustics requires at least 1 node.', ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
    ! Define parameters
-   call SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 ); if(Failed()) return
+   call SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat2, ErrMsg2 ); if(Failed()) return
    ! Define and initialize inputs 
    call Init_u( u, p, errStat2, errMsg2 ); if(Failed()) return
 
    ! Initialize states and misc vars
-   call Init_MiscVars(m, p, u, errStat2, errMsg2); if(Failed()) return
+   call Init_MiscVars(m, p, errStat2, errMsg2); if(Failed()) return
    call Init_States(xd, OtherState, p,  errStat2, errMsg2); if(Failed()) return
 
    ! Define write outputs here (must initialize AFTER Init_MiscVars)
-   call Init_y(y, m, u, p, errStat2, errMsg2); if(Failed()) return
+   call Init_y(y, m, p, errStat2, errMsg2); if(Failed()) return
 
    ! Define initialization output here
    call AA_SetInitOut(p, InitOut, errStat2, errMsg2); if(Failed()) return
@@ -142,10 +150,11 @@ contains
 end subroutine AA_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets AeroAcoustics parameters for use during the simulation; these variables are not changed after AA_Init.
-subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
-    TYPE(AA_InitInputType),       INTENT(IN   ) :: InitInp        !< Input data for initialization routine, out is needed because of copy below
+subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
+    TYPE(AA_InitInputType),       INTENT(INOUT) :: InitInp        !< Input data for initialization routine, out is needed because of copy below
     TYPE(AA_InputFile),           INTENT(INOUT) :: InputFileData  !< Data stored in the module's input file -- intent(out) only for move_alloc statements
     TYPE(AA_ParameterType),       INTENT(INOUT) :: p              !< Parameters
+    type(AFI_ParameterType),      intent(in   ) :: AFInfo(:)      !< The airfoil parameter data
     INTEGER(IntKi),               INTENT(  OUT) :: ErrStat        !< Error status of the operation
     CHARACTER(*),                 INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -154,14 +163,15 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 !    INTEGER(IntKi)          :: simcou,coun     ! simple loop  counter
     INTEGER(IntKi)          :: I,J,whichairfoil,K,i1_1,i10_1,i1_2,i10_2,iLE
     character(*), parameter :: RoutineName = 'SetParameters'
-    REAL(ReKi)              :: val1,val10,f2,f4,lefttip,rightip,jumpreg, dist1, dist10
+    REAL(ReKi)              :: val1,val10,f2,f4, dist1, dist10
+    REAL(ReKi)              :: BladeSpanUsedForNoise
+    
     ! Initialize variables for this routine
     ErrStat  = ErrID_None
     ErrMsg   = ""
-    !!Assign input fiel data to parameters
+    !!Assign input file data to parameters
     p%DT               = InputFileData%DT_AA         ! seconds
-    p%AA_Bl_Prcntge    = InputFileData%AA_Bl_Prcntge  ! %
-    p%total_sampleTI   = 5/p%DT  ! 10 seconds for TI sampling
+    p%Num_total_sampleTI   = max( NINT(RotorRegionTimeSampling / InputFileData%DT_AA), 1 )
     p%AAStart          = InputFileData%AAStart
     p%IBLUNT           = InputFileData%IBLUNT
     p%ILAM             = InputFileData%ILAM
@@ -177,7 +187,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%NrOutFile        = InputFileData%NrOutFile
     p%outFmt           = "ES15.6E3" 
     p%NumBlNds         = InitInp%NumBlNds
-    p%AirDens          = InitInp%AirDens          
+    p%AirDens          = InitInp%AirDens
     p%KinVisc          = InitInp%KinVisc
     p%SpdSound         = InitInp%SpdSound
     p%HubHeight        = InitInp%HubHeight
@@ -187,23 +197,12 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%TI               = InputFileData%TI
     p%avgV             = InputFileData%avgV
 
-    ! Copy AFInfo into AA module
-    ! TODO Allocate AFInfo   and AFindx variables (DONE AND DONE) 
-    ALLOCATE(p%AFInfo( size(InitInp%AFInfo) ), STAT=ErrStat2)
-    IF ( ErrStat2 /= 0 )  THEN
-        CALL SetErrStat(ErrID_Fatal, 'Error allocating memory for the InitInp%AFInfo array.', ErrStat2, ErrMsg2, RoutineName)
-        RETURN
-    ENDIF
-
-    do i=1,size(InitInp%AFInfo)
-        call AFI_CopyParam(InitInp%AFInfo(i), p%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
-    end do
 
     ! Check 1
     IF( (p%ITURB.eq.ITURB_TNO) .or. p%IInflow == IInflow_FullGuidati .OR. p%IInflow == IInflow_SimpleGuidati )then
         ! if tno is on or one of the guidati models is on, check if we have airfoil coordinates
-        DO k=1,size(p%AFInfo) ! if any of the airfoil coordinates are missing change calculation method
-            IF( p%AFInfo(k)%NumCoords .lt. 5 )then
+        DO k=1,size(AFInfo) ! if any of the airfoil coordinates are missing change calculation method
+            IF( AFInfo(k)%NumCoords .lt. 5 )then
                CALL WrScr( 'Airfoil coordinates are missing: If Full or Simplified Guidati or Bl Calculation is on coordinates are needed ' )
                CALL WrScr( 'Calculation methods enforced as BPM for TBLTE and only Amiet for inflow ' )
                p%ITURB   = ITURB_BPM
@@ -243,8 +242,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     call MOVE_ALLOC(InputFileData%ObsXYZ,p%ObsXYZ)
 
     ! 
-    call AllocAry(p%BlAFID,      p%NumBlNds, p%numBlades, 'p%BlAFID' , ErrStat2, ErrMsg2); if(Failed()) return
-    p%BlAFID=InitInp%BlAFID
+    call MOVE_ALLOC(InitInp%BlAFID,p%BlAFID)
     
     ! Blade Characteristics chord,span,trailing edge angle and thickness,airfoil ID for each segment
     call AllocAry(p%TEThick   ,p%NumBlNds,p%NumBlades,'p%TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
@@ -252,36 +250,49 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     call AllocAry(p%StallStart,p%NumBlNds,p%NumBlades,'p%StallStart',ErrStat2,ErrMsg2); if(Failed()) return
     p%StallStart = 0.0_ReKi
 
-     do i=1,p%NumBlades    
+     do i=1,p%NumBlades
         do j=1,p%NumBlNds
             whichairfoil = p%BlAFID(j,i)
             p%TEThick(j,i) = InputFileData%BladeProps(whichairfoil)%TEThick
             p%TEAngle(j,i) = InputFileData%BladeProps(whichairfoil)%TEAngle
             
-            if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
+            if(AFInfo(whichairfoil)%NumTabs /=1 ) then
                 call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
                 if(Failed()) return
             endif
-            p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
+            p%StallStart(j,i)  = AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
         enddo
     enddo
 
-    call AllocAry(p%BlSpn,       p%NumBlNds, p%NumBlades, 'p%BlSpn'  , ErrStat2, ErrMsg2); if(Failed()) return
-    call AllocAry(p%BlChord,     p%NumBlNds, p%NumBlades, 'p%BlChord', ErrStat2, ErrMsg2); if(Failed()) return
-    call AllocAry(p%AerCent,  2, p%NumBlNds, p%NumBlades, 'p%AerCent', ErrStat2, ErrMsg2); if(Failed()) return
+    call AllocAry(p%BlSpn,       p%NumBlNds, p%NumBlades, 'p%BlSpn'    , ErrStat2, ErrMsg2); if(Failed()) return
+    call AllocAry(p%BlElemSpn,   p%NumBlNds, p%NumBlades, 'p%BlElemSpn', ErrStat2, ErrMsg2); if(Failed()) return
+    call AllocAry(p%BlChord,     p%NumBlNds, p%NumBlades, 'p%BlChord'  , ErrStat2, ErrMsg2); if(Failed()) return
+    call AllocAry(p%AerCent,  2, p%NumBlNds, p%NumBlades, 'p%AerCent'  , ErrStat2, ErrMsg2); if(Failed()) return
     p%BlSpn   = InitInp%BlSpn
     p%BlChord = InitInp%BlChord
 
-    do j=p%NumBlNds,2,-1
-        IF ( p%BlSpn(j,1) .lt. p%BlSpn(p%NumBlNds,1)*(100-p%AA_Bl_Prcntge)/100 )THEN ! assuming 
+    p%startnode = max(1, p%NumBlNds - 1)
+    BladeSpanUsedForNoise = p%BlSpn(p%NumBlNds,1)*(1.0 - InputFileData%AA_Bl_Prcntge/100.0)
+    do j=p%NumBlNds-1,2,-1
+        IF ( p%BlSpn(j,1) .lt. BladeSpanUsedForNoise )THEN
             p%startnode=j
             exit ! exit the loop
         endif
     enddo
-
-    IF (p%startnode.lt.2) THEN
-        p%startnode=2
-    ENDIF
+    p%startnode = max(min(p%NumBlNds,2),p%startnode)
+    
+   p%BlElemSpn = 0;
+   DO I = 1,p%numBlades
+      DO J = p%startnode,p%NumBlNds  ! starts loop from startnode. 
+         IF (J < 2) THEN
+            p%BlElemSpn(J,I) = p%BlSpn(J,I) !assume this is the innermost node
+         ELSEIF (J .EQ. p%NumBlNds) THEN
+            p%BlElemSpn(J,I) =   p%BlSpn(J,I)-p%BlSpn(J-1,I)
+         ELSE
+            p%BlElemSpn(J,I) =   (p%BlSpn(J,I)-p%BlSpn(J-1,I))/2 + (p%BlSpn(J+1,I)-p%BlSpn(J,I))/2 ! this is the average element size around this node, equivalent to (p%BlSpn(J+1,I) - p%BlSpn(J-1,I))/2
+         ENDIF
+      end do
+   end do
 
     !print*, 'AeroAcoustics Module is using the blade nodes starting from ' ,p%startnode,' Radius in meter ',p%BlSpn(p%startnode,1)
     !AerodYnamic center extraction for each segment 
@@ -289,9 +300,9 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         do j=1,p%NumBlNds
             whichairfoil         = p%BlAFID(j,i)  ! just a temporary variable for clear coding
             ! airfoil coordinates read by AeroDyn. First value is the aerodynamic center
-            if (p%AFInfo(whichairfoil)%NumCoords > 0) then
-               p%AerCent(1,J,I)  = p%AFInfo(whichairfoil)%X_Coord(1)  ! assigned here corresponding airfoil.
-               p%AerCent(2,J,I)  = p%AFInfo(whichairfoil)%Y_Coord(1)  ! assigned here corresponding airfoil.
+            if (AFInfo(whichairfoil)%NumCoords > 0) then
+               p%AerCent(1,J,I)  = AFInfo(whichairfoil)%X_Coord(1)  ! assigned here corresponding airfoil.
+               p%AerCent(2,J,I)  = AFInfo(whichairfoil)%Y_Coord(1)  ! assigned here corresponding airfoil.
             else
                p%AerCent(1,J,I)  = 0.0_ReKi
                p%AerCent(2,J,I)  = 0.0_ReKi
@@ -336,34 +347,30 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
     ! If guidati is on, calculate the airfoil thickness at 1% and at 10% chord from input airfoil coordinates
     IF (p%IInflow .EQ. IInflow_FullGuidati) THEN
-        call AllocAry(p%AFThickGuida,2,size(p%AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%AFThickGuida,2,size(AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
         p%AFThickGuida=0.0_Reki
 
-        DO k=1,size(p%AFInfo) ! for each airfoil interpolation 
+        DO k=1,size(AFInfo) ! for each airfoil interpolation 
 
-            ! IF ((MIN(p%AFInfo(k)%X_Coord) < 0.) .or. (MAX(p%AFInfo(k)%X_Coord) > 0.)) THEN
-            !     call SetErrStat ( ErrID_Fatal,'The coordinates of airfoil '//trim(num2lstr(k))//' are mot defined between x=0 and x=1. Code stops.' ,ErrStat, ErrMsg, RoutineName )
-            ! ENDIF
-            
             ! find index where LE is found
-            DO i=3,size(p%AFInfo(k)%X_Coord)
-               IF (p%AFInfo(k)%X_Coord(i) - p%AFInfo(k)%X_Coord(i-1) > 0.) THEN
+            DO i=3,size(AFInfo(k)%X_Coord)
+               IF (AFInfo(k)%X_Coord(i) - AFInfo(k)%X_Coord(i-1) > 0.) THEN
                   iLE = i
                   exit ! end the innermost do loop (i)
                ENDIF
             ENDDO
 
             ! From LE toward TE
-            dist1  = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.01)
-            dist10 = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.10)
-            DO i=iLE+1,size(p%AFInfo(k)%X_Coord)
-                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+            dist1  = ABS( AFInfo(k)%X_Coord(iLE) - 0.01)
+            dist10 = ABS( AFInfo(k)%X_Coord(iLE) - 0.10)
+            DO i=iLE+1,size(AFInfo(k)%X_Coord)
+                IF (ABS(AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
                     i1_1 = i
-                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                    dist1 = ABS(AFInfo(k)%X_Coord(i) - 0.01)
                 ENDIF
-                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                IF (ABS(AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
                     i10_1 = i
-                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                    dist10 = ABS(AFInfo(k)%X_Coord(i) - 0.1)
                 ENDIF
             ENDDO
 
@@ -371,52 +378,35 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
             dist1  = 0.99
             dist10 = 0.90
             DO i=1,iLE-1
-                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+                IF (ABS(AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
                     i1_2 = i
-                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                    dist1 = ABS(AFInfo(k)%X_Coord(i) - 0.01)
                 ENDIF
-                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                IF (ABS(AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
                     i10_2 = i
-                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                    dist10 = ABS(AFInfo(k)%X_Coord(i) - 0.1)
                 ENDIF
             ENDDO
 
-            val1  = p%AFInfo(k)%Y_Coord(i1_1) - p%AFInfo(k)%Y_Coord(i1_2)
-            val10 = p%AFInfo(k)%Y_Coord(i10_1) - p%AFInfo(k)%Y_Coord(i10_2)
+            val1  = AFInfo(k)%Y_Coord(i1_1 ) - AFInfo(k)%Y_Coord(i1_2)
+            val10 = AFInfo(k)%Y_Coord(i10_1) - AFInfo(k)%Y_Coord(i10_2)
 
             p%AFThickGuida(1,k)=val1  ! 1  % chord thickness
             p%AFThickGuida(2,k)=val10 ! 10  % chord thickness
         ENDDO
     ENDIF
 
-    !! for turbulence intensity calculations on the fly every 5 meter the whole rotor area is divided vertically to store flow fields in each region
-    jumpreg=7
-    p%toptip           = CEILING(p%HubHeight+maxval(p%BlSpn(:,1)))+2 !Top Tip Height = Hub height plus radius
-    p%bottip           = FLOOR(p%HubHeight-maxval(p%BlSpn(:,1)))-2 !Bottom Tip Height = Hub height minus radius
-    call AllocAry(p%rotorregionlimitsVert,ceiling(((p%toptip)-(p%bottip))/jumpreg),  'p%rotorregionlimitsVert', errStat2, errMsg2); if(Failed()) return
-    do i=0,size(p%rotorregionlimitsVert)-1
-        p%rotorregionlimitsVert(i+1)=(p%bottip)+jumpreg*i
-    enddo
-    !! for turbulence intensity calculations on the fly every 5 meter the whole rotor area is divided horizontally to store flow fields in each region
-    jumpreg=7
-    lefttip           = 2*maxval(p%BlSpn(:,1))+5 !
-    rightip           = 0 !
-    call AllocAry( p%rotorregionlimitsHorz,ceiling(((lefttip)-(rightip))/jumpreg),  'p%rotorregionlimitsHorz', errStat2, errMsg2); if(Failed()) return
-    do i=0,size(p%rotorregionlimitsHorz)-1
-        p%rotorregionlimitsHorz(i+1)=rightip+jumpreg*i
-    enddo
-    jumpreg=60 ! 10 ! must be divisable to 360
-    call AllocAry(p%rotorregionlimitsalph,INT((360/jumpreg)+1),  'p%rotorregionlimitsalph', errStat2, errMsg2); if(Failed()) return
-    do i=0,size(p%rotorregionlimitsalph)-1
-        p%rotorregionlimitsalph(i+1)=jumpreg*i
-    enddo
-    jumpreg=5
-    call AllocAry( p%rotorregionlimitsrad, (CEILING( maxval(p%BlSpn(:,1))/jumpreg )+2),  'p%rotorregionlimitsrad', errStat2, errMsg2); if(Failed()) return
-    do i=1,size(p%rotorregionlimitsrad)-1
-        p%rotorregionlimitsrad(i+1)=jumpreg*i
-    enddo
-    p%rotorregionlimitsrad(1)=0.0_reki
-    p%rotorregionlimitsrad(size(p%rotorregionlimitsrad)-1)=p%rotorregionlimitsrad(size(p%rotorregionlimitsrad)-1)+3
+   p%NumRotorRegionLimitsAlph = NINT(360./RotorRegionAlph_delta) + 1
+   p%NumRotorRegionLimitsRad = CEILING( maxval(p%BlSpn)/RotorRegionRad_delta )+2
+   
+   call AllocAry( p%RotorRegion_k_minus1, p%NumBlNds, p%NumBlades,  'p%RotorRegion_k_minus1', errStat2, errMsg2); if(Failed()) return
+   p%RotorRegion_k_minus1 = 0
+   do i=1,p%NumBlades
+      do j=1,p%NumBlNds
+         p%RotorRegion_k_minus1(j,i) = CEILING( p%BlSpn(j,i) / RotorRegionRad_delta )
+         p%RotorRegion_k_minus1(j,i) = MIN( p%NumRotorRegionLimitsRad - 1, MAX( 1, p%RotorRegion_k_minus1(j,i) ) ) !safety
+      end do
+   enddo
 
 contains
     logical function Failed()
@@ -454,10 +444,9 @@ contains
 end subroutine Init_u
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes AeroAcoustics  output array variables for use during the simulation.
-subroutine Init_y(y, m, u, p, errStat, errMsg)
+subroutine Init_y(y, m, p, errStat, errMsg)
     type(AA_OutputType),           intent(  out)  :: y               !< Module outputs
     type(AA_MiscVarType),          intent(in   )  :: m               !< misc/optimization data
-    type(AA_InputType),            intent(inout)  :: u               !< Module inputs -- intent(out) because of mesh sibling copy
     type(AA_ParameterType),        intent(inout)  :: p               !< Parameters
     integer(IntKi),                intent(  out)  :: errStat         !< Error status of the operation
     character(*),                  intent(  out)  :: errMsg          !< Error message if ErrStat /= ErrID_None
@@ -502,10 +491,9 @@ contains
 end subroutine Init_y
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
-subroutine Init_MiscVars(m, p, u, errStat, errMsg)
+subroutine Init_MiscVars(m, p, errStat, errMsg)
     type(AA_MiscVarType),          intent(inout)  :: m                !< misc/optimization data (not defined in submodules)
     type(AA_ParameterType),        intent(in   )  :: p                !< Parameters
-    type(AA_InputType),            intent(inout)  :: u                !< input for HubMotion mesh (create sibling mesh here)
     integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
     character(*),                  intent(  out)  :: errMsg           !< Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -529,10 +517,7 @@ subroutine Init_MiscVars(m, p, u, errStat, errMsg)
     call AllocAry(m%SPLTIP      , size(p%FreqList), 'SPLTIP'    , errStat2, errMsg2); if(Failed()) return
     call AllocAry(m%SPLTI       , size(p%FreqList), 'SPLTI'     , errStat2, errMsg2); if(Failed()) return
     call AllocAry(m%SPLTIGui    , size(p%FreqList), 'SPLTIGui'  , errStat2, errMsg2); if(Failed()) return
-    call AllocAry(m%CfVar       , 2               , 'CfVar'     , errStat2, errMsg2); if(Failed()) return
-    call AllocAry(m%d99Var      , 2               , 'd99Var'    , errStat2, errMsg2); if(Failed()) return
-    call AllocAry(m%dstarVar    , 2               , 'dstarVar'  , errStat2, errMsg2); if(Failed()) return
-    call AllocAry(m%EdgeVelVar  , 2               , 'EdgeVelVar', errStat2, errMsg2); if(Failed()) return
+
     call AllocAry(m%LE_Location,  3, p%NumBlNds, p%numBlades, 'LE_Location', ErrStat2, ErrMsg2); if(Failed()) return
     
    ! arrays for computing WriteOutput values
@@ -561,33 +546,30 @@ end subroutine Init_MiscVars
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
 subroutine Init_states(xd, OtherState, p, errStat, errMsg)
-    type(AA_DiscreteStateType),   intent(inout)  :: xd               !
-    type(AA_OtherStateType),      intent(inout)  :: OtherState       !< Initial other states
-    type(AA_ParameterType),       intent(in   )  :: p                !< Parameters
-    integer(IntKi),               intent(  out)  :: errStat          !< Error status of the operation
-    character(*),                 intent(  out)  :: errMsg           !< Error message if ErrStat /= ErrID_None
-    ! Local variables
-    integer(intKi)                               :: ErrStat2          ! temporary Error status
-    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-    character(*), parameter                      :: RoutineName = 'Init_DiscrStates'
+   type(AA_DiscreteStateType),   intent(inout)  :: xd               !
+   type(AA_OtherStateType),      intent(inout)  :: OtherState       !< Initial other states
+   type(AA_ParameterType),       intent(in   )  :: p                !< Parameters
+   integer(IntKi),               intent(  out)  :: errStat          !< Error status of the operation
+   character(*),                 intent(  out)  :: errMsg           !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_states'
     
-    ! Initialize variables for this routine
-    errStat = ErrID_None
-    errMsg  = ""
+   ! Initialize variables for this routine
+   errStat = ErrID_None
+   errMsg  = ""
 
-    call AllocAry(xd%MeanVxVyVz, p%NumBlNds, p%numBlades, 'xd%MeanVxVyVz', ErrStat2, ErrMsg2); if(Failed()) return
-    call AllocAry(xd%TIVx,       p%NumBlNds, p%numBlades, 'xd%TIVx'      , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry(xd%TIVx,       p%NumBlNds, p%numBlades, 'xd%TIVx'      , ErrStat2, ErrMsg2); if(Failed()) return
+   xd%TIVx       = 0.0_ReKi
 
-    call AllocAry(xd%RegVxStor,             p%total_sampleTI, size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'xd%Vxst',                  ErrStat2,ErrMsg2); if(Failed()) return
-    call AllocAry(xd%RegionTIDelete,                          size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'xd%RegionTIDelete',        ErrStat2,ErrMsg2); if(Failed()) return
-    call AllocAry(OtherState%allregcounter ,                  size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'OtherState%allregcounter', ErrStat2,ErrMsg2); if(Failed()) return
+   if (p%TICalcMeth == TICalc_Every) then
+      call AllocAry(xd%RegVxStor,         p%Num_total_sampleTI, p%NumRotorRegionLimitsRad-1,p%NumRotorRegionLimitsAlph-1,'xd%Vxst',                  ErrStat2,ErrMsg2); if(Failed()) return
+      call AllocAry(OtherState%allregcounter ,                  p%NumRotorRegionLimitsRad-1,p%NumRotorRegionLimitsAlph-1,'OtherState%allregcounter', ErrStat2,ErrMsg2); if(Failed()) return
     
-    xd%MeanVxVyVz = 0.0_ReKi
-    xd%TIVx       = 0.0_ReKi
-    xd%RegionTIDelete = 0.0_ReKi
-    xd%RegVxStor      = 0.0_reki
-    
-    OtherState%allregcounter  = 2
+      xd%RegVxStor  = 0.0_reki
+      OtherState%allregcounter  = 0
+   endif
 
 contains
     logical function Failed()
@@ -610,22 +592,23 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
 !   integer(intKi)                               :: ErrStat2          ! temporary Error status
 !   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AA_UpdateStates'
-   REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades) :: TEMPSTD  ! temporary standard deviation variable
-   REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x   ! temporary standard deviation variable
-   integer(intKi)                               :: i,j,k,rco
+!   REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades) :: TEMPSTD  ! temporary standard deviation variable
+   REAL(ReKi)                                   :: InflowNorm,meanInflow,angletemp,abs_le_x   ! temporary standard deviation variable
+   integer(intKi)                               :: i,j
    integer(intKi)                               :: k_minus1,rco_minus1
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! Cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step
-   TEMPSTD       =  sqrt( u%Inflow(1,:,:)**2+u%Inflow(2,:,:)**2+u%Inflow(3,:,:)**2 )
-   xd%MeanVxVyVz = (TEMPSTD + xd%MeanVxVyVz*n) / (n+1)  
-   !   xd%VxSq       = TEMPSTD**2 + xd%VxSq
-   !   TEMPSTD     = sqrt(  (xd%VxSq/(n+1)) - (xd%MeanVxVyVz**2)   )
-   !   xd%TIVx  = (TEMPSTD / xd%MeanVxVyVz ) ! check inflow noise input for multiplication with 100 or not
+   !! Cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step
+   !TEMPSTD       =  sqrt( u%Inflow(1,:,:)**2+u%Inflow(2,:,:)**2+u%Inflow(3,:,:)**2 )
+   !xd%MeanVxVyVz = (TEMPSTD + xd%MeanVxVyVz*n) / (n+1)  
+   !!   xd%VxSq       = TEMPSTD**2 + xd%VxSq
+   !!   TEMPSTD     = sqrt(  (xd%VxSq/(n+1)) - (xd%MeanVxVyVz**2)   )
+   !!   xd%TIVx  = (TEMPSTD / xd%MeanVxVyVz ) ! check inflow noise input for multiplication with 100 or not
 
-   IF(   (p%TICalcMeth.eq.2) ) THEN
+               
+   IF( p%TICalcMeth == TICalc_Every ) THEN
        call Calc_LE_Location_Array(p,m,u) ! sets m%LE_Location(:,:,:)
    
        do i=1,p%NumBlades
@@ -633,44 +616,34 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
                abs_le_x=m%LE_Location(3,j,i)-p%hubheight
                
                if (EqualRealNos(abs_le_x, 0.0_ReKi)) then
-                  angletemp = 0.0_ReKi
+                  rco_minus1 = 1
                else
-                  angletemp = ATAN2(m%LE_Location(2,j,i), abs_le_x) * R2D_D
+                  angletemp = ATAN2(m%LE_Location(2,j,i), abs_le_x) * R2D ! returns angles in the range [-180, 180] degrees
+                  if (angletemp<0.) angletemp = angletemp + 360. ! in calculation for rco_minus1 below, we compare angles in the range [0, 360] degrees
+                  rco_minus1 = ceiling(angletemp / RotorRegionAlph_delta)
+                  rco_minus1 = MIN( p%NumRotorRegionLimitsAlph-1, MAX(1, rco_minus1) ) ! safety
                end if
 
-               k_minus1 = 0
-               do k=1,size(p%rotorregionlimitsrad)
-                   IF (p%BlSpn(j,i)-p%rotorregionlimitsrad(k).lt.0) THEN ! it means location is in the k-1 region
-                       !print*, abs_le_x,p%rotorregionlimitsrad(k),k-1
-                       k_minus1 = k - 1
-                       exit ! exit "k" do loop
-                   ENDIF
-               enddo
-               k_minus1 = MAX(1,k_minus1)
+               k_minus1 = p%RotorRegion_k_minus1(j,i)
                
-               rco_minus1 = 0
-               do rco=1,size(p%rotorregionlimitsalph)
-                   IF (angletemp-p%rotorregionlimitsalph(rco).lt.0) THEN ! it means location is in the k-1 region
-                       rco_minus1 = rco - 1
-                       exit ! exit "rco" do loop
-                   ENDIF
-               enddo
-               rco_minus1 = MAX(1,rco_minus1) ! make sure it didn't 
+               OtherState%allregcounter(k_minus1,rco_minus1) = OtherState%allregcounter(k_minus1,rco_minus1) + 1    ! increase the sample amount in that specific bin
                
-               OtherState%allregcounter(k_minus1,rco_minus1) = OtherState%allregcounter(k_minus1,rco_minus1) + 1    ! increase the sample amount in that specific 5 meter height vertical region
-               
-               tempsingle         = sqrt( u%Inflow(1,j,i)**2+u%Inflow(2,j,i)**2+u%Inflow(3,j,i)**2 )  ! 
+               InflowNorm = TwoNorm( u%Inflow(:,j,i) )
+               !note: p%Num_total_sampleTI = size(xd%RegVxStor,1)
                ! with storage region dependent moving average and TI
-               IF  ( OtherState%allregcounter(k_minus1,rco_minus1) .lt. size(xd%RegVxStor,1)+1 ) THEN
-                   xd%RegVxStor(OtherState%allregcounter(k_minus1,rco_minus1),k_minus1,rco_minus1)=tempsingle
-                   xd%TIVx(j,i)       =  0
-                   xd%RegionTIDelete(k_minus1,rco_minus1)=0
+               IF  ( OtherState%allregcounter(k_minus1,rco_minus1) <= p%Num_total_sampleTI ) THEN
+                   xd%RegVxStor(OtherState%allregcounter(k_minus1,rco_minus1),k_minus1,rco_minus1) = InflowNorm
+                   xd%TIVx(j,i) = 0
                ELSE
-                   xd%RegVxStor((mod( OtherState%allregcounter(k_minus1,rco_minus1) - size(xd%RegVxStor,1), size(xd%RegVxStor,1)))+1,k_minus1,rco_minus1)=tempsingle
-                   tempmean=SUM(xd%RegVxStor(:,k_minus1,rco_minus1))
-                   tempmean=tempmean/size(xd%RegVxStor,1)
-                   xd%RegionTIDelete(k_minus1,rco_minus1)=SQRT((SUM((xd%RegVxStor(:,k_minus1,rco_minus1)-tempmean)**2)) /  size(xd%RegVxStor,1) )
-                   xd%TIVx(j,i)       =  xd%RegionTIDelete(k_minus1,rco_minus1) ! only the fluctuation 
+                   xd%RegVxStor( mod( OtherState%allregcounter(k_minus1,rco_minus1), p%Num_total_sampleTI )+1, k_minus1, rco_minus1)=InflowNorm
+                   meanInflow = SUM( xd%RegVxStor(:,k_minus1,rco_minus1) ) /p%Num_total_sampleTI
+
+                   if ( EqualRealNos(meanInflow,0.0_ReKi)) then
+                      xd%TIVx(j,i) = 0.0_ReKi
+                   else
+                      xd%TIVx(j,i) = SQRT( SUM((xd%RegVxStor(:,k_minus1,rco_minus1)-meanInflow)**2) /  p%Num_total_sampleTI ) ! only the fluctuation  (this is the population standard deviation, not TI)
+                      xd%TIVx(j,i) = xd%TIVx(j,i) / meanInflow ! this is TI as a fraction (std(U)/mean(U))
+                   end if
                ENDIF
            enddo
        enddo
@@ -680,7 +653,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
            do j=1,p%NumBlNds
                ! We scale the incident turbulence intensity by the ratio of average to incident wind speed
                 ! The scaled TI is used by the Amiet model
-                xd%TIVx(j,i)=p%TI*p%avgV/u%Vrel(J,I) 
+                xd%TIVx(j,i)=p%TI * p%avgV/u%Vrel(J,I) 
            enddo
        enddo
    endif
@@ -688,12 +661,12 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
 end subroutine AA_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-subroutine AA_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine AA_End( u, p, xd, OtherState, y, m, ErrStat, ErrMsg )
     TYPE(AA_InputType),           INTENT(INOUT)  :: u           !< System inputs
     TYPE(AA_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
-    TYPE(AA_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+    !TYPE(AA_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
     TYPE(AA_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
-    TYPE(AA_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+    !TYPE(AA_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
     TYPE(AA_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
     TYPE(AA_OutputType),          INTENT(INOUT)  :: y           !< System outputs
     TYPE(AA_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
@@ -736,7 +709,7 @@ END SUBROUTINE AA_End
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
+subroutine AA_CalcOutput( t, u, p, xd, OtherState, y, m, ErrStat, ErrMsg)
     ! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
     ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
     ! placed in the y%WriteOutput(:) array.
@@ -744,9 +717,9 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
     REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
     TYPE(AA_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
     TYPE(AA_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-    TYPE(AA_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+    !TYPE(AA_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
     TYPE(AA_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
-    TYPE(AA_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+    !TYPE(AA_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
     TYPE(AA_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
     TYPE(AA_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
     type(AA_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
@@ -765,13 +738,13 @@ subroutine AA_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
     IF (t >= p%AAStart) THEN
        
         IF (.NOT. AA_OutputToSeparateFile .or. mod(t + 1E-10,p%DT) .lt. 1E-6) THEN !bjj: should check NINT(t/p%DT)?
-            call CalcObserve(p,m,u,xd,errStat2, errMsg2)
+            call CalcObserve(p,m,u,errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
            
-            call CalcAeroAcousticsOutput(u,p,m,xd,y,errStat2,errMsg2)
+            call CalcAeroAcousticsOutput(u,p,m,xd,errStat2,errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
 
-            call Calc_WriteOutput( p, u, m, y,  ErrStat2, ErrMsg2 )
+            call Calc_WriteOutput( p, m, y,  ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
 
             if (AA_OutputToSeparateFile) then
@@ -818,8 +791,7 @@ SUBROUTINE Calc_LE_Location_Array(p,m,u)
     
 END SUBROUTINE Calc_LE_Location_Array
 !----------------------------------------------------------------------------------------------------------------------------------!
-SUBROUTINE CalcObserve(p,m,u,xd,errStat,errMsg)
-    TYPE(AA_DiscreteStateType),          INTENT(IN   ) :: xd      !< discrete state type
+SUBROUTINE CalcObserve(p,m,u,errStat,errMsg)
     TYPE(AA_ParameterType),              intent(in   ) :: p       !< Parameters
     TYPE(AA_InputType),                  intent(in   ) :: u       !< NN Inputs at Time
     TYPE(AA_MiscVarType),                intent(inout) :: m       !< misc/optimization data (not defined in submodules)
@@ -851,7 +823,7 @@ SUBROUTINE CalcObserve(p,m,u,xd,errStat,errMsg)
       DO J = 1,p%NumBlNds
          ! Rotate the coordinates of leading and trailing edge from the local reference system to the global. Then add the coordinates of the aerodynamic center in the global coordinate system
          ! The global coordinate system is located on the ground, has x pointing downwind, y pointing laterally, and z pointing vertically upwards
-         RTEObservereal = MATMUL(p%AFTeCo(:,J,I), u%RotGtoL(:,:,J,I)) + u%AeroCent_G(:,J,I) ! Note that with the vector math, this is equivalent to MATMUL(TRANSPOSE(p%AFTeCo(:,J,I)), p%AFTeCo(:,J,I)) + u%AeroCent_G(:,J,I)
+         RTEObservereal = MATMUL(p%AFTeCo(:,J,I), u%RotGtoL(:,:,J,I)) + u%AeroCent_G(:,J,I) ! Note that with the vector math, this is equivalent to MATMUL(TRANSPOSE(p%RotGtoL(:,:,J,I)), p%AFTeCo(:,J,I)) + u%AeroCent_G(:,J,I)
             
          ! Loop through the observers
          DO K = 1,p%NrObsLoc
@@ -897,9 +869,8 @@ SUBROUTINE CalcObserve(p,m,u,xd,errStat,errMsg)
 
 END SUBROUTINE CalcObserve
 !----------------------------------------------------------------------------------------------------------------------------------!
-SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
+SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
     TYPE(AA_InputType),                     INTENT(IN   )   :: u       !< Inputs at Time t
-    TYPE(AA_OutputType),                    INTENT(INOUT)   :: y       !< 
     TYPE(AA_ParameterType),                 INTENT(IN   )   :: p       !< Parameters
     TYPE(AA_MiscVarType),                   INTENT(INOUT)   :: m       !< misc/optimization data (not defined in submodules)
     TYPE(AA_DiscreteStateType),             INTENT(IN   )   :: xd      !< discrete state type
@@ -914,7 +885,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     REAL(ReKi)                    :: AlphaNoise                       
     REAL(ReKi)                    :: AlphaNoise_Deg                   ! 
     REAL(ReKi)                    :: UNoise                           ! 
-    REAL(ReKi)                    :: elementspan                      ! 
 
     real(ReKi)                    ::  Ptotal
     character(*), parameter       :: RoutineName = 'CalcAeroAcousticsOutput'
@@ -946,11 +916,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             Unoise = SIGN(AA_u_min, Unoise)
          ENDIF
             
-         IF (J .EQ. p%NumBlNds) THEN
-            elementspan =   (p%BlSpn(J,I)-p%BlSpn(J-1,I))/2 
-         ELSE
-            elementspan =   (p%BlSpn(J,I)-p%BlSpn(J-1,I))/2    +    (p%BlSpn(J+1,I)-p%BlSpn(J,I))/2  
-         ENDIF
          AlphaNoise= u%AoANoise(J,I)
          call MPi2Pi(AlphaNoise) ! make sure this is in an appropriate range [-pi,pi]
          AlphaNoise_Deg = AlphaNoise * R2D_D ! convert to degrees since that is how this code is set up.
@@ -972,7 +937,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             !--------Laminar Boundary Layer Vortex Shedding Noise----------------------------!
             IF ( (p%ILAM .EQ. ILAM_BPM) .AND. (p%ITRIP .EQ. ITRIP_None) )    THEN
                CALL LBLVS(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                  elementspan,m%rTEtoObserve(K,J,I), p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,p%StallStart(J,I))
+                  p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,p%StallStart(J,I))
                
                call TotalContributionFromType(m%SPLLBL,Ptotal,NoiseMech=1)
             ENDIF
@@ -981,14 +946,14 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             IF ( p%ITURB /= ITURB_None )   THEN
                !returns  m%SPLP, m%SPLS, m%SPLALPH
                CALL TBLTE(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                      elementspan,m%rTEtoObserve(K,J,I), p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
+                      p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
                       m%SPLP,m%SPLS,m%SPLALPH )
                     
                IF (p%ITURB .EQ. ITURB_TNO)  THEN
                   m%EdgeVelVar=1.0_ReKi
                   !returns m%SPLP, m%SPLS from TBLTE
                   CALL TBLTE_TNO(UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                        elementspan,m%rTEtoObserve(K,J,I),m%CfVar,m%d99var,m%EdgeVelVar ,p, &
+                        p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I),m%CfVar,m%d99var,m%EdgeVelVar ,p, &
                         m%SPLP,m%SPLS)
                ENDIF
                
@@ -1002,7 +967,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             !--------Blunt Trailing Edge Noise----------------------------------------------!
             IF ( p%IBLUNT == IBLUNT_BPM )   THEN   ! calculate m%SPLBLUNT(1:nFreq)
                CALL BLUNT(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-               elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
+               p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
                p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I) )
                
                call TotalContributionFromType(m%SPLBLUNT,Ptotal,NoiseMech=5)
@@ -1025,7 +990,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
                ! Amiet's Inflow Noise Model is Calculated as long as InflowNoise is On
                CALL InflowNoise(AlphaNoise,p%BlChord(J,I),Unoise,m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),&
-                  elementspan,m%rLEtoObserve(K,J,I),xd%TIVx(J,I),p,m%SPLti )
+                  p%BlElemSpn(J,I),m%rLEtoObserve(K,J,I),xd%TIVx(J,I),p,m%SPLti )
                     
                ! If Guidati model (simplified or full version) is also on then the 'SPL correction' to Amiet's model will be added 
                IF ( p%IInflow .EQ. IInflow_FullGuidati )   THEN      
@@ -1529,7 +1494,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,TINoise,p,SPLti)
   REAL(ReKi),                                 INTENT(IN   ) :: d              ! element span
   REAL(ReKi),                                 INTENT(IN   ) :: RObs           ! distance to observer
 !  REAL(ReKi),                                 INTENT(IN   ) :: MeanVNoise     !
-  REAL(ReKi),                                 INTENT(IN   ) :: TINoise        !
+  REAL(ReKi),                                 INTENT(IN   ) :: TINoise        ! turbulence intensity (NOT in percent)
 !  REAL(ReKi),                                 INTENT(IN   ) :: LE_Location    !
 
 !  REAL(ReKi),                                 INTENT(IN   ) :: dissip         !
@@ -1598,9 +1563,15 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,TINoise,p,SPLti)
       ! mu = Mach*WaveNumber*Chord/2.0/Beta2
       
       !Note: when we set RObs in CalcObserve(), we make sure it is >= AA_EPSILON ! avoid divide-by-zero
-      ! tinooisess could be 0, especially on the first step, so we need to check that we don't get a 
+      ! tinooisess could be 0, especially on the first step, so we need to check (use LOG10AA instead of LOG10)
       SPLhigh = 10.*LOG10AA(p%AirDens**2 * p%SpdSound**4 * p%Lturb * (d/2.) / (RObs**2) *(Mach**5) * &
                             tinooisess**2 *(Khat**3)* (1+Khat**2)**(-7./3.) * Directivity) + 78.4   ! ref a; [2] )
+      !bjj 01-13-2026: comparing with Eq 8 in ref [2], 
+      ! (1) The paper uses "Kbar" instead of Khat (which the code uses).
+      ! (2) In the paper, "I" is in percent and it adds the constant 58.4. In the code, we have "I" as a fraction and I is squared, so 
+      ! 10*log10(x*100^2)+58.4 = 10*(log10(x)+log10(100^2)) + 58.4 = 10*log10(x) + 10*log10(100^2) + 58.4 = 10*log10(x) + 40 + 58.4
+      ! Seems like we should be adding 98.4 instead of 78.4 in this code. However, I also haven't found documentation for the "component due to angles of attack" below,
+      ! so maybe this isn't wrong.
       
    !!!   SPLhigh = 10.*LOG10(p%Lturb*(d/2.)/ &
    !!!                  (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(WaveNumber**3) &
@@ -1608,7 +1579,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,TINoise,p,SPLti)
    
       SPLhigh = SPLhigh + 10.*LOG10(1+ 9.0*AlphaNoise**2)  ! Component due to angles of attack, ref a [2])   
 
-      Sears = 1/(2.*PI*Kbar/Beta2+1/(1+2.4*Kbar/Beta2))      ! ref a [2])
+      Sears = 1./(TwoPi*Kbar/Beta2 + 1./(1.+2.4*Kbar/Beta2))      ! ref a [2])
 
    !!!   Sears = 1/(2.*PI*WaveNumber/Beta2+1/(1+2.4*WaveNumber/Beta2))  ! ref b [3]) 
    
@@ -2003,9 +1974,9 @@ SUBROUTINE THICK(C,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal)
     REAL(ReKi),                INTENT(IN   )  :: C              !< Chord Length
     REAL(ReKi),                INTENT(IN   )  :: RC             !< RC= U*C/KinViscosity
     TYPE(AA_ParameterType),    INTENT(IN   )  :: p              !< Parameters
-    REAL(ReKi),                INTENT(  OUT)  :: DELTAP         !<
-    REAL(ReKi),                INTENT(  OUT)  :: DSTRS          !<
-    REAL(ReKi),                INTENT(  OUT)  :: DSTRP          !<
+    REAL(ReKi),                INTENT(  OUT)  :: DELTAP         !< Pressure side boundary layer thickness
+    REAL(ReKi),                INTENT(  OUT)  :: DSTRS          !< Suction side displacement thickness
+    REAL(ReKi),                INTENT(  OUT)  :: DSTRP          !< Pressure side displacement thickness
     REAL(ReKi),                INTENT(IN   )  :: StallVal       !< Stall angle at station i
 
     ! Local variables
@@ -2032,7 +2003,7 @@ SUBROUTINE THICK(C,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal)
         IF (RC .LE. .3E+06) THEN
            DSTR0 = .0601 * RC **(-.114)*C
         ELSE
-            DSTR0=10.**(3.411-1.5397*LogRC+.1059*LogRC**2)*C
+           DSTR0=10.**(3.411-1.5397*LogRC+.1059*LogRC**2)*C
         END IF
         ! Lightly tripped
         IF (p%ITRIP .EQ. ITRIP_Light) DSTR0 = DSTR0 * .6
@@ -2042,22 +2013,30 @@ SUBROUTINE THICK(C,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal)
     ENDIF
     
     ! Pressure side displacement thickness, Eq. (9) of [1]
-    DSTRP   = 10.**(-.0432*ALPSTAR+.00113*ALPSTAR**2)*DSTR0
+   DSTRP   = 10.**(-.0432*ALPSTAR+.00113*ALPSTAR**2)*DSTR0
     !      IF (p%ITRIP .EQ. 3) DSTRP = DSTRP * 1.48 ! commented since itrip is never 3 check if meant 2.(EB_DTU)
+
     ! Suction side displacement thickness
-    IF (p%ITRIP .EQ. ITRIP_Heavy) THEN
-        ! Heavily tripped, Eq. (12) of [1]
-        IF (ALPSTAR .LE. 5.) DSTRS=10.**(.0679*ALPSTAR)*DSTR0
-        IF((ALPSTAR .GT. 5.).AND.(ALPSTAR .LE. StallVal)) &
-            DSTRS = .381*10.**(.1516*ALPSTAR)*DSTR0
-        IF (ALPSTAR .GT. StallVal)DSTRS=14.296*10.**(.0258*ALPSTAR)*DSTR0
-    ELSE
+   IF (p%ITRIP .EQ. ITRIP_Heavy) THEN
+      ! Heavily tripped, Eq. (12) of [1]
+      IF (ALPSTAR .LE. 5.) THEN
+         DSTRS=10.**(.0679*ALPSTAR)*DSTR0
+      ELSEIF (ALPSTAR .LE. StallVal) THEN
+         DSTRS = 0.381 * 10.**(.1516*ALPSTAR)*DSTR0
+      ELSE
+         DSTRS = 14.296 * 10.**(.0258*ALPSTAR)*DSTR0
+      ENDIF
+   ELSE
         ! Untripped or lightly tripped, Eq. (15) of [1]
-        IF (ALPSTAR .LE. 7.5)DSTRS =10.**(.0679*ALPSTAR)*DSTR0
-        IF((ALPSTAR .GT. 7.5).AND.(ALPSTAR .LE. StallVal)) &
-            DSTRS = .0162*10.**(.3066*ALPSTAR)*DSTR0
-        IF (ALPSTAR .GT. StallVal) DSTRS = 52.42*10.**(.0258*ALPSTAR)*DSTR0
-    ENDIF
+      IF (ALPSTAR .LE. 7.5) THEN
+         DSTRS =10.**(.0679*ALPSTAR)*DSTR0
+      ELSEIF(ALPSTAR .LE. StallVal) THEN
+         DSTRS = .0162*10.**(.3066*ALPSTAR)*DSTR0
+      ELSE
+         DSTRS = 52.42*10.**(.0258*ALPSTAR)*DSTR0
+      ENDIF
+   ENDIF
+   
 END SUBROUTINE Thick
 !====================================================================================================
 !> This subroutine computes the high frequency directivity function for the trailing edge

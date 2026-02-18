@@ -38,7 +38,7 @@ These instructions are for interaction directly with the `openfast_io` source co
     ```
 
 ### Extra options
-[ROSCO](https://github.com/NREL/ROSCO) can be installed as an optional dependency. Run either
+[ROSCO](https://github.com/NatLabRockies/ROSCO) can be installed as an optional dependency. Run either
 ```shell
 pip install openfast_io[rosco]
 ```

@@ -356,6 +356,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['CompSub'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompMooring'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompIce'] = int(f.readline().split()[0])
+        self.fst_vt['Fst']['CompSoil'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['MHK'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['MirrorRotor'] = read_array(f, self.fst_vt['Fst']['NRotors'], array_type=bool)
 
@@ -385,6 +386,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['SubFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['MooringFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['IceFile'] = quoted_read(f.readline().split()[0])
+        self.fst_vt['Fst']['SoilFile'] = quoted_read(f.readline().split()[0])
         # self.fst_vt['Fst']['EDFiles'] = [self.fst_vt['Fst']['EDFile']]
         # self.fst_vt['Fst']['BDBldFiles(1)'] = [self.fst_vt['Fst']['BDBldFile(1)']]
         # self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
@@ -548,6 +550,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDyn']['BlPIner(3)']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['HubMass']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['HubIner']    = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['HubIner_Teeter']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['GenIner']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['NacMass']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['NacYIner']   = float_read(f.readline().split()[0])
@@ -1694,7 +1697,7 @@ class InputReader_OpenFAST(object):
         for i in range(self.fst_vt['ServoDyn']['DLL_NumTrq']):
             data = f.readline().split()
             self.fst_vt['ServoDyn']['GenSpd_TLU'][i]  = float_read(data[0])
-            self.fst_vt['ServoDyn']['GenTrq_TLU'][i]  = float_read(data[0])
+            self.fst_vt['ServoDyn']['GenTrq_TLU'][i]  = float_read(data[1])
 
         # ServoDyn Output Params (sd_out_params)
         f.readline()
@@ -3544,6 +3547,8 @@ class InputReader_OpenFAST(object):
 
             if not os.path.isabs(self.fst_vt['ElastoDyn']['TwrFile']):
                 ed_tower_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['TwrFile'])
+            else:
+                ed_tower_file = self.fst_vt['ElastoDyn']['TwrFile']
             self.read_ElastoDynTower(ed_tower_file)
         
         if self.fst_vt['Fst']['CompInflow'] == 1:

@@ -14,18 +14,16 @@
 **Additional supporting information**
 <!-- Add any other context about the problem here. -->
 
+**Generative AI usage**
+<!-- describe any generative AI used
+If substantial portions are generated with AI, include a reference like one of the following:
+Co-authored-by: Google Gemini <gemini@google.com>
+Co-authored-by: OpenAI ChatGPT <chatgpt@openai.com>
+Co-authored-by: Microsoft Copilot <copilot@microsoft.com>
+Co-authored-by: Anthropic Claude <claude@anthropic.com>
+Assisted by: GitHub Copilot <support@github.com>
+-->
+
 **Test results, if applicable**
 <!-- Add the results from unit tests and regression tests here along with justification for any failing test cases. -->
-
-<!-- Release checklist:
-- [ ] Update the documentation version in docs/conf.py
-- [ ] Update the versions in docs/source/user/api_change.rst
-- [ ] Verify readthedocs builds correctly
-- [ ] Create a tag in OpenFAST
-- [ ] Create a merge commit in r-test and add a corresponding tag
-- [ ] Compile executables for Windows builds
-    - [ ] FAST_SFunc.mexw64
-    - [ ] OpenFAST-Simulink_x64.dll
-    - [ ] openfast_x64.exe
-    - [ ] DISCON.dll
--->
+- [ ] r-test branch merging required

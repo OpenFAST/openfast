@@ -12,16 +12,14 @@ implicit none
     character(11), parameter :: terminal="/dev/stdout"
 #endif
 
-integer, parameter :: stdout=CU
-
 contains
 
 subroutine hide_terminal_output()
-    open(unit=stdout, file=trim(nullfile))
+    open(unit=CU, file=trim(nullfile))
 end subroutine
 
 subroutine show_terminal_output()
-    open(unit=stdout, file=terminal, status="old")
+    open(unit=CU, file=terminal, status="old")
 end subroutine
 
 end module

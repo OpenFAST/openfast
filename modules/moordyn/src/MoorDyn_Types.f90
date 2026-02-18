@@ -34,6 +34,10 @@ MODULE MoorDyn_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxNCoef                      = 30      ! maximum number of entries to allow in nonlinear coefficient lookup tables [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxBdAtch                     = 100      ! maximum number of attachments to a body [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxPtAtch                     = 100      ! maximum number of attachments to a point [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxFailLines                  = 30      ! maximum number of line failures that can be simulated [-]
 ! =========  MD_InputFileType  =======
   TYPE, PUBLIC :: MD_InputFileType
     REAL(DbKi)  :: DTIC = 0.5      !< convergence check time step for IC generation [[s]]
@@ -84,14 +88,14 @@ IMPLICIT NONE
     REAL(DbKi)  :: cF = 0.0_R8Ki      !< Center VIV synchronization in non-dimensional frequency [-]
     INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload}  [-]
     INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
     INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
     INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
   END TYPE MD_LineProp
 ! =======================
 ! =========  MD_RodProp  =======
@@ -112,12 +116,12 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Point [-]
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxBdAtch)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxBdAtch)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedP = 0_IntKi      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
-    REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
-    REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
+    REAL(DbKi) , DIMENSION(1:3,1:MD_MaxBdAtch)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
+    REAL(DbKi) , DIMENSION(1:6,1:MD_MaxBdAtch)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
     REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (separate from attached objects) [[kg]]
     REAL(DbKi)  :: bodyV = 0.0_R8Ki      !< body volume (for buoyancy calculation) [[m^3]]
     REAL(DbKi) , DIMENSION(1:3)  :: bodyI = 0.0_R8Ki      !< body 3x3 inertia matrix diagonals [[kg-m^2]]
@@ -149,8 +153,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of point: fix, vessel, point [-]
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0_IntKi      !< number of attached lines [-]
     REAL(DbKi)  :: pointM = 0.0_R8Ki      !< point mass [[kg]]
     REAL(DbKi)  :: pointV = 0.0_R8Ki      !< point volume [[m^3]]
@@ -180,10 +184,10 @@ IMPLICIT NONE
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated rod properties [-]
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=pinned, 2=fixed, -1=coupledpinned, -2=coupled [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0_IntKi      !< list of IdNums of lines attached to end A [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachedA = 0_IntKi      !< list of IdNums of lines attached to end A [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: TopB = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttachedA = 0_IntKi      !< number of attached lines to Rod end A [-]
     INTEGER(IntKi)  :: nAttachedB = 0_IntKi      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:55)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
@@ -273,14 +277,14 @@ IMPLICIT NONE
     REAL(DbKi)  :: dF = 0.0_R8Ki      !< +- range of VIV synchronization in non-dimensional frequency [-]
     REAL(DbKi)  :: cF = 0.0_R8Ki      !< Center VIV synchronization in non-dimensional frequency [-]
     INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
     INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
     INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
@@ -338,8 +342,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this failure [-]
     INTEGER(IntKi)  :: attachID = 0_IntKi      !< ID of connection or Rod the lines are attached to [-]
     INTEGER(IntKi)  :: isRod = 0_IntKi      !< 1 Rod end A, 2 Rod end B, 0 if point [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: lineIDs = 0_IntKi      !< array of one or more lines to detach (starting from 1...) [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: lineTops = 0_IntKi      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxFailLines)  :: lineIDs = 0_IntKi      !< array of one or more lines to detach (starting from 1...) [-]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxFailLines)  :: lineTops = 0_IntKi      !< an array that will be FILLED IN to return which end of each line was disconnected ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nLinesToDetach = 0_IntKi      !< how many lines to dettach [-]
     REAL(DbKi)  :: failTime = 0.0_R8Ki      !< time of failure [s]
     REAL(DbKi)  :: failTen = 0.0_R8Ki      !< tension threshold of failure [N]
@@ -527,7 +531,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Xs      !< array of x-coordinates in the bathymetry grid [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Ys      !< array of y-coordinates in the bathymetry grid [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_npoints      !< number of grid points to describe the bathymetry grid [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
     LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
   END TYPE MD_MiscVarType
 ! =======================
@@ -4458,7 +4462,7 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%BathGrid_npoints = SrcMiscData%BathGrid_npoints
    end if
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstMiscData%IC_gen = SrcMiscData%IC_gen
@@ -4622,7 +4626,7 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%BathGrid_npoints)) then
       deallocate(MiscData%BathGrid_npoints)
    end if
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -4739,7 +4743,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%BathGrid_Xs)
    call RegPackAlloc(RF, InData%BathGrid_Ys)
    call RegPackAlloc(RF, InData%BathGrid_npoints)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call GridInterp_PackMisc(RF, InData%WaveField_m) 
    call RegPack(RF, InData%IC_gen)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -4891,7 +4895,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BathGrid_Xs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BathGrid_Ys); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BathGrid_npoints); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
    call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

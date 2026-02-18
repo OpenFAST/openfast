@@ -11,21 +11,21 @@ Prerequisites
 
 1. A version of Visual Studio (VS).  
 
-    -  Currently VS 2013 Professional and VS 2015 Community Edition have been tested with OpenFAST.
+    -  NOTE: not all VS Studio versions are supported by the Intel compilers. In general, the Fortran compiler must be newer than Visual Studio.  A list of Intel Fortran compatible VS versions and specific installation notes are found `here <https://software.intel.com/en-us/intel-parallel-studio-xe-compilers-required-microsoft-visual-studio>`_.    
 
-    -  A list of Intel Fortran compatible VS versions and specific installation notes are found `here <https://software.intel.com/en-us/intel-parallel-studio-xe-compilers-required-microsoft-visual-studio>`_.    
+    -  Currently VS 2019 Community Edition, VS 2022 Professional, and VS 2022 Community Edition have been tested with OpenFAST.  Download VS 2022 Community `here <https://aka.ms/vs/17/release/vs_community.exe>`__.
 
-    -  The included C/C++ project files for MAP++ and the Registry are compatible with VS 2013, but will upgrade seemlessly to a newer version of VS.
+    -  When installing Visual Studio, select the ``Desktop development with C++`` under ``Workloads``.
 
-    -  If you download and install `Visual Studio 2015 Community Edition <https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409>`__, you will need to be sure and select the ``C/C++ component`` using the ``Customize`` option.
+    -  Note: The included C/C++ project files for MAP++ and the Registry are compatible with VS 2019, but will upgrade seemlessly to a newer version of VS.
 
 2. Intel Fortran Compiler
 
-    -  Currently only version 2017.1 has been tested with OpenFAST, but any newer version should be compatible.
+    -  We recommend compiling with the IFX compiler from Intel.  This is included in the ``Intel Fortran Essentials`` installation package.  Currently tested with version 2025.3
 
-    -  You can download an Intel Fortran compiler `here <https://software.intel.com/en-us/fortran-compilers>`__.
+    -  You can download ``Intel Fortran Essentials`` `here <https://www.intel.com/content/www/us/en/developer/tools/oneapi/fortran-compiler-download.html>`__.  Note: do not install the ``oneAPI HPC Toolkit``
 
-    -  Only install Intel Fortran after you have completed your Visual Studio installation.
+    -  Only install Intel Fortran after you have completed your Visual Studio installation. Note that Intel Fortran must be compatible with your version of Visual Studio.  See `here <https://www.intel.com/content/www/us/en/developer/articles/reference-implementation/intel-compilers-compatibility-with-microsoft-visual-studio-and-xcode.html>`__ for compatibility tables.
 
 3. Git for Windows
 

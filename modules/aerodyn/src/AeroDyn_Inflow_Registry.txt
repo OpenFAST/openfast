@@ -27,23 +27,23 @@ typedef    ^        ^                  InflowWind_ParameterType         p       
 typedef    ^        ^                  InflowWind_MiscVarType           m                -      -     -   "Misc/optimization variables"
 typedef    ^        ^                  InflowWind_InputType             u                -      -     -   "Array of inputs associated with InputTimes"
 typedef    ^        ^                  InflowWind_OutputType            y                -      -     -   "System outputs"
-typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind, 2=External IfW (ADI c-bind only)" "-"
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
 # ..... InflowWind Input data .....................................................................................................
 typedef    ^     ADI_IW_InputData      Character(1024)                  InputFile        -      -     -   "Name of InfloWind input file" -
-typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind, 2=External IfW (ADI c-bind only)" "-"
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
 typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
+typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
+typedef    ^        ^                  ReKi                             MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" m
 typedef    ^        ^                  IntKi                            FilePassingMethod -     0     -   "Should we read everthing from an input file (0), passed in as a FileInfoType structure (1), or passed as the IfW_InputFile structure (2)"  -
 typedef    ^        ^                  FileInfoType                     PassedFileInfo   -      -     -   "If we don't use the input file, pass everything through this as a FileInfo structure"       -
 typedef    ^        ^                  InflowWind_InputFile             PassedFileData   -      -     -   "If we don't use the input file, pass everything through this as an IfW InputFile structure" -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
-typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
-typedef    ^        ^                  ReKi                             MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" m
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
 typedef    ^        ^                  LOGICAL                          OutputAccel      -    .FALSE. -   "Flag to output wind acceleration" -
 
@@ -57,6 +57,8 @@ typedef    ^        ^                  Logical                          storeHHV
 typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef    ^        ^                  IntKi                            WrVTK_Type       -     1      -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
+typedef    ^        ^                  FlowFieldType                   *FlowField        -      -     -   "Pointer of InflowWinds flow field data type (from external IfW instance -- used with c-binding)" -
+
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -

@@ -14,6 +14,7 @@
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
 usefrom   SeaSt_WaveField.txt
+usefrom   GridInterp.txt
 
 param       WAMIT2/WAMIT2     unused            INTEGER              MaxWAMIT2Outputs  -        6       -        ""    -
 
@@ -50,7 +51,7 @@ typedef     ^                 ^                 LOGICAL              SumQTFF    
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef     ^                 MiscVarType       INTEGER              LastIndWave       :        -        -        "Index for last interpolation step of 2nd order forces"   -
 typedef     ^                 ^                 ReKi                 F_Waves2         {:}       -        -        "2nd order force from this timestep"   -
-typedef     ^                 ^       SeaSt_WaveField_MiscVarType    WaveField_m       -        -        -        "misc var information from the SeaState Interpolation module"   -
+typedef     ^                 ^            GridInterp_MiscVarType    WaveField_m       -        -        -        "misc var information from the Grid Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -61,7 +62,7 @@ typedef     ^                 ^                 INTEGER              NBodyMod   
 
 #The 2nd order force time series grid
 typedef     ^                 ^                 SiKi             WaveExctn2Grid {:}{:}{:}{:}{:} -        -        "Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component)"    (N)
-typedef     ^                 ^       SeaSt_WaveField_ParameterType  Exctn2GridParams  -        -        -        "Parameters of WaveExctn2Grid" -
+typedef     ^                 ^            GridInterp_ParameterType  Exctn2GridParams  -        -        -        "Parameters of WaveExctn2Grid" -
 
 #Flags set for dimensions to use with each method (MnDrift, NewmanApp, etc). These are stored by method because .8 files that can be used in MnDrift or NewmanApp don't have some of the dimensions.
 typedef     ^                 ^                 LOGICAL              MnDriftDims       {6}      -        -        "Flags for which dimensions to calculate in MnDrift   calculations"  -

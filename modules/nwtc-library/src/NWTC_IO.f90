@@ -2354,6 +2354,8 @@ END SUBROUTINE CheckR8Var
                      //TRIM( DefaultInputFile )//'".' )
       END IF
       CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
+      CALL WrScr    ( NewLine//' For more information and documentation, visit:' )
+      CALL WrScr    ( '    https://openfast.readthedocs.io/' )
       CALL WrScr    ( ' ')
                      
    END SUBROUTINE NWTC_DisplaySyntax
@@ -2398,8 +2400,9 @@ END SUBROUTINE CheckR8Var
    OPEN( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='STREAM', IOSTAT=ErrStat, ACTION='READ' )
 
    IF ( ErrStat /= 0 ) THEN
+      ErrMsg  = 'OpenBInpFile:Cannot open file "'//TRIM( InFile )//'" for reading. Another program may have locked it.' &
+                //' (IOSTAT is '//TRIM(Num2LStr(ErrStat))//')'
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'OpenBInpFile:Cannot open file "'//TRIM( InFile )//'" for reading. Another program may have locked it.'
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -2427,9 +2430,9 @@ END SUBROUTINE CheckR8Var
    OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=ErrStat, ACTION='WRITE' )
 
    IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
       ErrMsg  = 'OpenBOutFile:Cannot open file "'//TRIM( OutFile )//'". Another program may have locked it for writing.' &
                 //' (IOSTAT is '//TRIM(Num2LStr(ErrStat))//')'
+      ErrStat = ErrID_Fatal
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''

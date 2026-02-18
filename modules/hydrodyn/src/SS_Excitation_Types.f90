@@ -73,7 +73,7 @@ IMPLICIT NONE
 ! =========  SS_Exc_MiscVarType  =======
   TYPE, PUBLIC :: SS_Exc_MiscVarType
     INTEGER(IntKi)  :: LastIndWave = 1      !< last used index in the WaveTime array [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the Grid Interpolation module [-]
   END TYPE SS_Exc_MiscVarType
 ! =======================
 ! =========  SS_Exc_ParameterType  =======
@@ -499,7 +499,7 @@ subroutine SS_Exc_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -513,7 +513,7 @@ subroutine SS_Exc_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SS_Exc_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -523,7 +523,7 @@ subroutine SS_Exc_PackMisc(RF, Indata)
    character(*), parameter         :: RoutineName = 'SS_Exc_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%LastIndWave)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call GridInterp_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -533,7 +533,7 @@ subroutine SS_Exc_UnPackMisc(RF, OutData)
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackMisc'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

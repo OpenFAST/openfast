@@ -3205,18 +3205,10 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             DO node=1,u_out%Nnodes
             
                Orient = u1%Orientation(:,:,node)
-               CALL DCM_logmap ( Orient, tensor(:,1), ErrStat, ErrMsg )
-                  IF (ErrStat >= AbortErrLev ) THEN 
-                     ErrMsg = 'MeshExtrapInterp1:'//TRIM(ErrMsg)
-                     RETURN
-                  END IF
+               CALL DCM_logmap(Orient, tensor(:,1))
                   
                Orient = u2%Orientation(:,:,node)
-               CALL DCM_logmap ( Orient, tensor(:,2), ErrStat, ErrMsg )
-                  IF (ErrStat >= AbortErrLev ) THEN 
-                     ErrMsg = 'MeshExtrapInterp1:'//TRIM(ErrMsg)
-                     RETURN
-                  END IF
+               CALL DCM_logmap(Orient, tensor(:,2))
                                     
                CALL DCM_SetLogMapForInterp( tensor )            
                       
@@ -3347,25 +3339,13 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             DO node=1,u_out%Nnodes
                
                Orient = u1%Orientation(:,:,node)
-               CALL DCM_logmap ( Orient, tensor(:,1), ErrStat, ErrMsg )
-                  IF (ErrStat >= AbortErrLev ) THEN 
-                     ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
-                     RETURN
-                  END IF
+               CALL DCM_logmap(Orient, tensor(:,1))
                   
                Orient = u2%Orientation(:,:,node)
-               CALL DCM_logmap ( Orient, tensor(:,2), ErrStat, ErrMsg )
-                  IF (ErrStat >= AbortErrLev ) THEN 
-                     ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
-                     RETURN
-                  END IF
+               CALL DCM_logmap(Orient, tensor(:,2))
                   
                Orient = u3%Orientation(:,:,node)
-               CALL DCM_logmap ( Orient, tensor(:,3), ErrStat, ErrMsg )
-                  IF (ErrStat >= AbortErrLev ) THEN 
-                     ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
-                     RETURN
-                  END IF
+               CALL DCM_logmap(Orient, tensor(:,3))
                
                CALL DCM_SetLogMapForInterp( tensor )
                                               

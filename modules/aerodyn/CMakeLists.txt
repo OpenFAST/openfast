@@ -39,6 +39,15 @@ add_library(basicaerolib STATIC
 )
 target_link_libraries(basicaerolib ifwlib nwtclibs)
 
+# AeroAcoustics library
+add_library(aeroacousticslib STATIC
+  src/AeroAcoustics_TNO.f90
+  src/AeroAcoustics.f90
+  src/AeroAcoustics_IO.f90
+  src/AeroAcoustics_Types.f90
+)
+target_link_libraries(aeroacousticslib basicaerolib nwtclibs)
+
 # AeroDyn Library
 add_library(aerodynlib STATIC
   src/AeroDyn.f90
@@ -53,12 +62,6 @@ add_library(aerodynlib STATIC
   src/BEMT_Types.f90
   src/DBEMT_Types.f90
 
-  # AeroAcoustics - Main
-  src/AeroAcoustics_TNO.f90
-  src/AeroAcoustics.f90
-  src/AeroAcoustics_IO.f90
-  src/AeroAcoustics_Types.f90
-
   # FVW lib
   src/FVW.f90
   src/FVW_IO.f90
@@ -69,7 +72,7 @@ add_library(aerodynlib STATIC
   src/FVW_Tests.f90
   src/FVW_Types.f90
 )
-target_link_libraries(aerodynlib basicaerolib nwtclibs seastlib)
+target_link_libraries(aerodynlib basicaerolib aeroacousticslib seastlib nwtclibs)
 
 # ADI lib
 add_library(adilib STATIC
@@ -91,6 +94,13 @@ add_executable(aerodyn_driver
 )
 target_link_libraries(aerodyn_driver aerodyn_driver_subs)
 
+# AeroAcoustics driver
+add_executable(aeroacoustics_driver
+   src/AeroAcoustics_Driver_Subs.f90
+   src/AeroAcoustics_Driver.f90
+)
+target_link_libraries(aeroacoustics_driver aeroacousticslib versioninfolib)
+
 # UnsteadyAero Driver
 add_executable(unsteadyaero_driver 
   src/UnsteadyAero_Driver.f90
@@ -98,17 +108,36 @@ add_executable(unsteadyaero_driver
 )
 target_link_libraries(unsteadyaero_driver basicaerolib lindynlib versioninfolib)
 
+
 # AeroDyn-InflowWind c-bindings interface library
-add_library(aerodyn_inflow_c_binding SHARED 
+#   create object instead of directly linking into shared and static -- causes issues in parallel builds
+#   This is only required because we are static linking the library for wavetank
+#   NOTE: target linking at the object, static, and shared libraries.  Different CMake versions handle this
+#         slightly differently with unpredictable results if I don't.
+add_library(aerodyn_inflow_c_binding_object OBJECT
   src/AeroDyn_Inflow_C_Binding_Types.f90
   src/AeroDyn_Inflow_C_Binding.f90
 )
-target_link_libraries(aerodyn_inflow_c_binding aerodyn_driver_subs versioninfolib)
+target_link_libraries(aerodyn_inflow_c_binding_object adilib aerodyn_driver_subs nwtclibs versioninfolib)
+set_property(TARGET aerodyn_inflow_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 1) # required for shared libs
+
+#   shared
+add_library(aerodyn_inflow_c_binding SHARED $<TARGET_OBJECTS:aerodyn_inflow_c_binding_object>)
+target_link_libraries(aerodyn_inflow_c_binding adilib aerodyn_driver_subs nwtclibs versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-install(TARGETS aerodynlib basicaerolib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding adilib
+# C-bindings non-shared interface
+# This is a workaround for building wavetank into a single DLL (also allows setting CU globaly for sending screen to file for labview integration)
+add_library(aerodyn_inflow_c_bind_static STATIC $<TARGET_OBJECTS:aerodyn_inflow_c_binding_object>)
+target_link_libraries(aerodyn_inflow_c_bind_static adilib aerodyn_driver_subs nwtclibs versioninfolib)
+if(APPLE OR UNIX)
+   target_compile_definitions(aerodyn_inflow_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+
+
+install(TARGETS aerodynlib aeroacousticslib basicaerolib aerodyn_driver_subs aerodyn_driver aeroacoustics_driver unsteadyaero_driver aerodyn_inflow_c_binding adilib aerodyn_inflow_c_bind_static
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

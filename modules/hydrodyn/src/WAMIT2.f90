@@ -2646,7 +2646,7 @@ END SUBROUTINE WAMIT2_Init
 
       ! Set up 2nd-order wave excitation grid
       ! Copy WaveField grid parameters
-      call SeaSt_WaveField_CopyParam(InitInp%WaveField%GridParams, p%Exctn2GridParams, 0, ErrStatTmp, ErrMsgTmp); CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      call GridInterp_CopyParam(InitInp%WaveField%VolGridParams, p%Exctn2GridParams, 0, ErrStatTmp, ErrMsgTmp); CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       ! x and y grids are currently not used for second-order wave excitation
       p%Exctn2GridParams%n(2:3)     =  1_IntKi
       p%Exctn2GridParams%delta(2:3) =  0.0_SiKi
@@ -2662,7 +2662,6 @@ END SUBROUTINE WAMIT2_Init
          p%Exctn2GridParams%pZero(4) = -Pi
       end if
       p%Exctn2GridParams%n(4)    =  p%NExctnHdg+1
-      p%Exctn2GridParams%Z_depth = -1.0   ! Set to Z_depth to a negative value to indicate uniform "z" grid for platform heading
 
 
          !> 1. Check that we only specified one of MnDrift, NewmanApp, or DiffQTF
