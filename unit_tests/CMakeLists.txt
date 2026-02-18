@@ -96,12 +96,12 @@ add_custom_target(
 if (AMREX_READER AND BUILD_FASTFARM)
   # Need input files
   add_custom_target(copy_amrex_reader_utest_files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/glue-codes/fast-farm/tests/my_subvol00006 ${CMAKE_BINARY_DIR}/unit_tests/my_subvol00006
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/modules/awae/tests/my_subvol00006 ${CMAKE_BINARY_DIR}/unit_tests/my_subvol00006
   )
   # FAST.Farm AMReX reader test
   add_executable(amrex_reader_utest
-    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/AMReX_reader_utest.F90
-    ${PROJECT_SOURCE_DIR}/glue-codes/fast-farm/tests/test_AMReX_reader.F90
+    ${PROJECT_SOURCE_DIR}/modules/awae/tests/AMReX_reader_utest.F90
+    ${PROJECT_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.F90
   )
   target_link_libraries(amrex_reader_utest amrex_reader nwtclibs testdrivelib)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)

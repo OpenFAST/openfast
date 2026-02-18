@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2026 National Lab of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,20 @@
 if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
+
+# I can't figure out how to get this set directly by the ExternalProject_Add
+if (AMREX_READER)
+  add_library(amrex_reader
+    src/amrex_reader/read_amrex_subdomain_module.F90
+    src/amrex_reader/read_amrex_subdomain.cpp
+  )
+  add_dependencies(amrex_reader amrex)
+  target_link_libraries(amrex_reader ${CMAKE_BINARY_DIR}/dependencies/amrex/Src/libamrex.a)
+  target_include_directories(amrex_reader PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/dependencies/amrex/mod_files_3d/>
+    $<INSTALL_INTERFACE:include>)
+endif()
+
 
 add_library(awaelib_c STATIC
   src/vtk.cpp
@@ -34,6 +48,16 @@ install(TARGETS awaelib awaelib_c
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
+if (AMREX_READER)
+  target_link_Libraries(awaelib amrex_reader)
+  install(TARGETS amrex_reader
+    EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
+endif()
+
 
 #set(AWAE_DRIVER_SOURCES
 #   src/driver/AWAE_Driver_Subs.f90
