@@ -1,6 +1,6 @@
 module test_AMReX_reader
    use testdrive, only: new_unittest, unittest_type, error_type, check
-   use NWTC_Num
+   use NWTC_Library
 
    use amrex_base_module
    use read_amrex_subdomain_module
@@ -43,10 +43,12 @@ contains
 
 
       call amrex_init()
-    
+
       FileName = "my_subvol00006"
       call ReadAMReXHeader(FileName, dims, origin, gridSpacing, time, ErrorStat, ErrorMsg)
-    
+      call check(error, ErrorStat, ErrID_None)
+      if (allocated(error)) return
+
       print*, "ErrorStat = ", ErrorStat
       if (ErrorStat .ne. 0) then
          print*, "ErrorMsg: ", ErrorMsg
@@ -56,25 +58,21 @@ contains
       print*, "gridSpacing = ", gridSpacing(1), gridSpacing(2), gridSpacing(3)
       print*, "time = ", time
 
-      ! Fail here: no file actually exists, so can't check anything yet
-      ErrStat=ErrID_Fatal
-      call check(error, ErrID_None, ErrStat); if (allocated(error)) return
-
-
-
       do idim = 1, 3
          dlo(idim) = dims(idim)/2
          dhi(idim) = dlo(idim) + dims(idim)/4
       end do
-    
+
       allocate(data(3,dlo(1):dhi(1),dlo(2):dhi(2),dlo(3):dhi(3)))
       call ReadAMReXSubdomain(data, dlo, dhi, ErrorStat, ErrorMsg)
-    
+      call check(error, ErrorStat, ErrID_None)
+      if (allocated(error)) return
+
       print*, "ErrorStat = ", ErrorStat
       if (ErrorStat .ne. 0) then
          print*, "ErrorMsg: ", ErrorMsg
       end if
-    
+
       do k = dlo(3), dhi(3)
          do j = dlo(2), dhi(2)
             do i = dlo(1), dhi(1)
@@ -82,7 +80,7 @@ contains
             end do
          end do
       end do
-    
+
       call amrex_finalize()
    end subroutine
 
