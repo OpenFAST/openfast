@@ -1131,8 +1131,10 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
 
    write(UnSu,'(//,A,//)')  '!Connections:'
    write(UnSu,'(A,I0)')     'Number of connections        : ',p%nConn
-   call disp2r8(UnSu, 'PosConn',p%PosConn)
-   call disp2r8(UnSu, 'PhiConn',p%PhiConn)
+   if (p%nConn>0) then
+      call disp2r8(UnSu, 'PosConn',p%PosConn)
+      call disp2r8(UnSu, 'PhiConn',p%PhiConn)
+   end if
 
    OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    OutPFmtS = '( A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
