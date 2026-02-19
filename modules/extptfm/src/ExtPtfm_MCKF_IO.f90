@@ -607,12 +607,15 @@ SUBROUTINE ReadPrimaryFile(InputFile, InitInp, p, OutFileRoot, InputFileData, Er
    CALL ReadCom(UnIn, InputFile, 'Section Header: Connections', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, InputFileData%HasConnections, 'Connections','Flag for connections', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, InputFileData%ConnFile, 'Conn_FileName', 'Path containing connections inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%ConnFile) ) InputFileData%ConnFile = TRIM(PriPath)//TRIM(InputFileData%ConnFile)
    !---------------------- USER FORCING INPUTS ---------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: User Forcing', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, InputFileData%HasUserForcing, 'UserForcing','Flag for user prescribed modal forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, InputFileData%ForceFile, 'Force_FileName', 'Path containing user modal forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%ForceFile) ) InputFileData%ForceFile = TRIM(PriPath)//TRIM(InputFileData%ForceFile)
    CALL ReadVar(UnIn, InputFile, InputFileData%HasConnForcing, 'ConnForcing','Flag for user prescribed connection forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, InputFileData%FConnFile, 'FConn_FileName', 'Path containing user connection forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%FConnFile) ) InputFileData%FConnFile = TRIM(PriPath)//TRIM(InputFileData%FConnFile)
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! SumPrint - Print summary data to <RootName>.sum (flag):
