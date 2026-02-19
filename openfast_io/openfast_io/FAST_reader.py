@@ -1933,6 +1933,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['PtfmVol0']      = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOBxt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOByt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
+        self.fst_vt['HydroDyn']['NAddDOF']       = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=int)
 
         # 2ND-ORDER FLOATING PLATFORM FORCES
         f.readline()
@@ -2891,15 +2892,26 @@ class InputReader_OpenFAST(object):
         f.readline()
 
         # Reduction inputs
-        self.fst_vt['ExtPtfm']['FileFormat'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['RBMod'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['Red_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
-        self.fst_vt['ExtPtfm']['RedCst_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         self.fst_vt['ExtPtfm']['NActiveDOFList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['ActiveDOFList'] = read_array(f,None,split_val='ActiveDOFList',array_type=int)
         self.fst_vt['ExtPtfm']['NInitPosList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitPosList'] = read_array(f,None,split_val='InitPosList',array_type=float)
         self.fst_vt['ExtPtfm']['NInitVelList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitVelList'] = read_array(f,None,split_val='InitVelList',array_type=float)
+        f.readline()
+
+        # Connection inputs
+        self.fst_vt['ExtPtfm']['Connections'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Conn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        f.readline()
+
+        # User forcing inputs
+        self.fst_vt['ExtPtfm']['UserForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Force_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        self.fst_vt['ExtPtfm']['ConnForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['FConn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         f.readline()
 
         # Output
