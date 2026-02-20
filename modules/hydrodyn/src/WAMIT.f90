@@ -399,18 +399,19 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          ! Linear restoring from the hydrostatics problem:
 
-      CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 )  ! Open file.
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-         IF ( ErrStat >= AbortErrLev )  THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN  ! Open file.
       p%HdroSttc (:,:) = 0.0 ! Initialize to zero
 
 
       DO    ! Loop through all rows in the file
 
          READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
+
+         IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+            CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+            CALL Cleanup()
+            RETURN
+         END IF
 
          IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
 
@@ -614,9 +615,12 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   CALL SetErrStat( ErrID_Fatal, "Error reading line from WAMIT file", ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
                   RETURN
-               END IF              
-!bjj: verify that I and J are valid indices for RdtnDim                  
-                  
+               END IF
+               IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.1'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
                   
               IF ( p%HasAddDOF )  THEN
 
@@ -639,7 +643,11 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   CALL Cleanup()
                   RETURN
                END IF              
-                  
+               IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.1'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
 
                IF ( p%HasAddDOF )  THEN
 
@@ -746,13 +754,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       !   to store the directions and frequency- and direction-dependent complex wave
       !   excitation force per unit wave amplitude vector:
 
-      CALL AllocAry(  WAMITWvDir,    NInpWvDir, 'WAMITWvDir',   ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      CALL AllocAry(  SortWvDirInd,  NInpWvDir, 'SortWvDirInd', ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      CALL AllocAry(  HdroWvDir,     NInpWvDir, 'HdroWvDir',    ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-         IF ( ErrStat >= AbortErrLev )  THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      CALL AllocAry(  WAMITWvDir,    NInpWvDir, 'WAMITWvDir',   ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
+      CALL AllocAry(  SortWvDirInd,  NInpWvDir, 'SortWvDirInd', ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
+      CALL AllocAry(  HdroWvDir,     NInpWvDir, 'HdroWvDir',    ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
             
       ALLOCATE ( HdroExctn   (NInpFreq,NInpWvDir,p%NDOF) , STAT=ErrStat2 ) ! complex so we don't have a built in subroutine
       IF ( ErrStat2 /= 0 )  THEN
@@ -881,6 +885,11 @@ if (p%ExctnMod == 1 ) then
             READ (Line,*,IOSTAT=Sttus)  TmpPer, TmpDir, I, TmpData1, TmpData2, TmpRe, TmpIm   ! Read in the period, direction, row index, and nondimensional data from the WAMIT file
                IF ( Sttus /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error reading period and direction, row index, and nondimensional data from the WAMIT file.', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
+               IF ( I > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.3'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
                   RETURN
                END IF
@@ -1019,12 +1028,7 @@ end if
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
-            
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  if ( ErrStat >= AbortErrLev ) then
-                     call Cleanup()
-                     return
-                  end if   
+               if(Failed()) return
             end if
             
          CASE ( WaveMod_ExtFull )              ! User wave data.
@@ -1201,12 +1205,7 @@ end if
                         IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
                            CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
                         END IF
-                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                        IF ( ErrStat >= AbortErrLev ) THEN
-                           CALL Cleanup()
-                           RETURN
-                        END IF
+                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 ); IF (Failed()) RETURN
                         WaveExctnC(I,iHdg,J) = WaveExctnC(I,iHdg,J) * CMPLX(p%WaveField%WaveElevC0(1,I), p%WaveField%WaveElevC0(2,I))
                      END DO                ! J - All wave excitation forces and moments
                   END DO                ! iHdg - All PRP heading
@@ -1279,12 +1278,7 @@ end if
                         IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
                            CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
                         END IF
-                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                        IF ( ErrStat >= AbortErrLev ) THEN
-                           CALL Cleanup()
-                           RETURN
-                        END IF
+                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 ); IF(FAILED()) RETURN
                         do iGrid = 1, p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3)
                            WaveExctnCGrid(I,iGrid,iHdg,J) = WaveExctnC(I,iHdg,J) * CMPLX(p%WaveField%WaveElevC(1,I,iGrid), p%WaveField%WaveElevC(2,I,iGrid))
                         end do
@@ -1424,12 +1418,7 @@ end if
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
-            
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  if ( ErrStat >= AbortErrLev ) then
-                     call Cleanup()
-                     return
-                  end if   
+                  if (Failed()) return
             end if
             
             IF ( (p%ExctnMod>0) .AND. (p%ExctnDisp==2) ) THEN ! Allocate and initialize array for filtered potential-flow body positions
@@ -1483,45 +1472,22 @@ end if
             Conv_Rdtn_InitInp%HighFreq            = HighFreq
             Conv_Rdtn_InitInp%WAMITFile           = InitInp%WAMITFile
             Conv_Rdtn_InitInp%NInpFreq            = NInpFreq
-    
-         
-            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
-                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
-            
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
-               
 
+            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
+                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2); IF (Failed()) RETURN
             
          ELSE IF ( InitInp%RdtnMod == 2 ) THEN
             
             SS_Rdtn_InitInp%InputFile    = InitInp%WAMITFile    
 
-            call AllocAry(SS_Rdtn_InitInp%enabledDOFs, 6*p%NBody, 'SS_Rdtn_InitInp%enabledDOFs', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
+            call AllocAry(SS_Rdtn_InitInp%enabledDOFs, 6*p%NBody, 'SS_Rdtn_InitInp%enabledDOFs', ErrStat2, ErrMsg2); if (Failed()) return
             SS_Rdtn_InitInp%enabledDOFs  = 1                        !  Set to 1 (True) for all DOFs, meaning each DOF is to be used in the analysis.   
             Interval_Sub                 = InitInp%Conv_Rdtn%RdtnDT
             SS_Rdtn_InitInp%NBody        = InitInp%NBody
-            call AllocAry(SS_Rdtn_InitInp%PtfmRefztRot, p%NBody, 'SS_Rdtn_InitInp%PtfmRefztRot', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
+            call AllocAry(SS_Rdtn_InitInp%PtfmRefztRot, p%NBody, 'SS_Rdtn_InitInp%PtfmRefztRot', ErrStat2, ErrMsg2); if (Failed()) return
             SS_Rdtn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
             CALL SS_Rad_Init(SS_Rdtn_InitInp, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, &
-                                   m%SS_Rdtn_y, m%SS_Rdtn, Interval_Sub, SS_Rdtn_InitOut, ErrStat2, ErrMsg2)
-            
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF            
+                                   m%SS_Rdtn_y, m%SS_Rdtn, Interval_Sub, SS_Rdtn_InitOut, ErrStat2, ErrMsg2); IF (Failed()) RETURN
             
          END IF
          
@@ -1563,13 +1529,7 @@ end if
                         ,TranslationVel    = .TRUE.            &
                         ,RotationVel       = .TRUE.            &
                         ,TranslationAcc    = .TRUE.            &
-                        ,RotationAcc       = .TRUE.)
-         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+                        ,RotationAcc       = .TRUE.); if (Failed()) return
          
       do iBody = 1, p%NBody
 
@@ -1578,16 +1538,12 @@ end if
          
          
             ! Create the node on the mesh
-  
          CALL MeshPositionNode (u%Mesh                                &
                                  , iBody                              &
                                  , (/InitInp%PtfmRefxt(iBody), InitInp%PtfmRefyt(iBody), InitInp%PtfmRefzt(iBody)/)   &  
                                  , ErrStat2                           &
                                  , ErrMsg2                            &
-                                 , orientation )
-      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
+                                 , orientation ); if (Failed()) return
       
             ! Create the mesh element
          CALL MeshConstructElement (  u%Mesh              &
@@ -1595,19 +1551,13 @@ end if
                                      , ErrStat2           &
                                      , ErrMsg2            &
                                      , iBody              &
-                                                 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                                                 ); if (Failed()) return
             
       end do
 
       CALL MeshCommit ( u%Mesh              &
-                        , ErrStat2            &
-                        , ErrMsg2             )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF      
+                      , ErrStat2            &
+                      , ErrMsg2             ); if (Failed()) return
 
         call MeshCopy ( SrcMesh   = u%Mesh           &
                        ,DestMesh  = y%Mesh           &
@@ -1616,30 +1566,27 @@ end if
                        ,ErrStat   = ErrStat2         &
                        ,ErrMess   = ErrMsg2          &
                        ,Force     = .TRUE.           &
-                       ,Moment    = .TRUE.           )
-        
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF    
+                       ,Moment    = .TRUE.           ); if (Failed()) return
+
       u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
-
       
          ! Define initialization-routine output here:
-         
-      
-     
-                                               
 
       ! initialize misc vars:      
-   m%LastIndWave = 1
+      m%LastIndWave = 1
        
        CALL Cleanup()
        
 CONTAINS
 
+   LOGICAL FUNCTION Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      IF (Failed) THEN
+         CALL Cleanup()
+      END IF
+   END FUNCTION Failed
 
    SUBROUTINE Cleanup()
    
