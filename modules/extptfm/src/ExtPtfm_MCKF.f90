@@ -29,7 +29,7 @@
 MODULE ExtPtfm_MCKF
 
    USE ExtPtfm_MCKF_Types
-   USE ExtPtfm_MCKF_Parameters ! ID_*, N_INPUTS, N_OUTPUTS
+   USE ExtPtfm_MCKF_Parameters ! ID_*
    USE NWTC_Library
    USE NWTC_LAPACK
 

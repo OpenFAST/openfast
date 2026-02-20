@@ -27,15 +27,11 @@ MODULE ExtPtfm_MCKF_Parameters
 
    TYPE(ProgDesc), PARAMETER :: ExtPtfm_Ver = ProgDesc( 'ExtPtfm_MCKF', '', '' ) !< module date/version information
    !
-   INTEGER(IntKi), parameter :: N_INPUTS = 18
-   INTEGER(IntKi), parameter :: N_OUTPUTS = 6
-
-
    CHARACTER(len=4), DIMENSION(3), PARAMETER :: StrIntMethod = (/'RK4 ','AB4 ','ABM4'/)
 
    ! Variables for output channels
-   INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
-                                                        ! Harcoded to outputs of 200 CB modes
+   INTEGER(IntKi), PARAMETER :: MaxOutChs   = 1 + 12 + 4*200 ! Maximum number of output channels
+                                                             ! Harcoded to outputs of 200 CB modes
    INTEGER(IntKi), PARAMETER :: ID_Time     = 0
    INTEGER(IntKi), PARAMETER :: ID_PtfFx    = 1
    INTEGER(IntKi), PARAMETER :: ID_PtfFy    = 2
@@ -43,14 +39,13 @@ MODULE ExtPtfm_MCKF_Parameters
    INTEGER(IntKi), PARAMETER :: ID_PtfMx    = 4
    INTEGER(IntKi), PARAMETER :: ID_PtfMy    = 5
    INTEGER(IntKi), PARAMETER :: ID_PtfMz    = 6
-   INTEGER(IntKi), PARAMETER :: ID_WaveElev = 7
-   INTEGER(IntKi), PARAMETER :: ID_InpFx    = 8
-   INTEGER(IntKi), PARAMETER :: ID_InpFy    = 9
-   INTEGER(IntKi), PARAMETER :: ID_InpFz    = 10
-   INTEGER(IntKi), PARAMETER :: ID_InpMx    = 11
-   INTEGER(IntKi), PARAMETER :: ID_InpMy    = 12
-   INTEGER(IntKi), PARAMETER :: ID_InpMz    = 13
-   INTEGER(IntKi), PARAMETER :: ID_QStart   = 14
+   INTEGER(IntKi), PARAMETER :: ID_InpFx    = 7
+   INTEGER(IntKi), PARAMETER :: ID_InpFy    = 8
+   INTEGER(IntKi), PARAMETER :: ID_InpFz    = 9
+   INTEGER(IntKi), PARAMETER :: ID_InpMx    = 10
+   INTEGER(IntKi), PARAMETER :: ID_InpMy    = 11
+   INTEGER(IntKi), PARAMETER :: ID_InpMz    = 12
+   INTEGER(IntKi), PARAMETER :: ID_QStart   = 13
 END MODULE ExtPtfm_MCKF_Parameters
 
 !**********************************************************************************************************************************
@@ -204,21 +199,19 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(13) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "INPF_FX  ","INPF_FY  ","INPF_FZ  ","INPF_MX  ","INPF_MY  ","INPF_MZ  ",&
-                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  ",&
-                               "WAVELEV  "/) 
-   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(13) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(12) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "EXTRNFX  ","EXTRNFY  ","EXTRNFZ  ","EXTRNMX  ","EXTRNMY  ","EXTRNMZ  ",&
+                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  "/)
+   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(12) =  (/ &                     ! This lists the units corresponding to the allowed parameters
                                "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ",&
-                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(13) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(12) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                               ID_InpFx, ID_InpFy, ID_InpFz, ID_InpMx, ID_InpMy, ID_InpMz,&
-                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz,&
-                              ID_WaveElev  /)
+                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz/)
    character(ErrMsgLen)                         :: WarnMsg  !Warning Message
    ErrStat = ErrID_None
    ErrMsg  = ""
-   WarnMsg  = ""
+   WarnMsg = ""
    
    p%NumOuts = NumOuts_in
    allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
