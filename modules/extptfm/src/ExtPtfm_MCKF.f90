@@ -511,7 +511,7 @@ SUBROUTINE Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg)
                      RotationAcc       = .TRUE.)
    if(Failed()) return
    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
+   CALL MeshPositionNode (u%PtfmMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return
    ! Create the mesh element
    CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%PtfmMesh, ErrStat, ErrMsg ); if(Failed()) return
@@ -531,7 +531,7 @@ SUBROUTINE Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg)
                      Moment            = .TRUE.)
    if(Failed()) return
    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-   CALL MeshPositionNode (u%FBMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return ! LW: Add Refxt and Refyt
+   CALL MeshPositionNode (u%FBMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return
    ! Create the mesh element
    CALL MeshConstructElement (  u%FBMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%FBMesh, ErrStat, ErrMsg ); if(Failed()) return
@@ -1017,13 +1017,19 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ! Update the output mesh
    y%PtfmMesh%Force(:,1)  = Fc(1:3)
    y%PtfmMesh%Moment(:,1) = Fc(4:6)
+   if (.not.p%HasRBMode) then
+      ! Interface moment correction for fixed-bottom structure similar to SubDyn
+      y%PtfmMesh%Moment(:,1) = y%PtfmMesh%Moment(:,1) - cross_product( u%PtfmMesh%TranslationDisp(:,1), Fc(1:3) )
+   end if
 
-   y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
-   y%FBMesh%Orientation     = u%PtfmMesh%Orientation
-   y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
-   y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
-   y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
-   y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+   if (p%HasRBMode) then
+      y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
+      y%FBMesh%Orientation     = u%PtfmMesh%Orientation
+      y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
+      y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
+      y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
+      y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+   end if
 
    if (p%nConn > 0_IntKi) then
       if (p%HasRBMode) then
