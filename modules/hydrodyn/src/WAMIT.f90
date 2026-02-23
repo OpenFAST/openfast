@@ -407,16 +407,16 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
 
-         IF ( I > p%NDOF .or. J > p%NDOF ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
-            CALL Cleanup()
-            RETURN
-         END IF
-
          IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
 
          ! In case NBodyMod = 1, we now have WAMIT matrices which are potentially larger than 6x6, so we need to determine how the SttcDim multiplier matrix (a 6x6)
          !   should be applied to the larger WAMIT matrix.  
+
+            IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+               CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+               CALL Cleanup()
+               RETURN
+            END IF
             
             IF ( p%HasAddDOF ) THEN
 
