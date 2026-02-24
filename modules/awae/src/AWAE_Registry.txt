@@ -45,6 +45,7 @@ typedef  ^            ^                   IntKi           Mod_Meander    - - -  
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
 typedef  ^            ^                   IntKi           Mod_AmbWind    - - -  "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef  ^            ^                   CHARACTER(1024) InflowFile     -  - -   "Name of file containing InflowWind module input parameters" -
+typedef  ^            ^                   IntKi           DirStartIndex  - - -    "Starting directory index number for AMReX wind" -
 typedef   ^           ^                   DbKi            dt_high        - - -    "High-resolution (FAST) time step" s
 typedef  ^            ^                   ReKi            X0_high       {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
 typedef  ^            ^                   ReKi            Y0_high       {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m

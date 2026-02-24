@@ -34,7 +34,7 @@ MODULE AWAE_IO
    character(*),   parameter  :: AWAE_Nickname = 'AWAE'
     
    public :: AWAE_IO_InitGridInfo
-   public :: ReadLowResWindFile
+   public :: ReadLowResWindVTK
 
    interface
       subroutine ReadVTK_inflow_info(FileName, Desc, dims, origin, gridSpacing, vecLabel, values, read_values, err_stat, err_msg) BIND(C,name='ReadVTK_inflow_info')     
@@ -105,7 +105,7 @@ end subroutine WriteDisWindFiles
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine read the low res wind file (VTK) at a given time step `n`
-subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
+subroutine ReadLowResWindVTK(n, p, Vamb_Low, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n            !< Current simulation timestep increment (zero-based)
    type(AWAE_ParameterType),       intent(in   )  :: p            !< Parameters
    real(SiKi), contiguous,         intent(inout)  :: Vamb_Low(:,0:,0:,0:)         !< Array which will contain the low resolution grid of ambient wind velocities
@@ -124,13 +124,13 @@ subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
   
    FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(Num2LStr(n))//".vtk"//c_null_char, FileName)
    call ReadVTK_inflow_info(FileName, desc, dims, origin, gridSpacing, vecLabel, Vamb_Low, 1, ErrStat, ErrMsg)
-   if (ErrStat /= ErrID_None) ErrMsg = "ReadLowResWindFile:"//trim(ErrMsg)
+   if (ErrStat /= ErrID_None) ErrMsg = "ReadLowResWindVTK:"//trim(ErrMsg)
 
-end subroutine ReadLowResWindFile
+end subroutine ReadLowResWindVTK
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine read the high res wind file (VTK) at a given time step `n`
-subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
+subroutine ReadHighResWindVTK(nt, n, p, Vamb_high, errStat, errMsg)
 
    integer(IntKi),                 intent(in   )  :: nt
    integer(IntKi),                 intent(in   )  :: n                       !< high-res time increment
@@ -151,9 +151,9 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    
    FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"//c_null_char, FileName)
    call ReadVTK_inflow_info(FileName, desc, dims, origin, gridSpacing, vecLabel, Vamb_high, 1, ErrStat, ErrMsg)
-   if (ErrStat /= ErrID_None) ErrMsg = "ReadHighResWindFile:"//trim(ErrMsg)
+   if (ErrStat /= ErrID_None) ErrMsg = "ReadHighResWindVTK:"//trim(ErrMsg)
 
-end subroutine ReadHighResWindFile
+end subroutine ReadHighResWindVTK
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> Flat array of Cartesian point coordinates
 !! Grid runs from (X0, Y0, Z0) to (X0 + (p%nX-1)*dX, Y0+ (p%nY-1)*dY, Z0+ (p%nZ-1)*dZ)
@@ -315,7 +315,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          end do
 
       ! AMReX-based inflow
-      ! case (2)
+      case (4)
       
       end select
    end if

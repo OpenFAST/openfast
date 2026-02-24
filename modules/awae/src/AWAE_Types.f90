@@ -70,6 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
     INTEGER(IntKi)  :: Mod_AmbWind = 0_IntKi      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing InflowWind module input parameters [-]
+    INTEGER(IntKi)  :: DirStartIndex = 0_IntKi      !< Starting directory index number for AMReX wind [-]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X0_high      !< X-component of the origin of the high-resolution spatial domain for each turbine [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y0_high      !< Y-component of the origin of the high-resolution spatial domain for each turbine [m]
@@ -456,6 +457,7 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    DstInputFileTypeData%C_Meander = SrcInputFileTypeData%C_Meander
    DstInputFileTypeData%Mod_AmbWind = SrcInputFileTypeData%Mod_AmbWind
    DstInputFileTypeData%InflowFile = SrcInputFileTypeData%InflowFile
+   DstInputFileTypeData%DirStartIndex = SrcInputFileTypeData%DirStartIndex
    DstInputFileTypeData%dt_high = SrcInputFileTypeData%dt_high
    if (allocated(SrcInputFileTypeData%X0_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%X0_high)
@@ -618,6 +620,7 @@ subroutine AWAE_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%C_Meander)
    call RegPack(RF, InData%Mod_AmbWind)
    call RegPack(RF, InData%InflowFile)
+   call RegPack(RF, InData%DirStartIndex)
    call RegPack(RF, InData%dt_high)
    call RegPackAlloc(RF, InData%X0_high)
    call RegPackAlloc(RF, InData%Y0_high)
@@ -668,6 +671,7 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_AmbWind); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InflowFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirStartIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%X0_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y0_high); if (RegCheckErr(RF, RoutineName)) return
