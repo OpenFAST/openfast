@@ -1,9 +1,8 @@
 program AMReX_reader_utest
 use, intrinsic :: iso_fortran_env, only: error_unit
 use testdrive, only: run_testsuite, new_testsuite, testsuite_type
-
+use amrex_utils
 use test_AMReX_reader
-!use NWTC_Num
 
 implicit none
 integer :: stat, is, total_tests
@@ -12,19 +11,19 @@ character(len=*), parameter :: fmt = '("#", *(1x, a))'
 
 stat = 0
 
+call amrex_init()
+
 call SetConstants()
 
 testsuites = [ &
              new_testsuite("AMReX", run_test_AMReX_reader) &
              ]
 
-
 total_tests = 0
 do is = 1, size(testsuites)
    write (error_unit, fmt) "Testing:", testsuites(is)%name
    call run_testsuite(testsuites(is)%collect, error_unit, stat)
 end do
-
 
 if (stat > 0) then
    write (error_unit, '(i0, 1x, a)') stat, "test(s) failed!"
@@ -33,5 +32,6 @@ end if
 
 write (error_unit, fmt) "All tests PASSED"
 
+call amrex_finalize()
 
 end program

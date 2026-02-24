@@ -96,7 +96,7 @@ add_custom_target(
 if (AMREX_READER AND BUILD_FASTFARM)
   # Need input files
   add_custom_target(copy_amrex_reader_utest_files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/modules/awae/tests/my_subvol00006 ${CMAKE_BINARY_DIR}/unit_tests/my_subvol00006
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/modules/awae/tests/data ${CMAKE_BINARY_DIR}/unit_tests/data
   )
   # FAST.Farm AMReX reader test
   add_executable(amrex_reader_utest

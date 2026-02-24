@@ -17,19 +17,13 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
-# I can't figure out how to get this set directly by the ExternalProject_Add
+# If AMReX reader enabled, build library and link amrex_3d
 if (AMREX_READER)
-  add_library(amrex_reader
-    src/amrex_reader/read_amrex_subdomain_module.F90
-    src/amrex_reader/read_amrex_subdomain.cpp
+  add_library(amrex_reader STATIC
+    src/amrex_reader/amrex_utils.F90
+    src/amrex_reader/amrex_utils.cpp
   )
-  add_dependencies(amrex_reader amrex)
-  target_link_libraries(amrex_reader ${CMAKE_BINARY_DIR}/dependencies/amrex/Src/libamrex.a)
-  target_include_directories(amrex_reader PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/dependencies/amrex/mod_files_3d/>
-    $<INSTALL_INTERFACE:include>)
-  set_target_properties(amrex_reader PROPERTIES
-    Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dependencies/amrex/mod_files_3d/)
+  target_link_libraries(amrex_reader amrex_3d)
 endif()
 
 
