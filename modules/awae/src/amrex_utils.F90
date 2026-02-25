@@ -58,7 +58,8 @@ contains
 
 #ifndef ENABLE_AMREX_LIB
 
-subroutine amrex_init()
+subroutine amrex_init(arg_parmparse)
+   logical, optional, intent(in) :: arg_parmparse
 end subroutine
 
 subroutine amrex_finalize()

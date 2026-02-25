@@ -171,15 +171,22 @@ subroutine ReadWindAMReX(sv, n, p, Vamb, ErrStat, ErrMsg)
   
    character(len=2048) :: FileName       ! Name of output file
    character(len=12)   :: DirIndex       ! Directory index suffix 
+   integer(IntKi)      :: i
 
    ! If sub-volume is 0 then this is low-resolution file
    if (sv == 0) then
-      write(DirIndex,'(i0'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaLow * n
+      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaLow * n
    else
-      write(DirIndex,'(i0'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaHigh * n
+      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaHigh * n
    end if
 
-   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//trim(DirIndex)
+   ! Prepend zeros in front of index number
+   do i = 1, p%DirIndexLen
+      if (DirIndex(i:i) /= " ") exit
+      DirIndex(i:i) = '0'
+   end do
+
+   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//DirIndex(1:p%DirIndexLen)
    call amrex_read_data(FileName, Vamb, ErrStat, ErrMsg)
 
 end subroutine
@@ -284,12 +291,12 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
 
       ! Read first low-res file
       FileName = trim(p%WindFilePath)//"_0_"//p%DirStartIndex
-      call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat, ErrMsg)
+      call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
       if (Failed()) return
 
       ! Search directory for time slices of this sub-volume
       call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, p%DirStartIndex, &
-                              StartIndexNum, p%DirIndexDeltaLow, ErrStat, ErrMsg)
+                              StartIndexNum, p%DirIndexDeltaLow, ErrStat2, ErrMsg2)
       if (Failed()) return
 
    end select
@@ -488,12 +495,12 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       case (4)
 
          FileName = trim(p%WindFilePath)//"_"//trim(Num2LStr(nt))//"_"//p%DirStartIndex
-         call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat, ErrMsg)
+         call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
          if (Failed()) return
 
          ! Search directory for time slices of this sub-volume
          call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low, p%DirStartIndex, &
-                                 StartIndexNum, IndexDelta, ErrStat, ErrMsg)
+                                 StartIndexNum, IndexDelta, ErrStat2, ErrMsg2)
          if (Failed()) return
 
          ! If first turbine, save index delta, otherwise ensure that it is the same

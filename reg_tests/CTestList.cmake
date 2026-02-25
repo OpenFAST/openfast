@@ -432,7 +432,7 @@ of_regression_linear("MHK_RM1_Floating_MR_Linear"     "-highpass=0.05"  "openfas
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
-  # ff_regression("AMReX"             ""                               "fastfarm")
+  ff_regression("AMReX"             ""                               "fastfarm")
   ff_regression("TSinflow"          ""                               "fastfarm")
   ff_regression("LESinflow"         ""                               "fastfarm")
   ff_regression("TSinflow_curl"     ""                               "fastfarm")

@@ -85,7 +85,7 @@ type(All_FastFarm_Data)               :: farm
    endif
 
    ! Initialize AMReX library
-   call amrex_init()
+   call amrex_init(arg_parmparse=.false.)
 
    CALL FAST_ProgStart( Farm_Ver ) ! put this after CheckArgs because CheckArgs assumes we haven't called this routine, yet.
    

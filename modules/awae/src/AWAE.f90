@@ -1658,20 +1658,21 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       errMsg  = ""
 
       ! Destroy InflowWind data
-      if (p%Mod_AmbWind > 1) then
-
+      select case(p%Mod_AmbWind)
+      case (2)
          call InflowWind_DestroyInput(m%u_IfW_Low, errStat, errMsg)
          call InflowWind_DestroyParam(p%IfW(0), errStat, errMsg)
          call InflowWind_DestroyOutput(m%y_IfW_Low, errStat, errMsg)
-
-         if (p%Mod_AmbWind == 3) then
-            do nt = 1,p%NumTurbines
-               call InflowWind_DestroyInput(m%u_IfW_High(nt), errStat, errMsg)
-               call InflowWind_DestroyParam(p%IfW(nt), errStat, errMsg)
-               call InflowWind_DestroyOutput(m%y_IfW_High(nt), errStat, errMsg)
-            end do
-         end if
-      end if
+      case (3)
+         call InflowWind_DestroyInput(m%u_IfW_Low, errStat, errMsg)
+         call InflowWind_DestroyParam(p%IfW(0), errStat, errMsg)
+         call InflowWind_DestroyOutput(m%y_IfW_Low, errStat, errMsg)
+         do nt = 1,p%NumTurbines
+            call InflowWind_DestroyInput(m%u_IfW_High(nt), errStat, errMsg)
+            call InflowWind_DestroyParam(p%IfW(nt), errStat, errMsg)
+            call InflowWind_DestroyOutput(m%y_IfW_High(nt), errStat, errMsg)
+         end do
+      end select
 
       ! Destroy the input data:
       call AWAE_DestroyInput( u, errStat, errMsg )
@@ -1764,7 +1765,7 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    ! AMReX-based inflow
    case (4)
 
-      call ReadWindAMReX(0, n, p, m%Vamb_low, errStat, errMsg)
+      call ReadWindAMReX(0, n, p, m%Vamb_low, errStat2, errMsg2)
       if (Failed()) return
 
    end select
@@ -1853,7 +1854,7 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
          ! Loop through high resolution grids
          do i_hl = 0, n_high_low
 
-            call ReadWindAMReX(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat, errMsg)
+            call ReadWindAMReX(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
             if (Failed()) return
 
          end do
@@ -2068,10 +2069,10 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
 
-   if ( (InputFileData%Mod_AmbWind < 1) .or. (InputFileData%Mod_AmbWind > 3) ) call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module, or 3: multiple instances of InflowWind module.', errStat, errMsg, RoutineName )
-   if ( InputFileData%Mod_AmbWind == 1 ) then
+   select case (InputFileData%Mod_AmbWind)
+   case (1,4)
       if (len_trim(InputFileData%WindFilePath) == 0) call SetErrStat ( ErrID_Fatal, 'WindFilePath must contain at least one character.', errStat, errMsg, RoutineName )
-   else
+   case (2,3)
       if (len_trim(InputFileData%InflowFile) == 0) call SetErrStat ( ErrID_Fatal, 'InflowFile must contain at least one character.', errStat, errMsg, RoutineName )
       if ( (InputFileData%nX_low < 2) .or. (InputFileData%nY_low < 2) .or. (InputFileData%nZ_low < 2) ) &
          call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
@@ -2079,7 +2080,9 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
          call SetErrStat ( ErrID_Fatal, 'The high resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
       if ( (InputFileData%dX_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) ) &
          call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
-   end if
+   case default
+      call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module, 3: multiple instances of InflowWind module, 4: high-fidelity precursor in AMReX format', errStat, errMsg, RoutineName )
+   end select
 
    if (  InputFileData%NumTurbines <   1  )  call SetErrStat ( ErrID_Fatal, 'Number of turbines must be greater than zero.', errStat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', errStat, errMsg, RoutineName )
