@@ -26,6 +26,7 @@
 PROGRAM FAST_Farm
 
    USE FAST_Farm_Subs
+   USE amrex_utils
 
    IMPLICIT NONE
 
@@ -82,6 +83,9 @@ type(All_FastFarm_Data)               :: farm
    else if ( len( trim(FlagArg) ) > 0 ) then ! Any other flag (-v,-h) end normally
       call NormStop()
    endif
+
+   ! Initialize AMReX library
+   call amrex_init()
 
    CALL FAST_ProgStart( Farm_Ver ) ! put this after CheckArgs because CheckArgs assumes we haven't called this routine, yet.
    
@@ -157,6 +161,9 @@ type(All_FastFarm_Data)               :: farm
    !...............................................................................................................................         
    
    call FARM_End(farm, ErrStat, ErrMsg)
+
+   ! Finalize AMReX library
+   call amrex_finalize()
    
    CALL RunTimes( ProgStrtTime, ProgStrtCPU, SimStrtTime, SimStrtCPU, t )   
    call NormStop()

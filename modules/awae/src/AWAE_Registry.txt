@@ -45,7 +45,7 @@ typedef  ^            ^                   IntKi           Mod_Meander    - - -  
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
 typedef  ^            ^                   IntKi           Mod_AmbWind    - - -  "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef  ^            ^                   CHARACTER(1024) InflowFile     -  - -   "Name of file containing InflowWind module input parameters" -
-typedef  ^            ^                   IntKi           DirStartIndex  - - -    "Starting directory index number for AMReX wind" -
+typedef  ^            ^                   character(12)   DirStartIndex  - - -    "Starting directory index suffix for AMReX wind" -
 typedef   ^           ^                   DbKi            dt_high        - - -    "High-resolution (FAST) time step" s
 typedef  ^            ^                   ReKi            X0_high       {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
 typedef  ^            ^                   ReKi            Y0_high       {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
@@ -204,6 +204,11 @@ typedef   ^ ParameterType  IntKi            Mod_Meander      -  - -   "Spatial f
 typedef   ^ ParameterType  ReKi             C_Meander        -  - -   "Calibrated parameter for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_ScaleDiam      -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
 typedef   ^ ParameterType  IntKi            Mod_Projection   -  - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
+typedef   ^ ParameterType  character(12)    DirStartIndex    -  - -    "Starting directory index suffix for AMReX wind" -
+typedef   ^ ParameterType  IntKi            DirIndexLen      -  - -    "Number of characters in directory index"
+typedef   ^ ParameterType  IntKi            DirStartNum      -  - -    "Starting directory index number for AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexDeltaLow -  - -    "Directory index delta for low-resolution AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexDeltaHigh -  - -   "Directory index delta for high-resolution AMReX wind"
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts           -  - -   "Number of parameters in the output list (number of outputs requested)"      -

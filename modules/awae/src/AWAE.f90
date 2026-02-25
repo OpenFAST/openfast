@@ -1220,6 +1220,12 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
    p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
+
+   ! AMReX Wind Parameters
+   p%DirStartIndex    = InitInp%InputFileData%DirStartIndex
+   p%DirIndexLen      = len_trim(InitInp%InputFileData%DirStartIndex)
+   read(p%DirStartIndex, *) p%DirStartNum
+
    ! Wake Added Turbulence (WAT) Parameters
    p%WAT_Enabled = InitInp%WAT_Enabled
    if (p%WAT_Enabled) then
@@ -1740,26 +1746,6 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    
       ! Read from file the ambient flow for the n time step
       call ReadLowResWindVTK(n, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
-      
-   ! AMReX-based inflow
-   ! case (2)
-
-   !    ! Set flag to write wind VTK files if requested and it's the correct step
-   !    WriteWindVTK = p%WrDisWind .and. (mod(nint(t / p%dt_low), p%WrDisSkp1) == 0)
-
-   !    ! Loop through low-resolution grid chunks
-   !    do i = 1, size(p%LowRes%WakeChunks)
-
-   !       ! If chunk has wake or VTK wind files are to be written this step, 
-   !       ! copy the ambient wind data into the current chunk
-   !       if (m%LowResChunkHasWake(i) .or. WriteWindVTK) then
-   !          m%Vamb_low(:,&
-   !                   p%LowRes%WakeChunks(i)%iSubGridX(1):p%LowRes%WakeChunks(i)%iSubGridX(2), &
-   !                   p%LowRes%WakeChunks(i)%iSubGridY(1):p%LowRes%WakeChunks(i)%iSubGridY(2), &
-   !                   p%LowRes%WakeChunks(i)%iSubGridZ(1):p%LowRes%WakeChunks(i)%iSubGridZ(2)) = &
-   !                   amr_wind_vel
-   !       end if
-   !    end do
 
    ! InflowWind-based ambient wind (single or multiple instances)
    case (2, 3)
@@ -1774,7 +1760,13 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
              lbound(m%Vamb_low,3):ubound(m%Vamb_low,3),&
              lbound(m%Vamb_low,4):ubound(m%Vamb_low,4)) => m%y_IfW_Low%VelocityUVW
       m%Vamb_Low = V_Grid
-      
+
+   ! AMReX-based inflow
+   case (4)
+
+      call ReadWindAMReX(0, n, p, m%Vamb_low, errStat, errMsg)
+      if (Failed()) return
+
    end select
 
    !----------------------------------------------------------------------------
@@ -1849,6 +1841,21 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
                    lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
                    lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
             m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
+         end do
+      end do
+
+   ! AMReX-based ambient wind
+   case (4)
+
+      ! Loop through turbines
+      do nt = 1, p%NumTurbines
+
+         ! Loop through high resolution grids
+         do i_hl = 0, n_high_low
+
+            call ReadWindAMReX(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat, errMsg)
+            if (Failed()) return
+
          end do
       end do
 

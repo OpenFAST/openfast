@@ -17,16 +17,6 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
-# If AMReX reader enabled, build library and link amrex_3d
-if (AMREX_READER)
-  add_library(amrex_reader STATIC
-    src/amrex_reader/amrex_utils.F90
-    src/amrex_reader/amrex_utils.cpp
-  )
-  target_link_libraries(amrex_reader amrex_3d)
-endif()
-
-
 add_library(awaelib_c STATIC
   src/vtk.cpp
 )
@@ -36,24 +26,22 @@ add_library(awaelib STATIC
   src/AWAE.f90
   src/AWAE_IO.f90
   src/AWAE_Types.f90
+  src/amrex_utils.F90
 )
 target_link_libraries(awaelib awaelib_c ifwlib nwtclibs)
+
+# If AMReX reader enabled, build library and link amrex_3d
+if (AMREX_READER)
+  target_sources(awaelib_c PRIVATE src/amrex_utils.cpp)
+  target_link_libraries(awaelib_c amrex_3d)
+  target_compile_definitions(awaelib PRIVATE ENABLE_AMREX_LIB)
+endif()
 
 install(TARGETS awaelib awaelib_c
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
-
-if (AMREX_READER)
-  target_link_Libraries(awaelib amrex_reader)
-  install(TARGETS amrex_reader
-    EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib)
-endif()
-
 
 #set(AWAE_DRIVER_SOURCES
 #   src/driver/AWAE_Driver_Subs.f90

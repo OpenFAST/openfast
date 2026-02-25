@@ -103,7 +103,7 @@ if (AMREX_READER AND BUILD_FASTFARM)
     ${PROJECT_SOURCE_DIR}/modules/awae/tests/AMReX_reader_utest.F90
     ${PROJECT_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.F90
   )
-  target_link_libraries(amrex_reader_utest amrex_reader nwtclibs testdrivelib)
+  target_link_libraries(amrex_reader_utest awaelib nwtclibs testdrivelib)
   set_target_properties(amrex_reader_utest PROPERTIES
     Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/dependencies/amrex/mod_files_3d/)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)

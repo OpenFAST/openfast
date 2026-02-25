@@ -27,6 +27,7 @@ MODULE AWAE_IO
    use VTK
    use AWAE_Types
    use iso_c_binding, only: c_char, c_int, c_double, c_float, c_null_char
+   use amrex_utils
    
    implicit none
    
@@ -34,7 +35,7 @@ MODULE AWAE_IO
    character(*),   parameter  :: AWAE_Nickname = 'AWAE'
     
    public :: AWAE_IO_InitGridInfo
-   public :: ReadLowResWindVTK
+   public :: ReadLowResWindVTK, ReadWindAMReX
 
    interface
       subroutine ReadVTK_inflow_info(FileName, Desc, dims, origin, gridSpacing, vecLabel, values, read_values, err_stat, err_msg) BIND(C,name='ReadVTK_inflow_info')     
@@ -154,6 +155,35 @@ subroutine ReadHighResWindVTK(nt, n, p, Vamb_high, errStat, errMsg)
    if (ErrStat /= ErrID_None) ErrMsg = "ReadHighResWindVTK:"//trim(ErrMsg)
 
 end subroutine ReadHighResWindVTK
+
+
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine read the AMReX at a given time step `n`
+subroutine ReadWindAMReX(sv, n, p, Vamb, ErrStat, ErrMsg)
+   use amrex_utils
+
+   integer(IntKi),           intent(in   )  :: sv              ! Sub-volume {0: low-res, 1+: high-res turbine}
+   integer(IntKi),           intent(in   )  :: n               !< time increment
+   type(AWAE_ParameterType), intent(in   )  :: p               !< Parameters
+   real(SiKi), contiguous,   intent(inout)  :: Vamb(:,:,:,:)   !< Array which will contain the grid of ambient wind velocities
+   integer(IntKi),           intent(  out)  :: ErrStat         !< Error status of the operation
+   character(*),             intent(  out)  :: ErrMsg          !< Error message if errStat /= ErrID_None
+  
+   character(len=2048) :: FileName       ! Name of output file
+   character(len=12)   :: DirIndex       ! Directory index suffix 
+
+   ! If sub-volume is 0 then this is low-resolution file
+   if (sv == 0) then
+      write(DirIndex,'(i0'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaLow * n
+   else
+      write(DirIndex,'(i0'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaHigh * n
+   end if
+
+   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//trim(DirIndex)
+   call amrex_read_data(FileName, Vamb, ErrStat, ErrMsg)
+
+end subroutine
+
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> Flat array of Cartesian point coordinates
 !! Grid runs from (X0, Y0, Z0) to (X0 + (p%nX-1)*dX, Y0+ (p%nY-1)*dY, Z0+ (p%nZ-1)*dZ)
@@ -197,6 +227,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    real(ReKi)                                 :: origin(3)            ! the lower-left corner of the 3D grid (X0,Y0,Z0)
    real(ReKi)                                 :: gridSpacing(3)       ! spacing between grid points in each of the 3 directions (dX,dY,dZ)
    real(ReKi)                                 :: gridSpacingWAT(3)    ! 
+   real(DbKi)                                 :: Time 
    character(1024)                            :: FileName             ! Name of output file     
    character(1024)                            :: desc                 ! Line describing the contents of the file
    character(1024)                            :: vecLabel             ! descriptor of the vector data
@@ -209,6 +240,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: nChunksX, nChunksY
    integer(IntKi)                             :: nChunkPointsX, nChunkPointsY
    integer(IntKi), allocatable                :: ChunkIndicesX(:,:), ChunkIndicesY(:,:)
+   integer(IntKi)                             :: StartIndexNum, IndexDelta
    
    errStat = ErrID_None
    errMsg  = ""
@@ -246,7 +278,20 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       gridSpacing(1) = InitInp%InputFileData%dX_low
       gridSpacing(2) = InitInp%InputFileData%dY_low
       gridSpacing(3) = InitInp%InputFileData%dZ_low
-          
+   
+   ! AMReX-based inflow
+   case (4)
+
+      ! Read first low-res file
+      FileName = trim(p%WindFilePath)//"_0_"//p%DirStartIndex
+      call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat, ErrMsg)
+      if (Failed()) return
+
+      ! Search directory for time slices of this sub-volume
+      call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, p%DirStartIndex, &
+                              StartIndexNum, p%DirIndexDeltaLow, ErrStat, ErrMsg)
+      if (Failed()) return
+
    end select
 
    !----------------------------------------------------------------------------
@@ -313,63 +358,43 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
             ! Check that VTK properties match grid
             call CheckLowResGridProps(p%LowRes, n, origin, gridSpacing, dims, ErrStat, ErrMsg)
          end do
-
-      ! AMReX-based inflow
-      case (4)
-      
+     
       end select
-   end if
-
-   !----------------------------------------------------------------------------
-   ! Divide low-resolution grid into chunks for reading from AMReX files
-   !----------------------------------------------------------------------------
-
-   if (p%Mod_AmbWind == 2) then
-      ! TODO: Implement chunking for AMReX files
    end if
 
    !----------------------------------------------------------------------------
    ! Divide low-resolution grid into chunks for selectively updating the domain
    !----------------------------------------------------------------------------
 
-   ! If using AMReX files for low-resolution grid
-   if (.false.) then
+   ! Approximate a chunk size based on the max wake diameter
+   TargetChunkSize = p%y(p%NumRadii-1)
 
-      ! Populate ChunkIndicesX and ChunkIndicesY from AMReX files
+   ! Target number of points in each chunk
+   nChunkPointsX = nint(TargetChunkSize/p%LowRes%dXYZ(1), IntKi)
+   nChunkPointsY = nint(TargetChunkSize/p%LowRes%dXYZ(2), IntKi)
 
-   else
+   nChunksX = int(ceiling(real(p%LowRes%nXYZ(1), ReKi) / real(nChunkPointsX, ReKi)), IntKi)
+   nChunksY = int(ceiling(real(p%LowRes%nXYZ(2), ReKi) / real(nChunkPointsY, ReKi)), IntKi)
 
-      ! Approximate a chunk size based on the max wake diameter
-      TargetChunkSize = p%y(p%NumRadii-1)
-
-      ! Target number of points in each chunk
-      nChunkPointsX = nint(TargetChunkSize/p%LowRes%dXYZ(1), IntKi)
-      nChunkPointsY = nint(TargetChunkSize/p%LowRes%dXYZ(2), IntKi)
-
-      nChunksX = int(ceiling(real(p%LowRes%nXYZ(1), ReKi) / real(nChunkPointsX, ReKi)), IntKi)
-      nChunksY = int(ceiling(real(p%LowRes%nXYZ(2), ReKi) / real(nChunkPointsY, ReKi)), IntKi)
-
-      ! Allocate arrays to store chunk start and end indices for X dimension, check that each chunk has at least 2 points
-      call AllocAry(ChunkIndicesX, 2, nChunksX, 'ChunkIndicesX', errStat2, errMsg2); if(Failed()) return
-      call BalancedChunks(p%LowRes%nXYZ(1), nChunksX, ChunkIndicesX, errStat2, errMsg2); if(Failed()) return
-      do i = 1, nChunksX
-         if (ChunkIndicesX(2,i) - ChunkIndicesX(1,i) + 1 < 2) then
-            call SetErrStat(ErrID_Fatal, 'Chunk size in X direction is less than 2.', errStat, errMsg, RoutineName)
-            return
-         end if
-      end do
-      
-      ! Allocate arrays to store chunk start and end indices for Y dimension, check that each chunk has at least 2 points
-      call AllocAry(ChunkIndicesY, 2, nChunksY, 'ChunkIndicesY', errStat2, errMsg2); if(Failed()) return
-      call BalancedChunks(p%LowRes%nXYZ(2), nChunksY, ChunkIndicesY, errStat2, errMsg2); if(Failed()) return
-      do i = 1, nChunksY
-         if (ChunkIndicesY(2,i) - ChunkIndicesY(1,i) + 1 < 2) then
-            call SetErrStat(ErrID_Fatal, 'Chunk size in Y direction is less than 2.', errStat, errMsg, RoutineName)
-            return
-         end if
-      end do
-
-   end if
+   ! Allocate arrays to store chunk start and end indices for X dimension, check that each chunk has at least 2 points
+   call AllocAry(ChunkIndicesX, 2, nChunksX, 'ChunkIndicesX', errStat2, errMsg2); if(Failed()) return
+   call BalancedChunks(p%LowRes%nXYZ(1), nChunksX, ChunkIndicesX, errStat2, errMsg2); if(Failed()) return
+   do i = 1, nChunksX
+      if (ChunkIndicesX(2,i) - ChunkIndicesX(1,i) + 1 < 2) then
+         call SetErrStat(ErrID_Fatal, 'Chunk size in X direction is less than 2.', errStat, errMsg, RoutineName)
+         return
+      end if
+   end do
+   
+   ! Allocate arrays to store chunk start and end indices for Y dimension, check that each chunk has at least 2 points
+   call AllocAry(ChunkIndicesY, 2, nChunksY, 'ChunkIndicesY', errStat2, errMsg2); if(Failed()) return
+   call BalancedChunks(p%LowRes%nXYZ(2), nChunksY, ChunkIndicesY, errStat2, errMsg2); if(Failed()) return
+   do i = 1, nChunksY
+      if (ChunkIndicesY(2,i) - ChunkIndicesY(1,i) + 1 < 2) then
+         call SetErrStat(ErrID_Fatal, 'Chunk size in Y direction is less than 2.', errStat, errMsg, RoutineName)
+         return
+      end if
+   end do
 
    ! Allocate array to store chunk information
    allocate(p%LowRes%WakeChunks(nChunksX*nChunksY), stat=errStat2)
@@ -458,6 +483,27 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          gridSpacing(1) = InitInp%InputFileData%dX_high(nt)
          gridSpacing(2) = InitInp%InputFileData%dY_high(nt)
          gridSpacing(3) = InitInp%InputFileData%dZ_high(nt)
+
+      ! AMReX-based wind
+      case (4)
+
+         FileName = trim(p%WindFilePath)//"_"//trim(Num2LStr(nt))//"_"//p%DirStartIndex
+         call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat, ErrMsg)
+         if (Failed()) return
+
+         ! Search directory for time slices of this sub-volume
+         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low, p%DirStartIndex, &
+                                 StartIndexNum, IndexDelta, ErrStat, ErrMsg)
+         if (Failed()) return
+
+         ! If first turbine, save index delta, otherwise ensure that it is the same
+         if (nt == 1) then
+            p%DirIndexDeltaHigh = IndexDelta
+         else if (p%DirIndexDeltaHigh /= IndexDelta) then
+            call SetErrStat(ErrID_Fatal, "got different index delta for sub-volume "//trim(Num2LStr(nt))//" than for sub-volume 1", &
+                            ErrStat, ErrMsg, RoutineName)
+            return
+         end if
 
       end select
 
@@ -556,9 +602,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
                   if (Failed()) return
                end do
             end do
-
-         ! AMReX-based inflow
-         ! case (2)
 
          end select
       end if
