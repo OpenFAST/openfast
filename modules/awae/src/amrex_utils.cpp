@@ -400,7 +400,7 @@ extern "C"
         // If fewer indices found than requested steps, return error
         if (indices.size() < num_steps)
         {
-            set_err(ErrID_Fatal, path_prefix.string() + ": found " + std::to_string(indices.size()) + " indices, requested " + std::to_string(num_steps),
+            set_err(ErrID_Fatal, path_prefix.string() + ": found " + std::to_string(indices.size()) + " indices, " + std::to_string(num_steps) + " were requested",
                     routine, err_stat, err_msg, err_msg_len);
         }
 
