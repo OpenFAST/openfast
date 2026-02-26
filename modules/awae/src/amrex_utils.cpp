@@ -13,10 +13,18 @@ const auto ErrID_Fatal = 4;
 using namespace amrex;
 
 // Set the value of err_stat and err_msg
-void set_err(int err_stat_id, std::string err_msg_str, int &err_stat, char *err_msg, int err_msg_len)
+void set_err(int err_stat_id, std::string err_msg_str, const std::string &routine, int &err_stat, char *err_msg, int err_msg_len)
 {
     err_stat = err_stat_id;
-    err_msg_str.resize(err_msg_len, ' ');
+    if (err_stat != ErrID_None)
+    {
+        err_msg_str = routine + ": " + err_msg_str;
+        err_msg_str.resize(err_msg_len, ' ');
+    }
+    else
+    {
+        err_msg_str.assign(" ");
+    }
     err_msg_str.copy(err_msg, err_msg_len);
 }
 
@@ -61,8 +69,10 @@ extern "C"
     void amrex_read_header_c(char const *dir, double &time, int dims[3], double dx[3],
                              double origin[3], int &err_stat, char *err_msg, int &err_msg_len)
     {
+        const std::string routine{"amrex_read_header_c"};
+
         // Initialize error status and message to no error
-        set_err(ErrID_None, "", err_stat, err_msg, err_msg_len);
+        set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
         // Try to open directory containing plot file data
         try
@@ -73,7 +83,7 @@ extern "C"
         catch (...)
         {
             set_err(ErrID_Fatal, "error opening '" + std::string{dir} + "'",
-                    err_stat, err_msg, err_msg_len);
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -84,8 +94,8 @@ extern "C"
         int fine_level = pf.finestLevel();
         if (fine_level != 0)
         {
-            set_err(ErrID_Fatal, "finest level must be 0, got " + std::to_string(fine_level),
-                    err_stat, err_msg, err_msg_len);
+            set_err(ErrID_Fatal, std::string{dir} + ": finest level must be 0, got " + std::to_string(fine_level),
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -93,8 +103,8 @@ extern "C"
         const int ncomp = pf.nComp();
         if (ncomp != 3)
         {
-            set_err(ErrID_Fatal, "data dimensionality must be 3, got " + std::to_string(ncomp),
-                    err_stat, err_msg, err_msg_len);
+            set_err(ErrID_Fatal, std::string{dir} + ": data dimensionality must be 3, got " + std::to_string(ncomp),
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -130,8 +140,8 @@ extern "C"
         {
             if (std::find(var_names_pf.begin(), var_names_pf.end(), var_name) == var_names_pf.end())
             {
-                set_err(ErrID_Fatal, "missing variable '" + var_name + "'",
-                        err_stat, err_msg, err_msg_len);
+                set_err(ErrID_Fatal, std::string{dir} + ": missing variable '" + var_name + "'",
+                        routine, err_stat, err_msg, err_msg_len);
                 return;
             }
         }
@@ -139,8 +149,10 @@ extern "C"
 
     void amrex_read_data_c(char const *dir, float *data, int &err_stat, char *err_msg, int &err_msg_len)
     {
+        const std::string routine{"amrex_read_data_c"};
+
         // Initialize error status and message to no error
-        set_err(ErrID_None, "", err_stat, err_msg, err_msg_len);
+        set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
         // Try to open directory containing plot file data
         try
@@ -151,7 +163,7 @@ extern "C"
         catch (...)
         {
             set_err(ErrID_Fatal, "error opening '" + std::string{dir} + "'",
-                    err_stat, err_msg, err_msg_len);
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -162,8 +174,8 @@ extern "C"
         int fine_level = pf.finestLevel();
         if (fine_level != 0)
         {
-            set_err(ErrID_Fatal, "finest level must be 0, got " + std::to_string(fine_level),
-                    err_stat, err_msg, err_msg_len);
+            set_err(ErrID_Fatal, std::string{dir} + ": finest level must be 0, got " + std::to_string(fine_level),
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -222,8 +234,10 @@ extern "C"
     void amrex_find_subvols_c(char const *dir_prefix, int &subvol, double &dt, int &num_steps, char const *start_index,
                               int &first_index, int &index_delta, int &err_stat, char *err_msg, int &err_msg_len)
     {
+        const std::string routine{"amrex_find_subvols_c"};
+
         // Initialize error status and message to no error
-        set_err(ErrID_None, "", err_stat, err_msg, err_msg_len);
+        set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
         // Construct path prefix based on directory prefix and subvolume number
         const std::filesystem::path path_prefix{std::string{dir_prefix} + "_" + std::to_string(subvol) + "_"};
@@ -243,7 +257,7 @@ extern "C"
         if (!std::filesystem::exists(first_path))
         {
             set_err(ErrID_Fatal, "directory '" + first_path + "' does not exist",
-                    err_stat, err_msg, err_msg_len);
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -337,24 +351,24 @@ extern "C"
             {
                 const auto dims_str = "(" + std::to_string(dims[0]) + ", " + std::to_string(dims[1]) + ", " + std::to_string(dims[2]) + ")";
                 const auto start_dims_str = "(" + std::to_string(start_dims[0]) + ", " + std::to_string(start_dims[1]) + ", " + std::to_string(start_dims[2]) + ")";
-                set_err(ErrID_Fatal, "directory '" + dir_path + "' grid dimensions " + dims_str + " doesn't match starting grid dimensions " + start_dims_str,
-                        err_stat, err_msg, err_msg_len);
+                set_err(ErrID_Fatal, dir_path + ": grid dimensions " + dims_str + " doesn't match starting grid dimensions " + start_dims_str,
+                        routine, err_stat, err_msg, err_msg_len);
                 return;
             }
             if ((std::abs(start_dx[0] - dx[0]) > 1e-8) || (std::abs(start_dx[1] - dx[1]) > 1e-8) || (std::abs(start_dx[1] - dx[1]) > 1e-8))
             {
                 const auto dx_str = "(" + std::to_string(dx[0]) + ", " + std::to_string(dx[1]) + ", " + std::to_string(dx[2]) + ")";
                 const auto start_dx_str = "(" + std::to_string(start_dx[0]) + ", " + std::to_string(start_dx[1]) + ", " + std::to_string(start_dx[2]) + ")";
-                set_err(ErrID_Fatal, "directory '" + dir_path + "' grid spacing " + dx_str + " doesn't match starting grid spacing " + start_dx_str,
-                        err_stat, err_msg, err_msg_len);
+                set_err(ErrID_Fatal, dir_path + ": grid spacing " + dx_str + " doesn't match starting grid spacing " + start_dx_str,
+                        routine, err_stat, err_msg, err_msg_len);
                 return;
             }
             if ((std::abs(start_origin[0] - origin[0]) > 1e-8) || (std::abs(start_origin[1] - origin[1]) > 1e-8) || (std::abs(start_origin[1] - origin[1]) > 1e-8))
             {
                 const auto origin_str = "(" + std::to_string(origin[0]) + ", " + std::to_string(origin[1]) + ", " + std::to_string(origin[2]) + ")";
                 const auto start_origin_str = "(" + std::to_string(start_origin[0]) + ", " + std::to_string(start_origin[1]) + ", " + std::to_string(start_origin[2]) + ")";
-                set_err(ErrID_Fatal, "directory '" + dir_path + "' grid spacing " + origin_str + " doesn't match starting grid spacing " + start_origin_str,
-                        err_stat, err_msg, err_msg_len);
+                set_err(ErrID_Fatal, dir_path + ": grid spacing " + origin_str + " doesn't match starting grid spacing " + start_origin_str,
+                        routine, err_stat, err_msg, err_msg_len);
                 return;
             }
 
@@ -369,8 +383,8 @@ extern "C"
         // Check that more than one index was found
         if (indices.size() < 2)
         {
-            set_err(ErrID_Fatal, "only 1 subvolume found, at least 2 required",
-                    err_stat, err_msg, err_msg_len);
+            set_err(ErrID_Fatal, path_prefix.string() + ": only 1 subvolume found, at least 2 required",
+                    routine, err_stat, err_msg, err_msg_len);
             return;
         }
 
@@ -386,8 +400,8 @@ extern "C"
         // If fewer indices found than requested steps, return error
         if (indices.size() < num_steps)
         {
-            set_err(ErrID_Fatal, "found " + std::to_string(indices.size()) + " indices, requested " + std::to_string(num_steps),
-                    err_stat, err_msg, err_msg_len);
+            set_err(ErrID_Fatal, path_prefix.string() + ": found " + std::to_string(indices.size()) + " indices, requested " + std::to_string(num_steps),
+                    routine, err_stat, err_msg, err_msg_len);
         }
 
         // Calculate delta between first two indices
@@ -403,9 +417,9 @@ extern "C"
             // If delta doesn't match first delta, return error
             if (index_delta != first_index_delta)
             {
-                set_err(ErrID_Fatal, "inconsistent delta between indices '" + std::to_string(indices[i - 1]) + //
+                set_err(ErrID_Fatal, path_prefix.string() + ": inconsistent delta between indices '" + std::to_string(indices[i - 1]) + //
                                          "' and '" + std::to_string(indices[i]) + "'",
-                        err_stat, err_msg, err_msg_len);
+                        routine, err_stat, err_msg, err_msg_len);
                 return;
             }
         }
