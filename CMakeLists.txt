@@ -173,6 +173,9 @@ endif()
 
 option(AMREX_READER "Include AMReX reader in FAST.Farm" off)
 if (AMREX_READER AND BUILD_FASTFARM)
+  if (WIN32)
+    message(FATAL_ERROR "AMREX_READER option not available on Windows (AMReX incompatible)")
+  endif()
   include(FetchContent)
   FetchContent_Declare(
     AMReX
