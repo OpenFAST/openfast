@@ -16,7 +16,7 @@ typedef StrucCtrl/StC StC_InputFile CHARACTER(1024) StCFileName - - - "Name of t
 typedef	^		^				LOGICAL			Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
 typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
-typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
+typedef ^       ^               INTEGER         StC_DOF_MODE   -   -   -   "DOF mode {0: NO StC_DOF; 1: independent X,Y,Z (each translational DOF may use TMDI via StC_X_b/StC_Y_b/StC_Z_b and StC_T_[XYZ]); 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series; 5: Force from external DLL}" -
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
@@ -34,6 +34,12 @@ typedef	^		^				ReKi			StC_Z_K		-	-	-	"StC Y stiffness"	"N/m"
 typedef	^		^				ReKi			StC_X_C		-	-	-	"StC X damping"	"N/(m/s)"
 typedef	^		^				ReKi			StC_Y_C		-	-	-	"StC Y damping"	"N/(m/s)"
 typedef	^		^				ReKi			StC_Z_C		-	-	-	"StC Z damping"	"N/(m/s)"
+typedef ^      ^                ReKi            StC_X_b     -   -   -   "Inerter inertance along local X (b_x). Used only when StC_DOF_MODE=1."  kg
+typedef ^      ^                ReKi            StC_Y_b     -   -   -   "Inerter inertance along local Y (b_y). Used only when StC_DOF_MODE=1."  kg
+typedef ^      ^                ReKi            StC_Z_b     -   -   -   "Inerter inertance along local Z (b_z). Used only when StC_DOF_MODE=1."  kg
+typedef ^      ^                ReKi            StC_T_X     -   -   -   "X coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1." m
+typedef ^      ^                ReKi            StC_T_Y     -   -   -   "Y coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1." m
+typedef ^      ^                ReKi            StC_T_Z     -   -   -   "Z coordinate of node T in local N, relative to P. Used only when StC_DOF_MODE=1." m
 typedef	^		^				ReKi			StC_X_PSP	-	-	-	"Positive stop position (maximum X mass displacement)"	m
 typedef	^		^				ReKi			StC_X_NSP	-	-	-	"Negative stop position (minimum X mass displacement)"	m
 typedef	^		^				ReKi			StC_Y_PSP	-	-	-	"Positive stop position (maximum Y mass displacement)"	m
@@ -151,7 +157,7 @@ typedef	^		MiscVarType  IntKi		PrescribedInterpIdx	-	-	-	"Index for interpolatio
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef ^ ParameterType DbKi DT - - - "Time step for cont. state integration & disc. state update" seconds
 typedef  ^     ^           CHARACTER(1024) RootName   -   -   -   "RootName for writing output files"	-
-typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
+typedef ^       ^               INTEGER         StC_DOF_MODE   -   -   -   "DOF mode {0: NO StC_DOF; 1: independent X,Y,Z (each translational DOF may use TMDI via bX_M/bY_M/bZ_M and T_[XYZ]); 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series; 5: Force from external DLL}" -
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
@@ -166,6 +172,12 @@ typedef	^		^				ReKi			K_Z		-	-	-	"StC stiffness"	"N/m"
 typedef	^		^				ReKi			C_X		-	-	-	"StC damping"	"N/(m/s)"
 typedef	^		^				ReKi			C_Y		-	-	-	"StC damping"	"N/(m/s)"
 typedef	^		^				ReKi			C_Z		-	-	-	"StC damping"	"N/(m/s)"
+typedef ^       ^               ReKi            bX_M    -   -   -   "Inerter inertance along local X (maps from StC_X_b when StC_DOF_MODE=1)"  kg
+typedef ^       ^               ReKi            bY_M    -   -   -   "Inerter inertance along local Y (maps from StC_Y_b when StC_DOF_MODE=1)"  kg
+typedef ^       ^               ReKi            bZ_M    -   -   -   "Inerter inertance along local Z (maps from StC_Z_b when StC_DOF_MODE=1)"  kg
+typedef ^       ^               ReKi            T_X     -   -   -   "X coordinate of node T in local N, relative to P (maps from StC_T_X when StC_DOF_MODE=1)" m
+typedef ^       ^               ReKi            T_Y     -   -   -   "Y coordinate of node T in local N, relative to P (maps from StC_T_Y when StC_DOF_MODE=1)" m
+typedef ^       ^               ReKi            T_Z     -   -   -   "Z coordinate of node T in local N, relative to P (maps from StC_T_Z when StC_DOF_MODE=1)" m
 typedef	^		^				ReKi			K_S	{3}	-	-	"StC stop stiffness"	"N/m"
 typedef	^		^				ReKi			C_S	{3}	-	-	"StC stop damping" "N/(m/s)"
 typedef	^		^				ReKi			P_SP	{3}	-	-	"Positive stop position (maximum mass displacement)"	m
