@@ -256,7 +256,7 @@ extern "C"
         // If file does not exist, return error
         if (!std::filesystem::exists(first_path))
         {
-            set_err(ErrID_Fatal, "directory '" + first_path + "' does not exist",
+            set_err(ErrID_Fatal, first_path + ": directory does not exist",
                     routine, err_stat, err_msg, err_msg_len);
             return;
         }
@@ -400,8 +400,11 @@ extern "C"
         // If fewer indices found than requested steps, return error
         if (indices.size() < num_steps)
         {
-            set_err(ErrID_Fatal, path_prefix.string() + ": found " + std::to_string(indices.size()) + " indices, " + std::to_string(num_steps) + " were requested",
-                    routine, err_stat, err_msg, err_msg_len);
+            std::string msg{path_prefix.string() + ": "};
+            msg += "found " + std::to_string(indices.size()) + " times, ";
+            msg += std::to_string(num_steps) + "times were requested ";
+            msg += "with a dt of " + std::to_string(dt) + " seconds";
+            set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
         }
 
         // Calculate delta between first two indices
@@ -417,9 +420,10 @@ extern "C"
             // If delta doesn't match first delta, return error
             if (index_delta != first_index_delta)
             {
-                set_err(ErrID_Fatal, path_prefix.string() + ": inconsistent delta between indices '" + std::to_string(indices[i - 1]) + //
-                                         "' and '" + std::to_string(indices[i]) + "'",
-                        routine, err_stat, err_msg, err_msg_len);
+                std::string msg{path_prefix.string() + ": "};
+                msg += "inconsistent delta between indices '" + std::to_string(indices[i - 1]);
+                msg += "' and '" + std::to_string(indices[i]) + "'";
+                set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
                 return;
             }
         }
