@@ -935,18 +935,20 @@ CONTAINS
       call WrScr("       ADinputFilePassed_C            "//TmpFlag )
       call WrScr("       ADinputFileString_C (ptr addr) "//trim(Num2LStr(LOC(ADinputFileString_C))) )
       call WrScr("       ADinputFileStringLength_C      "//trim(Num2LStr( ADinputFileStringLength_C )) )
-      if (ADinputFilePassed==0_c_int) then
-         i = index(ADinputFileString, char(0))     ! skip anything after c_null_char
-         call WrScr("       ADinputFileString_C            "//ADinputFileString(1:i))
-      endif
+!FIXME: This causes a seg fault
+!      if (ADinputFilePassed==0_c_int) then
+!         i = index(ADinputFileString, char(0))     ! skip anything after c_null_char
+!         call WrScr("       ADinputFileString_C            "//ADinputFileString(1:i))
+!      endif
       TmpFlag="F";   if (IfWinputFilePassed==1_c_int) TmpFlag="T"
       call WrScr("       IfWinputFilePassed_C           "//TmpFlag )
       call WrScr("       IfWinputFileString_C (ptr addr)"//trim(Num2LStr(LOC(IfWinputFileString_C))) )
       call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
-      if (IfWinputFilePassed==0_c_int) then
-         i = index(IfWinputFileString, char(0))     ! skip anything after c_null_char
-         call WrScr("       IfWinputFileString_C           "//trim(IfWinputFileString(1:i)))
-      endif
+!FIXME: This causes a seg fault
+!      if (IfWinputFilePassed==0_c_int) then
+!         i = index(IfWinputFileString, char(0))     ! skip anything after c_null_char
+!         call WrScr("       IfWinputFileString_C           "//trim(IfWinputFileString(1:i)))
+!      endif
       call WrScr("       OutRootName                    "//trim(OutRootName) )
       call WrScr("   Interpolation")
       call WrScr("       InterpOrder_C                  "//trim(Num2LStr( InterpOrder_C )) )
