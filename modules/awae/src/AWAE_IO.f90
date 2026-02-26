@@ -499,7 +499,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          if (Failed()) return
 
          ! Search directory for time slices of this sub-volume
-         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low, p%DirStartIndex, &
+         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low-1, p%DirStartIndex, &
                                  StartIndexNum, IndexDelta, ErrStat2, ErrMsg2)
          if (Failed()) return
 
