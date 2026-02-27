@@ -103,7 +103,7 @@ subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
    if (i > 0) ErrMsg = ErrMsg(:i-1)
    
 #else
-   call SetErrStat(ErrID_Fatal, "Enable AMReX library with -DAMREX_READER", ErrStat, ErrMsg, "amrex_read_header")
+   call SetErrStat(ErrID_Fatal, "AMReX library unavailable. Enable with -DAMREX_READER during compile with cmake on Linux, or change FAST.Farm Mod_AmbWind type", ErrStat, ErrMsg, "amrex_read_header")
 #endif
 end subroutine
 
@@ -135,7 +135,7 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
    if (i > 0) ErrMsg = ErrMsg(:i-1)
 
 #else
-   call SetErrStat(ErrID_Fatal, "Enable AMReX library with -DAMREX_READER", ErrStat, ErrMsg, "amrex_read_data")
+   call SetErrStat(ErrID_Fatal, "AMReX library unavailable. Enable with -DAMREX_READER during compile with cmake on Linux, or change FAST.Farm Mod_AmbWind type", ErrStat, ErrMsg, "amrex_read_data")
 #endif
 end subroutine
 
@@ -190,7 +190,7 @@ subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
    if (i > 0) ErrMsg = ErrMsg(:i-1)
 
 #else
-   call SetErrStat(ErrID_Fatal, "Enable AMReX library with -DAMREX_READER", ErrStat, ErrMsg, "amrex_find_subvols")
+   call SetErrStat(ErrID_Fatal, "AMReX library unavailable. Enable with -DAMREX_READER during compile with cmake on Linux, or change FAST.Farm Mod_AmbWind type", ErrStat, ErrMsg, "amrex_find_subvols")
 #endif
 end subroutine
 
