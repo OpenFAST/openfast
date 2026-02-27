@@ -32,6 +32,15 @@ turbulence files from Bladed.
 
 This file includes lines that define uniform (deterministic) wind data files.
 
+5) User-Defined Wind Input Files
+
+- :download:`InflowWind input file for user-defined wind <examples/inflowwind_user_example.dat>`
+- :download:`Driver input file for testing user-defined wind <examples/inflowwind_driver_user_example.inp>`
+- :download:`Test points file <examples/user_wind_points.txt>`
+
+These files demonstrate how to set up and test user-defined wind fields (WindType = 6).
+See :ref:`ifw_user_defined` for detailed implementation instructions.
+
 
 .. _ifw_output_channels:
 

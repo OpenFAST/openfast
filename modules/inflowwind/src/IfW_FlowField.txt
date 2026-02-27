@@ -103,7 +103,27 @@ typedef  ^              ^                      ReKi                RefHeight    
 typedef  ^              PointsFieldType        ReKi                Vel                 ::    -         -     "Point velocities populated by external driver [uvw,point]"                  -
 
 #----------------------------------------------------------------------------------------------------------------------------------
+# UserFieldType: Data structure for user-defined wind field
+#
+# This type allows users to implement custom wind field models by populating this structure
+# and implementing the UserField_GetVel() function in IfW_FlowField.f90.
+#
+# To implement a custom wind field:
+#   1. Add necessary data fields to this type definition
+#   2. Initialize these fields in IfW_User_Init() in InflowWind_IO.f90
+#   3. Implement UserField_GetVel() to return velocities at any (x,y,z,t) position
+#
+# Example use cases:
+#   - Analytical wind models (e.g., vortex, wake models)
+#   - Custom wind profiles
+#   - Coupling to external wind solvers
+#   - Real-time wind measurements
+#----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              UserFieldType          ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
+typedef  ^              ^                      IntKi               NumDataLines        -     0         -     "number of data lines (for time-varying user wind)"          -
+typedef  ^              ^                      DbKi                DTime               :     -         -     "time array for user-defined wind"                           seconds
+typedef  ^              ^                      ReKi                Data                ::    -         -     "user-defined wind data array [NumDataLines, NumDataColumns]" -
+typedef  ^              ^                      CHARACTER(1024)     FileName            -     -         -     "name of user wind file (if applicable)"                     -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
