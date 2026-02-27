@@ -67,7 +67,7 @@ After modifying the registry files, rebuild the project to regenerate type defin
 .. code-block:: bash
 
    cd build
-   cmake ..
+   cmake .. -DGENERATE_TYPES=ON
    make
 
 The build process automatically regenerates the ``*_Types.f90`` files from the ``.txt`` registry files.
@@ -224,7 +224,7 @@ Store wind data in time series arrays and interpolate based on ``Time`` paramete
 Wind from External Solver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Call external functions or read shared memory to get instantaneous wind fields.
+Call external functions to get instantaneous wind fields.
 
 **Example**: CFD coupling, external wake models, prescribed turbulence.
 
