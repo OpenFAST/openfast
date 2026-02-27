@@ -55,8 +55,8 @@ REAL(ReKi),                  INTENT(INOUT)  :: TRH_in(:)                       !
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
-!$OMP THREADPRIVATE(TRH)
 REAL(ReKi), allocatable, save :: TRH(:)         ! Each OMP thread gets its own copy of this array
+!$OMP THREADPRIVATE(TRH)
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
    
