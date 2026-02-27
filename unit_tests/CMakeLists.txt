@@ -101,7 +101,7 @@ if (AMREX_READER AND BUILD_FASTFARM)
   # FAST.Farm AMReX reader test
   add_executable(amrex_reader_utest
     ${CMAKE_SOURCE_DIR}/modules/awae/tests/AMReX_reader_utest.F90
-    ${CMAKE_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.F90
+    ${CMAKE_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.f90
   )
   target_link_libraries(amrex_reader_utest awaelib nwtclibs testdrivelib)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
