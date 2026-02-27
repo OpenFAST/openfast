@@ -67,6 +67,7 @@ end subroutine
 
 #endif
 
+! Read the header information for the AMReX grid and return it.
 subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
    character(*), intent(in)      :: DirPath
    real(DbKi), intent(out)       :: Time
@@ -106,6 +107,8 @@ subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
 #endif
 end subroutine
 
+! Read the XYZ velocity grid data into the FAST.Farm ambient wind data array [XYZ,NX,NY,NZ].
+! This function cannot be called in parallel due to internal restrictions of the AMReX library.
 subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
    character(*), intent(in)      :: DirPath
    real(SiKi), intent(out)       :: gridData(:,:,:,:)
@@ -136,6 +139,12 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
 #endif
 end subroutine
 
+! Search for AMReX directories based on given directory prefix, sub-volume 
+! number, time step, total number of steps, and the starting index string 
+! (e.g. `00000`). This function returns first index as a number, and the delta 
+! between successive directory indices. It also checks that a sufficient number 
+! of directories are available, that the data matches the requested time step, 
+! and the grid properties are consistent (size, origin, spacing).
 subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
                               FirstIndex, IndexDelta, ErrStat, ErrMsg)
    character(*), intent(in)      :: DirPath

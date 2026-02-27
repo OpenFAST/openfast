@@ -66,6 +66,7 @@ const std::array<std::string, 3> var_names{"x_velocity", "y_velocity", "z_veloci
 
 extern "C"
 {
+    // Read the header information for the AMReX grid and return it.
     void amrex_read_header_c(char const *dir, double &time, int dims[3], double dx[3],
                              double origin[3], int &err_stat, char *err_msg, int &err_msg_len)
     {
@@ -147,6 +148,8 @@ extern "C"
         }
     }
 
+    // Read the XYZ velocity grid data into the FAST.Farm ambient wind data array [XYZ,NX,NY,NZ].
+    // This function cannot be called in parallel due to internal restrictions of the AMReX library.
     void amrex_read_data_c(char const *dir, float *data, int &err_stat, char *err_msg, int &err_msg_len)
     {
         const std::string routine{"amrex_read_data_c"};
@@ -230,7 +233,10 @@ extern "C"
         }
     }
 
-    // Search for directories with given prefix and subvolume number
+    // Search for AMReX directories based on given directory prefix, subvolume number, time step, total number of steps,
+    // and the starting index string (e.g. `00000`). This function returns first index as a number, and the delta 
+    // between successive directory indices. It also checks that a sufficient number of directories are available,
+    // that the data matches the requested time step, and the grid properties are consistent (size, origin, spacing).
     void amrex_find_subvols_c(char const *dir_prefix, int &subvol, double &dt, int &num_steps, char const *start_index,
                               int &first_index, int &index_delta, int &err_stat, char *err_msg, int &err_msg_len)
     {
