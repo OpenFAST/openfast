@@ -97,7 +97,7 @@ export const projectsApi = {
     projectId: string,
     data: Partial<ProjectCreate>,
   ): Promise<Project> => {
-    const res = await api.put<Project>(`/projects/${projectId}`, data);
+    const res = await api.patch<Project>(`/projects/${projectId}`, data);
     return res.data;
   },
 
@@ -452,10 +452,22 @@ export const simulationsApi = {
     dels: ResultsDEL[];
     extremes: ResultsExtreme[];
   }> => {
-    const res = await api.get(
-      `/projects/${projectId}/simulations/${simId}/results`,
-    );
-    return res.data;
+    const [stats, dels, extremes] = await Promise.all([
+      api.get<ResultsStatistics[]>(
+        `/projects/${projectId}/simulations/${simId}/results/statistics`,
+      ),
+      api.get<ResultsDEL[]>(
+        `/projects/${projectId}/simulations/${simId}/results/del`,
+      ),
+      api.get<ResultsExtreme[]>(
+        `/projects/${projectId}/simulations/${simId}/results/extreme`,
+      ),
+    ]);
+    return {
+      statistics: stats.data,
+      dels: dels.data,
+      extremes: extremes.data,
+    };
   },
 };
 

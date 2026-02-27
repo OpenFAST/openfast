@@ -24,6 +24,7 @@ from app.models.user import User
 from app.schemas.simulation import (
     DLCDefinitionCreate,
     DLCDefinitionResponse,
+    DLCDefinitionUpdate,
     ResultsDELResponse,
     ResultsExtremeResponse,
     ResultsStatisticsResponse,
@@ -197,6 +198,70 @@ async def get_dlc_definition(
     if dlc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DLC definition not found")
     return DLCDefinitionResponse.model_validate(dlc)
+
+
+@dlc_router.put("/{dlc_id}", response_model=DLCDefinitionResponse)
+async def update_dlc_definition(
+    project_id: UUID,
+    dlc_id: UUID,
+    body: DLCDefinitionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _verify_project(project_id, current_user.org_id, db)
+    result = await db.execute(
+        select(DLCDefinition).where(
+            DLCDefinition.id == dlc_id, DLCDefinition.project_id == project_id
+        )
+    )
+    dlc = result.scalar_one_or_none()
+    if dlc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DLC definition not found")
+
+    update_data = body.model_dump(exclude_unset=True)
+    if "dlc_cases" in update_data and update_data["dlc_cases"] is not None:
+        update_data["dlc_cases"] = [
+            c.model_dump() if hasattr(c, "model_dump") else c for c in update_data["dlc_cases"]
+        ]
+        # Recount total cases
+        total = 0
+        for spec in body.dlc_cases:
+            total += len(spec.wind_speeds) * spec.seeds * len(spec.yaw_misalignments)
+        dlc.total_case_count = total
+
+    if "turbsim_params" in update_data and update_data["turbsim_params"] is not None:
+        update_data["turbsim_params"] = (
+            update_data["turbsim_params"].model_dump()
+            if hasattr(update_data["turbsim_params"], "model_dump")
+            else update_data["turbsim_params"]
+        )
+
+    for field, value in update_data.items():
+        setattr(dlc, field, value)
+
+    await db.flush()
+    await db.refresh(dlc)
+    return DLCDefinitionResponse.model_validate(dlc)
+
+
+@dlc_router.delete("/{dlc_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_dlc_definition(
+    project_id: UUID,
+    dlc_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _verify_project(project_id, current_user.org_id, db)
+    result = await db.execute(
+        select(DLCDefinition).where(
+            DLCDefinition.id == dlc_id, DLCDefinition.project_id == project_id
+        )
+    )
+    dlc = result.scalar_one_or_none()
+    if dlc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DLC definition not found")
+    await db.delete(dlc)
+    await db.flush()
 
 
 # ---------------------------------------------------------------------------
