@@ -21,7 +21,7 @@ contains
    subroutine AMReX_test_read_subvol_0(error)
       
       type(error_type), allocatable, intent(out) :: error
-      character(*), parameter :: DirPath = "data/subvolmultiple_fewerpoints_0_00006"
+      character(*), parameter :: DirPath = "data/subvolmultiple_0_00006"
       real(SiKi), allocatable :: data(:,:,:,:)
       integer(IntKi)          :: ErrStat
       character(ErrMsgLen)    :: ErrMsg
