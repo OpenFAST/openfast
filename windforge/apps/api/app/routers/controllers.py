@@ -128,7 +128,7 @@ def _generate_servodyn_file(ctrl: Controller, project: Project) -> str:
 # endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=list[ControllerResponse])
+@router.get("", response_model=list[ControllerResponse])
 async def list_controllers(
     project_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -143,7 +143,7 @@ async def list_controllers(
     return [ControllerResponse.model_validate(c) for c in result.scalars().all()]
 
 
-@router.post("/", response_model=ControllerResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ControllerResponse, status_code=status.HTTP_201_CREATED)
 async def create_controller(
     project_id: UUID,
     body: ControllerCreate,

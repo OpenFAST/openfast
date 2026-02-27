@@ -22,6 +22,8 @@ import type {
   ResultsExtreme,
 } from '@/types';
 
+export type { SimulationCase } from '@/types';
+
 // ─── Axios Instance ──────────────────────────────────────────────────────────
 
 const api = axios.create({
@@ -63,12 +65,7 @@ export const authApi = {
   },
 
   login: async (email: string, password: string): Promise<Token> => {
-    const params = new URLSearchParams();
-    params.append('username', email);
-    params.append('password', password);
-    const res = await api.post<Token>('/auth/login', params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
+    const res = await api.post<Token>('/auth/login', { email, password });
     return res.data;
   },
 

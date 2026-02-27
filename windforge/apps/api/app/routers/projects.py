@@ -29,7 +29,7 @@ async def _get_project_or_404(
 
 
 # ---- GET / ----------------------------------------------------------------
-@router.get("/", response_model=list[ProjectResponse])
+@router.get("", response_model=list[ProjectResponse])
 async def list_projects(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -44,7 +44,7 @@ async def list_projects(
 
 
 # ---- POST / ---------------------------------------------------------------
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     body: ProjectCreate,
     current_user: User = Depends(get_current_user),

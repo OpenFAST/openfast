@@ -130,7 +130,7 @@ def _expand_dlc_cases(dlc_def: DLCDefinition) -> list[dict]:
 dlc_router = APIRouter(prefix="/projects/{project_id}/dlc-definitions", tags=["dlc"])
 
 
-@dlc_router.post("/", response_model=DLCDefinitionResponse, status_code=status.HTTP_201_CREATED)
+@dlc_router.post("", response_model=DLCDefinitionResponse, status_code=status.HTTP_201_CREATED)
 async def create_dlc_definition(
     project_id: UUID,
     body: DLCDefinitionCreate,
@@ -165,7 +165,7 @@ async def create_dlc_definition(
     return DLCDefinitionResponse.model_validate(dlc)
 
 
-@dlc_router.get("/", response_model=list[DLCDefinitionResponse])
+@dlc_router.get("", response_model=list[DLCDefinitionResponse])
 async def list_dlc_definitions(
     project_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -203,7 +203,7 @@ async def get_dlc_definition(
 # Simulation endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=list[SimulationResponse])
+@router.get("", response_model=list[SimulationResponse])
 async def list_simulations(
     project_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -218,7 +218,7 @@ async def list_simulations(
     return [SimulationResponse.model_validate(s) for s in result.scalars().all()]
 
 
-@router.post("/", response_model=SimulationWithProgress, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SimulationWithProgress, status_code=status.HTTP_201_CREATED)
 async def create_simulation(
     project_id: UUID,
     body: SimulationCreate,

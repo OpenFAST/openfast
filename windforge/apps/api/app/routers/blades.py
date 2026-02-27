@@ -151,7 +151,7 @@ def _generate_aerodyn_blade_file(blade: Blade, project: Project) -> str:
 # endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=list[BladeResponse])
+@router.get("", response_model=list[BladeResponse])
 async def list_blades(
     project_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -166,7 +166,7 @@ async def list_blades(
     return [BladeResponse.model_validate(b) for b in result.scalars().all()]
 
 
-@router.post("/", response_model=BladeResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BladeResponse, status_code=status.HTTP_201_CREATED)
 async def create_blade(
     project_id: UUID,
     body: BladeCreate,

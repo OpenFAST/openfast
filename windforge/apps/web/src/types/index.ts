@@ -69,75 +69,95 @@ export interface ProjectCreate {
 // ─── Tower ───────────────────────────────────────────────────────────────────
 
 export interface TowerStation {
-  height_m: number;
-  outer_diameter_m: number;
-  wall_thickness_m: number;
-  elastic_modulus_pa: number;
-  shear_modulus_pa: number;
-  density_kg_m3: number;
+  frac: number;
+  mass_den: number;
+  fa_stiff: number;
+  ss_stiff: number;
+  outer_diameter: number;
+  wall_thickness: number;
 }
 
 export interface Tower {
   id: string;
   project_id: string;
   name: string;
-  total_height_m: number;
-  base_diameter_m: number;
-  top_diameter_m: number;
-  num_stations: number;
-  stations: TowerStation[];
+  version: number;
+  tower_height: number;
+  tower_base_height: number;
+  tower_fa_damping_1: number;
+  tower_fa_damping_2: number;
+  tower_ss_damping_1: number;
+  tower_ss_damping_2: number;
+  stations: TowerStation[] | null;
+  fa_mode_1_coeffs: number[] | null;
+  fa_mode_2_coeffs: number[] | null;
+  ss_mode_1_coeffs: number[] | null;
+  ss_mode_2_coeffs: number[] | null;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface TowerCreate {
   name: string;
-  total_height_m: number;
-  base_diameter_m: number;
-  top_diameter_m: number;
-  num_stations: number;
-  stations: TowerStation[];
+  tower_height: number;
+  tower_base_height?: number;
+  tower_fa_damping_1?: number;
+  tower_fa_damping_2?: number;
+  tower_ss_damping_1?: number;
+  tower_ss_damping_2?: number;
+  stations?: TowerStation[];
+  fa_mode_1_coeffs?: number[];
+  fa_mode_2_coeffs?: number[];
+  ss_mode_1_coeffs?: number[];
+  ss_mode_2_coeffs?: number[];
 }
 
 // ─── Blade ───────────────────────────────────────────────────────────────────
 
 export interface BladeStructuralStation {
-  span_fraction: number;
-  mass_density_kg_m: number;
-  flap_stiffness_nm2: number;
-  edge_stiffness_nm2: number;
-  torsional_stiffness_nm2: number;
-  ea_n: number;
+  frac: number;
+  pitch_axis: number;
+  struct_twist: number;
+  mass_den: number;
+  flap_stiff: number;
+  edge_stiff: number;
 }
 
 export interface BladeAeroStation {
-  span_fraction: number;
-  chord_m: number;
-  twist_deg: number;
-  airfoil_name: string;
-  thickness_ratio: number;
+  frac: number;
+  chord: number;
+  aero_twist: number;
+  airfoil_id: string;
+  aero_center: number;
 }
 
 export interface Blade {
   id: string;
   project_id: string;
   name: string;
-  length_m: number;
-  num_structural_stations: number;
-  num_aero_stations: number;
-  structural_stations: BladeStructuralStation[];
-  aero_stations: BladeAeroStation[];
+  version: number;
+  blade_length: number;
+  structural_stations: BladeStructuralStation[] | null;
+  aero_stations: BladeAeroStation[] | null;
+  flap_mode_1_coeffs: number[] | null;
+  flap_mode_2_coeffs: number[] | null;
+  edge_mode_1_coeffs: number[] | null;
+  blade_flap_damping: number;
+  blade_edge_damping: number;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface BladeCreate {
   name: string;
-  length_m: number;
-  num_structural_stations: number;
-  num_aero_stations: number;
-  structural_stations: BladeStructuralStation[];
-  aero_stations: BladeAeroStation[];
+  blade_length: number;
+  blade_flap_damping?: number;
+  blade_edge_damping?: number;
+  structural_stations?: BladeStructuralStation[];
+  aero_stations?: BladeAeroStation[];
+  flap_mode_1_coeffs?: number[];
+  flap_mode_2_coeffs?: number[];
+  edge_mode_1_coeffs?: number[];
 }
 
 // ─── Controller ──────────────────────────────────────────────────────────────
@@ -146,38 +166,25 @@ export interface Controller {
   id: string;
   project_id: string;
   name: string;
-  control_mode: string;
-  rated_power_kw: number;
-  rated_speed_rpm: number;
-  min_pitch_deg: number;
-  max_pitch_deg: number;
-  max_pitch_rate_deg_s: number;
-  kp_pitch: number;
-  ki_pitch: number;
-  kp_torque: number;
-  ki_torque: number;
-  min_gen_speed_rpm: number;
-  max_gen_speed_rpm: number;
-  max_torque_nm: number;
+  version: number;
+  controller_type: string;
+  pcmode: number;
+  vscontrl: number;
+  parameters: Record<string, any> | null;
+  dll_filename: string | null;
+  dll_procname: string | null;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface ControllerCreate {
   name: string;
-  control_mode: string;
-  rated_power_kw: number;
-  rated_speed_rpm: number;
-  min_pitch_deg: number;
-  max_pitch_deg: number;
-  max_pitch_rate_deg_s: number;
-  kp_pitch: number;
-  ki_pitch: number;
-  kp_torque: number;
-  ki_torque: number;
-  min_gen_speed_rpm: number;
-  max_gen_speed_rpm: number;
-  max_torque_nm: number;
+  controller_type: string;
+  pcmode?: number;
+  vscontrl?: number;
+  parameters?: Record<string, any>;
+  dll_filename?: string;
+  dll_procname?: string;
 }
 
 // ─── Airfoil ─────────────────────────────────────────────────────────────────
@@ -202,85 +209,86 @@ export interface TurbineModel {
   id: string;
   project_id: string;
   name: string;
-  tower_id: string;
-  blade_id: string;
-  controller_id: string;
-  num_blades: number;
-  hub_mass_kg: number;
-  hub_inertia_kg_m2: number;
-  nacelle_mass_kg: number;
-  nacelle_cm_x_m: number;
-  nacelle_cm_z_m: number;
-  shaft_tilt_deg: number;
-  precone_deg: number;
-  overhang_m: number;
-  twr2shft_m: number;
-  gearbox_ratio: number;
-  gen_inertia_kg_m2: number;
-  drivetrain_efficiency: number;
+  version: number;
+  tower_id: string | null;
+  blade_id: string | null;
+  controller_id: string | null;
+  gearbox_ratio: number | null;
+  generator_inertia: number | null;
+  drivetrain_stiffness: number | null;
+  drivetrain_damping: number | null;
+  hub_mass: number | null;
+  hub_inertia: number | null;
+  nacelle_mass: number | null;
+  nacelle_inertia: number | null;
+  overhang: number | null;
+  shaft_tilt: number | null;
+  precone: number | null;
+  rotor_speed_rated: number | null;
+  dof_flags: Record<string, boolean> | null;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface TurbineModelCreate {
   name: string;
-  tower_id: string;
-  blade_id: string;
-  controller_id: string;
-  num_blades: number;
-  hub_mass_kg: number;
-  hub_inertia_kg_m2: number;
-  nacelle_mass_kg: number;
-  nacelle_cm_x_m: number;
-  nacelle_cm_z_m: number;
-  shaft_tilt_deg: number;
-  precone_deg: number;
-  overhang_m: number;
-  twr2shft_m: number;
-  gearbox_ratio: number;
-  gen_inertia_kg_m2: number;
-  drivetrain_efficiency: number;
+  tower_id?: string;
+  blade_id?: string;
+  controller_id?: string;
+  gearbox_ratio?: number;
+  generator_inertia?: number;
+  drivetrain_stiffness?: number;
+  drivetrain_damping?: number;
+  hub_mass?: number;
+  hub_inertia?: number;
+  nacelle_mass?: number;
+  nacelle_inertia?: number;
+  overhang?: number;
+  shaft_tilt?: number;
+  precone?: number;
+  rotor_speed_rated?: number;
+  dof_flags?: Record<string, boolean>;
 }
 
 // ─── DLC ─────────────────────────────────────────────────────────────────────
 
 export interface TurbSimParams {
-  grid_height: number;
-  grid_width: number;
-  time_step: number;
-  analysis_time: number;
-  iec_turb_model: string;
+  turbulence_model: string;
   iec_standard: string;
   iec_turbc: string;
-  wind_profile_type: string;
-  ref_ht: number;
-  pllj_height?: number;
+  grid_height: number;
+  grid_width: number;
+  num_grid_z: number;
+  num_grid_y: number;
+  time_step: number;
+  analysis_time: number;
+  ref_height: number;
 }
 
 export interface DLCCaseSpec {
   dlc_number: string;
-  wind_speed_mps: number;
-  yaw_error_deg: number;
-  num_seeds: number;
-  turbsim_params: TurbSimParams;
-  fault_time_s?: number;
-  fault_type?: string;
+  wind_speeds: number[];
+  seeds: number;
+  yaw_misalignments: number[];
 }
 
 export interface DLCDefinition {
   id: string;
   project_id: string;
+  turbine_model_id: string;
   name: string;
-  iec_standard: string;
-  cases: DLCCaseSpec[];
+  dlc_cases: DLCCaseSpec[] | null;
+  turbsim_params: TurbSimParams | null;
+  total_case_count: number;
+  status: string;
   created_at: string;
-  updated_at: string;
 }
 
 export interface DLCDefinitionCreate {
   name: string;
-  iec_standard: string;
-  cases: DLCCaseSpec[];
+  turbine_model_id: string;
+  dlc_cases?: DLCCaseSpec[];
+  turbsim_params?: TurbSimParams;
 }
 
 // ─── Simulation ──────────────────────────────────────────────────────────────
@@ -296,28 +304,30 @@ export interface SimulationCase {
   id: string;
   simulation_id: string;
   dlc_number: string;
-  wind_speed_mps: number;
-  seed: number;
-  yaw_error_deg: number;
-  status: SimulationStatus;
-  progress: number;
-  error_message?: string;
-  started_at?: string;
-  completed_at?: string;
+  wind_speed: number;
+  seed_number: number;
+  yaw_misalignment: number;
+  status: string;
+  progress_percent: number;
+  current_time: number;
+  error_message: string | null;
+  wall_time_seconds: number | null;
 }
 
 export interface Simulation {
   id: string;
   project_id: string;
-  name: string;
-  turbine_model_id: string;
   dlc_definition_id: string;
-  status: SimulationStatus;
+  turbine_model_id: string;
+  name: string;
+  status: string;
   total_cases: number;
   completed_cases: number;
   failed_cases: number;
+  agent_id: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface SimulationWithProgress extends Simulation {
@@ -328,38 +338,35 @@ export interface SimulationWithProgress extends Simulation {
 // ─── Results ─────────────────────────────────────────────────────────────────
 
 export interface ChannelStatistic {
-  channel: string;
-  mean: number;
-  std: number;
   min: number;
   max: number;
-  abs_max: number;
+  mean: number;
+  std: number;
 }
 
 export interface ResultsStatistics {
-  simulation_id: string;
-  case_id: string;
+  id: string;
+  simulation_case_id: string;
   dlc_number: string;
-  wind_speed_mps: number;
-  statistics: ChannelStatistic[];
+  wind_speed: number;
+  channel_statistics: Record<string, ChannelStatistic> | null;
 }
 
 export interface ResultsDEL {
+  id: string;
   simulation_id: string;
-  channel: string;
-  dlc_number: string;
-  wohler_exponent: number;
-  del_values: number[];
-  lifetime_del: number;
+  del_results: Record<string, number> | null;
+  m_exponent: number;
+  n_equivalent: number;
 }
 
 export interface ResultsExtreme {
+  id: string;
   simulation_id: string;
-  channel: string;
-  dlc_number: string;
-  extreme_value: number;
-  time_of_extreme: number;
-  case_id: string;
+  extreme_loads: Record<
+    string,
+    { max: number; min: number; safety_factor: number; design_value: number }
+  > | null;
 }
 
 // ─── WebSocket Messages ──────────────────────────────────────────────────────

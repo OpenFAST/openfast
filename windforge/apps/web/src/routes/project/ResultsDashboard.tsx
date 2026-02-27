@@ -7,8 +7,9 @@ import type {
   ResultsDEL,
   ResultsExtreme,
 } from '@/types';
-import { BarChart3, Loader2, Download, Filter } from 'lucide-react';
+import { BarChart3, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
+import toast from 'react-hot-toast';
 
 interface ResultsData {
   statistics: ResultsStatistics[];
@@ -19,13 +20,11 @@ interface ResultsData {
 export default function ResultsDashboard() {
   const { projectId } = useParams<{ projectId: string }>();
   const [simulations, setSimulations] = useState<Simulation[]>([]);
-  const [selectedSim, setSelectedSim] = useState<Simulation | null>(null);
+  const [selectedSimId, setSelectedSimId] = useState<string>('');
   const [results, setResults] = useState<ResultsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
-  const [activeTab, setActiveTab] = useState<'statistics' | 'del' | 'extreme'>(
-    'statistics',
-  );
+  const [activeTab, setActiveTab] = useState<'statistics' | 'del' | 'extreme'>('statistics');
 
   useEffect(() => {
     if (!projectId) return;
@@ -35,21 +34,29 @@ export default function ResultsDashboard() {
       .then((data) => {
         const completed = data.filter((s) => s.status === 'completed');
         setSimulations(completed);
-        if (completed.length > 0) setSelectedSim(completed[0]);
+        if (completed.length > 0) {
+          setSelectedSimId(completed[0].id);
+        }
       })
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load simulations'))
       .finally(() => setIsLoading(false));
   }, [projectId]);
 
   useEffect(() => {
-    if (!projectId || !selectedSim) return;
+    if (!projectId || !selectedSimId) {
+      setResults(null);
+      return;
+    }
     setIsLoadingResults(true);
     simulationsApi
-      .getResults(projectId, selectedSim.id)
+      .getResults(projectId, selectedSimId)
       .then(setResults)
-      .catch(() => setResults(null))
+      .catch(() => {
+        setResults(null);
+        toast.error('Failed to load results');
+      })
       .finally(() => setIsLoadingResults(false));
-  }, [projectId, selectedSim]);
+  }, [projectId, selectedSimId]);
 
   if (isLoading) {
     return (
@@ -63,27 +70,17 @@ export default function ResultsDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">
-            Results Dashboard
-          </h2>
+          <h2 className="text-xl font-bold text-slate-800">Results Dashboard</h2>
           <p className="text-sm text-slate-500">
             Explore simulation statistics, DELs, and extreme loads
           </p>
         </div>
-        {results && (
-          <button className="btn-secondary">
-            <Download className="h-4 w-4" />
-            Export
-          </button>
-        )}
       </div>
 
       {simulations.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-16">
           <BarChart3 className="h-12 w-12 text-slate-300 mb-3" />
-          <h3 className="text-base font-semibold text-slate-700">
-            No completed simulations
-          </h3>
+          <h3 className="text-base font-semibold text-slate-700">No completed simulations</h3>
           <p className="mt-1 text-sm text-slate-500 max-w-sm text-center">
             Run a simulation to completion, then view the results here.
           </p>
@@ -92,28 +89,16 @@ export default function ResultsDashboard() {
         <div className="space-y-6">
           {/* Simulation selector */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-600">
-                Simulation:
-              </span>
-            </div>
-            <div className="flex gap-2">
+            <label className="text-sm font-medium text-slate-600">Simulation:</label>
+            <select
+              value={selectedSimId}
+              onChange={(e) => setSelectedSimId(e.target.value)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-accent-500 focus:ring-1 focus:ring-accent-500"
+            >
               {simulations.map((sim) => (
-                <button
-                  key={sim.id}
-                  onClick={() => setSelectedSim(sim)}
-                  className={clsx(
-                    'rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-                    selectedSim?.id === sim.id
-                      ? 'border-accent-300 bg-accent-50 text-accent-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
-                  )}
-                >
-                  {sim.name}
-                </button>
+                <option key={sim.id} value={sim.id}>{sim.name}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {isLoadingResults ? (
@@ -127,7 +112,7 @@ export default function ResultsDashboard() {
                 {[
                   { key: 'statistics' as const, label: 'Statistics' },
                   { key: 'del' as const, label: 'Fatigue DELs' },
-                  { key: 'extreme' as const, label: 'Extremes' },
+                  { key: 'extreme' as const, label: 'Extreme Loads' },
                 ].map((tab) => (
                   <button
                     key={tab.key}
@@ -144,184 +129,153 @@ export default function ResultsDashboard() {
                 ))}
               </div>
 
-              {/* Statistics */}
-              {activeTab === 'statistics' &&
-                results.statistics.length > 0 && (
+              {/* Statistics tab */}
+              {activeTab === 'statistics' && (
+                results.statistics.length > 0 ? (
                   <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                              DLC
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                              Wind
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                              Channel
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                              Mean
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                              Std
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                              Min
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                              Max
-                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">DLC</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Wind (m/s)</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Channel</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Mean</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Std</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Min</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Max</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {results.statistics.slice(0, 50).map((stat, si) =>
-                            stat.statistics.map((ch, ci) => (
-                              <tr
-                                key={`${si}-${ci}`}
-                                className="hover:bg-slate-50"
-                              >
+                          {results.statistics.map((stat) => {
+                            if (!stat.channel_statistics) return null;
+                            const entries = Object.entries(stat.channel_statistics);
+                            return entries.map(([channel, vals], ci) => (
+                              <tr key={`${stat.id}-${ci}`} className="hover:bg-slate-50">
                                 {ci === 0 && (
                                   <>
-                                    <td
-                                      className="px-3 py-2 font-medium text-slate-800"
-                                      rowSpan={stat.statistics.length}
-                                    >
+                                    <td className="px-3 py-2 font-medium text-slate-800" rowSpan={entries.length}>
                                       {stat.dlc_number}
                                     </td>
-                                    <td
-                                      className="px-3 py-2 text-slate-700"
-                                      rowSpan={stat.statistics.length}
-                                    >
-                                      {stat.wind_speed_mps} m/s
+                                    <td className="px-3 py-2 text-slate-700" rowSpan={entries.length}>
+                                      {stat.wind_speed}
                                     </td>
                                   </>
                                 )}
-                                <td className="px-3 py-2 text-slate-700 font-mono text-xs">
-                                  {ch.channel}
+                                <td className="px-3 py-2 text-slate-700 font-mono text-xs">{channel}</td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
+                                  {vals.mean.toExponential(3)}
                                 </td>
                                 <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                                  {ch.mean.toExponential(3)}
+                                  {vals.std.toExponential(3)}
                                 </td>
                                 <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                                  {ch.std.toExponential(3)}
+                                  {vals.min.toExponential(3)}
                                 </td>
                                 <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                                  {ch.min.toExponential(3)}
-                                </td>
-                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                                  {ch.max.toExponential(3)}
+                                  {vals.max.toExponential(3)}
                                 </td>
                               </tr>
-                            )),
-                          )}
+                            ));
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                )}
-
-              {/* DELs */}
-              {activeTab === 'del' && results.dels.length > 0 && (
-                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                            Channel
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                            DLC
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                            Wohler Exp.
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                            Lifetime DEL
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {results.dels.map((del, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="px-3 py-2 font-mono text-xs text-slate-800">
-                              {del.channel}
-                            </td>
-                            <td className="px-3 py-2 text-slate-700">
-                              {del.dlc_number}
-                            </td>
-                            <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                              {del.wohler_exponent}
-                            </td>
-                            <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs font-semibold">
-                              {del.lifetime_del.toExponential(3)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Extremes */}
-              {activeTab === 'extreme' && results.extremes.length > 0 && (
-                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                            Channel
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">
-                            DLC
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                            Extreme Value
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">
-                            Time (s)
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {results.extremes.map((ext, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="px-3 py-2 font-mono text-xs text-slate-800">
-                              {ext.channel}
-                            </td>
-                            <td className="px-3 py-2 text-slate-700">
-                              {ext.dlc_number}
-                            </td>
-                            <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs font-semibold">
-                              {ext.extreme_value.toExponential(3)}
-                            </td>
-                            <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
-                              {ext.time_of_extreme.toFixed(2)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Empty tab states */}
-              {activeTab === 'statistics' &&
-                results.statistics.length === 0 && (
+                ) : (
                   <EmptyTabState message="No statistics data available for this simulation." />
-                )}
-              {activeTab === 'del' && results.dels.length === 0 && (
-                <EmptyTabState message="No fatigue DEL data available for this simulation." />
+                )
               )}
-              {activeTab === 'extreme' &&
-                results.extremes.length === 0 && (
+
+              {/* DEL tab */}
+              {activeTab === 'del' && (
+                results.dels.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Channel</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">DEL Value</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">m Exponent</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">N Equivalent</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {results.dels.map((del) => {
+                            if (!del.del_results) return null;
+                            return Object.entries(del.del_results).map(([channel, value], i) => (
+                              <tr key={`${del.id}-${i}`} className="hover:bg-slate-50">
+                                <td className="px-3 py-2 font-mono text-xs text-slate-800">{channel}</td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs font-semibold">
+                                  {value.toExponential(3)}
+                                </td>
+                                {i === 0 && (
+                                  <>
+                                    <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs" rowSpan={Object.keys(del.del_results!).length}>
+                                      {del.m_exponent}
+                                    </td>
+                                    <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs" rowSpan={Object.keys(del.del_results!).length}>
+                                      {del.n_equivalent.toExponential(2)}
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            ));
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyTabState message="No fatigue DEL data available for this simulation." />
+                )
+              )}
+
+              {/* Extreme tab */}
+              {activeTab === 'extreme' && (
+                results.extremes.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">Channel</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Max</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Min</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Safety Factor</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 uppercase">Design Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {results.extremes.map((ext) => {
+                            if (!ext.extreme_loads) return null;
+                            return Object.entries(ext.extreme_loads).map(([channel, vals], i) => (
+                              <tr key={`${ext.id}-${i}`} className="hover:bg-slate-50">
+                                <td className="px-3 py-2 font-mono text-xs text-slate-800">{channel}</td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
+                                  {vals.max.toExponential(3)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
+                                  {vals.min.toExponential(3)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs">
+                                  {vals.safety_factor.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-700 font-mono text-xs font-semibold">
+                                  {vals.design_value.toExponential(3)}
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
                   <EmptyTabState message="No extreme load data available for this simulation." />
-                )}
+                )
+              )}
             </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
