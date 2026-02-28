@@ -2793,9 +2793,9 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Z_NSP'], 'StC_Z_NSP', '- Negative stop position (minimum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE or when StC_DOF_MODE=3]\n'))
         
         f.write('---------------------- StC MASS, STIFFNESS, & DAMPING ------------------------- [used only when StC_DOF_MODE=1, 2, or 3]\n')
-        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_X_M'], 'StC_X_M', '- StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]\n'))
-        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Y_M'], 'StC_Y_M', '- StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]\n'))
-        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Z_M'], 'StC_Z_M', '- StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE or when StC_DOF_MODE=3]\n'))
+        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_X_M'], 'StC_X_M', '- StC X mass (kg) [used only when StC_DOF_MODE=1 and StC_X_DOF=TRUE]\n'))
+        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Y_M'], 'StC_Y_M', '- StC Y mass (kg) [used only when StC_DOF_MODE=1 and StC_Y_DOF=TRUE]\n'))
+        f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Z_M'], 'StC_Z_M', '- StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]\n'))
         f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Omni_M'], 'StC_Omni_M', '- StC omni mass (kg) [used only when StC_DOF_MODE=2 or 3]\n'))
         f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_X_K'], 'StC_X_K', '- StC X stiffness (N/m)\n'))
         f.write('{:<22} {:<11} {:}'.format(StC_vt['StC_Y_K'], 'StC_Y_K', '- StC Y stiffness (N/m)\n'))

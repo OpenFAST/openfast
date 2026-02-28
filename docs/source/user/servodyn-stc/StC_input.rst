@@ -321,7 +321,7 @@ StructCtrl Control
 **StC_CChan** [-]
 
    Control channel group (1:10) for stiffness and damping *[used only when*
-   **StC_DOF_MODE=1, 2, 3, or 7** *and* **StC_CMODE=4 or 5** *]*
+   **StC_DOF_MODE=1, 2, 3, or 7** *and* **StC_CMODE=5** *]*
 
 **StC_SA_MODE** [-]
 
@@ -349,12 +349,12 @@ StructCtrl Control
 **StC_Z_C_HIGH** [-]
 
    StC Z high damping for ground hook control *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_Z_C_LOW** [-]
 
    StC Z low damping for ground hook control  *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_X_C_BRAKE** [-]
 
@@ -367,7 +367,8 @@ StructCtrl Control
 **StC_Z_C_BRAKE** [-]
 
    StC Z high damping for braking the StC *[used only when* **StC_DOF_MODE==1**
-   *and* **StC_Z_DOF==TRUE** *]* *[currently unused.  set to zero]*
+   *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]* *[currently 
+   unused.  set to zero]*
 
 
 

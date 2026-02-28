@@ -465,8 +465,8 @@ END SUBROUTINE UserYawCont
 !    Currently, this can only be used with
 !               StC_DOF_MODE = 1 (three independent StC/TMD DOFs),
 !                              2 (2DOF (XY)  omni-directional StC/TMDs),
-!                              5 (external forces and moments),
-!                           or 6 (3DOF (XYZ) omni-directional StC/TMDs).
+!                              3 (3DOF (XYZ) omni-directional StC/TMDs),
+!                           or 7 (external forces and moments).
 !    d is the apparent 3DOF displacement of the TMD mass relative to the parent structure.
 !    v is the apparent 3DOF velocity     of the TMD mass relative to the parent structure.
 !    For blade control, UserStC is called for each mesh point separately.
