@@ -376,24 +376,24 @@ or `VisIt <https://wci.llnl.gov/simulation/computer-codes/visit/>`__.
 Turbine controller and super controller
 ---------------------------------------
 
-FAST.Farm does not include modules for individual turbine controllers
-or farm-level controller (super controllers) and relies on
+FAST.Farm does not include its own modules for individual turbine controllers
+or farm-level controller (super controllers) but relies on
 separately compiled routines for them.
-FAST.Farm defers to the OpenFAST model of individual turbine for turbine controller.
+FAST.Farm defers to the OpenFAST model of individual turbine for the turbine controller.
 The controller is specified in the ServoDyn module of OpenFAST.
 OpenFAST allows for the use of bladed-style controllers in DLL format.
 Tools like `Reference Open Source Controller` (`ROSCO <https://github.com/NREL/ROSCO>`_)
-can be used to design and integrate turbine controller in DLL format.
+can be used to design and integrate turbine controller in DLL format, if the user does not already have their own controller.
 
 Farm-level super controller can be designed and implemented using external tools.
-`Wind-Hybrid-Open-Controller` (`WHOC <https://github.com/NREL/wind-hybrid-open-controller>`_) tool
+The `Hycon` (`Hycon <https://github.com/NREL/wind-hybrid-open-controller>`_) tool
 provides for rapid design of common farm-level controllers such as wake steering
 control, spatial filtering/consensus and active power control etc.
-WHOC includes examples the design of a wake steering controller and implementation on
+Hycon includes examples demonstration the design of a wake steering controller and implementation on
 a small farm using FAST.Farm.
 The `Reference Open Source Controller` (`ROSCO <https://github.com/NREL/ROSCO>`_)
 also has wind farm control capability.
-It gives user low-level access to various turbine measurements and offsets, and
+It gives the user low-level access to various turbine measurements and offsets, and
 enables implementation of user-written, python-based controllers.
 ROSCO also includes examples demonstrating the implementation of a farm-level
 controller in FAST.Farm.
