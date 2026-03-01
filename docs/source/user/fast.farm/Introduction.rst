@@ -386,7 +386,7 @@ Tools like `Reference Open Source Controller` (`ROSCO <https://github.com/NREL/R
 can be used to design and integrate turbine controller in DLL format, if the user does not already have their own controller.
 
 Farm-level super controller can be designed and implemented using external tools.
-The `Hycon` (`Hycon <https://github.com/NREL/wind-hybrid-open-controller>`_) tool
+The `Hycon` (`Hycon <https://github.com/NatLabRockies/hycon>`_) tool
 provides for rapid design of common farm-level controllers such as wake steering
 control, spatial filtering/consensus and active power control etc.
 Hycon includes examples demonstration the design of a wake steering controller and implementation on
