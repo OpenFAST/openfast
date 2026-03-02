@@ -24,6 +24,8 @@ MODULE BeamDyn
 
    IMPLICIT NONE
 
+   INTEGER, PARAMETER  :: FEKi = R8Ki  ! Define the kind to be used for FEM/eigenanalysis
+
 #ifndef UNIT_TEST
    PRIVATE
 
@@ -188,7 +190,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       QuasiStaticInitialized = .FALSE.
    ENDIF
 
-      
+   !.................................
+   ! Calculation of modal damping here
+
+   IF(p%damp_flag .EQ. 2) THEN
+      call Init_ModalDamping(InitInp, x, OtherState, p, MiscVar, ErrStat2, ErrMsg2); if (Failed()) return
+   ENDIF
 
       !.................................
       ! initialization of output mesh values (used for initial guess to AeroDyn)
@@ -1102,7 +1109,16 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    ! Physical damping flag and 6 damping coefficients
    !...............................................
    p%damp_flag  = InputFileData%InpBl%damp_flag
-   p%beta       = InputFileData%InpBl%beta
+   select case (p%damp_flag)
+   case (0) ! No damping
+   case (1) ! Stiffness-proportional damping
+      p%beta = InputFileData%InpBl%beta
+   case (2) ! Modal damping
+      p%zeta = InputFileData%InpBl%zeta
+   case default
+      call SetErrStat(ErrID_Fatal, "Invalid value for physical damping flag in input file.", ErrStat, ErrMsg, RoutineName )
+      return
+   end select
 
    !...............................................
    ! set parameters for File I/O data:
@@ -1788,6 +1804,188 @@ END SUBROUTINE Init_ContinuousStates
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes modal damping.
+SUBROUTINE Init_ModalDamping(InitInp, x, OtherState, p, m, ErrStat, ErrMsg)
+
+   TYPE(BD_InitInputType),          INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(BD_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at t on input at t + dt on output
+   type(BD_OtherStateType),         INTENT(IN   )  :: OtherState        !< Global rotations are stored in otherstate
+   TYPE(BD_ParameterType),          INTENT(INOUT)  :: p           !< Parameters, output modal damping matrix in original frame here
+   TYPE(BD_MiscVarType),            INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg
+
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'Init_ModalDamping'
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   INTEGER(IntKi)                            :: nDOF
+   INTEGER(IntKi)                            :: j, k                 ! looping indexing variable
+   INTEGER(IntKi)                            :: numZeta              ! number of damping values
+   REAL(R8Ki)                                :: Zj                   ! diagonal element of the modal damping matrix
+   REAL(R8Ki), ALLOCATABLE                   :: eigenvectors(:, :)   ! mode shapes
+   REAL(R8Ki), ALLOCATABLE                   :: omega(:)             ! modal frequencies (rad/s)
+   REAL(R8Ki), ALLOCATABLE                   :: phiT_M(:, :)         ! mode shapes transpose times mass matrix
+   REAL(R8Ki), ALLOCATABLE                   :: phi0T_M_phi0(:, :)   ! normalization calculation of mass matrix
+   REAL(R8Ki), ALLOCATABLE                   :: StifK(:,:)           ! Copy of stiffness matrix for eigenanalysis (modified during solve)
+   REAL(R8Ki), ALLOCATABLE                   :: MassM(:,:)           ! Copy of mass matrix for eigenanalysis (modified during solve)
+   real(R8Ki)                                :: NodeRot(3, 3)
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   numZeta = size(p%zeta)
+
+   ! 0. Setup quadrature points
+   CALL BD_QuadraturePointData(p, x, m)
+
+   ! 1. Generates K, M Matrices
+   ! These go into 'm%StifK' and 'm%MassM'
+   CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE.)
+
+   ! 2. Copy lines from 'BD_CalcForceAcc' for M, K -> 2D and apply Boundary conditions
+   ! Full mass matrix (n_dof, n_dof)
+   m%LP_MassM = reshape(m%MassM, [p%dof_total, p%dof_total])
+
+   ! Mass matrix for free nodes
+   m%LP_MassM_LU = m%LP_MassM(7:p%dof_total, 7:p%dof_total)
+
+   ! Full stiffness matrix (n_dof, n_dof)
+   m%LP_StifK = reshape(m%StifK, [p%dof_total, p%dof_total])
+
+   ! Stiffness matrix for free nodes
+   m%LP_StifK_LU = m%LP_StifK(7:p%dof_total, 7:p%dof_total)
+
+   ! 3. Do eigenanalysis
+   ! For now, calculate all eigenpairs
+   nDOF = p%dof_total - 6
+
+   ! Allocate eigenvector matrix and eigenvalue arrays
+   call AllocAry(eigenvectors, nDOF, nDOF, 'eigenvectors', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(omega, nDOF, 'omega', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(StifK, nDOF, nDOF, 'StifK', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(MassM, nDOF, nDOF, 'MassM', ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! EigenSolve modifies the input matrices, so make copies before calling
+   StifK = m%LP_StifK_LU
+   MassM = m%LP_MassM_LU
+   call EigenSolve(StifK, MassM, nDOF, .TRUE., eigenvectors, omega, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Mass-normalize the mode shapes
+   call AllocAry(phi0T_M_phi0, nDOF, nDOF, 'phi0T_M_phi0', ErrStat2, ErrMsg2); if (Failed()) return
+
+   phi0T_M_phi0 = matmul(transpose(eigenvectors), matmul(m%LP_MassM_LU, eigenvectors))
+
+   do j = 1, nDOF
+      eigenvectors(:, j) = eigenvectors(:, j) / sqrt(phi0T_M_phi0(j, j))
+   end do
+
+   ! 4. Generate damping matrix in original frame
+   call AllocAry(phiT_M, nDOF, nDOF, 'phiT_M', ErrStat2, ErrMsg2); if (Failed()) return
+
+   phiT_M = matmul(transpose(eigenvectors), m%LP_MassM_LU) ! after normalization
+
+   call AllocAry(p%ModalDampingMat, nDOF, nDOF, 'p%ModalDampingMat', ErrStat2, ErrMsg2); if (Failed()) return
+
+   do j = 1, nDOF
+
+      if( j <= numZeta) then
+         Zj = 2.0_R8Ki * omega(j) * p%zeta(j)
+      else
+         ! Stiffness proportional damping is used past the last prescribed value
+         ! at a rate equal to the last prescribed value.
+         Zj = 2.0_R8Ki * omega(j) * (p%zeta(numZeta) * omega(j) / omega(numZeta))
+      endif
+
+      p%ModalDampingMat(j, :) = Zj * phiT_M(j, :)
+   end do
+
+   p%ModalDampingMat = matmul(transpose(phiT_M), p%ModalDampingMat)
+
+   ! Apply the rotation of q here. When the actual dynamics are at the same position
+   ! as this, then this cancels with a rotation applied at the modal damping force.
+   ! Transforms as a tensor, so pre and post multiply by nodal rotations.
+   do j = 2, p%node_total
+
+      ! Loop over the nodes that apply to the damping matrix, so don't include the root node.
+      call BD_CrvMatrixR(x%q(4:6, j), NodeRot)
+      
+      k = (j-2)*6
+      p%ModalDampingMat(:, k+1:k+3) = matmul(p%ModalDampingMat(:, k+1:k+3), NodeRot)
+      p%ModalDampingMat(:, k+4:k+6) = matmul(p%ModalDampingMat(:, k+4:k+6), NodeRot)
+   end do
+   do j = 2, p%node_total
+
+      ! Loop over the nodes that apply to the damping matrix, so don't include the root node.
+      call BD_CrvMatrixR(x%q(4:6, j), NodeRot)
+      
+      k = (j-2)*6
+      p%ModalDampingMat(k+1:k+3, :) = matmul(transpose(NodeRot), p%ModalDampingMat(k+1:k+3, :))
+      p%ModalDampingMat(k+4:k+6, :) = matmul(transpose(NodeRot), p%ModalDampingMat(k+4:k+6, :))
+   end do
+
+   call CalcModalParticipation()
+
+   ! Allocate memory for the velocity vector that will be multiplied by the modal damping matrix
+   call AllocAry(m%DampedVelocities, nDOF, 'DampedVelocities', ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Allocate memory for the velocity vector that will be multiplied by the modal damping matrix
+   call AllocAry(m%ModalDampingF, nDOF, 'ModalDampingF', ErrStat2, ErrMsg2); if (Failed()) return
+
+   call AllocAry(m%RotatedDamping, nDOF, nDOF, 'RotatedDamping', ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+
+   subroutine CalcModalParticipation()
+
+      REAL(R8Ki), ALLOCATABLE                   :: modal_participation (:, :) ! Modal participation factor
+      INTEGER(IntKi)                            :: bdModesFile ! Unit numbers for file with BD modes
+
+      ! Theory based on Abaqus documentation
+      ! Only using rotational DOFs for rotations and not including
+      ! contributions from translations
+
+      CALL AllocAry(modal_participation, nDOF, 6, 'modal_participation', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Init_ModalDamping')
+
+      do j = 1, 6
+         modal_participation(:, j) = sum(phiT_M(:, j::6)*phiT_M(:, j::6), dim=2)
+      end do
+
+      ! Write to a file
+      CALL GetNewUnit(bdModesFile)
+      open(unit=bdModesFile, file=TRIM( InitInp%RootName )//'.modes.csv')
+
+      write(bdModesFile,*) '#Frequency [Hz], Zeta [Frac. Critical],'// &
+                           'Participation X, Participation Y, Participation Z,'// &
+                           'Participation RX, Participation RY, Participation RZ'
+
+      ! Loop over modes to output
+      do j = 1, nDOF
+
+         if( j <= numZeta) then
+            Zj = p%zeta(j)
+         else
+            ! Stiffness proportional damping is used past the last prescribed value
+            ! at a rate equal to the last prescribed value.
+            Zj = (p%zeta(numZeta) * omega(j) / omega(numZeta))
+         endif
+
+         write(bdModesFile, ' (1F12.4,1F12.8,6E14.5) ') omega(j)/TwoPi_D, &
+            Zj, modal_participation(j, :) / sum(modal_participation(j, :))
+      end do
+
+      close(bdModesFile)
+
+   END SUBROUTINE
+
+END SUBROUTINE
+
+!-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
@@ -1981,7 +2179,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
-      CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
+      CALL BD_CalcForceAcc(m%u, p, x, OtherState, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE
@@ -2105,7 +2303,7 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_QPDataVelocity( p, dxdt, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
    ! calculate accelerations and reaction loads (in m%RHS):
-   CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
+   CALL BD_CalcForceAcc(m%u, p, x, OtherState, m, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
       
@@ -3216,7 +3414,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, OtherState, m )
 
 
    CALL BD_ElasticForce( nelem, p, m, .FALSE. )                ! Calculate Fc, Fd only
-   IF(p%damp_flag .NE. 0) THEN
+   IF(p%damp_flag .EQ. 1) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
    CALL BD_GravityForce( nelem, p, m, MATMUL(p%gravity,OtherState%GlbRot) )              ! Calculate Fg      
@@ -4671,15 +4869,32 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
          ! extract the unconstrained stifness matrix
          m%LP_StifK_LU  =  m%LP_StifK(7:p%dof_total,7:p%dof_total)
 
-         ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
-         CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) return
+         ! Factoring of the matrix is done below after modal damping is added (if applicable).
       ENDIF
 
          ! Reshape 2d array into 1d for the use with the LAPACK solver
       m%LP_RHS       =  RESHAPE(m%RHS(:,:), (/p%dof_total/))
       m%LP_RHS_LU    =  m%LP_RHS(7:p%dof_total)
+
+      ! Modal damping
+      IF(p%damp_flag .EQ. 2) THEN
+         CALL BD_AddModalDampingRHS(p, x, OtherState, m, fact)
+
+         IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) then
+            ! FD does not get incorporated to everything else,
+            ! but this function prints the error comparison.
+            CALL BD_FD_GA2_DAMPING(p, x, OtherState, m)
+         end if
+      ENDIF
+
+      if (fact) then
+         ! Factor iteration matrix after the damping matrix from modal damping is added.
+         CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
+         if (ErrStat >= AbortErrLev) return
+      end if
 
          ! Solve for X in A*X=B to get the accelerations of blade
       CALL LAPACK_getrs( 'N',p%dof_total-6, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
@@ -4843,6 +5058,131 @@ SUBROUTINE BD_FD_GA2( x, OtherState, p, m )
 
 END SUBROUTINE BD_FD_GA2
 
+! This subroutine does finite differencing for only the modal damping
+! of the GA2 algorithm. This is applied in a consistent way as the Newton update.
+SUBROUTINE BD_FD_GA2_DAMPING(p_in, x_in, OtherState_in, m_in)
+
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p_in           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x_in           !< Continuous states
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState_in  !< other states (contains ref orientation)
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m_in           !< Misc/optimization variables
+
+   TYPE(BD_ParameterType)          :: p           !< Parameters
+   TYPE(BD_ContinuousStateType)    :: x           !< Continuous states
+   TYPE(BD_OtherStateType)         :: OtherState  !< other states (contains ref orientation)
+   TYPE(BD_MiscVarType)            :: m           !< Misc/optimization variables
+
+   integer(IntKi)    :: i, j, k        ! looping indexing variable
+   integer(IntKi)    :: nDOF        ! number of DOFs
+   real(BDKi)     :: delta        ! number of DOFs
+
+   INTEGER(IntKi)                  :: ErrStat   ! Temporary Error status
+   CHARACTER(ErrMsgLen)            :: ErrMsg    ! Temporary Error message
+   REAL(BDKi), allocatable  :: Damping_FD(:,:)
+   REAL(BDKi), allocatable  :: Damping_Diff(:,:)
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Debugging work suggests at 1e-6 works well here.
+   delta = 1.0d-6 ! p_in%tngt_stf_pert
+
+   nDOF = p_in%dof_total - 6
+
+   ! allocate local array and initialize to all zeros
+   CALL AllocAry(Damping_FD, nDOF, nDOF,'Damping_FD', ErrStat, ErrMsg)
+   CALL AllocAry(Damping_Diff, nDOF, nDOF,'Damping_Diff', ErrStat, ErrMsg)
+
+   Damping_FD(:, :) = 0.0_BDKi
+   Damping_Diff(:, :) = 0.0_BDKi
+
+   CALL BD_CopyMisc(m_in, m, MESH_NEWCOPY, ErrStat, ErrMsg)
+
+   ! Loop over doing Finite Differencing
+   DO i = 2,p_in%nodes_per_elem ! skip first node
+      DO j = 1,p_in%dof_node
+
+         ! Global DOF
+         k = 6 * (i - 2) + j
+
+         !!!!!!!!!!!!!!!!!!!!!!!!!
+         ! Positive Perturbation
+         ! Copy Everything about the problem
+         CALL BD_CopyParam(p_in, p, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyContState(x_in, x, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyOtherState(OtherState_in, OtherState, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyMisc(m_in, m, MESH_UPDATECOPY, ErrStat, ErrMsg)
+
+         ! Apply perturbation as a solution is applied
+         m%Solution = 0.0_BDKi
+         m%Solution(j,i) = delta
+
+         ! Recalculate Everything
+         CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+         CALL BD_QuadraturePointData( p,x,m )
+         CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .FALSE.)
+
+         m%LP_RHS_LU = 0.0_BDKi
+
+         CALL BD_AddModalDampingRHS(p, x, OtherState, m, .FALSE.)
+
+         Damping_FD(:, k) = Damping_FD(:, k) + m%LP_RHS_LU
+
+         !!!!!!!!!!!!!!!!!!!!!!!!!
+         ! Negative Perturbation
+         ! Copy Everything about the problem
+         CALL BD_CopyParam(p_in, p, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyContState(x_in, x, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyOtherState(OtherState_in, OtherState, MESH_UPDATECOPY, ErrStat, ErrMsg)
+         CALL BD_CopyMisc(m_in, m, MESH_UPDATECOPY, ErrStat, ErrMsg)
+
+         ! Apply perturbation as a solution is applied
+         m%Solution = 0.0_BDKi
+         m%Solution(j,i) = -1.0_BDKi * delta
+
+         ! Recalculate Everything
+         CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+         CALL BD_QuadraturePointData( p,x,m )
+         CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .FALSE.)
+
+         m%LP_RHS_LU = 0.0_BDKi
+
+         CALL BD_AddModalDampingRHS(p, x, OtherState, m, .FALSE.)
+
+         Damping_FD(:, k) = Damping_FD(:, k) - m%LP_RHS_LU
+
+         ! Include Negative Sign because solver actually uses -dRHS/dX
+         Damping_FD(:, k) = Damping_FD(:, k) / (-2.0_BDKi * delta)
+
+      END DO
+   END DO
+
+   ! Reference Analytical Damping Matrix
+
+   ! Copy Everything about the problem
+   CALL BD_CopyParam(p_in, p, MESH_UPDATECOPY, ErrStat, ErrMsg)
+   CALL BD_CopyContState(x_in, x, MESH_UPDATECOPY, ErrStat, ErrMsg)
+   CALL BD_CopyOtherState(OtherState_in, OtherState, MESH_UPDATECOPY, ErrStat, ErrMsg)
+   CALL BD_CopyMisc(m_in, m, MESH_UPDATECOPY, ErrStat, ErrMsg)
+
+   ! Recalculate Everything
+   CALL BD_QuadraturePointData( p,x,m )
+   CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .FALSE.)
+
+   m%LP_StifK_LU = 0.0_BDKi
+   CALL BD_AddModalDampingRHS(p, x, OtherState, m, .TRUE.)
+
+   Damping_Diff = m%LP_StifK_LU - Damping_FD
+
+   ! print *, 'Finite Diff matrix: \n', Damping_FD
+   ! print *, 'Difference in damping matrices: \n', Damping_Diff
+
+   print *, 'Finite Difference Matrix Norm: \n', sum(Damping_FD*Damping_FD)
+   print *, 'Error Diff Norm: \n', sum(Damping_Diff*Damping_Diff)
+   print *, 'Relative Error Norm: \n', sum(Damping_Diff*Damping_Diff) / sum(Damping_FD*Damping_FD)
+
+END SUBROUTINE BD_FD_GA2_DAMPING
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine updates the 1) displacements/rotations(uf)
 !! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and
@@ -4955,7 +5295,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, OtherState, m )
    CALL BD_ElasticForce(  nelem,p,m,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
    CALL BD_InertialForce( nelem,p,m,fact )                    ! Calculate Fi [and Mi,Gi,Ki IF(fact)]
    
-   IF(p%damp_flag .NE. 0) THEN
+   IF(p%damp_flag .EQ. 1) THEN
       CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
@@ -5009,7 +5349,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, OtherState, m )
       END DO
    
          ! Dissipative terms
-      IF (p%damp_flag .NE. 0) THEN
+      IF (p%damp_flag .EQ. 1) THEN
          DO j=1,p%nodes_per_elem
             DO idx_dof2=1,p%dof_node
                DO i=1,p%nodes_per_elem
@@ -5425,7 +5765,7 @@ SUBROUTINE BD_InitAcc( u, p, x, OtherState, m, qdotdot, ErrStat, ErrMsg )
    CALL BD_QPDataVelocity(p, x, m)
 
       ! set misc vars, particularly m%RHS
-   CALL BD_CalcForceAcc( u, p, OtherState, m, ErrStat2, ErrMsg2 )
+   CALL BD_CalcForceAcc( u, p, x, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set accelerations with inputs from the root and BD_CalcForceAcc solution
@@ -5509,10 +5849,11 @@ END SUBROUTINE BD_InitAcc
 !!
 !! The root reaction force is therefore calculated afterwards as
 !! \f$  F_\textrm{root} = f_1 - \sum_{i} m_{1,i} a_{i}  \f$.
-SUBROUTINE BD_CalcForceAcc( u, p, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, m, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states
    TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states (contains ref orientation)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -5561,6 +5902,11 @@ SUBROUTINE BD_CalcForceAcc( u, p, OtherState, m, ErrStat, ErrMsg )
 
    ! Add force contributions from root acceleration
    m%LP_RHS_LU = m%LP_RHS_LU - matmul(m%LP_MassM(7:,1:6), RootAcc)
+
+   IF(p%damp_flag .EQ. 2) THEN
+      ! Because modal damping is already global, it wouldn't make sense in BD_AssembleRHS.
+      CALL BD_AddModalDampingRHS(p, x, OtherState, m, .False.)
+   ENDIF
 
    ! Solve linear equations A * X = B for acceleration (F=ma) for nodes 2:p%node_total
    CALL LAPACK_getrf(n_free, n_free, m%LP_MassM_LU, m%LP_indx, ErrStat2, ErrMsg2)
@@ -5692,6 +6038,112 @@ SUBROUTINE BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem
    RETURN
 
 END SUBROUTINE BD_ComputeElementMass
+
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the modal damping force
+! Adds modal damping contributions to m%LP_RHS_LU
+SUBROUTINE BD_AddModalDampingRHS(p, x, OtherState, m, fact)
+
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states (contains ref orientation)
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   LOGICAL,                      INTENT(IN   )  :: fact        !< Boolean to calculate the Jacobian
+
+   integer(IntKi)    :: j, k        ! looping indexing variable
+   integer(IntKi)    :: nDOF        ! number of DOFs
+   integer(IntKi)    :: elem        ! looping indexing for element number
+   integer(IntKi)    :: elem_node   ! looping indexing for node in the element number
+   real(R8Ki)        :: r(3)        ! nodal position relative to root
+   real(R8Ki)        :: NodeRot(3, 3)
+
+   ! 1. Velocities relative to root
+   ! element loops
+   do elem = 1, p%elem_total
+
+      do elem_node = 2, p%nodes_per_elem
+
+         ! Global node index, excluding root
+         j = (elem - 1) * (p%nodes_per_elem - 1) + elem_node
+
+         ! DOF index
+         k = (j - 2) * 6
+
+         ! 1.a. Node translational velocity minus root velocity
+         ! x%... is at j+1 because skipping the root node and j is 1 at the first node after root.
+         m%DampedVelocities(k+1:k+6) = x%dqdt(:, j) - x%dqdt(:, 1)
+
+         ! 1.b. Subtract out the rigid body rotational velocity based on the blade root rotation
+
+         ! Vector from root to node
+         ! r = OtherState%GlbPos + p%uuN0(1:3, elem_node, elem) + x%q(1:3, j) - &
+         !     (u%RootMotion%Position(:, 1) + u%RootMotion%TranslationDisp(:, 1))
+         r = p%uuN0(1:3, elem_node, elem) + x%q(1:3, j)
+
+         m%DampedVelocities(k+1:k+3) = m%DampedVelocities(k+1:k+3) - Cross_Product(x%dqdt(4:6, 1), r)
+      end do
+
+   end do
+
+   ! 2. rotate velocities by matmul(u%RootMotion%Orientation, OtherState%GlbRot)
+   ! Solve is done at the coordinate system based on time n for states at time n+1
+   ! The damping matrix is technically defined for the n+1 coordinate system since that's where accel is evaluated.
+   ! Therefore, need to resolve the coordinate differences.
+   !
+   ! OtherState%GlbRot = tranpose(u%RootMotion%Orientation(:, :, 1) evaluated at n)
+   ! here, u%RootMotion%Orientation(:, :, 1) is evaluated at n+1, but is tranposed at this point
+
+   do j = 2, p%node_total
+
+      ! Loop over the nodes that apply to the damping matrix, so don't include the root node.
+      call BD_CrvMatrixR(x%q(4:6, j), NodeRot)
+
+      k = (j - 2) * 6
+      m%DampedVelocities(k+1:k+3) = matmul(transpose(NodeRot), m%DampedVelocities(k+1:k+3))
+      m%DampedVelocities(k+4:k+6) = matmul(transpose(NodeRot), m%DampedVelocities(k+4:k+6))
+   end do
+
+   ! 3. Multiply by modal damping matrix
+   m%ModalDampingF = matmul(p%ModalDampingMat, m%DampedVelocities)
+
+   ! 4. Rotate to correct coordinates and subtract from m%LP_RHS_LU
+   do j = 2, p%node_total
+
+      call BD_CrvMatrixR(x%q(4:6, j), NodeRot)
+
+      k = (j - 2) * 6
+      m%LP_RHS_LU(k+1:k+3) = m%LP_RHS_LU(k+1:k+3) - matmul(NodeRot, m%ModalDampingF(k+1:k+3))
+      m%LP_RHS_LU(k+4:k+6) = m%LP_RHS_LU(k+4:k+6) - matmul(NodeRot, m%ModalDampingF(k+4:k+6))
+   end do
+
+   IF (fact) THEN
+      ! Calculate Jacobian and add to 'm%LP_StifK_LU'
+      ! Do not consider any derivative effects of displacements on portions of this calculation
+      nDOF = p%dof_total - 6
+
+      m%RotatedDamping = p%ModalDampingMat
+
+      do j = 2, p%node_total
+
+         ! Loop over the nodes that apply to the damping matrix, so don't include the root node.
+         call BD_CrvMatrixR(x%q(4:6, j), NodeRot)
+
+         k = (j - 2) * 6
+
+         ! Rotations of the velocity side
+         m%RotatedDamping(:, k+1:k+3) = matmul(m%RotatedDamping(:, k+1:k+3), transpose(NodeRot))
+         m%RotatedDamping(:, k+4:k+6) = matmul(m%RotatedDamping(:, k+4:k+6), transpose(NodeRot))
+
+         ! rotations on the force side
+         m%RotatedDamping(k+1:k+3, :) = matmul(NodeRot, m%RotatedDamping(k+1:k+3, :))
+         m%RotatedDamping(k+4:k+6, :) = matmul(NodeRot, m%RotatedDamping(k+4:k+6, :))
+
+      end do
+
+      m%LP_StifK_LU = m%LP_StifK_LU + p%coef(7) * m%RotatedDamping
+   ENDIF
+
+END SUBROUTINE BD_AddModalDampingRHS
 
 
 subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)

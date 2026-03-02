@@ -139,7 +139,7 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["Ideal_Beam", "WP_Baseline"]:
+for data in ["Ideal_Beam", "WP_Baseline", "Damped_Beam"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         rtl.copyTree(os.path.join(moduleDirectory, data), dataDir, excludeExt=excludeExt)

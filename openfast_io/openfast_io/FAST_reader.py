@@ -1,3 +1,4 @@
+from numbers import Number
 import os, re, copy
 import numpy as np
 from functools import reduce
@@ -918,7 +919,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         f.readline()
-        #---------------------- DAMPING COEFFICIENT------------------------------------
+        #------ Stiffness-Proportional Damping [used only if damp_type=1] ---------------
         ln = f.readline().split()
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu1']           = float(ln[0])
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu2']           = float(ln[1])
@@ -927,7 +928,12 @@ class InputReader_OpenFAST(object):
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu5']           = float(ln[4])
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu6']           = float(ln[5])
         f.readline()
-        #---------------------- DISTRIBUTED PROPERTIES---------------------------------
+        # ------ Modal Damping [used only if damp_type=2] --------------------------------
+        n_modes = int(f.readline().split()[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['n_modes']       = n_modes
+        self.fst_vt['BeamDynBlade'][BladeNumber]['zeta']          = np.array(f.readline().strip().replace(',', ' ').split()[:n_modes], dtype=float).tolist()
+        f.readline()
+        #------ Distributed Properties --------------------------------------------------
         
         self.fst_vt['BeamDynBlade'][BladeNumber]['radial_stations'] = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total']))
         self.fst_vt['BeamDynBlade'][BladeNumber]['beam_stiff']      = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total'], 6, 6))
@@ -1730,7 +1736,7 @@ class InputReader_OpenFAST(object):
             f.readline()
             StC_vt['Echo'] = bool_read(f.readline().split()[0])      #  Echo         - Echo input data to <RootName>.ech (flag)
             f.readline()  # StC DEGREES OF FREEDOM
-            StC_vt['StC_DOF_MODE'] = int_read(f.readline().split()[0]) #        4   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series}
+            StC_vt['StC_DOF_MODE'] = int_read(f.readline().split()[0]) #        4   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: StC_XYZ_DOF (Omni-Directional StC); 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL}
             StC_vt['StC_X_DOF'] = bool_read(f.readline().split()[0])  # false         StC_X_DOF    - DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
             StC_vt['StC_Y_DOF'] = bool_read(f.readline().split()[0])  # false         StC_Y_DOF    - DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
             StC_vt['StC_Z_DOF'] = bool_read(f.readline().split()[0])  # false         StC_Z_DOF    - DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]
@@ -1754,7 +1760,7 @@ class InputReader_OpenFAST(object):
             StC_vt['StC_X_M'] = float_read(f.readline().split()[0])   #        0   StC_X_M      - StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]
             StC_vt['StC_Y_M'] = float_read(f.readline().split()[0])   #        50   StC_Y_M      - StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]
             StC_vt['StC_Z_M'] = float_read(f.readline().split()[0])   #        0   StC_Z_M      - StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-            StC_vt['StC_XY_M'] = float_read(f.readline().split()[0])   #        0   StC_XY_M     - StC XY mass (kg) [used only when StC_DOF_MODE=2]
+            StC_vt['StC_Omni_M'] = float_read(f.readline().split()[0])   #        0   StC_Omni_M     - StC omni mass (kg) [used only when StC_DOF_MODE=2 or 3]
             StC_vt['StC_X_K'] = float_read(f.readline().split()[0])   #    2300   StC_X_K      - StC X stiffness (N/m)
             StC_vt['StC_Y_K'] = float_read(f.readline().split()[0])   #    2300   StC_Y_K      - StC Y stiffness (N/m)
             StC_vt['StC_Z_K'] = float_read(f.readline().split()[0])   #        0   StC_Z_K      - StC Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
@@ -1800,7 +1806,7 @@ class InputReader_OpenFAST(object):
 
             # StructCtrl CONTROL, skip this readline() because it already happened
             f.readline()
-            StC_vt['StC_CMODE'] = int_read(f.readline().split()[0]) #        5   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
+            StC_vt['StC_CMODE'] = int_read(f.readline().split()[0]) #        5   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
             StC_vt['StC_CChan'] = int_read(f.readline().split()[0]) #        0   StC_CChan     - Control channel group (1:10) for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) (specify additional channels for blade instances of StC active control -- one channel per blade) [used only when StC_DOF_MODE=1 or 2, and StC_CMODE=4 or 5]
             StC_vt['StC_SA_MODE'] = int_read(f.readline().split()[0]) #        1   StC_SA_MODE   - Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} (-)
             StC_vt['StC_X_C_LOW'] = float_read(f.readline().split()[0])  #        0   StC_X_C_LOW   - StC X low damping for ground hook control

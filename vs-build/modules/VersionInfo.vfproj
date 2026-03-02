@@ -64,6 +64,27 @@
 			<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
+		<Configuration Name="Matlab_Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Matlab_Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>s
 	</Configurations>
 	<Files>
 		<Filter Name="Registry Files" Filter="txt"/>

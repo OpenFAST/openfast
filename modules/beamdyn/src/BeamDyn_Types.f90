@@ -70,7 +70,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: stiff0      !< C/S stiffness matrix arrays [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: mass0      !< C/S mass matrix arrays [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
-    INTEGER(IntKi)  :: damp_flag = 0_IntKi      !< Damping Flag: 0-No Damping, 1-Damped [-]
+    INTEGER(IntKi)  :: n_modes = 0_IntKi      !< Number of modal damping coefficients [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: zeta      !< Modal damping coefficient array [-]
+    INTEGER(IntKi)  :: damp_flag = 0_IntKi      !< Damping Flag: 0-No Damping, 1-Stiffness Prop. Damped, 2-Modal Damping [-]
   END TYPE BladeInputData
 ! =======================
 ! =========  BD_InputFile  =======
@@ -158,6 +160,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: blade_CG = 0.0_R8Ki      !< Blade center of gravity [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN = 0.0_R8Ki      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: zeta      !< Modal Damping Coefficients [-]
     REAL(R8Ki)  :: tol = 0.0_R8Ki      !< Tolerance used in stopping criterion [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
@@ -212,6 +215,7 @@ IMPLICIT NONE
     LOGICAL  :: RotStates = .false.      !< Orient states in rotating frame during linearization? (flag) [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: CompAppliedLdAtRoot = .FALSE.      !< flag to determine if BeamDyn should compute the applied loads at root [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ModalDampingMat      !< Modal damping matrix in the rotating frame [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -305,6 +309,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LP_RHS      !< Right-hand-side vector [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: LP_StifK_LU      !< Stiffness Matrix for LU [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LP_RHS_LU      !< Right-hand-side vector for LU [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: DampedVelocities      !< Velocity vector for applying modal damping [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: ModalDampingF      !< Modal damping force in the modal damping matrix coordinates [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RotatedDamping      !< Rotated damping matrix for linearization at time step in GA2 [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LP_indx      !< Index vector for LU [-]
     TYPE(BD_InputType)  :: u      !< Inputs converted to the internal BD coordinate system [-]
     TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
@@ -536,6 +543,19 @@ subroutine BD_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, C
       DstBladeInputDataData%mass0 = SrcBladeInputDataData%mass0
    end if
    DstBladeInputDataData%beta = SrcBladeInputDataData%beta
+   DstBladeInputDataData%n_modes = SrcBladeInputDataData%n_modes
+   if (allocated(SrcBladeInputDataData%zeta)) then
+      LB(1:1) = lbound(SrcBladeInputDataData%zeta)
+      UB(1:1) = ubound(SrcBladeInputDataData%zeta)
+      if (.not. allocated(DstBladeInputDataData%zeta)) then
+         allocate(DstBladeInputDataData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladeInputDataData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladeInputDataData%zeta = SrcBladeInputDataData%zeta
+   end if
    DstBladeInputDataData%damp_flag = SrcBladeInputDataData%damp_flag
 end subroutine
 
@@ -555,6 +575,9 @@ subroutine BD_DestroyBladeInputData(BladeInputDataData, ErrStat, ErrMsg)
    if (allocated(BladeInputDataData%mass0)) then
       deallocate(BladeInputDataData%mass0)
    end if
+   if (allocated(BladeInputDataData%zeta)) then
+      deallocate(BladeInputDataData%zeta)
+   end if
 end subroutine
 
 subroutine BD_PackBladeInputData(RF, Indata)
@@ -568,6 +591,8 @@ subroutine BD_PackBladeInputData(RF, Indata)
    call RegPackAlloc(RF, InData%stiff0)
    call RegPackAlloc(RF, InData%mass0)
    call RegPack(RF, InData%beta)
+   call RegPack(RF, InData%n_modes)
+   call RegPackAlloc(RF, InData%zeta)
    call RegPack(RF, InData%damp_flag)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -586,6 +611,8 @@ subroutine BD_UnPackBladeInputData(RF, OutData)
    call RegUnpackAlloc(RF, OutData%stiff0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%mass0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%beta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_modes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%damp_flag); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1197,6 +1224,18 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%blade_CG = SrcParamData%blade_CG
    DstParamData%blade_IN = SrcParamData%blade_IN
    DstParamData%beta = SrcParamData%beta
+   if (allocated(SrcParamData%zeta)) then
+      LB(1:1) = lbound(SrcParamData%zeta)
+      UB(1:1) = ubound(SrcParamData%zeta)
+      if (.not. allocated(DstParamData%zeta)) then
+         allocate(DstParamData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%zeta = SrcParamData%zeta
+   end if
    DstParamData%tol = SrcParamData%tol
    if (allocated(SrcParamData%QPtN)) then
       LB(1:1) = lbound(SrcParamData%QPtN)
@@ -1492,6 +1531,18 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%RotStates = SrcParamData%RotStates
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%CompAppliedLdAtRoot = SrcParamData%CompAppliedLdAtRoot
+   if (allocated(SrcParamData%ModalDampingMat)) then
+      LB(1:2) = lbound(SrcParamData%ModalDampingMat)
+      UB(1:2) = ubound(SrcParamData%ModalDampingMat)
+      if (.not. allocated(DstParamData%ModalDampingMat)) then
+         allocate(DstParamData%ModalDampingMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ModalDampingMat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ModalDampingMat = SrcParamData%ModalDampingMat
+   end if
 end subroutine
 
 subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1519,6 +1570,9 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%member_eta)) then
       deallocate(ParamData%member_eta)
+   end if
+   if (allocated(ParamData%zeta)) then
+      deallocate(ParamData%zeta)
    end if
    if (allocated(ParamData%QPtN)) then
       deallocate(ParamData%QPtN)
@@ -1597,6 +1651,9 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%FEweight)) then
       deallocate(ParamData%FEweight)
    end if
+   if (allocated(ParamData%ModalDampingMat)) then
+      deallocate(ParamData%ModalDampingMat)
+   end if
 end subroutine
 
 subroutine BD_PackParam(RF, Indata)
@@ -1620,6 +1677,7 @@ subroutine BD_PackParam(RF, Indata)
    call RegPack(RF, InData%blade_CG)
    call RegPack(RF, InData%blade_IN)
    call RegPack(RF, InData%beta)
+   call RegPackAlloc(RF, InData%zeta)
    call RegPack(RF, InData%tol)
    call RegPackAlloc(RF, InData%QPtN)
    call RegPackAlloc(RF, InData%QPtWeight)
@@ -1690,6 +1748,7 @@ subroutine BD_PackParam(RF, Indata)
    call RegPack(RF, InData%RotStates)
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%CompAppliedLdAtRoot)
+   call RegPackAlloc(RF, InData%ModalDampingMat)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1716,6 +1775,7 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%blade_CG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%blade_IN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%beta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QPtN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QPtWeight); if (RegCheckErr(RF, RoutineName)) return
@@ -1794,6 +1854,7 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAppliedLdAtRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ModalDampingMat); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine BD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -2902,6 +2963,42 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%LP_RHS_LU = SrcMiscData%LP_RHS_LU
    end if
+   if (allocated(SrcMiscData%DampedVelocities)) then
+      LB(1:1) = lbound(SrcMiscData%DampedVelocities)
+      UB(1:1) = ubound(SrcMiscData%DampedVelocities)
+      if (.not. allocated(DstMiscData%DampedVelocities)) then
+         allocate(DstMiscData%DampedVelocities(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DampedVelocities.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%DampedVelocities = SrcMiscData%DampedVelocities
+   end if
+   if (allocated(SrcMiscData%ModalDampingF)) then
+      LB(1:1) = lbound(SrcMiscData%ModalDampingF)
+      UB(1:1) = ubound(SrcMiscData%ModalDampingF)
+      if (.not. allocated(DstMiscData%ModalDampingF)) then
+         allocate(DstMiscData%ModalDampingF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModalDampingF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%ModalDampingF = SrcMiscData%ModalDampingF
+   end if
+   if (allocated(SrcMiscData%RotatedDamping)) then
+      LB(1:2) = lbound(SrcMiscData%RotatedDamping)
+      UB(1:2) = ubound(SrcMiscData%RotatedDamping)
+      if (.not. allocated(DstMiscData%RotatedDamping)) then
+         allocate(DstMiscData%RotatedDamping(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RotatedDamping.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RotatedDamping = SrcMiscData%RotatedDamping
+   end if
    if (allocated(SrcMiscData%LP_indx)) then
       LB(1:1) = lbound(SrcMiscData%LP_indx)
       UB(1:1) = ubound(SrcMiscData%LP_indx)
@@ -3044,6 +3141,15 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%LP_RHS_LU)) then
       deallocate(MiscData%LP_RHS_LU)
    end if
+   if (allocated(MiscData%DampedVelocities)) then
+      deallocate(MiscData%DampedVelocities)
+   end if
+   if (allocated(MiscData%ModalDampingF)) then
+      deallocate(MiscData%ModalDampingF)
+   end if
+   if (allocated(MiscData%RotatedDamping)) then
+      deallocate(MiscData%RotatedDamping)
+   end if
    if (allocated(MiscData%LP_indx)) then
       deallocate(MiscData%LP_indx)
    end if
@@ -3103,6 +3209,9 @@ subroutine BD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%LP_RHS)
    call RegPackAlloc(RF, InData%LP_StifK_LU)
    call RegPackAlloc(RF, InData%LP_RHS_LU)
+   call RegPackAlloc(RF, InData%DampedVelocities)
+   call RegPackAlloc(RF, InData%ModalDampingF)
+   call RegPackAlloc(RF, InData%RotatedDamping)
    call RegPackAlloc(RF, InData%LP_indx)
    call BD_PackInput(RF, InData%u) 
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
@@ -3158,6 +3267,9 @@ subroutine BD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%LP_RHS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_StifK_LU); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_RHS_LU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DampedVelocities); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ModalDampingF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotatedDamping); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_indx); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackInput(RF, OutData%u) ! u 
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 

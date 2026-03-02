@@ -443,26 +443,6 @@ typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	ParameterType	IntKi	NumStC_Control	-	-	-	"Number of cable StC channels requested"	-
 typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC channel to average on each control channel sent to DLL"	-
-# parameters for linearization
-typedef  ^  ParameterType  Integer  Jac_u_indx  {:}{:} - -  "matrix to help fill/pack the u vector in computing the jacobian"   -
-typedef  ^  ParameterType  Integer  Jac_x_indx  {:}{:} - -  "matrix to help fill/pack the x vector in computing the jacobian"   -
-typedef  ^  ParameterType  R8Ki     du          {:}    - -  "vector that determines size of perturbation for u (inputs)"
-typedef  ^  ParameterType  ReKi     dx          {:}    - -  "vector that determines size of perturbation for x (continuous states)"
-typedef  ^  ParameterType  Integer  Jac_nu      -      - -  "number of inputs in jacobian matrix"   -
-typedef  ^  ParameterType  Integer  Jac_ny      -      - -  "number of outputs in jacobian matrix"   -
-typedef  ^  ParameterType  Integer  Jac_nx      -      - -  "the number of continuous states in jacobian matrix" -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_u {:}{:}{:} - -  "the start and end indices of blade        StC u jacobian [ start/end, blade, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_u {:}{:}    - -  "the start and end indices of nacelle      StC u jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_u {:}{:}    - -  "the start and end indices of tower        StC u jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_u {:}{:}    - -  "the start and end indices of substructure StC u jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_x {:}{:}{:} - -  "the start and end indices of blade        StC x jacobian [ start/end, blade, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_x {:}{:}    - -  "the start and end indices of nacelle      StC x jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_x {:}{:}    - -  "the start and end indices of tower        StC x jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_x {:}{:}    - -  "the start and end indices of substructure StC x jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_y {:}{:}{:} - -  "the start and end indices of blade        StC y jacobian [ start/end, blade, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {:}{:}    - -  "the start and end indices of nacelle      StC y jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {:}{:}    - -  "the start and end indices of tower        StC y jacobian [ start/end, instance ]"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and end indices of substructure StC y jacobian [ start/end, instance ]"  -
 # parameters for lidar assisted control
 typedef	^	ParameterType	IntKi	SensorType  	 -   -	-	"Lidar sensor type" -
 typedef	^	ParameterType	IntKi	NumBeam     	 -   -	-	"Number of beams" -

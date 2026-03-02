@@ -1,13 +1,16 @@
  ------- BEAMDYN V1.00.* INDIVIDUAL BLADE INPUT FILE --------------------------
  NREL 5MW Blade
- ---------------------- BLADE PARAMETERS --------------------------------------
-49   station_total    - Number of blade input stations (-)
- 1   damp_flag        - Damping flag: 0: no damping; 1: damped
-  ---------------------- DAMPING COEFFICIENT------------------------------------
+------ Blade Parameters --------------------------------------------------------
+49                      station_total    - Number of blade input stations (-)
+1                       damp_type        - Damping type (switch) {0: none, 1: stiffness-proportional, 2: modal}
+------ Stiffness-Proportional Damping [used only if damp_type=1] ---------------
    mu1        mu2        mu3        mu4        mu5        mu6
    (-)        (-)        (-)        (-)        (-)        (-)
-1.0E-03    1.0E-03    1.0E-03    0.0014      0.0022     0.0022
- ---------------------- DISTRIBUTED PROPERTIES---------------------------------
+1.0E-03    1.0E-03    1.0E-03     0.0014      0.0022     0.0022
+------ Modal Damping [used only if damp_type=2] --------------------------------
+4                        n_modes    - Number of modal damping coefficients (-)
+0.01 0.02 0.03 0.04      zeta       - Damping coefficients for mode 1 through n_modes
+------ Distributed Properties --------------------------------------------------
   0.000000
    9.729480E+08    0.000000E+00    0.000000E+00    0.000000E+00    0.000000E+00    0.000000E+00
    0.000000E+00    9.729480E+08    0.000000E+00    0.000000E+00    0.000000E+00    0.000000E+00

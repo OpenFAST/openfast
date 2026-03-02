@@ -449,25 +449,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumCableControl = 0_IntKi      !< Number of cable control channels requested [-]
     INTEGER(IntKi)  :: NumStC_Control = 0_IntKi      !< Number of cable StC channels requested [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StCMeasNumPerChan      !< Number of cable StC channel to average on each control channel sent to DLL [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_x_indx      !< matrix to help fill/pack the x vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_nu = 0_IntKi      !< number of inputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< the number of continuous states in jacobian matrix [-]
-    INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Jac_Idx_BStC_u      !< the start and end indices of blade        StC u jacobian [ start/end, blade, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_NStC_u      !< the start and end indices of nacelle      StC u jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_TStC_u      !< the start and end indices of tower        StC u jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_SStC_u      !< the start and end indices of substructure StC u jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Jac_Idx_BStC_x      !< the start and end indices of blade        StC x jacobian [ start/end, blade, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_NStC_x      !< the start and end indices of nacelle      StC x jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_TStC_x      !< the start and end indices of tower        StC x jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_SStC_x      !< the start and end indices of substructure StC x jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Jac_Idx_BStC_y      !< the start and end indices of blade        StC y jacobian [ start/end, blade, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_NStC_y      !< the start and end indices of nacelle      StC y jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_TStC_y      !< the start and end indices of tower        StC y jacobian [ start/end, instance ] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_SStC_y      !< the start and end indices of substructure StC y jacobian [ start/end, instance ] [-]
     INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Lidar sensor type [-]
     INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of beams [-]
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
@@ -3787,8 +3768,8 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SrvD_CopyParam'
@@ -4070,201 +4051,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%StCMeasNumPerChan = SrcParamData%StCMeasNumPerChan
    end if
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%Jac_x_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_x_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_x_indx)
-      if (.not. allocated(DstParamData%Jac_x_indx)) then
-         allocate(DstParamData%Jac_x_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_x_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_x_indx = SrcParamData%Jac_x_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx)
-      UB(1:1) = ubound(SrcParamData%dx)
-      if (.not. allocated(DstParamData%dx)) then
-         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dx = SrcParamData%dx
-   end if
-   DstParamData%Jac_nu = SrcParamData%Jac_nu
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%Jac_nx = SrcParamData%Jac_nx
-   if (allocated(SrcParamData%Jac_Idx_BStC_u)) then
-      LB(1:3) = lbound(SrcParamData%Jac_Idx_BStC_u)
-      UB(1:3) = ubound(SrcParamData%Jac_Idx_BStC_u)
-      if (.not. allocated(DstParamData%Jac_Idx_BStC_u)) then
-         allocate(DstParamData%Jac_Idx_BStC_u(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_BStC_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_BStC_u = SrcParamData%Jac_Idx_BStC_u
-   end if
-   if (allocated(SrcParamData%Jac_Idx_NStC_u)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_NStC_u)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_NStC_u)
-      if (.not. allocated(DstParamData%Jac_Idx_NStC_u)) then
-         allocate(DstParamData%Jac_Idx_NStC_u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_NStC_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_NStC_u = SrcParamData%Jac_Idx_NStC_u
-   end if
-   if (allocated(SrcParamData%Jac_Idx_TStC_u)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_TStC_u)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_TStC_u)
-      if (.not. allocated(DstParamData%Jac_Idx_TStC_u)) then
-         allocate(DstParamData%Jac_Idx_TStC_u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_TStC_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_TStC_u = SrcParamData%Jac_Idx_TStC_u
-   end if
-   if (allocated(SrcParamData%Jac_Idx_SStC_u)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_SStC_u)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_SStC_u)
-      if (.not. allocated(DstParamData%Jac_Idx_SStC_u)) then
-         allocate(DstParamData%Jac_Idx_SStC_u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_SStC_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_SStC_u = SrcParamData%Jac_Idx_SStC_u
-   end if
-   if (allocated(SrcParamData%Jac_Idx_BStC_x)) then
-      LB(1:3) = lbound(SrcParamData%Jac_Idx_BStC_x)
-      UB(1:3) = ubound(SrcParamData%Jac_Idx_BStC_x)
-      if (.not. allocated(DstParamData%Jac_Idx_BStC_x)) then
-         allocate(DstParamData%Jac_Idx_BStC_x(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_BStC_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_BStC_x = SrcParamData%Jac_Idx_BStC_x
-   end if
-   if (allocated(SrcParamData%Jac_Idx_NStC_x)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_NStC_x)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_NStC_x)
-      if (.not. allocated(DstParamData%Jac_Idx_NStC_x)) then
-         allocate(DstParamData%Jac_Idx_NStC_x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_NStC_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_NStC_x = SrcParamData%Jac_Idx_NStC_x
-   end if
-   if (allocated(SrcParamData%Jac_Idx_TStC_x)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_TStC_x)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_TStC_x)
-      if (.not. allocated(DstParamData%Jac_Idx_TStC_x)) then
-         allocate(DstParamData%Jac_Idx_TStC_x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_TStC_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_TStC_x = SrcParamData%Jac_Idx_TStC_x
-   end if
-   if (allocated(SrcParamData%Jac_Idx_SStC_x)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_SStC_x)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_SStC_x)
-      if (.not. allocated(DstParamData%Jac_Idx_SStC_x)) then
-         allocate(DstParamData%Jac_Idx_SStC_x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_SStC_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_SStC_x = SrcParamData%Jac_Idx_SStC_x
-   end if
-   if (allocated(SrcParamData%Jac_Idx_BStC_y)) then
-      LB(1:3) = lbound(SrcParamData%Jac_Idx_BStC_y)
-      UB(1:3) = ubound(SrcParamData%Jac_Idx_BStC_y)
-      if (.not. allocated(DstParamData%Jac_Idx_BStC_y)) then
-         allocate(DstParamData%Jac_Idx_BStC_y(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_BStC_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_BStC_y = SrcParamData%Jac_Idx_BStC_y
-   end if
-   if (allocated(SrcParamData%Jac_Idx_NStC_y)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_NStC_y)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_NStC_y)
-      if (.not. allocated(DstParamData%Jac_Idx_NStC_y)) then
-         allocate(DstParamData%Jac_Idx_NStC_y(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_NStC_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_NStC_y = SrcParamData%Jac_Idx_NStC_y
-   end if
-   if (allocated(SrcParamData%Jac_Idx_TStC_y)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_TStC_y)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_TStC_y)
-      if (.not. allocated(DstParamData%Jac_Idx_TStC_y)) then
-         allocate(DstParamData%Jac_Idx_TStC_y(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_TStC_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_TStC_y = SrcParamData%Jac_Idx_TStC_y
-   end if
-   if (allocated(SrcParamData%Jac_Idx_SStC_y)) then
-      LB(1:2) = lbound(SrcParamData%Jac_Idx_SStC_y)
-      UB(1:2) = ubound(SrcParamData%Jac_Idx_SStC_y)
-      if (.not. allocated(DstParamData%Jac_Idx_SStC_y)) then
-         allocate(DstParamData%Jac_Idx_SStC_y(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_Idx_SStC_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_Idx_SStC_y = SrcParamData%Jac_Idx_SStC_y
-   end if
    DstParamData%SensorType = SrcParamData%SensorType
    DstParamData%NumBeam = SrcParamData%NumBeam
    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
@@ -4274,8 +4060,8 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(SrvD_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SrvD_DestroyParam'
@@ -4355,62 +4141,14 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%StCMeasNumPerChan)) then
       deallocate(ParamData%StCMeasNumPerChan)
    end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%Jac_x_indx)) then
-      deallocate(ParamData%Jac_x_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
-   if (allocated(ParamData%dx)) then
-      deallocate(ParamData%dx)
-   end if
-   if (allocated(ParamData%Jac_Idx_BStC_u)) then
-      deallocate(ParamData%Jac_Idx_BStC_u)
-   end if
-   if (allocated(ParamData%Jac_Idx_NStC_u)) then
-      deallocate(ParamData%Jac_Idx_NStC_u)
-   end if
-   if (allocated(ParamData%Jac_Idx_TStC_u)) then
-      deallocate(ParamData%Jac_Idx_TStC_u)
-   end if
-   if (allocated(ParamData%Jac_Idx_SStC_u)) then
-      deallocate(ParamData%Jac_Idx_SStC_u)
-   end if
-   if (allocated(ParamData%Jac_Idx_BStC_x)) then
-      deallocate(ParamData%Jac_Idx_BStC_x)
-   end if
-   if (allocated(ParamData%Jac_Idx_NStC_x)) then
-      deallocate(ParamData%Jac_Idx_NStC_x)
-   end if
-   if (allocated(ParamData%Jac_Idx_TStC_x)) then
-      deallocate(ParamData%Jac_Idx_TStC_x)
-   end if
-   if (allocated(ParamData%Jac_Idx_SStC_x)) then
-      deallocate(ParamData%Jac_Idx_SStC_x)
-   end if
-   if (allocated(ParamData%Jac_Idx_BStC_y)) then
-      deallocate(ParamData%Jac_Idx_BStC_y)
-   end if
-   if (allocated(ParamData%Jac_Idx_NStC_y)) then
-      deallocate(ParamData%Jac_Idx_NStC_y)
-   end if
-   if (allocated(ParamData%Jac_Idx_TStC_y)) then
-      deallocate(ParamData%Jac_Idx_TStC_y)
-   end if
-   if (allocated(ParamData%Jac_Idx_SStC_y)) then
-      deallocate(ParamData%Jac_Idx_SStC_y)
-   end if
 end subroutine
 
 subroutine SrvD_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SrvD_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SrvD_PackParam'
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%HSSBrDT)
@@ -4554,25 +4292,6 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumCableControl)
    call RegPack(RF, InData%NumStC_Control)
    call RegPackAlloc(RF, InData%StCMeasNumPerChan)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%Jac_x_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPackAlloc(RF, InData%dx)
-   call RegPack(RF, InData%Jac_nu)
-   call RegPack(RF, InData%Jac_ny)
-   call RegPack(RF, InData%Jac_nx)
-   call RegPackAlloc(RF, InData%Jac_Idx_BStC_u)
-   call RegPackAlloc(RF, InData%Jac_Idx_NStC_u)
-   call RegPackAlloc(RF, InData%Jac_Idx_TStC_u)
-   call RegPackAlloc(RF, InData%Jac_Idx_SStC_u)
-   call RegPackAlloc(RF, InData%Jac_Idx_BStC_x)
-   call RegPackAlloc(RF, InData%Jac_Idx_NStC_x)
-   call RegPackAlloc(RF, InData%Jac_Idx_TStC_x)
-   call RegPackAlloc(RF, InData%Jac_Idx_SStC_x)
-   call RegPackAlloc(RF, InData%Jac_Idx_BStC_y)
-   call RegPackAlloc(RF, InData%Jac_Idx_NStC_y)
-   call RegPackAlloc(RF, InData%Jac_Idx_TStC_y)
-   call RegPackAlloc(RF, InData%Jac_Idx_SStC_y)
    call RegPack(RF, InData%SensorType)
    call RegPack(RF, InData%NumBeam)
    call RegPack(RF, InData%NumPulseGate)
@@ -4583,8 +4302,8 @@ subroutine SrvD_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SrvD_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SrvD_UnPackParam'
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -4750,25 +4469,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumCableControl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumStC_Control); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%StCMeasNumPerChan); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_x_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_BStC_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_NStC_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_TStC_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_SStC_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_BStC_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_NStC_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_TStC_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_SStC_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_BStC_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_NStC_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_TStC_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_Idx_SStC_y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBeam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return

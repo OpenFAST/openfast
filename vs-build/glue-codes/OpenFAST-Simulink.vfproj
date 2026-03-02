@@ -37,7 +37,14 @@
 			</File>
 		</Filter>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_AeroMap.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Funcs.f90"/>
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Library.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Mapping.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_ModGlue.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Mods.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Solver.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Subs.f90"/>
 			<File RelativePath="..\..\glue-codes\simulink\src\FAST_SFunc.c">
 				<FileConfiguration Name="Matlab_Debug|x64" ExcludedFromBuild="true">
 				</FileConfiguration>

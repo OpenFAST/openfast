@@ -216,7 +216,7 @@ extern "C"
 
         // Read remaining values
         const auto n_values{n_points * 3};
-        for (auto i = 1U; i < n_values; ++i)
+        for (auto i = 1; i < n_values; ++i)
         {
             answer = fast_float::from_chars(answer.ptr, input.data() + input.size(), values[i], 
                                             fast_float::chars_format::skip_white_space);

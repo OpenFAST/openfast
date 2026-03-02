@@ -48,12 +48,14 @@ typedef   ^        BladeInputData    IntKi    format_index     -     -     -    
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        BladeInputData    R8Ki     station_eta     {:}    -     -    "Station location in eta [0,1]"
-typedef   ^        BladeInputData     ^       stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
-typedef   ^        BladeInputData     ^       mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
-typedef   ^        BladeInputData     ^       beta             {6} - - "Damping Coefficient" -
+typedef   ^        BladeInputData    R8Ki     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
+typedef   ^        BladeInputData    R8Ki     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
+typedef   ^        BladeInputData    R8Ki     beta             {6} - - "Damping Coefficient" -
+typedef   ^        BladeInputData    IntKi    n_modes           -  - - "Number of modal damping coefficients" -
+typedef   ^        BladeInputData    R8Ki     zeta              :  - - "Modal damping coefficient array" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef   ^        BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
+typedef   ^        BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Stiffness Prop. Damped, 2-Modal Damping"
 
 
 # ..... Input file data..............................................................................
@@ -164,6 +166,7 @@ typedef   ^        ParameterType  ^             blade_mass        -        - -  
 typedef   ^        ParameterType  ^             blade_CG         {3}       - -  "Blade center of gravity" -
 typedef   ^        ParameterType  ^             blade_IN         {3}{3}    - -  "Blade Length" -
 typedef   ^        ParameterType  ^             beta             {6}       - -  "Damping Coefficient" -
+typedef   ^        ParameterType  ^             zeta             {:}       - -  "Modal Damping Coefficients" -
 typedef   ^        ParameterType  ^             tol              -         - -  "Tolerance used in stopping criterion" -
 typedef   ^        ParameterType  ^             QPtN             {:}       - -  "Quadrature (QuadPt) point locations in natural frame [-1, 1]" -
 typedef   ^        ParameterType  ^             QPtWeight        {:}       - -  "Weights at each quadrature point (QuadPt)" -
@@ -222,6 +225,8 @@ typedef   ^        ParameterType    ^           FEweight               {:}{:}   
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^        ParameterType    LOGICAL     CompAppliedLdAtRoot     -   .FALSE.    - "flag to determine if BeamDyn should compute the applied loads at root"	-
+# .... arrays for modal damping ........................................................................................................
+typedef   ^        ParameterType    R8Ki        ModalDampingMat       {:}{:}  - - "Modal damping matrix in the rotating frame" -
 
 
 # ..... Inputs
@@ -344,6 +349,10 @@ typedef   ^        MiscVarType    ^            LP_MassM_LU  {:}{:}        - - "M
 typedef   ^        MiscVarType    ^            LP_RHS       {:}           - - "Right-hand-side vector" -
 typedef   ^        MiscVarType    ^            LP_StifK_LU  {:}{:}        - - "Stiffness Matrix for LU" -
 typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "Right-hand-side vector for LU" -
+# Velocity array for modal damping calculation
+typedef   ^        MiscVarType    ^            DampedVelocities    {:}           - - "Velocity vector for applying modal damping" -
+typedef   ^        MiscVarType    ^            ModalDampingF    {:}           - - "Modal damping force in the modal damping matrix coordinates" -
+typedef   ^        MiscVarType    ^            RotatedDamping  {:}{:}        - - "Rotated damping matrix for linearization at time step in GA2" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
