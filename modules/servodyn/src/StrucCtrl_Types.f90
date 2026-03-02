@@ -42,9 +42,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: StC_InputFile
     CHARACTER(1024)  :: StCFileName      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
-    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
+    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -55,7 +55,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: StC_X_M = 0.0_ReKi      !< StC X mass [kg]
     REAL(ReKi)  :: StC_Y_M = 0.0_ReKi      !< StC Y mass [kg]
     REAL(ReKi)  :: StC_Z_M = 0.0_ReKi      !< StC Z mass [kg]
-    REAL(ReKi)  :: StC_XY_M = 0.0_ReKi      !< StC XY mass [kg]
+    REAL(ReKi)  :: StC_Omni_M = 0.0_ReKi      !< StC omni mass [kg]
     REAL(ReKi)  :: StC_X_K = 0.0_ReKi      !< StC X stiffness [N/m]
     REAL(ReKi)  :: StC_Y_K = 0.0_ReKi      !< StC Y stiffness [N/m]
     REAL(ReKi)  :: StC_Z_K = 0.0_ReKi      !< StC Y stiffness [N/m]
@@ -188,7 +188,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: StC_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -196,7 +196,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: M_X = 0.0_ReKi      !< StC mass [kg]
     REAL(ReKi)  :: M_Y = 0.0_ReKi      !< StC mass [kg]
     REAL(ReKi)  :: M_Z = 0.0_ReKi      !< StC mass [kg]
-    REAL(ReKi)  :: M_XY = 0.0_ReKi      !< StCXY mass [kg]
+    REAL(ReKi)  :: M_Omni = 0.0_ReKi      !< StC omni mass [kg]
     REAL(ReKi)  :: K_X = 0.0_ReKi      !< StC stiffness [N/m]
     REAL(ReKi)  :: K_Y = 0.0_ReKi      !< StC stiffness [N/m]
     REAL(ReKi)  :: K_Z = 0.0_ReKi      !< StC stiffness [N/m]
@@ -208,7 +208,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: P_SP = 0.0_ReKi      !< Positive stop position (maximum mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: N_SP = 0.0_ReKi      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration vector [m/s^2]
-    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
+    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: StC_X_C_HIGH = 0.0_ReKi      !< StC X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_LOW = 0.0_ReKi      !< StC X low damping for ground hook control [N/(m/s)]
@@ -354,7 +354,7 @@ subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    DstInputFileData%StC_X_M = SrcInputFileData%StC_X_M
    DstInputFileData%StC_Y_M = SrcInputFileData%StC_Y_M
    DstInputFileData%StC_Z_M = SrcInputFileData%StC_Z_M
-   DstInputFileData%StC_XY_M = SrcInputFileData%StC_XY_M
+   DstInputFileData%StC_Omni_M = SrcInputFileData%StC_Omni_M
    DstInputFileData%StC_X_K = SrcInputFileData%StC_X_K
    DstInputFileData%StC_Y_K = SrcInputFileData%StC_Y_K
    DstInputFileData%StC_Z_K = SrcInputFileData%StC_Z_K
@@ -508,7 +508,7 @@ subroutine StC_PackInputFile(RF, Indata)
    call RegPack(RF, InData%StC_X_M)
    call RegPack(RF, InData%StC_Y_M)
    call RegPack(RF, InData%StC_Z_M)
-   call RegPack(RF, InData%StC_XY_M)
+   call RegPack(RF, InData%StC_Omni_M)
    call RegPack(RF, InData%StC_X_K)
    call RegPack(RF, InData%StC_Y_K)
    call RegPack(RF, InData%StC_Z_K)
@@ -594,7 +594,7 @@ subroutine StC_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%StC_X_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Z_M); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%StC_XY_M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_Omni_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_X_K); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_K); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Z_K); if (RegCheckErr(RF, RoutineName)) return
@@ -1578,7 +1578,7 @@ subroutine StC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%M_X = SrcParamData%M_X
    DstParamData%M_Y = SrcParamData%M_Y
    DstParamData%M_Z = SrcParamData%M_Z
-   DstParamData%M_XY = SrcParamData%M_XY
+   DstParamData%M_Omni = SrcParamData%M_Omni
    DstParamData%K_X = SrcParamData%K_X
    DstParamData%K_Y = SrcParamData%K_Y
    DstParamData%K_Z = SrcParamData%K_Z
@@ -1703,7 +1703,7 @@ subroutine StC_PackParam(RF, Indata)
    call RegPack(RF, InData%M_X)
    call RegPack(RF, InData%M_Y)
    call RegPack(RF, InData%M_Z)
-   call RegPack(RF, InData%M_XY)
+   call RegPack(RF, InData%M_Omni)
    call RegPack(RF, InData%K_X)
    call RegPack(RF, InData%K_Y)
    call RegPack(RF, InData%K_Z)
@@ -1774,7 +1774,7 @@ subroutine StC_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%M_X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_Z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%M_XY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_Omni); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_Z); if (RegCheckErr(RF, RoutineName)) return
