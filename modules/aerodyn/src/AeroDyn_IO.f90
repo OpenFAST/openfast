@@ -588,14 +588,12 @@ CONTAINS
    
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, InputFileData, OutFileRoot, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
 
       ! Passed variables
-   REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
-
    CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the input file
    CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
@@ -624,7 +622,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
    calcCrvAngle = .false.             ! initialize in case of early return
 
       ! get the blade input-file data
