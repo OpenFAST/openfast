@@ -536,6 +536,17 @@ accounted for if **WaveDisp** = 1. **AMMod** should only be set to 0 if wave
 stretching is causing numerical instabilities with flexible fixed-bottom support 
 structures modeled in SubDyn.
 
+**HstMod** controls the computation of distributed hydrostatic loads on 
+strip-theory members. If **HstMod** = 0, the hydrostatic pressure is always 
+integrated on the instantaneous wetted surface up to the SWL, even if wave 
+stretching is enabled. If **HstMod** = 1 and one of the wave stretching model is 
+selected with **WaveStMod** > 0, the hydrostatic pressure will be integrated up 
+to the instantaneous wave free surface, considering both wave elevation and wave 
+slope. If wave stretching is not used, **HstMod** will always be set to zero 
+internally, disregarding the user input. Irrespective of **HstMod**, the exact 
+displaced position of the structure is always used when computing hydrostatic 
+loads to obtain the correct hydrostatic restoring effect.
+
 Axial Coefficients
 ------------------
 This and the next several sections of the input file control the

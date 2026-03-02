@@ -1966,6 +1966,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['HydroDyn']['WaveDisp']     = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['AMMod']        = int_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['HstMod']       = int_read(f.readline().split()[0])
 
         #AXIAL COEFFICIENTS
         f.readline()
