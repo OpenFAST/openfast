@@ -94,11 +94,6 @@ dst = os.path.join(buildDirectory, "BAR_Baseline")
 src = os.path.join(moduleDirectory, "BAR_Baseline")
 if not os.path.isdir(dst):
     rtl.copyTree(src, dst)
-else:
-    # This can fail if two processes are copying the file at the same time
-    print('>>> Copy failed')
-    import time
-    time.sleep(1)
 
 # create the local output directory and initialize it with input files 
 if not os.path.isdir(testBuildDirectory):
