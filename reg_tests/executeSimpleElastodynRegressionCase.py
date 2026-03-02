@@ -88,7 +88,7 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-f not os.path.isdir(testBuildDirectory):
+if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'sed_driver.outb':'sed_driver_ref.outb'})
 
 ### Run SED on the test case

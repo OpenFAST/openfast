@@ -89,7 +89,7 @@ if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory and initialize it with input files (overwrite if exists)
-f not os.path.isdir(testBuildDirectory):
+if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, renameExtDict={'.out':'_ref.out'}, includeExt=['.dvr','.dat','.out','.csv'])
 
 

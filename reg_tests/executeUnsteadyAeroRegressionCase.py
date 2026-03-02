@@ -92,7 +92,7 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory and initialize it with input files 
 renameDict={'UA'+str(i)+'.outb':'UA'+str(i)+'_ref.outb' for i in [2,3,4,5,6,7]}
 
-f not os.path.isdir(testBuildDirectory):
+if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict=renameDict
        , excludeExt=['.sum'])
        # , excludeExt=['.out','.outb','.sum'])
