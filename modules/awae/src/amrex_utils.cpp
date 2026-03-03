@@ -62,7 +62,7 @@ void get_grid_bounds(const PlotFileData &pf, int level,
 }
 
 // Define the variable names
-const std::array<std::string, 3> var_names{"x_velocity", "y_velocity", "z_velocity"};
+// const std::array<std::string, 3> var_names{"x_velocity", "y_velocity", "z_velocity"};
 
 extern "C"
 {
@@ -135,16 +135,13 @@ extern "C"
             origin[i] = probLo[i] + static_cast<double>(gridLo[i] + 0.5) * dx[i];
         }
 
-        // Get variable names and check that required ones exist
+        // Get variable names and check that there are at least 3 variables
         const auto &var_names_pf = pf.varNames();
-        for (const auto &var_name : var_names)
+        if (var_names_pf.size() < 3)
         {
-            if (std::find(var_names_pf.begin(), var_names_pf.end(), var_name) == var_names_pf.end())
-            {
-                set_err(ErrID_Fatal, std::string{dir} + ": missing variable '" + var_name + "'",
-                        routine, err_stat, err_msg, err_msg_len);
-                return;
-            }
+            set_err(ErrID_Fatal, std::string{dir} + ": at least 3 variables required, found " + std::to_string(var_names_pf.size()),
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
         }
     }
 
@@ -190,8 +187,11 @@ extern "C"
             dims[i] = gridHi[i] - gridLo[i] + 1;
         }
 
+        // Get the variable names
+        const auto var_names = pf.varNames();
+
         // Loop through variables
-        for (int ivar = 0; ivar < var_names.size(); ++ivar)
+        for (int ivar = 0; ivar < 3; ++ivar)
         {
             // Get data for variable at given level
             const auto &mf = pf.get(fine_level, var_names[ivar]);
@@ -336,7 +336,7 @@ extern "C"
             const auto delta_time{time - start_time};
 
             // If the delta time is greater than the max time plus dt (for safety), continue
-            if (delta_time > (num_steps + dt / 4.))
+            if (delta_time > (max_time + dt / 4.))
             {
                 continue;
             }
@@ -408,7 +408,7 @@ extern "C"
         {
             std::string msg{path_prefix.string() + ": "};
             msg += "found " + std::to_string(indices.size()) + " times, ";
-            msg += std::to_string(num_steps) + "times were requested ";
+            msg += std::to_string(num_steps) + " times were requested ";
             msg += "with a dt of " + std::to_string(dt) + " seconds";
             set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
         }
