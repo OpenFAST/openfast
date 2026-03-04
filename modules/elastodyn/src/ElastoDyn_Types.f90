@@ -777,16 +777,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi)  :: BldNd_BladesOut = 0_IntKi      !< The blades to output (ED_AllBldNdOuts) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: CompAeroMaps = .false.      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: NumExtendedInputs = 0_IntKi      !< number of extended inputs for linearization [-]
-    INTEGER(IntKi)  :: NumBl_Lin = 0_IntKi      !< number of blades in the jacobian [-]
-    INTEGER(IntKi)  :: NActvVelDOF_Lin = 0_IntKi      !< number of velocity states in the jacobian [-]
-    INTEGER(IntKi)  :: NActvDOF_Lin = 0_IntKi      !< number of active DOFs to use in the jacobian [-]
-    INTEGER(IntKi)  :: NActvDOF_Stride = 0_IntKi      !< stride for active DOFs to use in the jacobian [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -5669,49 +5660,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    DstParamData%BldNd_BladesOut = SrcParamData%BldNd_BladesOut
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx)
-      UB(1:1) = ubound(SrcParamData%dx)
-      if (.not. allocated(DstParamData%dx)) then
-         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dx = SrcParamData%dx
-   end if
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
-   DstParamData%NumExtendedInputs = SrcParamData%NumExtendedInputs
-   DstParamData%NumBl_Lin = SrcParamData%NumBl_Lin
-   DstParamData%NActvVelDOF_Lin = SrcParamData%NActvVelDOF_Lin
-   DstParamData%NActvDOF_Lin = SrcParamData%NActvDOF_Lin
-   DstParamData%NActvDOF_Stride = SrcParamData%NActvDOF_Stride
 end subroutine
 
 subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5897,15 +5846,6 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(ParamData%BldNd_OutParam)
-   end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
-   if (allocated(ParamData%dx)) then
-      deallocate(ParamData%dx)
    end if
 end subroutine
 
@@ -6161,16 +6101,7 @@ subroutine ED_PackParam(RF, Indata)
       end do
    end if
    call RegPack(RF, InData%BldNd_BladesOut)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPackAlloc(RF, InData%dx)
-   call RegPack(RF, InData%Jac_ny)
    call RegPack(RF, InData%CompAeroMaps)
-   call RegPack(RF, InData%NumExtendedInputs)
-   call RegPack(RF, InData%NumBl_Lin)
-   call RegPack(RF, InData%NActvVelDOF_Lin)
-   call RegPack(RF, InData%NActvDOF_Lin)
-   call RegPack(RF, InData%NActvDOF_Stride)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -6436,16 +6367,7 @@ subroutine ED_UnPackParam(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%BldNd_BladesOut); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumExtendedInputs); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumBl_Lin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NActvVelDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NActvDOF_Lin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NActvDOF_Stride); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

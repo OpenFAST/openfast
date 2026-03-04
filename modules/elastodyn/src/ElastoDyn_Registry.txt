@@ -768,8 +768,6 @@ typedef ^       ParameterType   R8Ki    M_MCSMAX -      -       -       "Maximum
 typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
 typedef ^       ParameterType   R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
 typedef ^       ParameterType   R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
-#typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
-#typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
 
 # .... ED_AllBlNds option ........................................................................................................
 typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
@@ -778,16 +776,7 @@ typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and unit
 #typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
 typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
-typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
-typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
-typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
-typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
 typedef	^	ParameterType	Logical	CompAeroMaps	-	-	-	"number of outputs in jacobian matrix"	-
-typedef	^	ParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs for linearization"	-
-typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobian"	-
-typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
-typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
-typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
