@@ -957,7 +957,7 @@ contains
       call WrScr("Interface debugging:  SeaSt_C_GetDynPressure")
       call WrScr("   --------------------------------------------------------")
       call WrScr("   Time_C                 -> "//trim(Num2LStr(Time_C)))
-      call WrScr("   Pos_C                  -> ("//trim(Num2LStr(Pos_C(1)))//","//trim(Num2LStr(Pos_C(2)))//")")
+      call WrScr("   Pos_C                  -> ("//trim(Num2LStr(Pos_C(1)))//","//trim(Num2LStr(Pos_C(2)))//","//trim(Num2LStr(Pos_C(3)))//")")
    end subroutine ShowPassedData
    subroutine ShowReturnData()
       call WrScr("   DynP_C                 <- "//trim(Num2LStr(DynP_C)))
