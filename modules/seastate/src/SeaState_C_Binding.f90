@@ -44,6 +44,7 @@ MODULE SeaState_C_Binding
    PUBLIC :: SeaSt_C_GetDens
    PUBLIC :: SeaSt_C_GetDpth
    PUBLIC :: SeaSt_C_GetMSL2SWL
+   PUBLIC :: SeaSt_C_GetDynPressure
 
    !------------------------------------------------------------------------------------
    !  Debugging: DebugLevel -- passed at PreInit
@@ -896,6 +897,73 @@ subroutine CheckWaveFieldPtr(callingRoutine,valid,ErrStat,ErrMsg)
       valid = .false.
    endif
 end subroutine
+
+
+!> return the surface elevation and normal vector at a point.
+subroutine SeaSt_C_GetDynPressure(Time_C, Pos_C, DynP_C, ErrStat_C,ErrMsg_C) BIND (C, NAME='SeaSt_C_GetDynPressure')
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_GetDynPressure
+!GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_GetDynPressure
+#endif
+   real(c_double),            intent(in   ) :: Time_C
+   real(c_float),             intent(in   ) :: Pos_c(3)
+   real(c_float),             intent(  out) :: DynP_C
+   integer(c_int),            intent(  out) :: ErrStat_C
+   character(kind=c_char),    intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+
+   real(DbKi)                 :: Time
+   real(ReKi)                 :: Pos(3)
+   real(SiKi)                 :: FDynP
+   integer                    :: ErrStat
+   character(ErrMsgLen)       :: ErrMsg
+   character(*), parameter    :: RoutineName = 'SeaSt_C_GetDynPressure'
+   logical                    :: valid
+   ! Temporary vars for calling GetNodeWaveKin -- remove if new interface developed
+   integer(IntKi)             :: nodeInWater
+
+   if (DebugLevel > 1) call ShowPassedData()
+
+   ! convert position and time to fortran types
+   Time = real(Time_C, DbKi)
+   Pos = real(Pos_C(1:3), ReKi)
+
+   ! verify there is actually wavefield data
+   call CheckWaveFieldPtr(RoutineName, valid, ErrStat, ErrMsg)
+   if (.not. valid) then
+      call Cleanup()
+      return
+   endif
+
+   ! get wave elevation (total combined first and second order)
+   ! Notes:
+   !     - if position is outside the wave field boundary, it will simply return boundary edge value
+   !     - time must be positive or a fatal error occurs
+   !     - forceNodeInWater = .false. -- perhaps update this later to allow throug interface?
+   call WaveField_GetDynP( p%WaveField, m%WaveField_m, Time, pos, .false., nodeInWater, FDynP, ErrStat, ErrMsg )
+
+
+   ! Store resulting elevation as C type
+   DynP_C = real(FDynP,c_float)
+
+   if (DebugLevel > 1) call ShowReturnData()
+   call Cleanup()
+   return
+contains
+   subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
+      CALL SetErrStat_F2C(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   end subroutine Cleanup
+   subroutine ShowPassedData()
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  SeaSt_C_GetDynPressure")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   Time_C                 -> "//trim(Num2LStr(Time_C)))
+      call WrScr("   Pos_C                  -> ("//trim(Num2LStr(Pos_C(1)))//","//trim(Num2LStr(Pos_C(2)))//")")
+   end subroutine ShowPassedData
+   subroutine ShowReturnData()
+      call WrScr("   DynP_C                 <- "//trim(Num2LStr(DynP_C)))
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowReturnData
+end subroutine SeaSt_C_GetDynPressure
 
 
 !FIXME: the following visualization writer should be merged into the library vtk.f90

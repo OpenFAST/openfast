@@ -17,6 +17,7 @@ PUBLIC WaveField_GetNodeWaveNormal
 PUBLIC WaveField_GetNodeWaveKin
 PUBLIC WaveField_GetNodeWaveVelAcc
 PUBLIC WaveField_GetWaveKin
+PUBLIC WaveField_GetDynP
 
 CONTAINS
 
@@ -308,6 +309,103 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE WaveField_GetNodeWaveKin
+
+
+!-------------------- Subroutine for dynamic pressure --------------------!
+!NOTE: this is a subset of WaveField_GetNodeWaveKin
+SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWater, nodeInWater, FDynP, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
+   type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
+   real(DbKi),                         intent(in   ) :: Time
+   real(ReKi),                         intent(in   ) :: pos(3)
+   logical,                            intent(in   ) :: forceNodeInWater
+   real(SiKi),                         intent(  out) :: FDynP
+   integer(IntKi),                     intent(  out) :: nodeInWater
+   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+
+   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3)
+   character(*),                       parameter     :: RoutineName = 'WaveField_GetDynP'
+   integer(IntKi)                                    :: errStat2
+   character(ErrMsgLen)                              :: errMsg2
+
+   ! Temporary vars not kept
+   real(SiKi)                                        :: WaveElev1
+   real(SiKi)                                        :: WaveElev2
+   real(SiKi)                                        :: WaveElev
+
+   ErrStat   = ErrID_None
+   ErrMsg    = ""
+
+   posXY    = pos(1:2)
+   posXY0   = (/pos(1),pos(2),0.0_ReKi/)
+
+   ! Wave elevation
+   WaveElev1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   WaveElev2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   WaveElev  = WaveElev1 + WaveElev2
+
+   IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
+
+      IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
+         nodeInWater = 1_IntKi
+         ! Use location to obtain interpolated values of kinematics
+         CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+      ELSE ! Node is above the SWL
+         nodeInWater = 0_IntKi
+         FDynP       = 0.0
+      END IF
+
+   ELSE ! Wave stretching enabled
+      IF ( (pos(3) <= WaveElev) .OR. forceNodeInWater ) THEN ! Node is submerged
+         nodeInWater = 1_IntKi
+         IF ( WaveField%WaveStMod < 3 ) THEN ! Vertical or extrapolated wave stretching
+
+            IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
+               ! Use location to obtain interpolated values of kinematics
+               CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+            ELSE ! Node is above SWL - need wave stretching
+
+               ! Vertical wave stretching
+               CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+
+               ! Extrapoled wave stretching
+               IF (WaveField%WaveStMod == 2) THEN
+                  CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, posXY, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+                  FDynP = FDynP + GridInterp3D   ( WaveField%PWaveDynP0, WaveField_m ) * pos(3)
+               END IF
+
+            END IF ! Node is submerged
+
+         ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
+
+            ! Map the node z-position linearly from [-EffWtrDpth,m%WaveElev(j)] to [-EffWtrDpth,0]
+            posPrime    = pos
+            posPrime(3) = WaveField%EffWtrDpth*(WaveField%EffWtrDpth+pos(3))/(WaveField%EffWtrDpth+WaveElev)-WaveField%EffWtrDpth
+            posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE.
+
+            ! Obtain the wave-field variables by interpolation with the mapped position.
+            CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+            FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+         END IF
+
+      ELSE ! Node is out of water - zero-out all wave dynamics
+
+         nodeInWater = 0_IntKi
+         FDynP       = 0.0
+
+      END IF ! If node is in or out of water
+   END IF ! If wave stretching is on or off
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+END SUBROUTINE WaveField_GetDynP
 
 
 !-------------------- Subroutine for wave field velocity only --------------------!
