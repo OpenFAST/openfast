@@ -47,6 +47,7 @@ digraph ModVarDiagram {
         <tr><td align="left">VF_DerivOrder1</td><td>2048</td></tr>
         <tr><td align="left">VF_DerivOrder2</td><td>4096</td></tr>
         <tr><td align="left">VF_Mapping</td><td>8192</td></tr>
+        <tr><td align="left">VF_NoLin</td><td>16384</td></tr>
         </table>>;];
     
     ModVarType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
@@ -97,7 +98,6 @@ digraph ModVarDiagram {
         <tr><td align="left">dXdy(:,:)</td><td>R8Ki</td></tr>
         <tr><td align="left">dUdu(:,:)</td><td>R8Ki</td></tr>
         <tr><td align="left">dUdy(:,:)</td><td>R8Ki</td></tr>
-        <tr><td align="left">StateRotation(:,:)</td><td>R8Ki</td></tr>
         </table>>;];
     
     ModDataType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">
@@ -106,7 +106,9 @@ digraph ModVarDiagram {
         <tr><td align="left">iMod</td><td>IntKi</td></tr>
         <tr><td align="left">ID</td><td>IntKi</td></tr>
         <tr><td align="left">Ins</td><td>IntKi</td></tr>
+        <tr><td align="left">iRotor</td><td>IntKi</td></tr>
         <tr><td align="left">SubSteps</td><td>IntKi</td></tr>
+        <tr><td align="left">Category</td><td>IntKi</td></tr>
         <tr><td align="left">DT</td><td>R8Ki</td></tr>
         <tr><td align="left">Vars</td><td port="Vars">ModVarsType</td></tr>
         <tr><td align="left">Lin</td><td port="Lin">ModLinType</td></tr>

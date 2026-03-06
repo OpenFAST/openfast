@@ -80,7 +80,7 @@ param       ^       -           IntKi           MC_Option1          -   2   -   
 param       ^       -           IntKi           MC_Option2          -   4   -   ""  -
 param       ^       -           IntKi           MC_Post             -   8   -   ""  -
 
-typedef     ^       DatLoc      IntKi           Num                 -   0   -   "Mesh number in module"
+typedef     ^       DatLoc      IntKi           Num                 -   0   -   "Field number in module input, output, or continuous state derived data types"
 typedef     ^       ^           IntKi           i1                  -   0   -   "Index 1"
 typedef     ^       ^           IntKi           i2                  -   0   -   "Index 2"
 typedef     ^       ^           IntKi           i3                  -   0   -   "Index 3"
