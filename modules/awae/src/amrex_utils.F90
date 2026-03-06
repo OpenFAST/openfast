@@ -93,11 +93,11 @@ subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
    call amrex_read_header_c(dir_path, t, dims, gridSpacing, origin, err_stat_c, err_msg_c, ErrMsgLen)
 
    ! Transfer outputs back to fortran types
-   time = transfer(t, time)
-   nXYZ = transfer(dims, nXYZ)
-   dXYZ = transfer(gridSpacing, dXYZ)
-   oXYZ = transfer(origin, oXYZ)
-   ErrStat = transfer(err_stat_c, ErrStat)
+   time = real(t, DbKi)
+   nXYZ = int(dims, IntKi)
+   dXYZ = real(gridSpacing, ReKi)
+   oXYZ = real(origin, ReKi)
+   ErrStat = int(err_stat_c, IntKi)
    ErrMsg = transfer(err_msg_c, ErrMsg)
    i = index(ErrMsg, c_null_char)
    if (i > 0) ErrMsg = ErrMsg(:i-1)
@@ -129,7 +129,7 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
    call amrex_read_data_c(dir_path, gridData, err_stat_c, err_msg_c, ErrMsgLen)
 
    ! Transfer outputs back to fortran types
-   ErrStat = transfer(err_stat_c, ErrStat)
+   ErrStat = int(err_stat_c, IntKi)
    ErrMsg = transfer(err_msg_c, ErrMsg)
    i = index(ErrMsg, c_null_char)
    if (i > 0) ErrMsg = ErrMsg(:i-1)
@@ -173,18 +173,18 @@ subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
    start_index = transfer(trim(StartIndex) // c_null_char, start_index) 
    
    ! Transfer inputs to C types
-   subvol_c = transfer(SubVol, subvol_c)
-   num_step = transfer(NumStep, num_step)
-   dt_c = transfer(DT, dt_c)
+   subvol_c = int(SubVol, c_int)
+   num_step = int(NumStep, c_int)
+   dt_c = real(DT, c_double)
 
    ! Call C++ routine to find first index and index delta values
    call amrex_find_subvols_c(dir_path, subvol_c, dt_c, num_step, start_index, first_index, &
                              index_delta, err_stat_c, err_msg_c, ErrMsgLen)
 
    ! Transfer outputs to fortran types
-   FirstIndex = transfer(first_index, FirstIndex)
-   IndexDelta = transfer(index_delta, IndexDelta)
-   ErrStat = transfer(err_stat_c, ErrStat)
+   FirstIndex = int(first_index, IntKi)
+   IndexDelta = int(index_delta, IntKi)
+   ErrStat = int(err_stat_c, IntKi)
    ErrMsg = transfer(err_msg_c, ErrMsg)
    i = index(ErrMsg, c_null_char)
    if (i > 0) ErrMsg = ErrMsg(:i-1)

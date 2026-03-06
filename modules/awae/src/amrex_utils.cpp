@@ -361,7 +361,7 @@ extern "C"
                         routine, err_stat, err_msg, err_msg_len);
                 return;
             }
-            if ((std::abs(start_dx[0] - dx[0]) > 1e-8) || (std::abs(start_dx[1] - dx[1]) > 1e-8) || (std::abs(start_dx[1] - dx[1]) > 1e-8))
+            if ((std::abs(start_dx[0] - dx[0]) > 1e-8) || (std::abs(start_dx[1] - dx[1]) > 1e-8) || (std::abs(start_dx[2] - dx[2]) > 1e-8))
             {
                 const auto dx_str = "(" + std::to_string(dx[0]) + ", " + std::to_string(dx[1]) + ", " + std::to_string(dx[2]) + ")";
                 const auto start_dx_str = "(" + std::to_string(start_dx[0]) + ", " + std::to_string(start_dx[1]) + ", " + std::to_string(start_dx[2]) + ")";
@@ -369,7 +369,7 @@ extern "C"
                         routine, err_stat, err_msg, err_msg_len);
                 return;
             }
-            if ((std::abs(start_origin[0] - origin[0]) > 1e-8) || (std::abs(start_origin[1] - origin[1]) > 1e-8) || (std::abs(start_origin[1] - origin[1]) > 1e-8))
+            if ((std::abs(start_origin[0] - origin[0]) > 1e-8) || (std::abs(start_origin[1] - origin[1]) > 1e-8) || (std::abs(start_origin[2] - origin[2]) > 1e-8))
             {
                 const auto origin_str = "(" + std::to_string(origin[0]) + ", " + std::to_string(origin[1]) + ", " + std::to_string(origin[2]) + ")";
                 const auto start_origin_str = "(" + std::to_string(start_origin[0]) + ", " + std::to_string(start_origin[1]) + ", " + std::to_string(start_origin[2]) + ")";
@@ -411,6 +411,7 @@ extern "C"
             msg += std::to_string(num_steps) + " times were requested ";
             msg += "with a dt of " + std::to_string(dt) + " seconds";
             set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
+            return;
         }
 
         // Calculate delta between first two indices
