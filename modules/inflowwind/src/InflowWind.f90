@@ -336,6 +336,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case (User_WindNumber)
 
       p%FlowField%FieldType = User_FieldType
+      User_InitInput%WindFileName = ''
+      User_InitInput%RefHt = 0.0_ReKi
       call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
