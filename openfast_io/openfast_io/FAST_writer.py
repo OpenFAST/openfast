@@ -821,16 +821,18 @@ class InputWriter_OpenFAST(object):
 
         f.write('------- BEAMDYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
-        f.write('---------------------- BLADE PARAMETERS --------------------------------------\n')
+        f.write('------ Blade Parameters --------------------------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
-        f.write('---------------------- DAMPING COEFFICIENT------------------------------------\n')
+        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['damp_type'], 'damp_type', '- Damping type (switch) {0: none, 1: stiffness-proportional, 2: modal}\n'))
+        f.write('------ Stiffness-Proportional Damping [used only if damp_type=1] ---------------\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['mu1','mu2','mu3','mu4','mu5','mu6']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(-)','(-)','(-)','(-)','(-)']])+'\n')
         mu = [bd_blade_dict['mu1'], bd_blade_dict['mu2'], bd_blade_dict['mu3'], bd_blade_dict['mu4'], bd_blade_dict['mu5'], bd_blade_dict['mu6']]
         f.write(" ".join(['{:^11f}'.format(i) for i in mu])+'\n')
-        f.write('---------------------- DISTRIBUTED PROPERTIES---------------------------------\n')
-
+        f.write('------ Modal Damping [used only if damp_type=2] --------------------------------\n')
+        f.write('{:<22} {:<11} {:}\n'.format(bd_blade_dict['n_modes'], 'n_modes', '- Number of modal damping coefficients (-)'))
+        f.write('{:<22} {:<11} {:}\n'.format(" ".join([repr(v) for v in bd_blade_dict['zeta']]), 'zeta', ' - Damping coefficients for mode 1 through n_modes'))
+        f.write('------ Distributed Properties --------------------------------------------------\n')
         for i in range(len(bd_blade_dict['radial_stations'])):
             f.write('{: 2.15e}\n'.format(bd_blade_dict['radial_stations'][i]))
             for j in range(6):

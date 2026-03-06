@@ -440,7 +440,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             p_FAST%BDRotMap(j) = iRot     ! Set this rotor number for this instance
             p_FAST%BDBldMap(j) = k        ! Set this blade number for this instance
 
-            Init%InData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))//TRIM(Num2LStr(k))
+            Init%InData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))&
+               &//'.R'//TRIM(Num2LStr(iRot))//'.B'//TRIM(Num2LStr(k))
             Init%InData_BD%InputFile    = p_FAST%BDBldFile(k, iRot)
             Init%InData_BD%GlbPos       = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)          ! {:}    - - "Initial Position Vector of the local blade coordinate system"
             Init%InData_BD%GlbRot       = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)  ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"

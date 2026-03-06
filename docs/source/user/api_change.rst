@@ -64,6 +64,9 @@ ElastoDyn                                     79       PBrIner(3)           200 
 ElastoDyn                                     80       BlPIner(1)           28578         BlPIner(1)  - Pitch inertia of an undeflected blade, blade 1 (kg m^2)
 ElastoDyn                                     81       BlPIner(2)           28578         BlPIner(2)  - Pitch inertia of an undeflected blade, blade 2 (kg m^2)
 ElastoDyn                                     82       BlPIner(3)           28578         BlPIner(3)  - Pitch inertia of an undeflected blade, blade 3 (kg m^2) [unused for 2 blades]
+BeamDyn                                       10                            ------ Modal Damping [used only if damp_type=2] --------------------------------
+BeamDyn                                       11       n_modes              3             n_modes     - Number of modal damping coefficients (-)
+BeamDyn                                       12       zeta                 0.1, 0.2, 0.3 zeta        - Damping coefficients for mode 1 through n_modes
 ServoDyn                                      9        PitNeut(1)           0             PitNeut(1)  - Blade 1 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
 ServoDyn                                      10       PitNeut(2)           0             PitNeut(2)  - Blade 2 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
 ServoDyn                                      11       PitNeut(3)           0             PitNeut(3)  - Blade 3 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]* *[unused for 2 blades]*
