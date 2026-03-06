@@ -167,7 +167,7 @@ else()
 endif()
 
 #-------------------------------------------------------------------------------
-# ARMeX reader inclusion in FAST.Farm
+# AMReX reader inclusion in FAST.Farm
 #-------------------------------------------------------------------------------
 # Included as an external project, cloned to `dependencies` directory
 

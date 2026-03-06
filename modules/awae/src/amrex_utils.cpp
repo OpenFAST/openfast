@@ -23,7 +23,7 @@ void set_err(int err_stat_id, std::string err_msg_str, const std::string &routin
     }
     else
     {
-        err_msg_str.assign(" ");
+        err_msg_str.assign(err_msg_len, ' ');
     }
     err_msg_str.copy(err_msg, err_msg_len);
 }
@@ -307,7 +307,7 @@ extern "C"
             const auto dir_path{dir_entry.path().string()};
 
             // If path doesn't contain the prefix, continue
-            if (dir_path.find(path_prefix) == std::string::npos)
+            if (dir_path.find(path_prefix.string()) == std::string::npos)
             {
                 continue;
             }
