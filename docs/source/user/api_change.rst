@@ -80,7 +80,7 @@ HydroDyn                                      \*       HstMod               1   
 FAST.Farm                                     35                            --- AMBIENT WIND: AMReX MODULE --- [used only for Mod_AmbWind=4]
 FAST.Farm                                     36       WindDirPrefix        "inflow/ffboxes"   WindDirPrefix - Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)
 FAST.Farm                                     37       DirStartIndex        00110              DirStartIndex - AMReX sub-volume directory suffix to consider as time=0 (quoted string)
-FAST.Farm                                     38       DT_Low-AMReX         2.0                DT_Low-AMReX  - Time step for low -resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
+FAST.Farm                                     38       DT_Low-AMReX         2.0                DT_Low-AMReX  - Time step for low-resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
 FAST.Farm                                     39       DT_High-AMReX        1.0                DT_High-AMReX - Time step for high-resolution wind data interpolation (s) [>0.0]
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 
