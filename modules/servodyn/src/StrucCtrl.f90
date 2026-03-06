@@ -6,6 +6,7 @@ MODULE StrucCtrl
 
    USE StrucCtrl_Types
    USE NWTC_Library
+   USE UserSubs, ONLY: UserStC
 
    IMPLICIT NONE
 
@@ -26,7 +27,7 @@ MODULE StrucCtrl
                                                     !   continuous states, and updating discrete states
    PUBLIC :: StC_CalcOutput                     ! Routine for computing outputs
 
-  ! PUBLIC :: StC_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   !PUBLIC :: StC_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: StC_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
 
    !PUBLIC :: StC_UpdateDiscState                ! Tight coupling routine for updating discrete states
@@ -47,14 +48,17 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: ControlMode_NONE      = 0          !< The (StC-universal) control code for not using a particular type of control
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          !< independent DOFs
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_ForceDLL      = 5          !< prescribed force series
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< 2DOF omni-directional
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni3         = 3          !< 3DOF omni-directional
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 5          !< tuned liquid column dampers !MEG & SP
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 6          !< prescribed force series
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_ForceDLL      = 7          !< dll force series
+
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveUsrSub    = 3          !< active control based on user subroutine
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveEXTERN    = 4          !< active control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control based on DLL
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          !< 1: velocity-based ground hook control;
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          !< 2: Inverse velocity-based ground hook control
@@ -217,7 +221,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       x%StC_x(2,i_pt) = 0
       x%StC_x(3,i_pt) = InputFileData%StC_Y_DSP
       x%StC_x(4,i_pt) = 0
-      if ((p%StC_DOF_MODE == DOFMode_Indept) .and. p%StC_Z_DOF) then    ! Should be zero for omni and TLCD
+      if (((p%StC_DOF_MODE == DOFMode_Indept) .and. p%StC_Z_DOF) .or. (p%StC_DOF_MODE == DOFMode_Omni3)) then    ! Should be zero for omni and TLCD
          x%StC_x(5,i_pt) = InputFileData%StC_Z_DSP
       else
          x%StC_x(5,i_pt) = 0.0_ReKi
@@ -842,7 +846,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             m%M_P(3,i_pt) =  - F_X_P(2)  * x%StC_x(1,i_pt)  +  F_Y_P(1) * x%StC_x(3,i_pt)    ! NOTE signs match document, but are changed from prior value
 
             ! forces and moments in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
             y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
          enddo
 
@@ -852,9 +856,9 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! StrucCtrl external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_XY_P(1) = 0
-            F_XY_P(2) = 0
-            F_XY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                       &
+            F_XY_P(1) = 0.0_ReKi
+            F_XY_P(2) = 0.0_ReKi
+            F_XY_P(3) = - p%M_Omni * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                       &
                                                 - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt)   &
                                                 + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(1,i_pt)   &
                                                 - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                         &
@@ -866,12 +870,29 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
             m%F_P(3,i_pt) = - F_XY_P(3)
 
-            m%M_P(1,i_pt) = - F_XY_P(3) * x%StC_x(3,i_pt)
-            m%M_P(2,i_pt) =   F_XY_P(3) * x%StC_x(1,i_pt)
-            m%M_P(3,i_pt) = - F_XY_P(1) * x%StC_x(3,i_pt) + F_XY_P(2) * x%StC_x(1,i_pt)
+            ! Compute M_P using F_P insteand in case the other load components can generate moments about P
+            m%M_P(1:3,i_pt) = cross_product( x%StC_x([1,3,5],i_pt), m%F_P(1:3,i_pt) )
 
             ! forces and moments in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+
+         !note: m%F_k is computed earlier in StC_CalcContStateDeriv
+
+         ! StrucCtrl external forces of dependent degrees:
+         do i_pt=1,p%NumMeshPts
+
+            ! forces and moments in local coordinates
+            m%F_P(1:3,i_pt) = m%K(1:3,i_pt) * x%StC_x([1,3,5],i_pt) + (m%C_ctrl(1:3,i_pt) + m%C_Brake(1:3,i_pt)) * x%StC_x([2,4,6],i_pt) &
+                            - m%F_stop(1:3,i_pt) - m%F_ext(1:3,i_pt) - m%F_fr(1:3,i_pt) + m%F_table(1:3,i_pt)*(m%F_k(1:3,i_pt))
+            m%F_P(  3,i_pt) = m%F_P(  3,i_pt) - p%StC_Z_PreLd
+            m%M_P(1:3,i_pt) = cross_product( x%StC_x([1,3,5],i_pt), m%F_P(1:3,i_pt) )
+
+            ! forces and moments in global coordinates
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
             y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
          enddo
 
@@ -1107,9 +1128,9 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
          do i_pt=1,p%NumMeshPts
             ! Aggregate acceleration terms
-            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
-            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
-            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1 / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) + p%StC_Z_PreLd )
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1.0_ReKi / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1.0_ReKi / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
+            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1.0_ReKi / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) + p%StC_Z_PreLd )
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
@@ -1117,18 +1138,31 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          do i_pt=1,p%NumMeshPts
             denom = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2)
             IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
-                m%F_k(1,i_pt) = 0.0
-                m%F_k(2,i_pt) = 0.0
+                m%F_k(1:2,i_pt) = 0.0_ReKi
             ELSE
-                  m%F_k(1,i_pt) = x%StC_x(1,i_pt)/denom
-                  m%F_k(2,i_pt) = x%StC_x(3,i_pt)/denom
+                m%F_k(1:2,i_pt) = x%StC_x([1,3],i_pt)/denom
             END IF
-            m%F_k(3,i_pt) = 0.0
+            m%F_k(3,i_pt) = 0.0_ReKi
 
             ! Aggregate acceleration terms
-            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
-            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_XY * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
             m%Acc(3,i_pt) = 0.0_ReKi
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+
+         do i_pt=1,p%NumMeshPts
+            denom = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2+x%StC_x(5,i_pt)**2)
+            IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
+                m%F_k(1:3,i_pt) = 0.0_ReKi
+            ELSE
+                m%F_k(1:3,i_pt) = x%StC_x([1,3,5],i_pt)/denom
+            END IF
+
+            ! Aggregate acceleration terms (this is the difference between the absolute accelerations of the TMD and P in N frame)
+            m%Acc(1:3,i_pt) = - m%rddot_P(1:3,i_pt) + m%a_G(1:3,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(1:3,i_pt) + m%F_stop(1:3,i_pt) - m%F_table(1:3,i_pt)*(m%F_k(1:3,i_pt)) )
+            m%Acc(  3,i_pt) = m%Acc(  3,i_pt) + p%StC_Z_PreLd / p%M_Omni
          enddo
 
       ENDIF
@@ -1172,7 +1206,8 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             enddo
          END IF
 
-         if ( .not. (p%StC_DOF_MODE == DOFMode_Indept .AND. p%StC_Z_DOF)) then      ! z not used in any other configuration
+         if ( .not. ( (p%StC_DOF_MODE == DOFMode_Indept .AND. p%StC_Z_DOF) .or. (p%StC_DOF_MODE == DOFMode_Omni3) )) then
+            ! z not used in any other configuration
             do i_pt=1,p%NumMeshPts
                dxdt%StC_x(5,i_pt) = 0.0_ReKi
             enddo
@@ -1191,7 +1226,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
       ELSE IF (p%StC_CMODE == CMODE_ActiveDLL) THEN   ! Active control from DLL
-         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
+         call StC_ActiveCtrl_StiffDamp(u,x,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
          m%F_fr    = 0.0_ReKi
          if (.not. p%Use_F_TBL) then
             K(1:3,:) = m%K(1:3,:)
@@ -1204,6 +1239,12 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          !   do i_pt=1,p%NumMeshPts
          !      K(1:3,i_pt) = m%F_table(1:3,i_pt) - m%K(1:3,i_pt)
          !   enddo
+         endif
+      ELSE IF (p%StC_CMODE == CMODE_ActiveUsrSub) THEN   ! Active control from user subroutine
+         call StC_ActiveCtrl_UsrSub(u,x,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
+         m%F_fr    = 0.0_ReKi
+         if (.not. p%Use_F_TBL) then
+            K(1:3,:) = m%K(1:3,:)
          endif
       END IF
 
@@ -1251,19 +1292,34 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_XY) * x%StC_x(1,i_pt)   &
-                                - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
-                                - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
-                                +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
+            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_Omni) * x%StC_x(1,i_pt)   &
+                                - ( m%C_ctrl( 1,i_pt)/p%M_Omni ) * x%StC_x(2,i_pt)                                     &
+                                - ( m%C_Brake(1,i_pt)/p%M_Omni ) * x%StC_x(2,i_pt)                                     &
+                                +  m%Acc(1,i_pt) + 1/p%M_Omni * ( m%F_fr(1,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%StC_x(3,i_pt)      &
                                +2 * m%omega_P(3,i_pt) * x%StC_x(4,i_pt)
-            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_XY) * x%StC_x(3,i_pt)   &
-                                - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
-                                - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
-                                +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
+            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Omni) * x%StC_x(3,i_pt)   &
+                                - ( m%C_ctrl( 2,i_pt)/p%M_Omni ) * x%StC_x(4,i_pt)                                     &
+                                - ( m%C_Brake(2,i_pt)/p%M_Omni ) * x%StC_x(4,i_pt)                                     &
+                                +  m%Acc(2,i_pt) + 1/p%M_Omni * ( m%F_fr(2,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%StC_x(1,i_pt)      &
                                -2 * m%omega_P(3,i_pt) * x%StC_x(2,i_pt)
             dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+               ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
+         do i_pt=1,p%NumMeshPts
+
+            dxdt%StC_x([2,4,6],i_pt) =  1.0_ReKi/p%M_Omni *                                                        &
+                                        ( -          K(1:3,i_pt)                         * x%StC_x([1,3,5],i_pt) & ! Stiffness
+                                          - ( m%C_ctrl(1:3,i_pt) + m%C_Brake(1:3,i_pt) ) * x%StC_x([2,4,6],i_pt) & ! Damping
+                                          +     m%F_fr(1:3,i_pt)                                                 ) ! Friction
+            dxdt%StC_x([2,4,6],i_pt) = dxdt%StC_x([2,4,6],i_pt) + m%Acc(1:3,i_pt)                                                 &
+                                     - cross_product( m%omega_P(:,i_pt), cross_product(m%omega_P(:,i_pt),x%StC_x([1,3,5],i_pt)) ) &
+                                     - cross_product( m%alpha_P(:,i_pt),                                 x%StC_x([1,3,5],i_pt)  ) &
+                          - 2.0_ReKi * cross_product( m%omega_P(:,i_pt),                                 x%StC_x([2,4,6],i_pt)  )
+
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
@@ -1671,8 +1727,9 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    enddo
 END SUBROUTINE StC_GroundHookDamp
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
+SUBROUTINE StC_ActiveCtrl_StiffDamp(u,x,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
    TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ContinuousStateType),         INTENT(IN   )  :: x              !< State at Time
    TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
    real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
    real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
@@ -1687,16 +1744,40 @@ SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
          C_Brake(1:3,i_pt) = u%CmdBrake(1:3,p%StC_CChan(i_pt))
          F_ctrl(1:3,i_pt)  = u%CmdForce(1:3,p%StC_CChan(i_pt))
          M_ctrl(1:3,i_pt)  = u%CmdMoment(1:3,p%StC_CChan(i_pt))
-      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior
-         C_ctrl(1,:) = p%C_X
-         C_ctrl(2,:) = p%C_Y
-         C_ctrl(3,:) = p%C_Z
-         C_Brake     = 0.0_ReKi
-         F_ctrl      = 0.0_ReKi
-         M_ctrl      = 0.0_ReKi
+      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior; yes, but K_ctrl is not used if table is used
+         K_ctrl(1:3,i_pt)  = [p%K_X,p%K_Y,p%K_Z]
+         C_ctrl(1:3,i_pt)  = [p%C_X,p%C_Y,p%C_Z]
+         C_Brake(1:3,i_pt) = 0.0_ReKi
+         F_ctrl(1:3,i_pt)  = 0.0_ReKi
+         M_ctrl(1:3,i_pt)  = 0.0_ReKi
       endif
    enddo
 END SUBROUTINE StC_ActiveCtrl_StiffDamp
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Example user subroutine for active structure control
+SUBROUTINE StC_ActiveCtrl_UsrSub(u,x,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
+   TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ContinuousStateType),         INTENT(IN   )  :: x              !< State at Time
+   TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
+   real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
+   real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
+   real(ReKi),                            intent(inout)  :: C_Brake(:,:)   !< brake     commanded by dll
+   real(ReKi),                            intent(inout)  :: F_ctrl(:,:)    !< force     commanded by dll
+   real(ReKi),                            intent(inout)  :: M_ctrl(:,:)    !< moment    commanded by dll
+   integer(IntKi)                                        :: i_pt           ! counter for mesh points
+   do i_pt=1,p%NumMeshPts
+      call UserStC(x%StC_x([1,3,5],i_pt),& ! Apparent relative displacement
+                   x%StC_x([2,4,6],i_pt),& ! Apparent relative velocity
+                   K_ctrl (1:3,i_pt),&
+                   C_ctrl (1:3,i_pt),&
+                   C_Brake(1:3,i_pt),&
+                   F_ctrl (1:3,i_pt),&
+                   M_ctrl (1:3,i_pt))
+   enddo
+
+END SUBROUTINE StC_ActiveCtrl_UsrSub
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Extrapolate or interpolate stiffness value based on stiffness table.
 SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
@@ -1731,15 +1812,17 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
    do i_pt=1,p%NumMeshPts
 
-      IF (p%StC_DOF_MODE == DOFMode_Indept .OR. p%StC_DOF_MODE == DOFMode_Omni) THEN
+      IF (p%StC_DOF_MODE == DOFMode_Indept .OR. p%StC_DOF_MODE == DOFMode_Omni .OR. p%StC_DOF_MODE == DOFMode_Omni3) THEN
 
          IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
             DO I = 1,3
                Disp(I) = x%StC_x(J(I),i_pt)
             END DO
-         ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
+         ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
             Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2) ! constant assignment to vector
             Disp(3) = 0.0_ReKi
+         ELSE ! IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN  ! X, Y, and Z
+            Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2+x%StC_x(5,i_pt)**2)
          END IF
 
          
@@ -1834,9 +1917,11 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
 
       !  DOF mode (switch) {  0: No StC or TLCD DOF; 
       !                       1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs);
-      !                       2: StC_XY_DOF (Omni-Directional StC);
-      !                       3: TLCD;
-      !                       4: Prescribed force/moment time series}
+      !                       2: StC_XY_DOF (2DOF Omni-Directional StC);
+      !                       3: StC_XYZ_DOF (3DOF Omni-Directional StC);
+      !                       5: TLCD;
+      !                       6: Prescribed force/moment time series}
+      !                       7: Force determined by external DLL
    call ParseVar( FileInfo_In, Curline, 'StC_DOF_MODE', InputFileData%StC_DOF_MODE, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
@@ -1933,8 +2018,8 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
       !  StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
    call ParseVar( FileInfo_In, Curline, 'StC_Z_M', InputFileData%StC_Z_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
-      !  StC Z mass (kg) [used only when StC_DOF_MODE=2]
-   call ParseVar( FileInfo_In, Curline, 'StC_XY_M', InputFileData%StC_XY_M, ErrStat2, ErrMsg2, UnEcho )
+      !  StC Omni mass (kg) [used only when StC_DOF_MODE=2 or 3]
+   call ParseVar( FileInfo_In, Curline, 'StC_Omni_M', InputFileData%StC_Omni_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC X stiffness (N/m)
    call ParseVar( FileInfo_In, Curline, 'StC_X_K', InputFileData%StC_X_K, ErrStat2, ErrMsg2, UnEcho )
@@ -2192,29 +2277,48 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    IF (  InputFileData%StC_DOF_MODE /= ControlMode_None     .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Indept       .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Omni         .and. &
+         InputFileData%StC_DOF_MODE /= DOFMode_Omni3        .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_TLCD         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Prescribed   .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), '// &
-               'or 2 (omni-directional), or 3 (TLCD), 4 (prescribed force time-series), or 5 (force from external DLL).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be '                   //&
+               trim(Num2LStr(ControlMode_None))  //' (no DOF), '                         //&
+               trim(Num2LStr(DOFMode_Indept))    //' (two/three independent DOFs), '     //&
+               trim(Num2LStr(DOFMode_Omni))      //' (2DOF omni-directional), '          //&
+               trim(Num2LStr(DOFMode_Omni3))     //' (3DOF omni-directional), '          //&
+               trim(Num2LStr(DOFMode_TLCD))      //' (TLCD), '                           //&
+               trim(Num2LStr(DOFMode_Prescribed))//' (prescribed force time-series), or '//&
+               trim(Num2LStr(DOFMode_ForceDLL))  //' (force from external DLL).',          &
+           ErrStat, ErrMsg, RoutineName )
 
       ! Check control modes
    IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
          InputFileData%StC_CMODE /= CMODE_Semi           .and. &
+         InputFileData%StC_CMODE /= CMODE_ActiveUsrSub   .and. &
          InputFileData%StC_CMODE /= CMODE_ActiveDLL ) &
          !InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &    ! Not an option at the moment --> 4 (active with Simulink control),
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active),'// &
-            ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be '                                   //&
+            trim(Num2LStr(ControlMode_None))  //' (none), '                                               //&
+            trim(Num2LStr(CMODE_Semi))        //' (semi-active), '                                        //&
+            trim(Num2LStr(CMODE_ActiveUsrSub))//' (active with user subroutine), or '                     //&
+            trim(Num2LStr(CMODE_ActiveDLL))   //' (active with DLL control) in this version of StrucCtrl.', &
+      ErrStat, ErrMsg, RoutineName )
 
       ! Check control channel
-   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
+   if ( InputFileData%StC_CMode == CMODE_ActiveUsrSub .or. InputFileData%StC_CMode == CMODE_ActiveDLL ) then
       if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and. &
            InputFileData%StC_DOF_MODE /= DOFMode_Omni   .and. &
+           InputFileData%StC_DOF_MODE /= DOFMode_Omni3  .and. &
            InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) then
-         call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
-               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) or force from external DLL '// &
-               '(StC_DOF_Mode = 5) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, &
+               'Control mode '//trim(Num2LStr(CMODE_ActiveUsrSub))//' (active with user subroutine) or '//&
+                                trim(Num2LStr(CMODE_ActiveDLL))   //' (active with DLL control) '       //&
+               'can only be used with independent or omni DOF (StC_DOF_Mode='//trim(Num2LStr(DOFMode_Indept))//', '//&
+               trim(Num2LStr(DOFMode_Omni))//', or '//trim(Num2LStr(DOFMode_Omni3))//') or external force (StC_DOF_Mode = '//&
+               trim(Num2LStr(DOFMode_ForceDLL))//') in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
       endif
+   endif
+   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
       if (InitInp%NumMeshPts > 1) then
          do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
             if ( InputFileData%StC_CChan(i) == InputFileData%StC_CChan(1) ) then
@@ -2226,10 +2330,10 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       endif
       do i=1,InitInp%NumMeshPts     ! Check we are in range of number of control channel groups
          if ( InputFileData%StC_CChan(i) < 0 .or. InputFileData%StC_CChan(i) > 10 ) then
-            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
+            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode='//trim(Num2LStr(CMODE_ActiveDLL))//'.', ErrStat, ErrMsg, RoutineName )
          endif
          if ( InputFileData%StC_CChan(i) == 0 ) then
-            call SetErrStat( ErrID_Warn, 'Control mode 5 (active with DLL control) requested, but no control channel specified.  No external force will be applied.', ErrStat, ErrMsg, RoutineName )
+            call SetErrStat( ErrID_Warn, 'Control mode '//trim(Num2LStr(CMODE_ActiveDLL))//' (active with DLL control) requested, but no control channel specified.  No external force will be applied.', ErrStat, ErrMsg, RoutineName )
          endif
       enddo
    endif
@@ -2239,9 +2343,13 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
         InputFileData%StC_SA_MODE /= SA_CMODE_GH_disp   .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_Ph_FF     .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_Ph_DF     ) then
-      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be 1 (velocity-based ground hook control), '// &
-                   '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
-                   '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be '                          //&
+                   trim(Num2LStr(SA_CMODE_GH_vel))   //' (velocity-based ground hook control), '               //&
+                   trim(Num2LStr(SA_CMODE_GH_invVel))//' (inverse velocity-based ground hook control), '       //&
+                   trim(Num2LStr(SA_CMODE_GH_disp))  //' (displacement-based ground hook control), '           //&
+                   trim(Num2LStr(SA_CMODE_Ph_FF))    //' (phase difference algorithm with friction force), or '//&
+                   trim(Num2LStr(SA_CMODE_Ph_DF))    //' (phase difference algorithm with damping force).',      &
+           ErrStat, ErrMsg, RoutineName )
    END IF
 
       ! Prescribed forces
@@ -2262,8 +2370,8 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       endif
 
       ! Need active DLL control
-      if (InputFileData%StC_CMODE /= CMODE_ActiveDLL) THEN
-         call SetErrStat( ErrID_Fatal, 'StC_CMODE must be '//trim(Num2LStr(CMODE_ActiveDLL))//   &
+      if (InputFileData%StC_CMODE /= CMODE_ActiveDLL .and. InputFileData%StC_CMODE /= CMODE_ActiveUsrSub) THEN
+         call SetErrStat( ErrID_Fatal, 'StC_CMODE must be '//trim(Num2LStr(CMODE_ActiveUsrSub))//' or '//trim(Num2LStr(CMODE_ActiveDLL))//   &
                                  ' when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
       endif
    endif
@@ -2284,12 +2392,21 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
 
-   if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_XY_M <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_XY_M must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Omni_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Omni_M must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_X_K <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Omni_M <= 0.0_ReKi) )   &
+      call SetErrStat(ErrID_Fatal,'StC_Omni_M must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_X_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
 
       ! Check spring preload in ZDof
    TmpCh = trim(InputFileData%StC_Z_PreLdC)
@@ -2370,7 +2487,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%C_Z = InputFileData%StC_Z_C
 
    ! StC Omni parameters
-   p%M_XY = InputFileData%StC_XY_M
+   p%M_Omni = InputFileData%StC_Omni_M
 
    ! Fore-Aft TLCD Parameters ! MEG & SP
    p%L_X = InputFileData%L_X
@@ -2430,10 +2547,14 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%StC_Z_PreLd = 0.0_ReKi
    TmpCh = trim(InputFileData%StC_Z_PreLdC)
    call Conv2UC(TmpCh)
-   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. &
-         (INDEX(TmpCh, "NONE") /= 1) ) then
+   if ( ((InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF) .or. (InputFileData%StC_DOF_MODE == DOFMode_Omni3)) &
+         .and. (INDEX(TmpCh, "NONE") /= 1) ) then
       if (INDEX(TmpCh, "GRAVITY") == 1 ) then  ! if gravity, then calculate
-         p%StC_Z_PreLd = -p%Gravity(3)*p%M_Z
+         if ( InputFileData%StC_DOF_MODE == DOFMode_Indept ) then
+            p%StC_Z_PreLd = -p%Gravity(3)*p%M_Z
+         else
+            p%StC_Z_PreLd = -p%Gravity(3)*p%M_Omni
+         end if
       else
          READ (InputFileData%StC_Z_PreLdC,*,IOSTAT=ErrStat2)   p%StC_Z_PreLd     ! Read a real number and store
          if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'StC_Z_PreLd must be "gravity", "none" or a real number', ErrStat,ErrMsg,RoutineName)

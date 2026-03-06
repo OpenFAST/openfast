@@ -1430,7 +1430,10 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,UnSum,ErrStat,ErrMsg)
       if (p%SStC(i)%StC_CMode == ControlMode_DLL)  p%StCCMode  = ControlMode_DLL
    enddo
 
-   if (p%NumStC_Control==0) return    ! No reason to do anything else
+   if (p%NumStC_Control==0) then
+      p%StCCMode = 0_IntKi  ! Effectively no DLL control
+      return                ! No reason to do anything else
+   end if
 
    ! Allocate StC averaging info (if multiple StC's request same channel, average the measured data for those channels
    allocate(p%StCMeasNumPerChan(p%NumStC_Control),           STAT=ErrStat2); if ( AllErr('Could not allocate StCMeasNumPerChan') ) return;

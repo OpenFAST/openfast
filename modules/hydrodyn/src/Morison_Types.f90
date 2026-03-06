@@ -405,7 +405,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
-    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !< Total number of nodes in the final software model [-]
     TYPE(Morison_JointType) , DIMENSION(:), ALLOCATABLE  :: InpJoints      !< Array of user-specified joints [-]
@@ -539,6 +540,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !<  [-]
@@ -3240,6 +3242,7 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
    DstInitInputData%AMMod = SrcInitInputData%AMMod
+   DstInitInputData%HstMod = SrcInitInputData%HstMod
    DstInitInputData%NJoints = SrcInitInputData%NJoints
    DstInitInputData%NNodes = SrcInitInputData%NNodes
    if (allocated(SrcInitInputData%InpJoints)) then
@@ -3687,6 +3690,7 @@ subroutine Morison_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
    call RegPack(RF, InData%AMMod)
+   call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NJoints)
    call RegPack(RF, InData%NNodes)
    call RegPack(RF, allocated(InData%InpJoints))
@@ -3892,6 +3896,7 @@ subroutine Morison_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NNodes); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%InpJoints)) deallocate(OutData%InpJoints)
@@ -4895,6 +4900,7 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WaveDisp = SrcParamData%WaveDisp
    DstParamData%AMMod = SrcParamData%AMMod
+   DstParamData%HstMod = SrcParamData%HstMod
    DstParamData%NMembers = SrcParamData%NMembers
    if (allocated(SrcParamData%Members)) then
       LB(1:1) = lbound(SrcParamData%Members)
@@ -5208,6 +5214,7 @@ subroutine Morison_PackParam(RF, Indata)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
    call RegPack(RF, InData%AMMod)
+   call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NMembers)
    call RegPack(RF, allocated(InData%Members))
    if (allocated(InData%Members)) then
@@ -5297,6 +5304,7 @@ subroutine Morison_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%Members)) deallocate(OutData%Members)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return

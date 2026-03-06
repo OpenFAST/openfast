@@ -144,6 +144,8 @@ IMPLICIT NONE
 ! =========  UserFieldType  =======
   TYPE, PUBLIC :: UserFieldType
     REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: DTime      !< time array for user-defined wind [seconds]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Data      !< user-defined wind data array [NumDataLines, NumDataColumns] [-]
   END TYPE UserFieldType
 ! =======================
 ! =========  FlowFieldType  =======
@@ -954,10 +956,36 @@ subroutine IfW_FlowField_CopyUserFieldType(SrcUserFieldTypeData, DstUserFieldTyp
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUserFieldType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
+   if (allocated(SrcUserFieldTypeData%DTime)) then
+      LB(1:1) = lbound(SrcUserFieldTypeData%DTime)
+      UB(1:1) = ubound(SrcUserFieldTypeData%DTime)
+      if (.not. allocated(DstUserFieldTypeData%DTime)) then
+         allocate(DstUserFieldTypeData%DTime(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUserFieldTypeData%DTime.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUserFieldTypeData%DTime = SrcUserFieldTypeData%DTime
+   end if
+   if (allocated(SrcUserFieldTypeData%Data)) then
+      LB(1:2) = lbound(SrcUserFieldTypeData%Data)
+      UB(1:2) = ubound(SrcUserFieldTypeData%Data)
+      if (.not. allocated(DstUserFieldTypeData%Data)) then
+         allocate(DstUserFieldTypeData%Data(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUserFieldTypeData%Data.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUserFieldTypeData%Data = SrcUserFieldTypeData%Data
+   end if
 end subroutine
 
 subroutine IfW_FlowField_DestroyUserFieldType(UserFieldTypeData, ErrStat, ErrMsg)
@@ -967,6 +995,12 @@ subroutine IfW_FlowField_DestroyUserFieldType(UserFieldTypeData, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(UserFieldTypeData%DTime)) then
+      deallocate(UserFieldTypeData%DTime)
+   end if
+   if (allocated(UserFieldTypeData%Data)) then
+      deallocate(UserFieldTypeData%Data)
+   end if
 end subroutine
 
 subroutine IfW_FlowField_PackUserFieldType(RF, Indata)
@@ -975,6 +1009,8 @@ subroutine IfW_FlowField_PackUserFieldType(RF, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUserFieldType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%RefHeight)
+   call RegPackAlloc(RF, InData%DTime)
+   call RegPackAlloc(RF, InData%Data)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -982,8 +1018,13 @@ subroutine IfW_FlowField_UnPackUserFieldType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(UserFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUserFieldType'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Data); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine IfW_FlowField_CopyFlowFieldType(SrcFlowFieldTypeData, DstFlowFieldTypeData, CtrlCode, ErrStat, ErrMsg)

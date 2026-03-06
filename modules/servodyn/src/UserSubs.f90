@@ -459,5 +459,39 @@ END IF
 
 RETURN
 END SUBROUTINE UserYawCont
+
+!==========================================================================
+! Template for user-defined structural control subroutine used with StC_CMODE=3
+!    Currently, this can only be used with
+!               StC_DOF_MODE = 1 (three independent StC/TMD DOFs),
+!                              2 (2DOF (XY)  omni-directional StC/TMDs),
+!                              3 (3DOF (XYZ) omni-directional StC/TMDs),
+!                           or 7 (external forces and moments).
+!    d is the apparent 3DOF displacement of the TMD mass relative to the parent structure.
+!    v is the apparent 3DOF velocity     of the TMD mass relative to the parent structure.
+!    For blade control, UserStC is called for each mesh point separately.
+SUBROUTINE UserStC(d,v,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
+
+USE         Precision
+USE         NWTC_Library
+IMPLICIT    NONE
+
+REAL(ReKi), INTENT(IN )  :: d(3)       !< TMD mass apparent relative displacement
+REAL(ReKi), INTENT(IN )  :: v(3)       !< TMD mass apparent relative velocity
+REAL(ReKi), INTENT(OUT)  :: K_ctrl(3)  !< stiffness  commanded
+REAL(ReKi), INTENT(OUT)  :: C_ctrl(3)  !< damping    commanded
+REAL(ReKi), INTENT(OUT)  :: C_Brake(3) !< brake dmpg commanded
+REAL(ReKi), INTENT(OUT)  :: F_ctrl(3)  !< force      commanded
+REAL(ReKi), INTENT(OUT)  :: M_ctrl(3)  !< moment     commanded
+
+! Replace the lines below with controller/actuator logic
+K_ctrl  = 0.0_ReKi
+C_ctrl  = 0.0_ReKi
+C_Brake = 0.0_ReKi
+F_ctrl  = 0.0_ReKi
+M_ctrl  = 0.0_ReKi
+
+END SUBROUTINE UserStc
+
 !=======================================================================
 end module UserSubs

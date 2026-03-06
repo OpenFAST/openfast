@@ -76,6 +76,7 @@ ServoDyn                                      14       PitSpr(3)            3.6E
 ServoDyn                                      15       PitDamp(1)           1.4E6         PitDamp(1)  - Blade 1 pitch damping constant
 ServoDyn                                      16       PitDamp(2)           1.4E6         PitDamp(2)  - Blade 2 pitch damping constant
 ServoDyn                                      17       PitDamp(3)           1.4E6         PitDamp(3)  - Blade 3 pitch damping constant *[unused for 2 blades]*
+HydroDyn                                      \*       HstMod               1             HstMod      - Method of computing hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) *[overwrite to 0 when WaveStMod = 0 in SeaState]*
 FAST.Farm                                     35                            --- AMBIENT WIND: AMReX MODULE --- [used only for Mod_AmbWind=4]
 FAST.Farm                                     36       WindDirPrefix        "inflow/ffboxes"   WindDirPrefix - Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)
 FAST.Farm                                     37       DirStartIndex        00110              DirStartIndex - AMReX sub-volume directory suffix to consider as time=0 (quoted string)

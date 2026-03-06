@@ -106,8 +106,9 @@ StC Degrees of Freedom
 **StC_DOF_MODE** [switch]
 
    DOF mode   {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF
-   (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD;
-   4: Prescribed force/moment time series; 5: Force determined by external DLL}
+   (three independent StC DOFs); 2: StC_XY_DOF (2DOF Omni-Directional StC); 3: 
+   StC_XYZ_DOF (3DOF Omni-Directional StC); 5: TLCD; 6: Prescribed force/moment 
+   time series; 7: Force determined by external DLL}
 
 
 **StC_X_DOF** [flag]
@@ -145,7 +146,7 @@ specified in the main ServoDyn input file.  See description above.
 StC Initial Conditions
 ----------------------
 
-*used only when* **StC_DOF_MODE==1 or 2**
+*used only when* **StC_DOF_MODE==1, 2, or 3**
 
 **StC_X_DSP** [m]
 
@@ -158,7 +159,7 @@ StC Initial Conditions
 **StC_Z_DSP** [m]
 
    StC Z initial displacement   *[relative to at rest position; used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_Z_PreLd** [N]
 
@@ -167,13 +168,14 @@ StC Initial Conditions
    position of the StC Z mass when gravity is acting on it using
    :math:`F_{Z_{PreLoad}} = M_Z * G`, or **"none"** to disable spring pre-load.
    See :numref:`SrvD-StCz-PreLoad` for details of implementation.
-   *[used only when* **StC_DOF_MODE=1** and **StC_Z_DOF=TRUE** *]*
+   *[used only when* **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* 
+   **StC_DOF_MODE==3** *]*
 
 
 StC Configuration
 -----------------
 
-*used only when* **StC_DOF_MODE==1 or 2**
+*used only when* **StC_DOF_MODE==1, 2, or 3**
 
 **StC_X_PSP** [m]
 
@@ -194,17 +196,19 @@ StC Configuration
 **StC_Z_PSP** [m]
 
    Positive stop position  -- maximum Z mass displacement *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3**
+   *]*
 
 **StC_Z_NSP** [m]
 
    Negative stop position -- minimum Z mass displacement *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3**
+   *]*
 
 StC Mass, Stiffness, & Damping
 ------------------------------
 
-*used only when* **StC_DOF_MODE==1 or 2**
+*used only when* **StC_DOF_MODE==1, 2, or 3**
 
 **StC_X_M** [kg]
 
@@ -221,9 +225,9 @@ StC Mass, Stiffness, & Damping
    StC Z mass   *[used only when* **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE**
    *]*
 
-**StC_XY_M** [kg]
+**StC_Omni_M** [kg]
 
-   StC XY mass   *[used only when* **StC_DOF_MODE==2** *]*
+   StC omni mass   *[used only when* **StC_DOF_MODE==2 or 3** *]*
 
 **StC_X_K** [N/m]
 
@@ -236,7 +240,7 @@ StC Mass, Stiffness, & Damping
 **StC_Z_K** [N/m]
 
    StC Z stiffness   *[used only when* **StC_DOF_MODE==1** *and*
-   **StC_Z_DOF==TRUE** *]*
+   **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_X_C** [N/(m/s)]
 
@@ -249,7 +253,7 @@ StC Mass, Stiffness, & Damping
 **StC_Z_C** [N/(m/s)]
 
    StC Z damping   *[used only when* **StC_DOF_MODE==1** *and*
-   **StC_Z_DOF==TRUE** *]*
+   **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_X_KS** [N/m]
 
@@ -261,8 +265,8 @@ StC Mass, Stiffness, & Damping
 
 **StC_Z_KS** [N/m]
 
-   Stop spring Z stiffness   *[used only when* **StC_DOF_MODE==1** *and
-   StC_Z_DOF==TRUE]*
+   Stop spring Z stiffness   *[used only when* **StC_DOF_MODE==1** *and*
+   **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_X_CS** [N/(m/s)]
 
@@ -275,13 +279,13 @@ StC Mass, Stiffness, & Damping
 **StC_Z_CS** [N/(m/s)]
 
    Stop spring Z damping   *[used only when* **StC_DOF_MODE==1** *and*
-   **StC_Z_DOF==TRUE** *]*
+   **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 
 StC User-Defined Spring Forces
 ------------------------------
 
-*used only when* **StC_DOF_MODE==1 or 2**
+*used only when* **StC_DOF_MODE==1, 2, or 3**
 
 **Use_F_TBL** [flag]
 
@@ -306,12 +310,18 @@ Example spring forces table:
 
 StructCtrl Control
 ------------------
-*used only when* **StC_DOF_MODE==1 or 2**
+*used only when* **StC_DOF_MODE==1, 2, 3, or 7**
 
 **StC_CMODE** [switch]
 
-   Control mode   {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}.
-   When using StC_DOF_MODE==5, StC_CMODE must be 2.
+   Control mode   {0:none; 1: Semi-Active Control Mode; 3: Active Control 
+   Mode through user subroutine; 5: Active Control Mode through Bladed 
+   interface}. When using StC_DOF_MODE==7, StC_CMODE must be 3 or 5.
+
+**StC_CChan** [-]
+
+   Control channel group (1:10) for stiffness and damping *[used only when*
+   **StC_DOF_MODE=1, 2, 3, or 7** *and* **StC_CMODE=5** *]*
 
 **StC_SA_MODE** [-]
 
@@ -339,12 +349,12 @@ StructCtrl Control
 **StC_Z_C_HIGH** [-]
 
    StC Z high damping for ground hook control *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_Z_C_LOW** [-]
 
    StC Z low damping for ground hook control  *[used only when*
-   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
+   **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]*
 
 **StC_X_C_BRAKE** [-]
 
@@ -357,14 +367,15 @@ StructCtrl Control
 **StC_Z_C_BRAKE** [-]
 
    StC Z high damping for braking the StC *[used only when* **StC_DOF_MODE==1**
-   *and* **StC_Z_DOF==TRUE** *]* *[currently unused.  set to zero]*
+   *and* **StC_Z_DOF==TRUE** *or when* **StC_DOF_MODE==3** *]* *[currently 
+   unused.  set to zero]*
 
 
 
 TLCD -- Tuned Liquid Column Damper
 ----------------------------------
 
-*used only when* **StC_DOF_MODE==3**
+*used only when* **StC_DOF_MODE==5**
 
 **L_X** [m]
 
@@ -422,12 +433,12 @@ Prescribed Time Series
 A prescribed time series of forces and moments may be applied in place of the
 StC damper.  The force and moment may be applied either in a global coordinate
 frame, or in a local (following) coordinate frame.  This feature is *used only
-when* **StC_DOF_MODE==4**.
+when* **StC_DOF_MODE==6**.
 
 **PrescribedForcesCoord** [switch]
 
    Prescribed forces are in global or local coordinates  {1: global; 2: local}.  
-   When using StC_DOF_MODE==5, PrescribedForcesCoord must be 1.
+   When using StC_DOF_MODE==7, PrescribedForcesCoord must be 1.
 
 **PrescribedForcesFile** [-]
 
