@@ -1123,7 +1123,7 @@ subroutine IfW_User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    
    ! Example: Set reference height (after regenerating types from registry)
    ! UF%RefHeight = InitInp%RefHt
-   UF%RefHeight = 0.0_ReKi  ! Temporary: set to sensible default
+   UF%RefHeight = InitInp%RefHt  ! Temporary: set to sensible default
    
    ! Example: Store filename if reading from file (after regenerating types)
    ! UF%FileName = InitInp%WindFileName

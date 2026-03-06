@@ -62,7 +62,9 @@ Add any parameters needed to initialize your wind model.
 Step 3: Regenerate Type Files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After modifying the registry files, rebuild the project to regenerate type definitions:
+After modifying the registry files, rebuild the project to regenerate type definitions. When using Visual Studio
+to build OpenFAST on Windows, the types files are automatically regenerated. When using CMake,
+run the following commands to enable generation of the types files.
 
 .. code-block:: bash
 
@@ -243,8 +245,6 @@ Current Limitations
 
 1. **No Acceleration Support**: User-defined wind fields do not currently support 
    acceleration calculations needed by some modules (e.g., MHK turbines).
-
-2. **No Persistence**: Data must be recalculated if simulation is restarted.
 
 Performance Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
