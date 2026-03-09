@@ -1553,7 +1553,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          ! Loop through high resolution grids
-         do i_hl = -1, n_high_low
+         do i_hl = 0, n_high_low
 
 !FIXME:merge5.0 remove next 4 lines
             ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
