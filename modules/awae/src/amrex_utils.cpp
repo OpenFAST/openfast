@@ -171,9 +171,6 @@ extern "C"
             return;
         }
 
-        // Actually open the directory
-        PlotFileData pf(dir);
-
         // Read finest level, return error if not 0
         int fine_level = pf->finestLevel();
         if (fine_level != 0)
