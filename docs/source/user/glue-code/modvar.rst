@@ -28,7 +28,7 @@ where a particular variable lives inside a module's derived-type hierarchy:
 .. code-block:: fortran
 
    TYPE :: DatLoc
-     INTEGER :: Num   ! Mesh number (or 0 for non-mesh scalars)
+     INTEGER :: Num   ! Data identification number (from _Types.f90 file)
      INTEGER :: i1    ! First index
      INTEGER :: i2    ! Second index
      INTEGER :: i3    ! Third index
