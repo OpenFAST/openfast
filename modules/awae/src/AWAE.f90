@@ -1425,7 +1425,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    ! InflowWind-based ambient wind (single or multiple instances)
    case (2, 3)
 
-!FIXME: remove next 3 lines in 5.0.0
+!FIXME:merge5.0 remove next 3 lines
       ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel) -- note that this is garbage data.
       m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
       call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2);   if (Failed()) return;
@@ -1457,8 +1457,10 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       do nt = 1,p%NumTurbines
          do i_hl=0, n_high_low
 
-               ! read from file the ambient flow for the current time step
+            ! read from file the ambient flow for the current time step
+!FIXME:merge5.0 replace next line with the following
             call ReadHighResWindFile(nt, (n+1)*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
+!            call ReadHighResWindVTK(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
@@ -1476,12 +1478,12 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       ! Loop through turbines
       do nt = 1, p%NumTurbines
 
-!FIXME: remove next 4 lines in merge with 5.0
+!FIXME:merge5.0 remove next 4 lines
          ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
          m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
          call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
 
-!FIXME: remove next 3 lines in merge with 5.0
+!FIXME:merge5.0 remove next 3 lines
          ! Set input position
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
 
@@ -1489,25 +1491,24 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          do i_hl = 0, n_high_low
 
             ! Calculate wind velocities at grid locations from InflowWind
+!FIXME:merge5.0 replace next line with the next
             call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2)
+!            call IfW_FlowField_GetVelAcc(p%IfW(0)%FlowField, 1, t + i_hl*p%DT_high, &
+!                                         m%u_IfW_High(nt)%PositionXYZ, &
+!                                         m%y_IfW_High(nt)%VelocityUVW, AccUVW, errStat2, errMsg2)
             if (Failed()) return
 
             ! Transfer velocities to high resolution grid
-!FIXME: remove following 9 lines and uncomment block after during merge to 5.0
-               c = 1
-               do k = 0,p%nZ_high-1
-                  do j = 0,p%nY_high-1
-                     do i = 0,p%nX_high-1
-                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
-                        c = c+1
-                     end do
-                  end do
-               end do
+!FIXME:merge5.0 remove following 4 lines and uncomment block after
+            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
+                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
+                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
+                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High%VelocityUVW
 !            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
 !                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
 !                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
 !                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
-!            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
+            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
          end do
       end do
 
@@ -1517,7 +1518,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       ! Loop through turbines
       do nt = 1, p%NumTurbines
 
-!FIXME: remove next 10 lines in merge with 5.0
+!FIXME:merge5.0 remove next 10 lines
          ! Set input velocity
          c = 1
          do k = 0,p%nZ_high-1
@@ -1532,31 +1533,30 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          ! Loop through high resolution grids
          do i_hl = 0, n_high_low
 
-!FIXME: remove next 4 lines in merge with 5.0
+!FIXME:merge5.0 remove next 4 lines
             ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
             m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /) - p%WT_Position(:,nt)
             call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
 
             ! Calculate wind velocities at grid locations from InflowWind
+!FIXME:merge5.0 replace next line with the next
             call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
+!            call IfW_FlowField_GetVelAcc(p%IfW(nt)%FlowField, 1, t + i_hl*p%DT_high, &
+!                                         m%u_IfW_High(nt)%PositionXYZ, &
+!                                         m%y_IfW_High(nt)%VelocityUVW, AccUVW, errStat2, errMsg2)
             if (Failed()) return
 
             ! Transfer velocities to high resolution grid
-!FIXME: remove following 9 lines and uncomment block after during merge to 5.0
-               c = 1
-               do k = 0,p%nZ_high-1
-                  do j = 0,p%nY_high-1
-                     do i = 0,p%nX_high-1
-                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
-                        c = c+1
-                     end do
-                  end do
-               end do
+!FIXME:merge5.0 remove following 4 lines and uncomment block after
+            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
+                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
+                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
+                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High%VelocityUVW
 !            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
 !                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
 !                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
 !                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
-!            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
+            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
          end do
       end do
 
