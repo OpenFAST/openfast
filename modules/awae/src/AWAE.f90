@@ -1718,7 +1718,6 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    integer(IntKi)             :: n_high_low, nt, i_hl
    integer(IntKi)             :: i,j,k,c
    real(ReKi), pointer        :: V_Grid(:,:,:,:)
-   real(SiKi), pointer        :: VelUVW(:,:)
    real(ReKi), allocatable    :: AccUVW(:,:)
    logical                    :: WriteWindVTK
    real(DbKi)                 :: t
@@ -1818,8 +1817,8 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
                    lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
                    lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
             m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
-            end do
          end do
+      end do
 
    ! Multiple InflowWind instances (one per turbine)
    case (3)
