@@ -87,6 +87,7 @@ subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
 #ifdef ENABLE_AMREX_LIB
 
    ! Convert directory path to C type
+   allocate(dir_path(len_trim(DirPath) + 1))
    dir_path = transfer(trim(DirPath) // c_null_char, dir_path) 
 
    ! Call C++ function to read header
@@ -123,6 +124,7 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
 #ifdef ENABLE_AMREX_LIB
 
    ! Convert directory path to C type
+   allocate(dir_path(len_trim(DirPath) + 1))
    dir_path = transfer(trim(DirPath) // c_null_char, dir_path) 
 
    ! Call C++ function to read header
@@ -167,9 +169,11 @@ subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
 #ifdef ENABLE_AMREX_LIB
 
    ! Convert directory path to C type
+   allocate(dir_path(len_trim(DirPath) + 1))
    dir_path = transfer(trim(DirPath) // c_null_char, dir_path) 
 
    ! Convert start directory to C type
+   allocate(start_index(len_trim(StartIndex) + 1))
    start_index = transfer(trim(StartIndex) // c_null_char, start_index) 
    
    ! Transfer inputs to C types

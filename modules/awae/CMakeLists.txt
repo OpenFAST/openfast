@@ -33,7 +33,7 @@ target_link_libraries(awaelib awaelib_c ifwlib nwtclibs)
 # If AMReX reader enabled, build library and link amrex_3d
 if (AMREX_READER)
   target_sources(awaelib_c PRIVATE src/amrex_utils.cpp)
-  target_link_libraries(awaelib_c PUBLIC amrex_3d)
+  target_link_libraries(awaelib_c amrex_3d)
   target_compile_definitions(awaelib PRIVATE ENABLE_AMREX_LIB)
 endif()
 

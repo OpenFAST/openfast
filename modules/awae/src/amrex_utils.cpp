@@ -1,6 +1,11 @@
 #include <string>
 #include <algorithm>
 #include <filesystem>
+#include <array>
+#include <vector>
+#include <limits>
+#include <cmath>
+#include <optional>
 
 #include <AMReX_PlotFileUtil.H>
 
@@ -76,9 +81,10 @@ extern "C"
         set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
         // Try to open directory containing plot file data
+        std::optional<PlotFileData> pf;
         try
         {
-            amrex::PlotFileData pf(dir);
+            pf = std::optional<PlotFileData>(dir);
         }
         // Catch any exceptions
         catch (...)
@@ -88,11 +94,8 @@ extern "C"
             return;
         }
 
-        // Actually open the directory
-        PlotFileData pf(dir);
-
         // Read finest level, return error if not 0
-        int fine_level = pf.finestLevel();
+        int fine_level = pf->finestLevel();
         if (fine_level != 0)
         {
             set_err(ErrID_Fatal, std::string{dir} + ": finest level must be 0, got " + std::to_string(fine_level),
@@ -101,7 +104,7 @@ extern "C"
         }
 
         // Read number of dimensions, return error if not 3
-        const int ncomp = pf.nComp();
+        const int ncomp = pf->nComp();
         if (ncomp != 3)
         {
             set_err(ErrID_Fatal, std::string{dir} + ": data dimensionality must be 3, got " + std::to_string(ncomp),
@@ -110,11 +113,11 @@ extern "C"
         }
 
         // Get the time
-        time = pf.time();
+        time = pf->time();
 
         // Get the grid dimensions
         std::array<int, 3> gridLo{0}, gridHi{0}, n_cells{0};
-        get_grid_bounds(pf, fine_level, gridLo, gridHi);
+        get_grid_bounds(*pf, fine_level, gridLo, gridHi);
         for (auto i = 0; i < 3; ++i)
         {
             n_cells[i] = gridHi[i] - gridLo[i] + 1;
@@ -122,21 +125,21 @@ extern "C"
         }
 
         // Get the grid discretization
-        auto cellSize = pf.cellSize(fine_level);
+        auto cellSize = pf->cellSize(fine_level);
         for (auto i = 0; i < 3; ++i)
         {
             dx[i] = cellSize[i];
         }
 
         // Calculate the origin (problem origin + (grid index + 1/2) * cell size)
-        const auto probLo = pf.probLo();
+        const auto probLo = pf->probLo();
         for (auto i = 0; i < 3; ++i)
         {
             origin[i] = probLo[i] + static_cast<double>(gridLo[i] + 0.5) * dx[i];
         }
 
         // Get variable names and check that there are at least 3 variables
-        const auto &var_names_pf = pf.varNames();
+        const auto &var_names_pf = pf->varNames();
         if (var_names_pf.size() < 3)
         {
             set_err(ErrID_Fatal, std::string{dir} + ": at least 3 variables required, found " + std::to_string(var_names_pf.size()),
@@ -155,9 +158,10 @@ extern "C"
         set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
         // Try to open directory containing plot file data
+        std::optional<PlotFileData> pf;
         try
         {
-            amrex::PlotFileData pf(dir);
+            pf = std::optional<PlotFileData>(dir);
         }
         // Catch any exceptions
         catch (...)
@@ -171,7 +175,7 @@ extern "C"
         PlotFileData pf(dir);
 
         // Read finest level, return error if not 0
-        int fine_level = pf.finestLevel();
+        int fine_level = pf->finestLevel();
         if (fine_level != 0)
         {
             set_err(ErrID_Fatal, std::string{dir} + ": finest level must be 0, got " + std::to_string(fine_level),
@@ -181,20 +185,20 @@ extern "C"
 
         // Get overall grid bounds
         std::array<int, 3> dims{0}, gridLo{0}, gridHi{0};
-        get_grid_bounds(pf, fine_level, gridLo, gridHi);
+        get_grid_bounds(*pf, fine_level, gridLo, gridHi);
         for (auto i = 0; i < 3; ++i)
         {
             dims[i] = gridHi[i] - gridLo[i] + 1;
         }
 
         // Get the variable names
-        const auto var_names = pf.varNames();
+        const auto var_names = pf->varNames();
 
         // Loop through variables
         for (int ivar = 0; ivar < 3; ++ivar)
         {
             // Get data for variable at given level
-            const auto &mf = pf.get(fine_level, var_names[ivar]);
+            const auto &mf = pf->get(fine_level, var_names[ivar]);
 
             // Loop through boxes of data
             for (MFIter mfi(mf); mfi.isValid(); ++mfi)
@@ -373,7 +377,7 @@ extern "C"
             {
                 const auto origin_str = "(" + std::to_string(origin[0]) + ", " + std::to_string(origin[1]) + ", " + std::to_string(origin[2]) + ")";
                 const auto start_origin_str = "(" + std::to_string(start_origin[0]) + ", " + std::to_string(start_origin[1]) + ", " + std::to_string(start_origin[2]) + ")";
-                set_err(ErrID_Fatal, dir_path + ": grid spacing " + origin_str + " doesn't match starting grid spacing " + start_origin_str,
+                set_err(ErrID_Fatal, dir_path + ": grid origin " + origin_str + " doesn't match starting grid origin " + start_origin_str,
                         routine, err_stat, err_msg, err_msg_len);
                 return;
             }
