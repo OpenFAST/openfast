@@ -751,7 +751,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    real(ReKi)          :: WAT_k              ! WAT scaling factor (averaged from overlapping wakes)
    real(SiKi)          :: WAT_V(3)           ! WAT velocity contribution
    real(ReKi)          :: Pos_global(3)      ! global position
-   real(ReKi), allocatable :: WAT_B_BoxHi(:,:) ! position of WAT box (global) for each intermediate steps, shape: 3 x n_high_low
+   real(ReKi), allocatable :: WAT_B_BoxHi(:,:) ! position of WAT box (global) for each intermediate steps, shape: 3 x n_high_low_p1
    real(ReKi), allocatable :: wk_R_p2i(:,:,:)!< Orientations from plane to inertial for each wake, shape: 3x3xnWake
    real(ReKi), allocatable :: wk_V(:,:)      !< Wake velocity from each overlapping wake,  shape: 3xnWake
    real(ReKi), allocatable :: wk_WAT_k(:)    !< WAT scaling factors for all wakes (for overlap)
@@ -760,7 +760,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    integer(IntKi)      :: maxPln
    integer(IntKi)      :: maxN_wake
    integer(IntKi)      :: NumGrid_high !< number of points in high res grid grid
-   integer(IntKi)      :: n_high_low
+   integer(IntKi)      :: n_high_low_p1
    integer(IntKi)      :: WAT_iT,WAT_iY,WAT_iZ  !< indexes for WAT point (Time interchangeable with X)
    integer(IntKi)      :: errStat2
    character(*), parameter   :: RoutineName = 'HighResGridCalcOutput'
@@ -770,10 +770,10 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    maxPln =  min(n,p%NumPlanes-2)
 
       ! We only need one high res file for that last simulation time
-   if ( (n/p%n_high_low) == (p%NumDT-1) ) then
-      n_high_low = 0
+   if ( (n/p%n_high_low_p1) == (p%NumDT-1) ) then
+      n_high_low_p1 = 1
    else
-      n_high_low = p%n_high_low
+      n_high_low_p1 = p%n_high_low_p1
    end if
 
    maxN_wake = p%NumTurbines*( p%NumPlanes-1 )
@@ -786,10 +786,11 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    ! Convect WAT Box tracer for each intermediate step
    ! Note: we substract because the high-res points are "before" current low res point
    if (p%WAT_Enabled) then
-      allocate ( WAT_B_BoxHi    ( 3, 0:n_high_low), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for WAT_B_BoxHi.', errStat, errMsg, RoutineName )
+      allocate ( WAT_B_BoxHi    ( 3, 0:n_high_low_p1), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for WAT_B_BoxHi.', errStat, errMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
-      do i_hl=0, n_high_low
-         WAT_B_BoxHi(1:3, i_hl) = xd%WAT_B_Box(1:3) - (n_high_low-i_hl) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
+      do i_hl=0, n_high_low_p1
+         ! NOTE: i_hl=0 corresponds to T=-DT_high, so shift by one high res timestep
+         WAT_B_BoxHi(1:3, i_hl) = xd%WAT_B_Box(1:3) - (n_high_low_p1-i_hl+1) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
       enddo
    endif
 
@@ -817,7 +818,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP&         V_qs, &
       !$OMP&         i_hl, Pos_global,&
       !$OMP&         wk_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
-      !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, WAT_B_BoxHi, errStat, errMsg)
+      !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low_p1, WAT_B_BoxHi, errStat, errMsg)
       ! Loop over all points of the high resolution ambient wind
       do iXYZ=1, NumGrid_high
          ! From flat index iXYZ to grid indices
@@ -849,7 +850,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             endif
 
             ! --- Store full velocity (Ambient + Wake QS + WAT) in grid
-            do i_hl=0, n_high_low
+            do i_hl=0, n_high_low_p1
                ! Compute WAT velocity
                if (p%WAT_Enabled) then
                   ! find location of grid point in the turbulent box, accounting for the convection of the box in between high res and low res
@@ -929,7 +930,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%NumRadii         = InitInp%InputFileData%NumRadii
    p%NumTurbines      = InitInp%InputFileData%NumTurbines
    p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator. Note: on Windows a trailing / or \ causes no problem! GJH
-   p%n_high_low       = InitInp%n_high_low
+   p%n_high_low       = InitInp%n_high_low                  ! number of timesteps between low res steps
+   p%n_high_low_p1    = InitInp%n_high_low + 1              ! include a time slice at t_low-DT_high (for interpolation in AeroDyn -- this is a hack)
    p%NumDT            = InitInp%NumDT
    p%NOutDisWindXY    = InitInp%InputFileData%NOutDisWindXY
    p%NOutDisWindYZ    = InitInp%InputFileData%NOutDisWindYZ
@@ -991,7 +993,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! This will establish certain parameters as well as all of the initialization outputs
       ! Sets:
       ! Parameters: nX_low, nY_low, nZ_low, nX_high, nY_high, nZ_high, Grid_low,
-      !             Grid_high, n_high_low, n_rp_max
+      !             Grid_high, n_high_low_p1, n_rp_max
       ! InitOutput: X0_high, Y0_high, Z0_high, dX_high, dY_high, dZ_high, nX_high, nY_high, nZ_high
    call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2); if(Failed()) return;
 
@@ -1156,7 +1158,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( y%V_plane(3,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('y%V_plane.'   )) return;
    allocate ( y%Vdist_High(1:p%NumTurbines),                STAT=ErrStat2 );  if (Failed0('y%Vdist_High.')) return;
    do i = 1, p%NumTurbines
-      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 );  if (Failed0('y%Vdist_High%data.')) return;
+      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low_p1), STAT=ErrStat2 );  if (Failed0('y%Vdist_High%data.')) return;
       y%Vdist_High(i)%data    = 0.0_Siki
    end do
 
@@ -1200,7 +1202,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 );   if (Failed0('Could not allocate memory for m%Vamb_high.')) return;
    do i = 1, p%NumTurbines
-         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 );   if (Failed0('m%Vamb_high%data.')) return;
+         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low_p1), STAT=ErrStat2 );   if (Failed0('m%Vamb_high%data.')) return;
    end do
 
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%parallelFlag.')) return;
@@ -1455,18 +1457,27 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(nt, i_hl, errStat2, errMsg2) &
       !$OMP SHARED(p, n_high_low, n, m, errStat, errMsg, AbortErrLev)
       do nt = 1,p%NumTurbines
+
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
+         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+
          do i_hl=0, n_high_low
 
             ! read from file the ambient flow for the current time step
 !FIXME:merge5.0 replace next line with the following
-            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
-!            call ReadHighResWindVTK(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
+            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
+!            call ReadHighResWindVTK(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
                !$OMP END CRITICAL
             endif
          end do
+
+         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high)
+         !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
+         if (n==0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+
       end do
       !$OMP END PARALLEL DO  
 
@@ -1486,6 +1497,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 !FIXME:merge5.0 remove next 3 lines
          ! Set input position
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
+
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
+         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          ! Loop through high resolution grids
          do i_hl = 0, n_high_low
@@ -1508,8 +1522,13 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 !                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
 !                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
 !                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
-            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
+            m%Vamb_high(nt)%data(:,:,:,:,i_hl+1) = V_Grid
          end do
+
+         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high)
+         !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
+         if (n==0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+
       end do
 
    ! Multiple InflowWind instances (one per turbine)
@@ -1530,8 +1549,11 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end do
          end do
 
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
+         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+
          ! Loop through high resolution grids
-         do i_hl = 0, n_high_low
+         do i_hl = -1, n_high_low
 
 !FIXME:merge5.0 remove next 4 lines
             ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
@@ -1556,8 +1578,13 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 !                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
 !                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
 !                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
-            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
+            m%Vamb_high(nt)%data(:,:,:,:,i_hl+1) = V_Grid
          end do
+
+         ! Special handling at T=0 for time slice at -DT_high
+         !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
+         if (n==0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+
       end do
 
    end select
