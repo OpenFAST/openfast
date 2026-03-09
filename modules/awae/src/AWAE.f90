@@ -1388,34 +1388,75 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                                                                  !!   Output: Constraint states at t+dt
    type(AWAE_OtherStateType),        intent(inout) :: OtherState !< Input: Other states at t;
                                                                  !!   Output: Other states at t+dt
-   type(AWAE_MiscVarType),           intent(inout) :: m          !< Misc/optimization variables
+   type(AWAE_MiscVarType), target,   intent(inout) :: m          !< Misc/optimization variables
    integer(IntKi),                   intent(  out) :: errStat    !< Error status of the operation
    character(*),                     intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
 
-   type(AWAE_InputType)                            :: uInterp           ! Interpolated/Extrapolated input
+   character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
    integer(intKi)                                  :: errStat2          ! temporary Error status
    character(ErrMsgLen)                            :: errMsg2           ! temporary Error message
-   character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
-   integer(IntKi)                                  :: n_high_low, nt, i_hl, i,j,k,c
+   type(AWAE_InputType)                            :: uInterp           ! Interpolated/Extrapolated input
+   integer(IntKi)                                  :: n_high_low, nt, i_hl
+   integer(IntKi)                                  :: i,j,k,c
+   real(ReKi), pointer        :: V_Grid(:,:,:,:)
    
    errStat = ErrID_None
    errMsg  = ""
-   
-   ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-   
+
+   ! If last time step, don't populate high-resolution grid
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 0
    else
       n_high_low = p%n_high_low
    end if
 
-   if ( p%Mod_AmbWind == 1 ) then
-         ! read from file the ambient flow for the n+1 time step
+   !----------------------------------------------------------------------------
+   ! Populate low resolution grids based on ambient wind source
+   !----------------------------------------------------------------------------
+
+   select case (p%Mod_AmbWind)
+
+   ! File-based ambient wind
+   case (1)
+   
+      ! Read from file the ambient flow for the n+1 time step
       call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
       
-      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, i_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
+   ! InflowWind-based ambient wind (single or multiple instances)
+   case (2, 3)
+
+!FIXME: remove next 3 lines in 5.0.0
+      ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel) -- note that this is garbage data.
+      m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
+      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2);   if (Failed()) return;
+
+      ! Calculate the low-resolution grid inflow velocities
+      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2)
+      if (Failed()) return
+
+      ! Transfer velocities to low resolution grid
+      V_Grid(lbound(m%Vamb_low,1):ubound(m%Vamb_low,1),&
+             lbound(m%Vamb_low,2):ubound(m%Vamb_low,2),&
+             lbound(m%Vamb_low,3):ubound(m%Vamb_low,3),&
+             lbound(m%Vamb_low,4):ubound(m%Vamb_low,4)) => m%y_IfW_Low%VelocityUVW
+      m%Vamb_Low = V_Grid
+
+   end select
+
+   !----------------------------------------------------------------------------
+   ! Populate high-resolution grid based on ambient wind source
+   !----------------------------------------------------------------------------
+
+   select case (p%Mod_AmbWind)
+
+   ! File-based ambient wind
+   case (1)
+
+      !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(nt, i_hl, errStat2, errMsg2) &
+      !$OMP SHARED(p, n_high_low, n, m, errStat, errMsg, AbortErrLev)
       do nt = 1,p%NumTurbines
          do i_hl=0, n_high_low
+
                ! read from file the ambient flow for the current time step
             call ReadHighResWindFile(nt, (n+1)*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
@@ -1426,33 +1467,82 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          end do
       end do
       !$OMP END PARALLEL DO  
+
       if (errStat >= AbortErrLev) return 
 
-   else ! p%Mod_AmbWind == 2 .or. 3
+   ! Single InflowWind instance
+   case (2)
 
+      ! Loop through turbines
+      do nt = 1, p%NumTurbines
+
+!FIXME: remove next 4 lines in merge with 5.0
          ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
-      m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
-      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2);   if (Failed()) return;
-      ! Set low-resolution inflow wind velocities
-      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
-      c = 1
-      do k = 0,p%nZ_low-1
-         do j = 0,p%nY_low-1
-            do i = 0,p%nX_low-1
-               m%Vamb_Low(:,i,j,k) = m%y_IfW_Low%VelocityUVW(:,c)
-               c = c+1
-            end do
+         m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
+         call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
+
+!FIXME: remove next 3 lines in merge with 5.0
+         ! Set input position
+         m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
+
+         ! Loop through high resolution grids
+         do i_hl = 0, n_high_low
+
+            ! Calculate wind velocities at grid locations from InflowWind
+            call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2)
+            if (Failed()) return
+
+            ! Transfer velocities to high resolution grid
+!FIXME: remove following 9 lines and uncomment block after during merge to 5.0
+               c = 1
+               do k = 0,p%nZ_high-1
+                  do j = 0,p%nY_high-1
+                     do i = 0,p%nX_high-1
+                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
+                        c = c+1
+                     end do
+                  end do
+               end do
+!            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
+!                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
+!                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
+!                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
+!            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
          end do
       end do
-      ! Set the high-resoultion inflow wind velocities for each turbine
-      if (  p%Mod_AmbWind == 2 ) then
-         do nt = 1,p%NumTurbines
-            m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
-               ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
-            m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
+
+   ! Multiple InflowWind instances (one per turbine)
+   case (3)
+
+      ! Loop through turbines
+      do nt = 1, p%NumTurbines
+
+!FIXME: remove next 10 lines in merge with 5.0
+         ! Set input velocity
+         c = 1
+         do k = 0,p%nZ_high-1
+            do j = 0,p%nY_high-1
+               do i = 0,p%nX_high-1
+                  m%u_IfW_High%PositionXYZ(:,c) = p%Grid_high(:,c,nt) - p%WT_Position(:,nt)
+                  c = c+1
+               end do
+            end do
+         end do
+
+         ! Loop through high resolution grids
+         do i_hl = 0, n_high_low
+
+!FIXME: remove next 4 lines in merge with 5.0
+            ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+            m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /) - p%WT_Position(:,nt)
             call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
-            do i_hl=0, n_high_low
-               call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
+
+            ! Calculate wind velocities at grid locations from InflowWind
+            call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
+            if (Failed()) return
+
+            ! Transfer velocities to high resolution grid
+!FIXME: remove following 9 lines and uncomment block after during merge to 5.0
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
@@ -1462,54 +1552,36 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                      end do
                   end do
                end do
-            end do
+!            V_Grid(lbound(m%Vamb_high(nt)%data,1):ubound(m%Vamb_high(nt)%data,1),&
+!                   lbound(m%Vamb_high(nt)%data,2):ubound(m%Vamb_high(nt)%data,2),&
+!                   lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
+!                   lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
+!            m%Vamb_high(nt)%data(:,:,:,:,i_hl) = V_Grid
          end do
+      end do
 
-      else !p%Mod_AmbWind == 3
-         do nt = 1,p%NumTurbines
-            c = 1
-            do k = 0,p%nZ_high-1
-               do j = 0,p%nY_high-1
-                  do i = 0,p%nX_high-1
-                     m%u_IfW_High%PositionXYZ(:,c) = p%Grid_high(:,c,nt) - p%WT_Position(:,nt)
-                     c = c+1
-                  end do
-               end do
-            end do
-            do i_hl=0, n_high_low
-                  ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
-               m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /) - p%WT_Position(:,nt)
-               call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
-               call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2);   if (Failed()) return;
-               c = 1
-               do k = 0,p%nZ_high-1
-                  do j = 0,p%nY_high-1
-                     do i = 0,p%nX_high-1
-                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
-                        c = c+1
-                     end do
-                  end do
-               end do
-            end do
-         end do
-      end if
-   end if
+   end select
 
-   ! WAT tracer propagation
+   !----------------------------------------------------------------------------
+   ! Propagate WAT tracer
+   !----------------------------------------------------------------------------
+
    if (p%WAT_Enabled) then
-      ! find mean velocity of all turbine disks
+
+      ! Find mean velocity of all turbine disks
       xd%Ufarm = 0.0_ReKi
       do nt=1,p%NumTurbines
          xd%Ufarm(1:3) = xd%Ufarm(1:3) + m%V_amb_low_disk(1:3,nt)
       enddo
       xd%Ufarm(1:3) = xd%Ufarm(1:3) / real(p%NumTurbines,ReKi)
+
       ! add mean velocity * dt to the tracer for the position of the WAT box
       xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + xd%Ufarm(1:3)*real(p%dt_low,ReKi)
    endif
 
 contains
    logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 end subroutine AWAE_UpdateStates
