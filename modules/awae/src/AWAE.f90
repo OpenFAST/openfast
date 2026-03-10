@@ -1778,7 +1778,7 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
          do i_hl=0, n_high_low
 
             ! read from file the ambient flow for the current time step
-            call ReadHighResWindVTK(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
+            call ReadHighResWindFile(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
