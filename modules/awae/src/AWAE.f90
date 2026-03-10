@@ -1437,7 +1437,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    do nt = 1, p%NumTurbines
       allocate (y%Vdist_High(nt)%data(3, 0:p%HighRes(nt)%nXYZ(1)-1, 0:p%HighRes(nt)%nXYZ(2)-1, 0:p%HighRes(nt)%nXYZ(3)-1, 0:p%n_high_low_p1), STAT=ErrStat2)
       if (Failed0('y%Vdist_High%data.')) return
-      y%Vdist_High(i)%data    = 0.0_Siki
+      y%Vdist_High(nt)%data = 0.0_Siki
    end do
 
    allocate (y%Vx_wind_disk (1:p%NumTurbines), STAT=ErrStat2);  if (Failed0('y%Vx_rel_disk.')) return;
