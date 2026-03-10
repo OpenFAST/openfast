@@ -211,6 +211,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Grid_high      !< XYZ components (global positions) of the spatial discretization of the high-resolution spatial domain for each turbine  [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low [-]
+    INTEGER(IntKi)  :: n_high_low_p1 = 0_IntKi      !< Number of high-resolution time steps per low, plus one at t_low-dt_high [-]
     REAL(DbKi)  :: dt_low = 0.0_R8Ki      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     INTEGER(IntKi)  :: NumDT = 0_IntKi      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
@@ -1999,6 +2000,7 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%WT_Position = SrcParamData%WT_Position
    end if
    DstParamData%n_high_low = SrcParamData%n_high_low
+   DstParamData%n_high_low_p1 = SrcParamData%n_high_low_p1
    DstParamData%dt_low = SrcParamData%dt_low
    DstParamData%dt_high = SrcParamData%dt_high
    DstParamData%NumDT = SrcParamData%NumDT
@@ -2221,6 +2223,7 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%Grid_high)
    call RegPackAlloc(RF, InData%WT_Position)
    call RegPack(RF, InData%n_high_low)
+   call RegPack(RF, InData%n_high_low_p1)
    call RegPack(RF, InData%dt_low)
    call RegPack(RF, InData%dt_high)
    call RegPack(RF, InData%NumDT)
@@ -2306,6 +2309,7 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Grid_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WT_Position); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_high_low); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_high_low_p1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_low); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumDT); if (RegCheckErr(RF, RoutineName)) return
