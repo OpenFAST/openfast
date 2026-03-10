@@ -2080,7 +2080,7 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
       if ( (InputFileData%dX_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) ) &
          call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
    case default
-      call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module, 3: multiple instances of InflowWind module, 4: high-fidelity precursor in AMReX format', errStat, errMsg, RoutineName )
+      call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module (will be deprecated in future), 3: multiple instances of InflowWind module, 4: high-fidelity precursor in AMReX format', errStat, errMsg, RoutineName )
    end select
 
    if (  InputFileData%NumTurbines <   1  )  call SetErrStat ( ErrID_Fatal, 'Number of turbines must be greater than zero.', errStat, errMsg, RoutineName )
