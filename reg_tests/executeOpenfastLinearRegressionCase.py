@@ -161,11 +161,11 @@ else:
                 rtl.copyTree(srcname, dstname, excludeExt=excludeExt)
         else:
             shutil.copy2(srcname, dstname)
-# 
-# Copying the actual test directory
-# if not os.path.isdir(testBuildDirectory):
-rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
-             renameExtDict={'.lin':'.ref_lin', '.out': '.ref.out', '.outb': '.ref.outb'})
+ 
+# Copy the actual test directory
+if not os.path.isdir(testBuildDirectory):
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.lin':'.ref_lin', '.out': '.ref.out', '.outb': '.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:

@@ -1211,7 +1211,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       
    ! set the inputs needed for FAST (these are slow-varying so can just be done once per farm time step)
    do nt = 1,farm%p%NumTurbines
-      call FWrap_SetInputs(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
+      call FWrap_SetWindTStart(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
    end do
    
    

@@ -863,7 +863,7 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          call interpTimeValue(wt%hub%motion, time, wt%hub%iMotion, hubMotion)
          !print*,hubMotion
          wt%hub%rotSpeed  = hubMotion(2)
-         wt%hub%rotAcc    = hubMotion(2)
+         wt%hub%rotAcc    = hubMotion(3)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
       else if (wt%hub%motionType == idHubMotionUserFunction) then
          ! We call a user-defined function to determined the azimuth, speed (and potentially acceleration...)

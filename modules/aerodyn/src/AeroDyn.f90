@@ -373,7 +373,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       ! -----------------------------------------------------------------
       ! Read the AeroDyn blade files, or copy from passed input
-   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat2, ErrMsg2 )
+   call ReadInputFiles( InitInp%InputFile, InputFileData, p%RootName, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat2, ErrMsg2 )
       if (Failed()) return;
          
       ! override some parameters to simplify for aero maps

@@ -224,6 +224,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_AmbWind = 0_IntKi      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
     INTEGER(IntKi)  :: n_rp_max = 0_IntKi      !< Maximum possible number of points in the polar grid for the wake plane at each rotor [-]
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low [-]
+    INTEGER(IntKi)  :: n_high_low_p1 = 0_IntKi      !< Number of high-resolution time steps per low, plus one at t_low-dt_high [-]
     REAL(DbKi)  :: dt_low = 0.0_R8Ki      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     INTEGER(IntKi)  :: NumDT = 0_IntKi      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
@@ -2055,6 +2056,7 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Mod_AmbWind = SrcParamData%Mod_AmbWind
    DstParamData%n_rp_max = SrcParamData%n_rp_max
    DstParamData%n_high_low = SrcParamData%n_high_low
+   DstParamData%n_high_low_p1 = SrcParamData%n_high_low_p1
    DstParamData%dt_low = SrcParamData%dt_low
    DstParamData%dt_high = SrcParamData%dt_high
    DstParamData%NumDT = SrcParamData%NumDT
@@ -2248,6 +2250,7 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%Mod_AmbWind)
    call RegPack(RF, InData%n_rp_max)
    call RegPack(RF, InData%n_high_low)
+   call RegPack(RF, InData%n_high_low_p1)
    call RegPack(RF, InData%dt_low)
    call RegPack(RF, InData%dt_high)
    call RegPack(RF, InData%NumDT)
@@ -2324,6 +2327,7 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Mod_AmbWind); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_rp_max); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_high_low); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_high_low_p1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_low); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumDT); if (RegCheckErr(RF, RoutineName)) return
