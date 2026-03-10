@@ -404,19 +404,22 @@ extern "C"
             indices.resize(num_steps);
         }
 
+        // Calculate delta between first two indices
+        const auto first_index_delta = indices[1] - indices[0];
+
         // If fewer indices found than requested steps, return error
         if (indices.size() < num_steps)
         {
             std::string msg{path_prefix.string() + ": "};
-            msg += "found " + std::to_string(indices.size()) + " times, ";
-            msg += std::to_string(num_steps) + " times were requested ";
-            msg += "with a dt of " + std::to_string(dt) + " seconds";
+            msg += "found " + std::to_string(indices.size()) + " dirs, ";
+            msg += std::to_string(num_steps) + " dirs were requested ";
+            msg += "with a dt of " + std::to_string(dt) + " seconds (";
+            msg += "first index=" + std::to_string(indices[0]) + ", ";
+            msg += "last index=" + std::to_string(indices.back()) + ", ";
+            msg += "index step=" + std::to_string(first_index_delta) + ")";
             set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
             return;
         }
-
-        // Calculate delta between first two indices
-        const auto first_index_delta = indices[1] - indices[0];
 
         // Loop through indices and check that none are missing
         // ie, same delta between all adjacent indicies
