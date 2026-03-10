@@ -72,7 +72,7 @@ param       ^       -           IntKi           VF_AeroMap          - 1024  -   
 param       ^       -           IntKi           VF_DerivOrder1      - 2048  -   "Variable is derivative order 1 in linearization file"  -
 param       ^       -           IntKi           VF_DerivOrder2      - 4096  -   "Variable is derivative order 2 in linearization file"  -
 param       ^       -           IntKi           VF_Mapping          - 8192  -   "Variable is used in a module-to-module transfer mapping"  -
-param       ^       -           IntKi           VF_NoLin           - 16384  -   "Variable is used in a module-to-module transfer mapping"  -
+param       ^       -           IntKi           VF_NoLin           - 16384  -   "Flag to exclude variable from linearization or solver"  -
 
 param       ^       -           IntKi           MC_None             -   0   -   ""  -
 param       ^       -           IntKi           MC_Tight            -   1   -   ""  -
@@ -80,7 +80,7 @@ param       ^       -           IntKi           MC_Option1          -   2   -   
 param       ^       -           IntKi           MC_Option2          -   4   -   ""  -
 param       ^       -           IntKi           MC_Post             -   8   -   ""  -
 
-typedef     ^       DatLoc      IntKi           Num                 -   0   -   "Mesh number in module"
+typedef     ^       DatLoc      IntKi           Num                 -   0   -   "Field number in module input, output, or continuous state derived data types"
 typedef     ^       ^           IntKi           i1                  -   0   -   "Index 1"
 typedef     ^       ^           IntKi           i2                  -   0   -   "Index 2"
 typedef     ^       ^           IntKi           i3                  -   0   -   "Index 3"

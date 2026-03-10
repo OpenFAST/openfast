@@ -47,6 +47,9 @@ of publications, presentations, and past studies on the subject.
 Glue Code and Mesh Mapping
 **************************
 
+For current documentation on the glue code structure, module variable API,
+solver, and linearization see :ref:`glue-code`.
+
 - `FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and Temporal Meshes <https://www.nrel.gov/docs/fy14osti/60742.pdf>`_
 - `FAST Modular Framework for Wind Turbine Simulation: New Algorithms and Numerical Examples <https://dx.doi.org/10.2514/6.2015-1461>`_
 - :download:`Predictor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
