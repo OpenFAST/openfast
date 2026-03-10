@@ -62,7 +62,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder1                   = 2048      ! Variable is derivative order 1 in linearization file [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder2                   = 4096      ! Variable is derivative order 2 in linearization file [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Mapping                       = 8192      ! Variable is used in a module-to-module transfer mapping [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_NoLin                         = 16384      ! Variable is used in a module-to-module transfer mapping [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_NoLin                         = 16384      ! Flag to exclude variable from linearization or solver [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MC_None                          = 0      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MC_Tight                         = 1      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MC_Option1                       = 2      !  [-]
@@ -121,7 +121,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  DatLoc  =======
   TYPE, PUBLIC :: DatLoc
-    INTEGER(IntKi)  :: Num = 0      !< Mesh number in module [-]
+    INTEGER(IntKi)  :: Num = 0      !< Field number in module input, output, or continuous state derived data types [-]
     INTEGER(IntKi)  :: i1 = 0      !< Index 1 [-]
     INTEGER(IntKi)  :: i2 = 0      !< Index 2 [-]
     INTEGER(IntKi)  :: i3 = 0      !< Index 3 [-]
