@@ -197,6 +197,8 @@ CONTAINS
             END IF
             
             call FARM_End(farm, ErrStat2, ErrMsg2)                                 
+            ! Finalize AMReX library
+            call amrex_finalize()
             call ProgAbort('', TrapErrors=.FALSE., TimeWait=3._ReKi )
             
          END IF
