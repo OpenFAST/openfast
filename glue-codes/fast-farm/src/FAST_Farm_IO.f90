@@ -1073,7 +1073,13 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    ! FIXME: this really should be checked with the turbine specific size diameter -- maybe relocate this check to AWAE or in FF after initializing all turbines?
    ! check that the grid is large enough to contain the turbine (only check Y and Z)
    select case(AWAE_InitInp%Mod_AmbWind)
-   case (2,3)
+   case (2)
+      call WrScr("Mod_AmbWind==2 will be depreciated and removed in a future release")
+      do i=1,p%NumTurbines
+         if (AWAE_InitInp%nY_High*AWAE_InitInp%dY_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Y (nY_High*dY_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+         if (AWAE_InitInp%nZ_High*AWAE_InitInp%dZ_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Z (nZ_High*dZ_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+      end do
+   case (3)
       do i=1,p%NumTurbines
          if (AWAE_InitInp%nY_High*AWAE_InitInp%dY_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Y (nY_High*dY_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
          if (AWAE_InitInp%nZ_High*AWAE_InitInp%dZ_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Z (nZ_High*dZ_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
