@@ -789,8 +789,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       allocate ( WAT_B_BoxHi    ( 3, 0:n_high_low_p1), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for WAT_B_BoxHi.', errStat, errMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
       do i_hl=0, n_high_low_p1
-         ! NOTE: i_hl=0 corresponds to T=-DT_high, so shift by one high res timestep
-         WAT_B_BoxHi(1:3, i_hl) = xd%WAT_B_Box(1:3) - (n_high_low_p1-i_hl+1) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
+         WAT_B_BoxHi(1:3, i_hl) = xd%WAT_B_Box(1:3) - (n_high_low_p1-i_hl) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
       enddo
    endif
 
@@ -1458,8 +1457,8 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       !$OMP SHARED(p, n_high_low, n, m, errStat, errMsg, AbortErrLev)
       do nt = 1,p%NumTurbines
 
-         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
-         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high).  Note that n starts at -1
+         if (n/=-1_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          do i_hl=0, n_high_low
 
@@ -1474,9 +1473,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             endif
          end do
 
-         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high)
+         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high).  Note that n starts at -1
          !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
-         if (n==0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+         if (n==-1_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
 
       end do
       !$OMP END PARALLEL DO  
@@ -1498,8 +1497,8 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          ! Set input position
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
 
-         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
-         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high).  Note that n starts at -1
+         if (n/=-1_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          ! Loop through high resolution grids
          do i_hl = 0, n_high_low
@@ -1525,9 +1524,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             m%Vamb_high(nt)%data(:,:,:,:,i_hl+1) = V_Grid
          end do
 
-         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high)
+         ! Special handling at T=0 for time slice at -DT_high (0 index in Vamb_high).  Note that n starts at -1
          !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
-         if (n==0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+         if (n==-1_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
 
       end do
 
@@ -1549,8 +1548,8 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end do
          end do
 
-         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high)
-         if (n/=0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high).  Note that n starts at -1
+         if (n/=-1_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          ! Loop through high resolution grids
          do i_hl = 0, n_high_low
@@ -1581,9 +1580,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             m%Vamb_high(nt)%data(:,:,:,:,i_hl+1) = V_Grid
          end do
 
-         ! Special handling at T=0 for time slice at -DT_high
+         ! Special handling at T=0 for time slice at -DT_high.  Note that n starts at -1
          !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
-         if (n==0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+         if (n==-1_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
 
       end do
 
