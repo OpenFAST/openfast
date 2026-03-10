@@ -6149,7 +6149,6 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    call MV_AddMeshVar(InitOut%Vars%u, "Tower", [FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
                       DatLoc(AD_u_TowerMotion), &
                       Mesh=u%TowerMotion, &
-                      Flags=VF_SmallAngle, &
                       Perturbs=[PerturbTower, Perturb, PerturbTower, PerturbTower])
 
    ! Add blade root motion
