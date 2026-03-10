@@ -55,8 +55,8 @@ REAL(ReKi),                  INTENT(INOUT)  :: TRH_in(:)                       !
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
-!$OMP THREADPRIVATE(TRH)
 REAL(ReKi), allocatable, save :: TRH(:)         ! Each OMP thread gets its own copy of this array
+!$OMP THREADPRIVATE(TRH)
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
    
@@ -763,7 +763,7 @@ integer                          :: old_max_levels    ! maximum nesting levels f
       NPts = p%grid%NPoints
    END IF
          
-   CALL LAPACK_pptrf( 'L', NPts, TRH(Indx:), ErrStat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
+   CALL LAPACK_potrf( 'L', NPts, TRH(Indx:), ErrStat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (unpacked form), of order 'NPoints'; returns Stat
 
    IF ( ErrStat /= ErrID_None ) THEN
       IF (ErrStat < AbortErrLev) then

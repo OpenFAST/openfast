@@ -44,7 +44,7 @@ MODULE FASTWrapper
 
    PUBLIC :: FWrap_t0                             !  call to compute outputs at t0 [and initialize some more variables]
    PUBLIC :: FWrap_Increment                      !  call to update states to n+1 and compute outputs at n+1
-   PUBLIC :: FWrap_SetInputs  
+   PUBLIC :: FWrap_SetWindTStart
    PUBLIC :: FWrap_CalcOutput  
    
 
@@ -119,7 +119,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    ExternInitData%windGrid_n(1) = InitInp%nX_high
    ExternInitData%windGrid_n(2) = InitInp%nY_high
    ExternInitData%windGrid_n(3) = InitInp%nZ_high
-   ExternInitData%windGrid_n(4) = InitInp%n_high_low
+   ExternInitData%windGrid_n(4) = InitInp%n_high_low+1      ! include a step at t-dt_high
    
    ExternInitData%windGrid_delta(1) = InitInp%dX_high
    ExternInitData%windGrid_delta(2) = InitInp%dY_high
@@ -392,7 +392,7 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    !ELSE
    !   
          ! set the inputs needed for FAST
-      !call FWrap_SetInputs(u, m, t)   <<< moved up into FAST.Farm FARM_UpdateStates
+      !call FWrap_SetWindTStart(u, m, t)   <<< moved up into FAST.Farm FARM_UpdateStates
       
       ! call FAST p%n_FAST_low times   (p%n_FAST_low is simply the number of steps to make per wrapper call. It is affected by MooringMod)
       do n_ss = 1, p%n_FAST_low 
@@ -434,7 +434,7 @@ SUBROUTINE FWrap_t0( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrMsg  = ''
 
       ! set the inputs needed for FAST:
-   call FWrap_SetInputs(u, m, 0.0_DbKi)
+   call FWrap_SetWindTStart(u, m, 0.0_DbKi)
       
       ! compute the FAST t0 solution:
    call FAST_Solution0_T(m%Turbine, ErrStat2, ErrMsg2 )
@@ -685,16 +685,18 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST
-SUBROUTINE FWrap_SetInputs(u, m, t)
+SUBROUTINE FWrap_SetWindTStart(u, m, t)
 
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
    TYPE(FWrap_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
    REAL(DbKi),                      INTENT(IN   )  :: t           !< current simulation time
 
    ! set the 4d-wind-inflow input array (a bit of a hack [simplification] so that we don't have large amounts of data copied in multiple data structures):
-      m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
+   ! NOTE: the wind data starts at `t - DT_high` as one extra slice of wind data is added at start.  If AeroDyn is updated to not require the `t-DT_high`
+   !        timestep, this can be changed
+   m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t - m%Turbine%IfW%p%FlowField%Grid4D%delta(4)
       
-END SUBROUTINE FWrap_SetInputs
+END SUBROUTINE FWrap_SetWindTStart
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE FASTWrapper
 !**********************************************************************************************************************************

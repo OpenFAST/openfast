@@ -90,7 +90,8 @@ if not os.path.isdir(inputsDirectory):
 
 
 # create the local output directory and initialize it with input files 
-rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'py_ad_driver.out':'py_ad_driver_ref.out'})
+if not os.path.isdir(testBuildDirectory):
+    rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'py_ad_driver.out':'py_ad_driver_ref.out'})
        # , excludeExt=['.out','.outb'])
 
 ### Run aerodyn on the test case
