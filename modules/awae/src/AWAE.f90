@@ -1809,8 +1809,8 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
 
             ! Calculate wind velocities at grid locations from InflowWind
             call IfW_FlowField_GetVelAcc(p%IfW(0)%FlowField, 1, t + i_hl*p%DT_high, &
-                                          m%u_IfW_High(nt)%PositionXYZ, &
-                                          m%y_IfW_High(nt)%VelocityUVW, AccUVW, errStat2, errMsg2)
+                                         m%u_IfW_High(nt)%PositionXYZ, &
+                                         m%y_IfW_High(nt)%VelocityUVW, AccUVW, errStat2, errMsg2)
             if (Failed()) return
 
             ! Transfer velocities to high resolution grid
