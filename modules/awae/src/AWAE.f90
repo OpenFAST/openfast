@@ -770,7 +770,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    maxPln =  min(n,p%NumPlanes-2)
 
       ! We only need one high res file for that last simulation time
-   if ( (n/p%n_high_low_p1) == (p%NumDT-1) ) then
+   if ( (n/p%n_high_low) == (p%NumDT-1) ) then
       n_high_low_p1 = 1
    else
       n_high_low_p1 = p%n_high_low_p1
