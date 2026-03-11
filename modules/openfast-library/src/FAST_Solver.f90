@@ -184,7 +184,20 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    end do
 
    !----------------------------------------------------------------------------
-   ! Set solve flags and combine relevant modules into TC module
+   ! Check module attributes based on category
+   !----------------------------------------------------------------------------
+
+   ! Loop through tight-coupling modules
+   do i = 1, size(p%iModTC)
+      if (GlueModData(i)%SubSteps > 1) then
+         call WrScr('Info: tightly coupled module "'//trim(GlueModData(i)%Abbr)//'" requested '// &
+                    'time step of '//trim(Num2Lstr(GlueModData(i)%DT))//', which is different than '// &
+                    'glue-code time step of '//trim(Num2Lstr(p%h))//'. Sub-stepping disabled for this module.')
+      end if
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Set solve flags and combine relevant modules into Solver module
    !----------------------------------------------------------------------------
 
    ! Set VF_Solve flag on Jacobian variables use by the tight coupling solver
