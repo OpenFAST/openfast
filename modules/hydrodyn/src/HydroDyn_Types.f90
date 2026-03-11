@@ -170,10 +170,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile = 0_IntKi      !< File unit for the HydroDyn outputs [-]
     INTEGER(IntKi)  :: OutDec = 0_IntKi      !< Write every OutDec time steps [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
@@ -1384,43 +1380,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%Delim = SrcParamData%Delim
    DstParamData%UnOutFile = SrcParamData%UnOutFile
    DstParamData%OutDec = SrcParamData%OutDec
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx)
-      UB(1:1) = ubound(SrcParamData%dx)
-      if (.not. allocated(DstParamData%dx)) then
-         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dx = SrcParamData%dx
-   end if
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    DstParamData%WaveField => SrcParamData%WaveField
    DstParamData%PtfmYMod = SrcParamData%PtfmYMod
@@ -1478,15 +1437,6 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(ParamData%OutParam)
-   end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
-   if (allocated(ParamData%dx)) then
-      deallocate(ParamData%dx)
    end if
    nullify(ParamData%WaveField)
 end subroutine
@@ -1549,10 +1499,6 @@ subroutine HydroDyn_PackParam(RF, Indata)
    call RegPack(RF, InData%Delim)
    call RegPack(RF, InData%UnOutFile)
    call RegPack(RF, InData%OutDec)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPackAlloc(RF, InData%dx)
-   call RegPack(RF, InData%Jac_ny)
    call RegPack(RF, InData%VisMeshes)
    call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
@@ -1639,10 +1585,6 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Delim); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UnOutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutDec); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
