@@ -763,7 +763,7 @@ integer                          :: old_max_levels    ! maximum nesting levels f
       NPts = p%grid%NPoints
    END IF
          
-   CALL LAPACK_pptrf( 'L', NPts, TRH(Indx:), ErrStat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
+   CALL LAPACK_potrf( 'L', NPts, TRH(Indx:), ErrStat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (unpacked form), of order 'NPoints'; returns Stat
 
    IF ( ErrStat /= ErrID_None ) THEN
       IF (ErrStat < AbortErrLev) then

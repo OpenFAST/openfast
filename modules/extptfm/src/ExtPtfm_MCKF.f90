@@ -263,8 +263,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
 
     call MV_AddMeshVar(Vars%u, 'Interface node', MotionFields, &
                        DatLoc(ExtPtfm_u_PtfmMesh), &
-                       Mesh=u%PtfmMesh, &
-                       Flags=VF_SmallAngle)
+                       Mesh=u%PtfmMesh)
 
     !---------------------------------------------------------------------------
     ! Output variables
