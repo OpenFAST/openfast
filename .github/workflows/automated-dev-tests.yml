@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+          sudo apt-get install -y libopenblas-serial-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -83,7 +83,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+          sudo apt-get install -y libopenblas-serial-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -149,7 +149,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -220,7 +220,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev
+          sudo apt-get install -y libopenblas-serial-dev
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
         with:
@@ -281,7 +281,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -344,7 +344,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -401,7 +401,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -457,7 +457,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -512,7 +512,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -567,7 +567,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -619,7 +619,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -672,7 +672,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Install openfast_io
         working-directory: ${{github.workspace}}/openfast_io
@@ -726,7 +726,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-serial-dev
+          sudo apt-get install -y libopenblas-serial-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
