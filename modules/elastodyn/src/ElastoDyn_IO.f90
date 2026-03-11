@@ -1726,8 +1726,9 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
    REAL(ReKi)                   :: AdjBlMs                                         ! Factor to adjust blade mass density.
    REAL(ReKi)                   :: AdjEdSt                                         ! Factor to adjust edge stiffness.
    REAL(ReKi)                   :: AdjFlSt                                         ! Factor to adjust flap stiffness.
-   REAL(ReKi)                   :: TmpRAry(6)                                      ! Temporary variable to read table from file (up to 6 columns)
    INTEGER(IntKi)               :: i                                               ! A generic DO index.
+   integer(IntKi)               :: colIdxOrder(5)                                  ! Column index order
+   integer(IntKi)               :: numColumn                                       ! number of columns
    INTEGER( IntKi )             :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)               :: ErrStat2                                        ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
@@ -1787,17 +1788,9 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
    !  -------------- DISTRIBUTED BLADE PROPERTIES ---------------------------------
    ! Skip the comment lines.
    call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Separator
-   call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Col Names
+   call GetBldTbleCols( CurLine, colIdxOrder, numColumn, ErrStat2, ErrMsg2 ); if (Failed()) return;   ! Col Names
    call ParseCom( InFileInfo, CurLine, TmpComment, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return;   ! Col Units
-
-   call ParseAry( InFileInfo, CurLine, 'Blade input station table', TmpRAry, 6_IntKi, ErrStat2, ErrMsg2, UnEc=0_IntKi );
-   if (ErrStat2 < AbortErrLev) then  ! CurLine won't be incremented if ErrStat2>=AbortErrLev
-      call SetErrStat( ErrID_Fatal,  " The ElastoDyn Blade file, "//trim(InFileInfo%FileList(1))//   &
-                 ", DISTRIBUTED BLADE PROPERTIES table contains the PitchAxis column.  This column is no longer supported and must be removed. ", ErrStat, ErrMsg, RoutineName )
-      return
-   endif
-
-   call ParseTable5Col(ErrStat2, ErrMsg2); if (Failed()) return;
+   call ParseTable5Col( colIdxOrder, numColumn, ErrStat2, ErrMsg2); if (Failed()) return;
 
    !  -------------- BLADE MODE SHAPES --------------------------------------------
    ! NOTE: there is no coefficient for mode 0, so starts at BldFl1Sh(2), hence using (i+1)
@@ -1835,18 +1828,64 @@ CONTAINS
       IF ( AdjFlSt <= 0.0_ReKi ) call SetErrStat( ErrID_Warn, 'AdjFlSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
       IF ( AdjEdSt <= 0.0_ReKi ) call SetErrStat( ErrID_Warn, 'AdjEdSt must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    end subroutine
-   subroutine ParseTable5Col(ErrStat3, ErrMsg3)
+   !> Read the header line for the table to find out which column number holds each of the expected data types needed
+   subroutine GetBldTbleCols( CurLine, IdxOrder, numCol, ErrStat3, ErrMsg3 )
+      integer(IntKi),         intent(inout) :: CurLine
+      integer(IntKi),         intent(  out) :: IdxOrder(5)
+      integer(IntKi),         intent(  out) :: numCol
+      integer(IntKi),         intent(  out) :: ErrStat3
+      character(ErrMsgLen),   intent(  out) :: ErrMsg3
+      logical                               :: tmpFlag
+      character(len=12), allocatable        :: ColHdrNames(:)
+      character(len=8),  parameter          :: ColNames(5)=["BlFract ","StrcTwst","BMassDen","FlpStff ","EdgStff "]
+      integer(IntKi)                        :: j,k
+      character(len=12)                     :: TmpName,TmpNameRead
+      ! get the number of column headers
+      numCol = CountWords( InFileInfo%Lines(CurLine) )
+      call AllocAry(ColHdrNames, numCol, 'ColHdrNames', ErrStat3, ErrMsg3 ); if (ErrStat3 >= AbortErrLev) return
+      ! get column names
+      call GetTokens( InFileInfo%Lines(CurLine), numCol, ColHdrNames, TmpFlag )
+      if (TmpFlag) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = " Error reading header line for the blade input station table form the ElastoDyn Blade file "//trim(InFileInfo%FileList(1))
+         return
+      endif
+      ! Find the column number for each name.
+      IdxOrder = -1
+      do j=1,5
+         TmpName = ColNames(j);  call Conv2UC(TmpName);
+         do k=1,numCol
+            TmpNameRead = ColHdrNames(k); call Conv2UC(TmpNameRead)
+            if (TmpName == TmpNameRead) then
+               IdxOrder(j) = k
+               cycle
+            endif
+         enddo
+         ! if couldn't find a column
+         if (IdxOrder(j) == -1) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = " Could not find column "//trim(ColNames(j))//" in the blade input station table header in ElastoDyn blade file "//trim(InFileInfo%FileList(1))
+            return
+         endif
+      enddo
+      ! successfully read header line, so increment line number
+      CurLine = CurLine + 1
+   end subroutine
+   subroutine ParseTable5Col(ColIdx, NInputCols, ErrStat3, ErrMsg3)
+      integer(IntKi),       intent(in ) :: ColIdx(5)
+      integer(IntKi),       intent(in ) :: NInputCols
       integer(IntKi),       intent(out) :: ErrStat3
       character(ErrMsgLen), intent(out) :: ErrMsg3
-      integer(IntKi),       parameter   :: NInputCols = 5
+      real(ReKi),           allocatable :: TmpRAry(:)                                      ! Temporary variable to read table from file
+      call AllocAry(TmpRAry, NInputCols, 'TmpRAry', ErrStat3, ErrMsg3); if (ErrStat3 >= AbortErrLev) return
       do I=1,BladeKInputFileData%NBlInpSt
          call ParseAry( InFileInfo, CurLine, 'Blade input station table', TmpRAry, NInputCols, ErrStat3, ErrMsg3, UnEc)
          if (ErrStat3 >= AbortErrLev) return;
-         BladeKInputFileData%BlFract( I) = TmpRAry(1)
-         BladeKInputFileData%StrcTwst(I) = TmpRAry(2)*D2R      ! Input in degrees; converted to radians here
-         BladeKInputFileData%BMassDen(I) = TmpRAry(3)*AdjBlMs  ! Apply the correction factors to the elemental data.
-         BladeKInputFileData%FlpStff( I) = TmpRAry(4)*AdjFlSt  ! Apply the correction factors to the elemental data.
-         BladeKInputFileData%EdgStff( I) = TmpRAry(5)*AdjEdSt  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%BlFract( I) = TmpRAry(ColIdx(1))
+         BladeKInputFileData%StrcTwst(I) = TmpRAry(ColIdx(2))*D2R      ! Input in degrees; converted to radians here
+         BladeKInputFileData%BMassDen(I) = TmpRAry(ColIdx(3))*AdjBlMs  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%FlpStff( I) = TmpRAry(ColIdx(4))*AdjFlSt  ! Apply the correction factors to the elemental data.
+         BladeKInputFileData%EdgStff( I) = TmpRAry(ColIdx(5))*AdjEdSt  ! Apply the correction factors to the elemental data.
       enddo
    end subroutine
    !> write out the blade file contents to screen (use in debugging only)
