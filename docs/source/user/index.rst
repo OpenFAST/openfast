@@ -14,6 +14,7 @@ This section contains documentation for the OpenFAST module-coupling environment
    :maxdepth: 1
 
    General considerations <general.rst>
+   Glue Code <glue-code/index.rst>
    AeroDyn <aerodyn/index.rst>
    OLAF <aerodyn-olaf/index.rst>
    Aeroacoustics <aerodyn-aeroacoustics/index.rst>

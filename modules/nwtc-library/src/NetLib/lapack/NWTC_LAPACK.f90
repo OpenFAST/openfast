@@ -77,6 +77,12 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_sposv
    END INTERFACE
 
+   !> Compute the Cholesky factorization of a real symmetric positive definite matrix A stored in packed format (internally handled as unpacked).
+   INTERFACE LAPACK_potrf 
+      MODULE PROCEDURE LAPACK_dpotrf
+      MODULE PROCEDURE LAPACK_spotrf
+   END INTERFACE
+
    !> Compute the Cholesky factorization of a real symmetric positive definite matrix A stored in packed format.
    INTERFACE LAPACK_pptrf 
       MODULE PROCEDURE LAPACK_dpptrf
@@ -1407,6 +1413,190 @@ MODULE NWTC_LAPACK
 
    RETURN
    END SUBROUTINE LAPACK_SPOSV
+!=======================================================================
+!> Compute the Cholesky factorization of a real symmetric positive definite matrix A stored in packed format.
+!! use LAPACK_POTRF (nwtc_lapack::lapack_potrf) instead of this specific function.
+   SUBROUTINE LAPACK_DPOTRF (UPLO, N, AP, ErrStat, ErrMsg)
+   
+      ! DPOTRF computes the Cholesky factorization of a real symmetric
+      ! positive definite matrix A stored in packed format.
+      !
+      ! Internally, packed storage is converted to full storage and DPOTRF
+      ! is called.  The result is converted back to packed storage.
+      !
+      ! The factorization has the form
+      !    A = U**T * U,  if UPLO = 'U', or
+      !    A = L  * L**T,  if UPLO = 'L'.
+   
+         INTEGER,         INTENT(IN   ) :: N
+         REAL(R8Ki),      INTENT(INOUT) :: AP(:)
+         INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+         CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+         CHARACTER(1),    INTENT(IN   ) :: UPLO
+   
+         REAL(R8Ki), ALLOCATABLE :: A(:,:)
+         INTEGER :: I, J, IDX, INFO
+   
+         ErrStat = ErrID_None
+         ErrMsg  = ""
+   
+         IF (N <= 0) RETURN
+   
+         ALLOCATE(A(N,N))
+         A = 0.0_R8Ki
+   
+         IF (UPLO == 'U') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = 1, J
+                  IDX = IDX + 1
+                  A(I,J) = AP(IDX)
+               END DO
+            END DO
+         ELSE IF (UPLO == 'L') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = J, N
+                  IDX = IDX + 1
+                  A(I,J) = AP(IDX)
+               END DO
+            END DO
+         ELSE
+            ErrStat = ErrID_FATAL
+            ErrMsg  = "LAPACK_DPOTRF: invalid UPLO value."
+            DEALLOCATE(A)
+            RETURN
+         END IF
+   
+         CALL DPOTRF (UPLO, N, A, N, INFO)
+   
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_FATAL
+            WRITE(ErrMsg,*) INFO
+            IF (INFO < 0) THEN
+               ErrMsg = "LAPACK_DPOTRF: illegal value in argument "//TRIM(ErrMsg)//"."
+            ELSE
+               ErrMsg = "LAPACK_DPOTRF: Leading minor of order "//TRIM(ErrMsg)// &
+                        " of A is not positive definite, so Cholesky factorization could not be completed."
+            END IF
+            DEALLOCATE(A)
+            RETURN
+         END IF
+   
+         IF (UPLO == 'U') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = 1, J
+                  IDX = IDX + 1
+                  AP(IDX) = A(I,J)
+               END DO
+            END DO
+         ELSE
+            IDX = 0
+            DO J = 1, N
+               DO I = J, N
+                  IDX = IDX + 1
+                  AP(IDX) = A(I,J)
+               END DO
+            END DO
+         END IF
+   
+         DEALLOCATE(A)
+         RETURN
+   
+   END SUBROUTINE LAPACK_DPOTRF
+!=======================================================================
+!> Compute the Cholesky factorization of a real symmetric positive definite matrix A stored in packed format.
+!! use LAPACK_POTRF (nwtc_lapack::lapack_potrf) instead of this specific function.
+   SUBROUTINE LAPACK_SPOTRF (UPLO, N, AP, ErrStat, ErrMsg)
+   
+      ! SPOTRF computes the Cholesky factorization of a real symmetric
+      ! positive definite matrix A stored in packed format.
+      !
+      ! Internally, packed storage is converted to full storage and SPOTRF
+      ! is called.  The result is converted back to packed storage.
+      !
+      ! The factorization has the form
+      !    A = U**T * U,  if UPLO = 'U', or
+      !    A = L  * L**T,  if UPLO = 'L'.
+   
+         INTEGER,         INTENT(IN   ) :: N
+         REAL(SiKi),      INTENT(INOUT) :: AP(:)
+         INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+         CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+         CHARACTER(1),    INTENT(IN   ) :: UPLO
+   
+         REAL(SiKi), ALLOCATABLE :: A(:,:)
+         INTEGER :: I, J, IDX, INFO
+   
+         ErrStat = ErrID_None
+         ErrMsg  = ""
+   
+         IF (N <= 0) RETURN
+   
+         ALLOCATE(A(N,N))
+         A = 0.0_SiKi
+   
+         IF (UPLO == 'U') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = 1, J
+                  IDX = IDX + 1
+                  A(I,J) = AP(IDX)
+               END DO
+            END DO
+         ELSE IF (UPLO == 'L') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = J, N
+                  IDX = IDX + 1
+                  A(I,J) = AP(IDX)
+               END DO
+            END DO
+         ELSE
+            ErrStat = ErrID_FATAL
+            ErrMsg  = "LAPACK_SPOTRF: invalid UPLO value."
+            DEALLOCATE(A)
+            RETURN
+         END IF
+   
+         CALL SPOTRF (UPLO, N, A, N, INFO)
+   
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_FATAL
+            WRITE(ErrMsg,*) INFO
+            IF (INFO < 0) THEN
+               ErrMsg = "LAPACK_SPOTRF: illegal value in argument "//TRIM(ErrMsg)//"."
+            ELSE
+               ErrMsg = "LAPACK_SPOTRF: Leading minor of order "//TRIM(ErrMsg)// &
+                        " of A is not positive definite, so Cholesky factorization could not be completed."
+            END IF
+            DEALLOCATE(A)
+            RETURN
+         END IF
+   
+         IF (UPLO == 'U') THEN
+            IDX = 0
+            DO J = 1, N
+               DO I = 1, J
+                  IDX = IDX + 1
+                  AP(IDX) = A(I,J)
+               END DO
+            END DO
+         ELSE
+            IDX = 0
+            DO J = 1, N
+               DO I = J, N
+                  IDX = IDX + 1
+                  AP(IDX) = A(I,J)
+               END DO
+            END DO
+         END IF
+   
+         DEALLOCATE(A)
+         RETURN
+   
+   END SUBROUTINE LAPACK_SPOTRF
 !=======================================================================
 !> Compute the Cholesky factorization of a real symmetric positive definite matrix A stored in packed format.
 !! use LAPACK_PPTRF (nwtc_lapack::lapack_pptrf) instead of this specific function.

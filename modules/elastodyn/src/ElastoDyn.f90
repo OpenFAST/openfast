@@ -11314,13 +11314,12 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
 
    call MV_AddMeshVar(Vars%y, 'Platform', MotionFields, &
                       DatLoc(ED_y_PlatformPtMesh), &
-                      Mesh=y%PlatformPtMesh, &
-                      Flags=VF_SmallAngle)
+                      Mesh=y%PlatformPtMesh)
 
    call MV_AddMeshVar(Vars%y, 'Tower', MotionFields, &
                       DatLoc(ED_y_TowerLn2Mesh), &
                       Mesh=y%TowerLn2Mesh, &
-                      Flags=ior(VF_Line, VF_SmallAngle))
+                      Flags=VF_Line)
 
    call MV_AddMeshVar(Vars%y, 'Hub', [FieldTransDisp, FieldOrientation, FieldAngularVel], &
                       DatLoc(ED_y_HubPtMotion), &

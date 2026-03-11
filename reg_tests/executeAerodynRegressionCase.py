@@ -92,16 +92,13 @@ if not os.path.isdir(inputsDirectory):
 # Special case, copy the BAR Baseline files
 dst = os.path.join(buildDirectory, "BAR_Baseline")
 src = os.path.join(moduleDirectory, "BAR_Baseline")
-try:
+if not os.path.isdir(dst):
     rtl.copyTree(src, dst)
-except:
-    # This can fail if two processes are copying the file at the same time
-    print('>>> Copy failed')
-    import time
-    time.sleep(1)
 
 # create the local output directory and initialize it with input files 
-rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})
+if not os.path.isdir(testBuildDirectory):
+    rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})
+       # , excludeExt=['.out','.outb'])
 
 ### Run aerodyn on the test case
 if not noExec:

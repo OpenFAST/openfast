@@ -361,6 +361,10 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['MHK'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['MirrorRotor'] = read_array(f, self.fst_vt['Fst']['NRotors'], array_type=bool)
 
+        if self.fst_vt['Fst']['NRotors'] > 1:
+            raise ValueError('openfast_io does not currently support multi-rotor turbines (NRotors > 1),' + 
+                             'this feature will be added in a future release')
+
         # Environmental conditions
         f.readline()
         self.fst_vt['Fst']['Gravity']   = float_read(f.readline().split()[0])
