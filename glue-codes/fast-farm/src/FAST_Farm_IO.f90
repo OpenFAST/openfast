@@ -72,20 +72,24 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    
    WRITE (UnSum,'(/,A)') 'Ambient Wind:'
    
-   if (     farm%AWAE%p%mod_AmbWind == 1 ) then
+   select case(farm%AWAE%p%mod_AmbWind)
+   case(1,4)
       strModDescr = 'High-Fidelity Precursor'
-   elseif ( farm%AWAE%p%mod_AmbWind == 2 ) then
+   case(2)
       strModDescr = 'One InflowWind Module'
-   else   ! farm%AWAE%p%mod_AmbWind == 3
+   case(3)    
       strModDescr = 'Multiple InflowWind Modules'
-   end if
+   end select
    
-   WRITE (UnSum,'(2X,A)') 'Ambient wind model: '//trim(strModDescr)
-   if ( farm%AWAE%p%mod_AmbWind == 1 ) then
-      WRITE (UnSum,'(2X,A)') 'Ambient wind input filepath: '//trim(farm%p%WindFilePath)
-   else
-      WRITE (UnSum,'(2X,A)') 'InflowWind module input file: '//trim(farm%p%WindFilePath)
-   end if
+   write (UnSum,'(2X,A)') 'Ambient wind model: '//trim(strModDescr)
+   select case(farm%AWAE%p%mod_AmbWind)
+   case (1) 
+      write (UnSum,'(2X,A)') 'Ambient wind input filepath: '//trim(farm%p%WindFilePath)
+   case (2,3)
+      write (UnSum,'(2X,A)') 'InflowWind module input file: '//trim(farm%p%WindFilePath)
+   case (4)
+      write (UnSum,'(2X,A)') 'AMReX wind directories: '//trim(farm%p%WindFilePath)
+   end select
    
    !..................................
    ! Turbine information.
@@ -569,6 +573,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
+   CHARACTER(1024)               :: InflowPathIfW                             ! Path name of the inflow file
+   CHARACTER(1024)               :: InflowPathVTK                             ! Path name of the VTK directory
+   CHARACTER(1024)               :: InflowPathAMReX                           ! Path name of the AMReX directory
    character(1024)               :: sDummy ! Dummy string
 
    CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
@@ -579,6 +586,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ReadPrimaryFile'
    Real(ReKi)                    :: DefaultReVal ! Default real value
    real(ReKi)                    :: TmpRAry5(5)    ! Temporary array for reading in array of 5
+   real(DbKi)                    :: DT_High_IfW, DT_Low_IfW
+   real(DbKi)                    :: DT_High_VTK, DT_Low_VTK
+   real(DbKi)                    :: DT_High_AMReX, DT_Low_AMReX
 
       ! Initialize some variables:
    UnEc = -1
@@ -641,7 +651,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       END SELECT
 
    CALL ReadVar( UnIn, InputFile, p%TMax, "TMax", "Total run time (s)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple InflowWind modules, 4: high-fidelity precursor in AMReX format}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%MooringMod, "Mod_SharedMooring", "Array-level mooring handling (-) (switch) {0: none; 3: array-level MoorDyn model}", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
@@ -654,22 +664,16 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
 
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, p%DT_low, "DT_Low-VTK", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, p%DT_high, "DT_High-VTK", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, p%WindFilePath, "WindFilePath", "Path name of wind data files from ABLSolver precursor (string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   IF ( PathIsRelative( p%WindFilePath ) ) p%WindFilePath = TRIM(PriPath)//TRIM(p%WindFilePath)
+   CALL ReadVar( UnIn, InputFile, DT_Low_VTK, "DT_Low-VTK", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, DT_High_VTK, "DT_High-VTK", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, InflowPathVTK, "WindFilePath", "Path name of wind data files from ABLSolver precursor (string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   IF (PathIsRelative(InflowPathVTK)) InflowPathVTK = TRIM(PriPath)//TRIM(InflowPathVTK)
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%ChkWndFiles, "ChkWndFiles", "Check all the ambient wind files for data consistency? (flag)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    !---------------------- AMBIENT WIND: INFLOWWIND MODULE ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: InflowWind Module', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_Low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_High", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-
-   ! Ensure consistency between AWAE_Inputs and FAST.Farm time steps
-   if ( AWAE_InitInp%Mod_AmbWind == 1) AWAE_InitInp%DT_high = p%DT_high
-   if ( AWAE_InitInp%Mod_AmbWind == 1) AWAE_InitInp%DT_low  = p%DT_low
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_high = AWAE_InitInp%DT_high
+   CALL ReadVar( UnIn, InputFile, DT_Low_IfW, "DT_Low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, DT_High_IfW, "DT_High", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    ! low res
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_Low,  "nX_Low",  "Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]",   ErrStat2, ErrMsg2, UnEc); if (Failed()) return
@@ -688,9 +692,37 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nZ_High, "nZ_High", "Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]",  ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    ! inflow file
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%InflowFile, "InflowFile", "Name of file containing InflowWind module input parameters (quoted string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   IF ( PathIsRelative( AWAE_InitInp%InflowFile ) ) AWAE_InitInp%InflowFile = TRIM(PriPath)//TRIM(AWAE_InitInp%InflowFile)
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%WindFilePath = AWAE_InitInp%InflowFile  ! For the summary file
+   CALL ReadVar( UnIn, InputFile, InflowPathIfW, "InflowFile", "Name of file containing InflowWind module input parameters (quoted string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   IF (PathIsRelative(InflowPathIfW)) InflowPathIfW = TRIM(PriPath)//TRIM(InflowPathIfW)
+
+   !---------------------- AMBIENT WIND: PRECURSOR IN AMReX FORMAT ---------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in AMReX Format', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   CALL ReadVar( UnIn, InputFile, InflowPathAMReX, "WindDirPrefix", "Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   IF (PathIsRelative(InflowPathAMReX)) InflowPathAMReX = TRIM(PriPath)//TRIM(InflowPathAMReX)
+
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DirStartIndex, "DirStartIndex", "AMReX sub-volume directory suffix to consider as time=0 (quoted string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, DT_Low_AMReX, "DT_Low-AMReX", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, DT_High_AMReX, "DT_High-AMReX", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+
+   ! Ensure consistency between AWAE_Inputs and FAST.Farm time steps
+   select case (AWAE_InitInp%Mod_AmbWind)
+   case (1)
+      p%DT_low = DT_Low_VTK
+      p%DT_high = DT_High_VTK
+      p%WindFilePath = InflowPathVTK
+   case (2,3)
+      p%DT_low = DT_Low_IfW
+      p%DT_high = DT_High_IfW
+      p%WindFilePath = InflowPathIfW
+   case (4)
+      p%DT_low = DT_Low_AMReX
+      p%DT_high = DT_High_AMReX
+      p%WindFilePath = InflowPathAMReX
+   end select
+   AWAE_InitInp%dt_low = p%DT_low
+   AWAE_InitInp%dt_high = p%DT_high
+   AWAE_InitInp%InflowFile = p%WindFilePath
 
    !---------------------- WIND TURBINES ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Wind Turbines', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
@@ -702,31 +734,33 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    call AllocAry( p%WT_FASTInFile,  p%NumTurbines, 'WT_FASTInFile', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (Failed()) return
    call AllocAry( AWAE_InitInp%WT_Position, 3, p%NumTurbines, 'AWAE_InitInp%WT_Position', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (Failed()) return
 
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) then     ! Using InflowWind
+   select case (AWAE_InitInp%Mod_AmbWind)
+   case (2,3)
       call AllocAry(AWAE_InitInp%X0_high, p%NumTurbines, 'AWAE_InitInp%X0_high', ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(AWAE_InitInp%Y0_high, p%NumTurbines, 'AWAE_InitInp%Y0_high', ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(AWAE_InitInp%Z0_high, p%NumTurbines, 'AWAE_InitInp%Z0_high', ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(AWAE_InitInp%dX_high, p%NumTurbines, 'AWAE_InitInp%dX_high', ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(AWAE_InitInp%dY_high, p%NumTurbines, 'AWAE_InitInp%dY_high', ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(AWAE_InitInp%dZ_high, p%NumTurbines, 'AWAE_InitInp%dZ_high', ErrStat2, ErrMsg2); if (Failed()) return
-   end if
+   end select
 
       ! WT_Position (WT_X, WT_Y, WT_Z) and WT_FASTInFile
    do i=1,p%NumTurbines
-      if ( AWAE_InitInp%Mod_AmbWind == 1 ) then
+      select case (AWAE_InitInp%Mod_AmbWind)
+      case (1,4)
          READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i)
-      else
+      case (2,3)
          READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i)
-      end if
+      end select
       AWAE_InitInp%WT_Position(:,i) = p%WT_Position(:,i)
       CALL CheckIOS ( IOS, InputFile, 'Wind Turbine Columns', NumType, ErrStat2, ErrMsg2 ); if (Failed()) return
       IF ( UnEc > 0 ) THEN
-         if ( AWAE_InitInp%Mod_AmbWind == 1 ) then
+         select case (AWAE_InitInp%Mod_AmbWind)
+         case (1,4)
             WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), I
-         else
+         case (2,3)
             WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,6(ES11.4e2,2X),' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i), I
-         end if
-
+         end select
       END IF
       IF ( PathIsRelative( p%WT_FASTInFile(i) ) ) p%WT_FASTInFile(i) = TRIM(PriPath)//TRIM(p%WT_FASTInFile(i))
    end do
@@ -1037,13 +1071,20 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
 
    ! --- AMBIENT WIND: INFLOWWIND MODULE --- [used only for Mod_AmbWind=2 or 3] ---
    ! FIXME: this really should be checked with the turbine specific size diameter -- maybe relocate this check to AWAE or in FF after initializing all turbines?
-   if (AWAE_InitInp%Mod_AmbWind > 1) then
-      ! check that the grid is large enough to contain the turbine (only check Y and Z)
+   ! check that the grid is large enough to contain the turbine (only check Y and Z)
+   select case(AWAE_InitInp%Mod_AmbWind)
+   case (2)
+      call WrScr("Mod_AmbWind==2 will be depreciated and removed in a future release")
       do i=1,p%NumTurbines
          if (AWAE_InitInp%nY_High*AWAE_InitInp%dY_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Y (nY_High*dY_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
          if (AWAE_InitInp%nZ_High*AWAE_InitInp%dZ_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Z (nZ_High*dZ_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
-      enddo
-   endif
+      end do
+   case (3)
+      do i=1,p%NumTurbines
+         if (AWAE_InitInp%nY_High*AWAE_InitInp%dY_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Y (nY_High*dY_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+         if (AWAE_InitInp%nZ_High*AWAE_InitInp%dZ_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Z (nZ_High*dZ_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+      end do
+   end select
 
    ! --- WAKE DYNAMICS ---
    IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)

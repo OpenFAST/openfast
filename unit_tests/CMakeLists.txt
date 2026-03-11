@@ -92,3 +92,20 @@ add_custom_target(
     aerodyn_utest 
     inflowwind_utest 
 )
+
+if (AMREX_READER AND BUILD_FASTFARM)
+  # Need input files
+  add_custom_target(copy_amrex_reader_utest_files ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/modules/awae/tests/data ${CMAKE_BINARY_DIR}/unit_tests/data
+  )
+  # FAST.Farm AMReX reader test
+  add_executable(amrex_reader_utest
+    ${CMAKE_SOURCE_DIR}/modules/awae/tests/AMReX_reader_utest.F90
+    ${CMAKE_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.f90
+  )
+  target_link_libraries(amrex_reader_utest awaelib nwtclibs testdrivelib)
+  add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
+  add_dependencies(amrex_reader_utest copy_amrex_reader_utest_files)     # copy input files needed for this test
+  add_dependencies(unit_tests amrex_reader_utest)     # add to the unit_tests target
+endif()
+

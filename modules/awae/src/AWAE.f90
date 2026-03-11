@@ -1222,6 +1222,12 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
    p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
+
+   ! AMReX Wind Parameters
+   p%DirStartIndex    = InitInp%InputFileData%DirStartIndex
+   p%DirIndexLen      = len_trim(InitInp%InputFileData%DirStartIndex)
+   read(p%DirStartIndex, *) p%DirStartNum
+
    ! Wake Added Turbulence (WAT) Parameters
    p%WAT_Enabled = InitInp%WAT_Enabled
    if (p%WAT_Enabled) then
@@ -1655,20 +1661,21 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       errMsg  = ""
 
       ! Destroy InflowWind data
-      if (p%Mod_AmbWind > 1) then
-
+      select case(p%Mod_AmbWind)
+      case (2)
          call InflowWind_DestroyInput(m%u_IfW_Low, errStat, errMsg)
          call InflowWind_DestroyParam(p%IfW(0), errStat, errMsg)
          call InflowWind_DestroyOutput(m%y_IfW_Low, errStat, errMsg)
-
-         if (p%Mod_AmbWind == 3) then
-            do nt = 1,p%NumTurbines
-               call InflowWind_DestroyInput(m%u_IfW_High(nt), errStat, errMsg)
-               call InflowWind_DestroyParam(p%IfW(nt), errStat, errMsg)
-               call InflowWind_DestroyOutput(m%y_IfW_High(nt), errStat, errMsg)
-            end do
-         end if
-      end if
+      case (3)
+         call InflowWind_DestroyInput(m%u_IfW_Low, errStat, errMsg)
+         call InflowWind_DestroyParam(p%IfW(0), errStat, errMsg)
+         call InflowWind_DestroyOutput(m%y_IfW_Low, errStat, errMsg)
+         do nt = 1,p%NumTurbines
+            call InflowWind_DestroyInput(m%u_IfW_High(nt), errStat, errMsg)
+            call InflowWind_DestroyParam(p%IfW(nt), errStat, errMsg)
+            call InflowWind_DestroyOutput(m%y_IfW_High(nt), errStat, errMsg)
+         end do
+      end select
 
       ! Destroy the input data:
       call AWAE_DestroyInput( u, errStat, errMsg )
@@ -1714,7 +1721,6 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    integer(IntKi)             :: n_high_low, nt, i_hl
    integer(IntKi)             :: i,j,k,c
    real(ReKi), pointer        :: V_Grid(:,:,:,:)
-   real(SiKi), pointer        :: VelUVW(:,:)
    real(ReKi), allocatable    :: AccUVW(:,:)
    logical                    :: WriteWindVTK
    real(DbKi)                 :: t
@@ -1742,7 +1748,7 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    case (1)
    
       ! Read from file the ambient flow for the n time step
-      call ReadLowResWindFile(n, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
+      call ReadLowResWindVTK(n, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
 
    ! InflowWind-based ambient wind (single or multiple instances)
    case (2, 3)
@@ -1757,6 +1763,13 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
              lbound(m%Vamb_low,3):ubound(m%Vamb_low,3),&
              lbound(m%Vamb_low,4):ubound(m%Vamb_low,4)) => m%y_IfW_Low%VelocityUVW
       m%Vamb_Low = V_Grid
+
+   ! AMReX-based inflow
+   case (4)
+
+      call ReadWindAMReX(0, n, p, m%Vamb_low, errStat2, errMsg2)
+      if (Failed()) return
+
    end select
 
    !----------------------------------------------------------------------------
@@ -1776,9 +1789,9 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
          if (n /= 0_IntKi)   m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
 
          do i_hl=0, n_high_low
-
+            
             ! read from file the ambient flow for the current time step
-            call ReadHighResWindFile(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
+            call ReadHighResWindVTK(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
@@ -1851,6 +1864,29 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
                    lbound(m%Vamb_high(nt)%data,3):ubound(m%Vamb_high(nt)%data,3),&
                    lbound(m%Vamb_high(nt)%data,4):ubound(m%Vamb_high(nt)%data,4)) => m%y_IfW_High(nt)%VelocityUVW
             m%Vamb_high(nt)%data(:,:,:,:,i_hl+1) = V_Grid
+         end do
+
+         ! Special handling at T=0 for time slice at -DT_high.  Note that n starts at 0
+         !  -> Copy T=0 data into T=-DT_high for AD extrap/interp
+         if (n == 0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,1)
+
+      end do
+
+   ! AMReX-based ambient wind
+   case (4)
+
+      ! Loop through turbines
+      do nt = 1, p%NumTurbines
+
+         ! Copy T=T_low_previous-DT_high (end-1 index in Vamb_high) into T=T_low_now-DT_high (0 index in Vamb_high).  Note that n starts at 0
+         if (n /= 0_IntKi) m%Vamb_high(nt)%data(:,:,:,:,0) = m%Vamb_high(nt)%data(:,:,:,:,ubound(m%Vamb_high(nt)%data,5)-1)
+
+         ! Loop through high resolution grids
+         do i_hl = 0, n_high_low
+
+            call ReadWindAMReX(nt, n*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl+1), errStat2, errMsg2)
+            if (Failed()) return
+
          end do
 
          ! Special handling at T=0 for time slice at -DT_high.  Note that n starts at 0
@@ -2068,10 +2104,10 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
 
-   if ( (InputFileData%Mod_AmbWind < 1) .or. (InputFileData%Mod_AmbWind > 3) ) call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module, or 3: multiple instances of InflowWind module.', errStat, errMsg, RoutineName )
-   if ( InputFileData%Mod_AmbWind == 1 ) then
+   select case (InputFileData%Mod_AmbWind)
+   case (1,4)
       if (len_trim(InputFileData%WindFilePath) == 0) call SetErrStat ( ErrID_Fatal, 'WindFilePath must contain at least one character.', errStat, errMsg, RoutineName )
-   else
+   case (2,3)
       if (len_trim(InputFileData%InflowFile) == 0) call SetErrStat ( ErrID_Fatal, 'InflowFile must contain at least one character.', errStat, errMsg, RoutineName )
       if ( (InputFileData%nX_low < 2) .or. (InputFileData%nY_low < 2) .or. (InputFileData%nZ_low < 2) ) &
          call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
@@ -2079,7 +2115,9 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
          call SetErrStat ( ErrID_Fatal, 'The high resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
       if ( (InputFileData%dX_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) ) &
          call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
-   end if
+   case default
+      call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be 1: high-fidelity precursor in VTK format, 2: one instance of InflowWind module (will be deprecated in future), 3: multiple instances of InflowWind module, 4: high-fidelity precursor in AMReX format', errStat, errMsg, RoutineName )
+   end select
 
    if (  InputFileData%NumTurbines <   1  )  call SetErrStat ( ErrID_Fatal, 'Number of turbines must be greater than zero.', errStat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', errStat, errMsg, RoutineName )
