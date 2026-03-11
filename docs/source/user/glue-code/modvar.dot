@@ -38,16 +38,15 @@ digraph ModVarDiagram {
         <tr><td align="left">VF_RotFrame</td><td>4</td></tr>
         <tr><td align="left">VF_Linearize</td><td>8</td></tr>
         <tr><td align="left">VF_ExtLin</td><td>16</td></tr>
-        <tr><td align="left">VF_SmallAngle</td><td>32</td></tr>
-        <tr><td align="left">VF_2PI</td><td>64</td></tr>
-        <tr><td align="left">VF_WM_Rot</td><td>128</td></tr>
-        <tr><td align="left">VF_WriteOut</td><td>256</td></tr>
-        <tr><td align="left">VF_Solve</td><td>512</td></tr>
-        <tr><td align="left">VF_AeroMap</td><td>1024</td></tr>
-        <tr><td align="left">VF_DerivOrder1</td><td>2048</td></tr>
-        <tr><td align="left">VF_DerivOrder2</td><td>4096</td></tr>
-        <tr><td align="left">VF_Mapping</td><td>8192</td></tr>
-        <tr><td align="left">VF_NoLin</td><td>16384</td></tr>
+        <tr><td align="left">VF_2PI</td><td>32</td></tr>
+        <tr><td align="left">VF_WM_Rot</td><td>64</td></tr>
+        <tr><td align="left">VF_WriteOut</td><td>128</td></tr>
+        <tr><td align="left">VF_Solve</td><td>256</td></tr>
+        <tr><td align="left">VF_AeroMap</td><td>512</td></tr>
+        <tr><td align="left">VF_DerivOrder1</td><td>1024</td></tr>
+        <tr><td align="left">VF_DerivOrder2</td><td>2048</td></tr>
+        <tr><td align="left">VF_Mapping</td><td>4096</td></tr>
+        <tr><td align="left">VF_NoLin</td><td>8192</td></tr>
         </table>>;];
     
     ModVarType [shape = plain;label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="0">

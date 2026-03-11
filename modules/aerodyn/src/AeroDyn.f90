@@ -373,7 +373,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       ! -----------------------------------------------------------------
       ! Read the AeroDyn blade files, or copy from passed input
-   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat2, ErrMsg2 )
+   call ReadInputFiles( InitInp%InputFile, InputFileData, p%RootName, NumBlades, AeroProjMod, UnEcho, calcCrvAngle, ErrStat2, ErrMsg2 )
       if (Failed()) return;
          
       ! override some parameters to simplify for aero maps
@@ -6149,7 +6149,6 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    call MV_AddMeshVar(InitOut%Vars%u, "Tower", [FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
                       DatLoc(AD_u_TowerMotion), &
                       Mesh=u%TowerMotion, &
-                      Flags=VF_SmallAngle, &
                       Perturbs=[PerturbTower, Perturb, PerturbTower, PerturbTower])
 
    ! Add blade root motion

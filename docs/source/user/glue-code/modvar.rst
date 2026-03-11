@@ -132,29 +132,25 @@ Flags are combined via ``IOR`` and tested with ``MV_HasFlagsAll`` /
    * - ``VF_ExtLin``
      - 16
      - Variable is included in extended linearization output.
-   * - ``VF_SmallAngle``
-     - 32
-     - Use small-angle approximation when computing orientation differences for
-       linearization.
    * - ``VF_2PI``
-     - 64
+     - 32
      - Scalar angle with range [0, 2π] (e.g. generator azimuth).
    * - ``VF_WriteOut``
-     - 256
+     - 64
      - Output variable associated with a ``WriteOutput`` channel.
    * - ``VF_Solve``
-     - 512
+     - 256
      - Variable participates in the tight-coupling Jacobian or input-output
        convergence solve.  Set automatically by ``FAST_SolverInit``;
        module developers should not set this flag manually.
    * - ``VF_AeroMap``
-     - 1024
+     - 512
      - Variable used in aeromap computation.
    * - ``VF_Mapping``
-     - 8192
+     - 1024
      - Variable participates in a module-to-module transfer mapping.
    * - ``VF_NoLin``
-     - 16384
+     - 8192
      - Explicitly excludes a variable from both linearization and the solver
        (overrides ``VF_Linearize`` and ``VF_Solve``).
 
@@ -455,5 +451,4 @@ straightforward finite-differencing via quaternion composition
 
 When computing orientation differences for Jacobian rows, ``MV_ComputeDiff``
 computes the relative rotation between the negative and positive-perturbation
-quaternions and converts it to a rotation vector (small-angle approximation
-or full Rodrigues formula depending on ``VF_SmallAngle``).
+quaternions and converts it to a rotation vector.

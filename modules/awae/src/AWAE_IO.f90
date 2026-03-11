@@ -87,14 +87,16 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
     
-   do nt = 1, p%NumTurbines
-       ! We are only writing out the first of the high res data for a given low res time step
+   do nt= 1,p%NumTurbines
+      ! We are only writing out the first of the high res data for a given low res time step
+      ! NOTE: y%Vdist_high(nt)%data(:,:,:,:,1) is at T=t_low, and index 0 is at T=t_low-DT_high
       
       FileName = trim(p%OutFileVTKRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors3D( Un, "Velocity", p%HighRes(nt)%nXYZ, p%HighRes(nt)%oXYZ, p%HighRes(nt)%dXYZ, y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
+
+      call WrVTK_SP_vectors3D( Un, "Velocity", p%HighRes(nt)%nXYZ, p%HighRes(nt)%oXYZ, p%HighRes(nt)%dXYZ, y%Vdist_high(nt)%data(:,:,:,:,1), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
        

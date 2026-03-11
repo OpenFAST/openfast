@@ -196,6 +196,7 @@ typedef   ^ ParameterType  ReKi             dPol             -  - -   "Spatial r
 typedef   ^ ^              IntKi            Mod_AmbWind      -  - -   "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef   ^ ParameterType  IntKi            n_rp_max         -  - -   "Maximum possible number of points in the polar grid for the wake plane at each rotor" -
 typedef   ^ ParameterType  IntKi            n_high_low       -  - -   "Number of high-resolution time steps per low" -
+typedef   ^ ParameterType  IntKi            n_high_low_p1    -  - -   "Number of high-resolution time steps per low, plus one at t_low-dt_high" -
 typedef   ^ ParameterType  DbKi             dt_low           -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
 typedef   ^ ParameterType  DbKi             dt_high          -  - -   "High-resolution (FAST) time step" s
 typedef   ^ ParameterType  IntKi            NumDT            -  - -   "Number of low-resolution (FAST.Farm driver/glue code) time steps" -

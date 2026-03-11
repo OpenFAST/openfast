@@ -708,7 +708,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    end if
 
-
        ! WavePkShp - Peak shape parameter
    if ( InputFileData%WaveMod == WaveMod_JONSWAP ) then   ! Only used for JONSWAP/Pierson-Moskowitz spectrum
 
