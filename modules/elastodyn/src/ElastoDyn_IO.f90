@@ -1840,14 +1840,16 @@ CONTAINS
       character(len=8),  parameter          :: ColNames(5)=["BlFract ","StrcTwst","BMassDen","FlpStff ","EdgStff "]
       integer(IntKi)                        :: j,k
       character(len=12)                     :: TmpName,TmpNameRead
+      character(len=:), allocatable         :: HeaderLine
       ! get the number of column headers
-      numCol = CountWords( InFileInfo%Lines(CurLine) )
+      HeaderLine = InFileInfo%Lines(CurLine)
+      numCol = CountWords( HeaderLine )
       call AllocAry(ColHdrNames, numCol, 'ColHdrNames', ErrStat3, ErrMsg3 ); if (ErrStat3 >= AbortErrLev) return
-      ! get column names
-      call GetTokens( InFileInfo%Lines(CurLine), numCol, ColHdrNames, TmpFlag )
+      ! get column names (use GetWords on a local copy to avoid mutating InFileInfo%Lines)
+      call GetWords( HeaderLine, numCol, ColHdrNames, TmpFlag )
       if (TmpFlag) then
          ErrStat3 = ErrID_Fatal
-         ErrMsg3  = " Error reading header line for the blade input station table form the ElastoDyn Blade file "//trim(InFileInfo%FileList(1))
+         ErrMsg3  = " Error reading header line for the blade input station table from the ElastoDyn Blade file "//trim(InFileInfo%FileList(1))
          return
       endif
       ! Find the column number for each name.
