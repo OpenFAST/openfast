@@ -302,7 +302,13 @@ Repositories maintained by third-parties are listed below:
 
 - `WindEnergyToolbox <https://gitlab.windenergy.dtu.dk/toolbox/WindEnergyToolbox>`_: library developed by DTU, providing some support for different file formats
 
-- `FASTTool <https://github.com/TUDelft-DataDrivenControl/FASTTool>`_ : NREL FASTv8, MATLAB GUI and Simulink integration developed by TUDelft
+- `FASTTool <https://github.com/TUDelft-DataDrivenControl/FASTTool>`_ : MATLAB GUI and Simulink integration developed by TUDelft for FASTv8
+
+- `Continuous Section Field (CSF) <https://github.com/giovanniboscu/continuous-section-field>`_: a small Python utility developed by Giovanni Boscu for calculating cross sectional properties for towers.  The tool focuses on:
+
+   - Modeling non-prismatic members using ruled surfaces.
+   - Calculating sectional properties :math:`(A, I, Ip)` along the tower height.
+   - Providing a simplified estimation of torsional rigidity :math:`( J )`.
 
 
 
