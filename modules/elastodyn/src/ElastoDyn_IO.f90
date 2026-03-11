@@ -1835,7 +1835,6 @@ CONTAINS
       integer(IntKi),         intent(  out) :: numCol
       integer(IntKi),         intent(  out) :: ErrStat3
       character(ErrMsgLen),   intent(  out) :: ErrMsg3
-      logical                               :: tmpFlag
       character(len=12), allocatable        :: ColHdrNames(:)
       character(len=8),  parameter          :: ColNames(5)=["BlFract ","StrcTwst","BMassDen","FlpStff ","EdgStff "]
       integer(IntKi)                        :: j,k
@@ -1846,12 +1845,7 @@ CONTAINS
       numCol = CountWords( HeaderLine )
       call AllocAry(ColHdrNames, numCol, 'ColHdrNames', ErrStat3, ErrMsg3 ); if (ErrStat3 >= AbortErrLev) return
       ! get column names (use GetWords on a local copy to avoid mutating InFileInfo%Lines)
-      call GetWords( HeaderLine, numCol, ColHdrNames, TmpFlag )
-      if (TmpFlag) then
-         ErrStat3 = ErrID_Fatal
-         ErrMsg3  = " Error reading header line for the blade input station table from the ElastoDyn Blade file "//trim(InFileInfo%FileList(1))
-         return
-      endif
+      call GetWords(HeaderLine, ColHdrNames, numCol)
       ! Find the column number for each name.
       IdxOrder = -1
       do j=1,5
