@@ -72,7 +72,32 @@ satisfying the following criteria: :math:`\Delta t=\frac{1}{10 f_\text{max}}`, w
 for an increasing number of Craig-Bampton modes to get an idea of how many modes are needed to reach convergence 
 and see which modes contributes the most to the sytem response.
 
+OpenFAST 5.0
+~~~~~~~~~~~~
 
+With the release of OpenFAST 5.0, significant changes were made to the input files of ExtPtfm and its internal formulation. 
+Couplings between ExtPtfm and HydroDyn and between ExtPtfm and the mooring modules have been enabled to more conveniently 
+simulate a flexible floating structure. Finally, linearization with ExtPtfm is now possible.
 
+When simulating a floating structure in ExtPtfm, HydroDyn can be enabled in the glue-code to compute and provide 
+potential-flow wave excitation and radiation loads and hydrostatic loads for both rigid-body modes and additional 
+generalized degrees of freedom through the `NAddDOF` option (see HydroDyn documentation). With this setup, we need 
+the number of active modes in ExtPtfm to be equal to :math:`6+NAddDOF` in HydroDyn, with the first 6 modes being 
+rigid-body modes, followed by a number of elastic modes. 
+
+Note that if HydroDyn also contains strip-theory members, the resulting strip-theory loads will all be mapped to 
+the ExtPtfm rigid-body modes only, not the elastic modes. Therefore, users are discouraged from using strip-theory-only 
+members in HydroDyn. The same applies to marine growth and ballast/flooding in HydroDyn. However, hybrid members 
+with drag only can still be used in many cases to help obtain more relastic floater motions. The drag force tends 
+to be small and does not have a strong direct impact on the structural loading. In this case, mapping the drag force 
+to the rigid-body modes only can be an acceptable simplification. The same consideration also applies to the 
+second-order potential-flow options in HydroDyn that do no support generalized degrees of freedom, yet. 
+
+When coupling to mooring, a set of connection points must be defined in the ExtPtfm module. These connections points 
+are coupled to the fairleads in the mooring models. Generally, the connection points in ExtPtfm should be the same 
+set of points used as fairleads in the mooring model; however, they need not be exactly the same as OpenFAST automatically 
+introduces nearest-neighbor mapping between the two assuming rigid connections.
+
+Note that the above workflow with ExtPtfm coupling to HydroDyn and mooring is still a work-in-progress. 
 
 
