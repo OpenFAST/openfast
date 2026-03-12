@@ -1,6 +1,12 @@
 
 name: 'Development Pipeline'
 
+#-------------------------------------------------------------------------------
+# Notes
+# - ATLAS BLAS is used instead of OpenBLAS because it gives more consistent
+#   results when OpenMP is enabled. This is likely due to a bug in OpenBLAS.
+#-------------------------------------------------------------------------------
+
 on:
   push:
     paths-ignore:
@@ -41,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+          sudo apt-get install -y libatlas-base-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -53,7 +59,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DBLA_VENDOR:STRING=ATLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DDOUBLE_PRECISION:BOOL=OFF \
@@ -83,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+          sudo apt-get install -y libatlas-base-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -96,7 +102,7 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
-            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DBLA_VENDOR:STRING=ATLAS \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
@@ -149,7 +155,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{github.workspace}}/build
       - name: Configure build
@@ -161,7 +167,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DBLA_VENDOR:STRING=ATLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DGENERATE_TYPES:BOOL=ON \
             -DVARIABLE_TRACKING:BOOL=OFF \
@@ -220,7 +226,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev
+          sudo apt-get install -y libatlas-base-dev
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
         with:
@@ -281,7 +287,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -344,7 +350,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -401,7 +407,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -457,7 +463,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -512,7 +518,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -567,7 +573,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -619,7 +625,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build
@@ -672,7 +678,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Install openfast_io
         working-directory: ${{github.workspace}}/openfast_io
@@ -704,6 +710,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build-all-release
     env:
+      CTEST_PARALLEL_LEVEL: 2
       OMP_NUM_THREADS: 2
     steps:
       - name: Restore workspace from artifact
@@ -726,7 +733,7 @@ jobs:
           pip install -r requirements.txt
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libatlas-base-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{github.workspace}}/build

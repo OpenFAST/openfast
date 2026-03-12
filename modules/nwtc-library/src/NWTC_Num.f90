@@ -2688,45 +2688,58 @@ END FUNCTION FindValidChannelIndx
    REAL(DbKi), PARAMETER              :: LrgAngle  = 0.4_DbKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
-
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
    GetSmllRotAngsD = 0.0_DbKi
    ErrStat         = ErrID_None
-   ErrMsg          = ""
+   IF (PRESENT(ErrMsg))  ErrMsg = ""
 
       ! calculate the small angles
    GetSmllRotAngsD(1) = DCMat(2,3) - DCMat(3,2)
    GetSmllRotAngsD(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsD(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_DbKi
+   denom              = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) + 1.0_DbKi
 
-   IF ( .NOT. EqualRealNos( denom, 0.0_DbKi ) ) THEN
-      GetSmllRotAngsD = GetSmllRotAngsD / denom
-
-         ! check that the angles are, in fact, small
-      IF ( ANY( ABS(GetSmllRotAngsD) > LrgAngle ) ) THEN
-         ErrStat = ErrID_Severe
+   IF (denom < 0.0_DbKi) THEN
+      
+      ErrStat = ErrID_Fatal
+      
+      IF (PRESENT(ErrMsg)) THEN
+         ErrMsg = ' Denominator is imaginary in GetSmllRotAngs(). Matrix may not be a valid DCM.'
+      ELSE
+         CALL ProgAbort( ' Denominator is imaginary in GetSmllRotAngs(). Matrix may not be a valid DCM.', TrapErrors = .TRUE. )
+      END IF
+      
+   ELSE
+      denom = sqrt(denom)
+      
+      IF ( EqualRealNos( denom, 0.0_DbKi ) ) THEN
+      
+         ErrStat = ErrID_Fatal
 
          IF (PRESENT(ErrMsg)) THEN
-            ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+            ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
          ELSE
-            CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+            CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
          END IF
-
-      END IF
-
-   ELSE
-         ! check that the angles are, in fact, small (denom should be close to 2 if angles are small)
-      ErrStat = ErrID_Fatal
-
-      IF (PRESENT(ErrMsg)) THEN
-         ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
+      
       ELSE
-         CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
-      END IF
+         GetSmllRotAngsD = GetSmllRotAngsD / denom
 
+            ! check that the angles are, in fact, small
+         IF ( ANY( ABS(GetSmllRotAngsD) > LrgAngle ) ) THEN
+            ErrStat = ErrID_Severe
+
+            IF (PRESENT(ErrMsg)) THEN
+               ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+            ELSE
+               CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+            END IF
+
+         END IF
+         
+      END IF
    END IF
 
 
@@ -2753,41 +2766,56 @@ END FUNCTION FindValidChannelIndx
 
    GetSmllRotAngsR = 0.0_SiKi
    ErrStat         = ErrID_None
-   ErrMsg          = ""
+   IF (PRESENT(ErrMsg)) ErrMsg  = ""
 
       ! calculate the small angles
    GetSmllRotAngsR(1) = DCMat(2,3) - DCMat(3,2)
    GetSmllRotAngsR(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsR(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_SiKi
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) + 1.0_SiKi
 
-   IF ( .NOT. EqualRealNos( denom, 0.0_SiKi ) ) THEN
-      GetSmllRotAngsR = GetSmllRotAngsR / denom
 
-         ! check that the angles are, in fact, small
-      IF ( ANY( ABS(GetSmllRotAngsR) > LrgAngle ) ) THEN
-         ErrStat = ErrID_Severe
+   IF (denom < 0.0_SiKi) THEN
+      
+      ErrStat = ErrID_Fatal
+      
+      IF (PRESENT(ErrMsg)) THEN
+         ErrMsg = ' Denominator is imaginary in GetSmllRotAngs(). Matrix may not be a valid DCM.'
+      ELSE
+         CALL ProgAbort( ' Denominator is imaginary in GetSmllRotAngs(). Matrix may not be a valid DCM.', TrapErrors = .TRUE. )
+      END IF
+      
+   ELSE
+      denom = sqrt(denom)
+      
+      IF ( EqualRealNos( denom, 0.0_SiKi ) ) THEN
+      
+         ErrStat = ErrID_Fatal
 
          IF (PRESENT(ErrMsg)) THEN
-            ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+            ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
          ELSE
-            CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+            CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
          END IF
-
-      END IF
-
-   ELSE
-         ! check that the angles are, in fact, small (denom should be close to 2 if angles are small)
-      ErrStat = ErrID_Fatal
-
-      IF (PRESENT(ErrMsg)) THEN
-         ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
+      
       ELSE
-         CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
-      END IF
+         GetSmllRotAngsR = GetSmllRotAngsR / denom
 
-   END IF
+            ! check that the angles are, in fact, small
+         IF ( ANY( ABS(GetSmllRotAngsR) > LrgAngle ) ) THEN
+            ErrStat = ErrID_Severe
+
+            IF (PRESENT(ErrMsg)) THEN
+               ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+            ELSE
+               CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+            END IF
+
+         END IF
+         
+      END IF
+   END IF   
 
 
    END FUNCTION GetSmllRotAngsR
@@ -5807,6 +5835,8 @@ end function Rad2M180to180Deg
 !!   below, was derived symbolically by J. Jonkman by computing \f$UV^T\f$
 !!   by hand with verification in Mathematica.
 !!
+!! Note: this formulation has been updated with new equations from J. Jonkman, derived from
+!! using quaternions. It is accurrate longer.
 !! This routine is the inverse of GetSmllRotAngs (nwtc_num::getsmllrotangs). \n
 !! Use SmllRotTrans (nwtc_num::smllrottrans) instead of directly calling a specific routine in the generic interface. 
    SUBROUTINE SmllRotTransD( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
@@ -5825,18 +5855,15 @@ end function Rad2M180to180Deg
    CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          !< an additional message to be displayed as a warning (typically the simulation time)
 
       ! Local Variables:
+   REAL(DbKi)                          :: Half_1                                          ! = Theta1/2
+   REAL(DbKi)                          :: Half_2                                          ! = Theta2/2
+   REAL(DbKi)                          :: Half_3                                          ! = Theta3/2
+   REAL(DbKi)                          :: Theta1Sq                                        ! = Theta1^2
+   REAL(DbKi)                          :: Theta2Sq                                        ! = Theta2^2
+   REAL(DbKi)                          :: Theta3Sq                                        ! = Theta3^2
+   REAL(DbKi)                          :: w                                               ! = sqrt( 1 - Theta1^2/4 - Theta2^2/4 - Theta3^2/4)
 
-   REAL(DbKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
    REAL(DbKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(DbKi)                          :: Theta11                                         ! = Theta1^2
-   REAL(DbKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta22                                         ! = Theta2^2
-   REAL(DbKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta33                                         ! = Theta3^2
-   REAL(DbKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(DbKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-
    LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
 
@@ -5864,84 +5891,34 @@ end function Rad2M180to180Deg
 
       ! Compute some intermediate results:
 
-   Theta11      = Theta1*Theta1
-   Theta22      = Theta2*Theta2
-   Theta33      = Theta3*Theta3
+   Theta1Sq      = Theta1*Theta1
+   Theta2Sq      = Theta2*Theta2
+   Theta3Sq      = Theta3*Theta3
 
-   SqrdSum      = Theta11 + Theta22 + Theta33
-   SQRT1SqrdSum = SQRT( 1.0_DbKi + SqrdSum )
-   ComDenom     = SqrdSum*SQRT1SqrdSum
+   Half_1      = Theta1 * 0.5_DbKi
+   Half_2      = Theta2 * 0.5_DbKi
+   Half_3      = Theta3 * 0.5_DbKi
 
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_DbKi )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
-
+   w = SQRT( 1.0_DbKi - Half_1**2 - Half_2**2 - Half_3**2 )
 
       ! Define the transformation matrix:
+   TransMat(1,1) = 1.0_DbKi - (Theta2Sq + Theta3Sq) * 0.5_DbKi
+   TransMat(2,1) = Theta1*Half_2 - Theta3*w
+   TransMat(3,1) = Theta1*Half_3 + Theta2*w
 
-   IF ( ComDenom == 0.0_DbKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
+   TransMat(1,2) = Theta1*Half_2 + Theta3*w
+   TransMat(2,2) = 1.0_DbKi - (Theta1Sq + Theta3Sq) * 0.5_DbKi
+   TransMat(3,2) = Theta2*Half_3 - Theta1*w
 
-      TransMat(1,:) = (/ 1.0_DbKi, 0.0_DbKi, 0.0_DbKi /)
-      TransMat(2,:) = (/ 0.0_DbKi, 1.0_DbKi, 0.0_DbKi /)
-      TransMat(3,:) = (/ 0.0_DbKi, 0.0_DbKi, 1.0_DbKi /)
-
-   ELSE                          ! At least one angle is nonzero
-
-      TransMat(1,1) = ( Theta11*SQRT1SqrdSum + Theta22              + Theta33              )/ComDenom
-      TransMat(2,2) = ( Theta11              + Theta22*SQRT1SqrdSum + Theta33              )/ComDenom
-      TransMat(3,3) = ( Theta11              + Theta22              + Theta33*SQRT1SqrdSum )/ComDenom
-      TransMat(1,2) = (  Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(2,1) = ( -Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(1,3) = ( -Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(3,1) = (  Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(2,3) = (  Theta1*SqrdSum + Theta23S )/ComDenom
-      TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
-
-   ENDIF
-
+   TransMat(1,3) = Theta1*Half_3 - Theta2*w
+   TransMat(2,3) = Theta2*Half_3 + Theta1*w
+   TransMat(3,3) = 1.0_DbKi - (Theta1Sq + Theta2Sq) * 0.5_DbKi
 
    RETURN
    END SUBROUTINE SmllRotTransD
 !=======================================================================
 !> \copydoc nwtc_num::smllrottransd
    SUBROUTINE SmllRotTransR( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
-
-
-      ! This routine computes the 3x3 transformation matrix, TransMat,
-      !   to a coordinate system x (with orthogonal axes x1, x2, x3)
-      !   resulting from three rotations (Theta1, Theta2, Theta3) about the
-      !   orthogonal axes (X1, X2, X3) of coordinate system X.  All angles
-      !   are assummed to be small, as such, the order of rotations does
-      !   not matter and Euler angles do not need to be used.  This routine
-      !   is used to compute the transformation matrix (TransMat) between
-      !   undeflected (X) and deflected (x) coordinate systems.  In matrix
-      !   form:
-      !      {x1}   [TransMat(Theta1, ] {X1}
-      !      {x2} = [         Theta2, ]*{X2}
-      !      {x3}   [         Theta3 )] {X3}
-      !
-      ! The transformation matrix, TransMat, is the closest orthonormal
-      !   matrix to the nonorthonormal, but skew-symmetric, Bernoulli-Euler
-      !   matrix:
-      !          [   1.0    Theta3 -Theta2 ]
-      !      A = [ -Theta3   1.0    Theta1 ]
-      !          [  Theta2 -Theta1   1.0   ]
-      !
-      !   In the Frobenius Norm sense, the closest orthornormal matrix is:
-      !      TransMat = U*V^T,
-      !
-      !   where the columns of U contain the eigenvectors of A*A^T and the
-      !   columns of V contain the eigenvectors of A^T*A (^T = transpose).
-      !   This result comes directly from the Singular Value Decomposition
-      !   (SVD) of A = U*S*V^T where S is a diagonal matrix containing the
-      !   singular values of A, which are SQRT( eigenvalues of A*A^T ) =
-      !   SQRT( eigenvalues of A^T*A ).
-      !
-      ! The algebraic form of the transformation matrix, as implemented
-      !   below, was derived symbolically by J. Jonkman by computing U*V^T
-      !   by hand with verification in Mathematica.
-      !
-      ! This routine is the inverse of GetSmllRotAngs()
 
       ! Passed Variables:
 
@@ -5957,18 +5934,15 @@ end function Rad2M180to180Deg
    CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          ! an additional message to be displayed as a warning (typically the simulation time)
 
       ! Local Variables:
+   REAL(SiKi)                          :: Half_1                                          ! = Theta1/2
+   REAL(SiKi)                          :: Half_2                                          ! = Theta2/2
+   REAL(SiKi)                          :: Half_3                                          ! = Theta3/2
+   REAL(SiKi)                          :: Theta1Sq                                        ! = Theta1^2
+   REAL(SiKi)                          :: Theta2Sq                                        ! = Theta2^2
+   REAL(SiKi)                          :: Theta3Sq                                        ! = Theta3^2
+   REAL(SiKi)                          :: w                                               ! = sqrt( 1 - Theta1^2/4 - Theta2^2/4 - Theta3^2/4)
 
-   REAL(SiKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
    REAL(SiKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(SiKi)                          :: Theta11                                         ! = Theta1^2
-   REAL(SiKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(SiKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(SiKi)                          :: Theta22                                         ! = Theta2^2
-   REAL(SiKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(SiKi)                          :: Theta33                                         ! = Theta3^2
-   REAL(SiKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(SiKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-
    LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
 
@@ -5996,41 +5970,28 @@ end function Rad2M180to180Deg
 
       ! Compute some intermediate results:
 
-   Theta11      = Theta1*Theta1
-   Theta22      = Theta2*Theta2
-   Theta33      = Theta3*Theta3
+   Theta1Sq      = Theta1*Theta1
+   Theta2Sq      = Theta2*Theta2
+   Theta3Sq      = Theta3*Theta3
 
-   SqrdSum      = Theta11 + Theta22 + Theta33
-   SQRT1SqrdSum = SQRT( 1.0_ReKi + SqrdSum )
-   ComDenom     = SqrdSum*SQRT1SqrdSum
+   Half_1      = Theta1 * 0.5_SiKi
+   Half_2      = Theta2 * 0.5_SiKi
+   Half_3      = Theta3 * 0.5_SiKi
 
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Siki )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Siki )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Siki )
-
+   w = SQRT( 1.0_SiKi - Half_1**2 - Half_2**2 - Half_3**2 )
 
       ! Define the transformation matrix:
+   TransMat(1,1) = 1.0_SiKi - (Theta2Sq + Theta3Sq) * 0.5_SiKi
+   TransMat(2,1) = Theta1*Half_2 - Theta3*w
+   TransMat(3,1) = Theta1*Half_3 + Theta2*w
 
-   IF ( ComDenom == 0.0_ReKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
+   TransMat(1,2) = Theta1*Half_2 + Theta3*w
+   TransMat(2,2) = 1.0_SiKi - (Theta1Sq + Theta3Sq) * 0.5_SiKi
+   TransMat(3,2) = Theta2*Half_3 - Theta1*w
 
-      TransMat(1,:) = (/ 1.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
-      TransMat(2,:) = (/ 0.0_SiKi, 1.0_SiKi, 0.0_SiKi /)
-      TransMat(3,:) = (/ 0.0_SiKi, 0.0_SiKi, 1.0_SiKi /)
-
-   ELSE                          ! At least one angle is nonzero
-
-      TransMat(1,1) = ( Theta11*SQRT1SqrdSum + Theta22              + Theta33              )/ComDenom
-      TransMat(2,2) = ( Theta11              + Theta22*SQRT1SqrdSum + Theta33              )/ComDenom
-      TransMat(3,3) = ( Theta11              + Theta22              + Theta33*SQRT1SqrdSum )/ComDenom
-      TransMat(1,2) = (  Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(2,1) = ( -Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(1,3) = ( -Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(3,1) = (  Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(2,3) = (  Theta1*SqrdSum + Theta23S )/ComDenom
-      TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
-
-   ENDIF
-
+   TransMat(1,3) = Theta1*Half_3 - Theta2*w
+   TransMat(2,3) = Theta2*Half_3 + Theta1*w
+   TransMat(3,3) = 1.0_SiKi - (Theta1Sq + Theta2Sq) * 0.5_SiKi
 
    RETURN
    END SUBROUTINE SmllRotTransR
