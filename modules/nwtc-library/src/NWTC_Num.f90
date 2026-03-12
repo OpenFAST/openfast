@@ -80,7 +80,6 @@ MODULE NWTC_Num
    INTEGER, PARAMETER :: kernelType_TRIWEIGHT     = 4
    INTEGER, PARAMETER :: kernelType_TRICUBE       = 5
    INTEGER, PARAMETER :: kernelType_GAUSSIAN      = 6
-
    
       ! constants for output formats
    INTEGER, PARAMETER                        :: Output_in_Native_Units = 0
@@ -7278,5 +7277,184 @@ end function Rad2M180to180Deg
       end if
    
    END SUBROUTINE fZero_R8
+!=======================================================================
+   ! Copy of EigenSolve from SubDyn, migrated here to use for beamdyn modal damping.
+   !> Return eigenvalues, Omega, and eigenvectors
+   SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMsg )
+      USE NWTC_LAPACK, only: LAPACK_ggev
+
+      INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
+      REAL(R8Ki),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix
+      REAL(R8Ki),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix
+      LOGICAL,                 INTENT(IN   )    :: bCheckSingularity                  ! If True, the solver will fail if rigid modes are present
+      REAL(R8Ki),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
+      REAL(R8Ki),              INTENT(INOUT)    :: Omega(N)      !< Returned Eigenvalues
+      INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
+      CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
+      ! LOCALS
+      REAL(R8Ki), ALLOCATABLE                   :: WORK (:),  VL(:,:), AlphaR(:), AlphaI(:), BETA(:) ! eigensolver variables
+      INTEGER                                   :: i
+      INTEGER                                   :: LWORK                          !variables for the eigensolver
+      INTEGER,    ALLOCATABLE                   :: KEY(:)
+      INTEGER(IntKi)                            :: ErrStat2
+      CHARACTER(ErrMsgLen)                      :: ErrMsg2
+      REAL(R8Ki) :: normA
+      REAL(R8Ki) :: Omega2(N)  !< Squared eigenvalues
+      REAL(R8Ki), parameter :: MAX_EIGENVALUE = HUGE(1.0_ReKi) ! To avoid overflow when switching to ReKi
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! allocate working arrays and return arrays for the eigensolver
+      LWORK=8*N + 16  !this is what the eigensolver wants  >> bjj: +16 because of MKL ?ggev documenation ( "lwork >= max(1, 8n+16) for real flavors"), though LAPACK documenation says 8n is fine
+      !bjj: there seems to be a memory problem in *GGEV, so I'm making the WORK array larger to see if I can figure it out
+      CALL AllocAry( Work,    LWORK, 'Work',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+      CALL AllocAry( AlphaR,  N,     'AlphaR', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+      CALL AllocAry( AlphaI,  N,     'AlphaI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+      CALL AllocAry( Beta,    N,     'Beta',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+      CALL AllocAry( VL,      N,  N, 'VL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+      CALL AllocAry( KEY,     N,     'KEY',    ErrStat2, ErrMsg2 ); if(Failed()) return
+
+      ! --- Eigenvalue  analysis
+      ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
+      !       DGGEV seems to work better, so I'm making these variables R8Ki (which is set to R8Ki for now)   - bjj 4/25/2014
+      ! bjj: This comes from the LAPACK documentation:
+      !   Note: the quotients AlphaR(j)/BETA(j) and AlphaI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
+      !   Thus, the user should avoid naively computing the ratio Alpha/beta.  However, AlphaR and AlphaI will be always less
+      !   than and usually comparable with norm(A) in magnitude, and BETA always less than and usually comparable with norm(B).
+      ! Omega2=AlphaR/BETA  !Note this may not be correct if AlphaI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
+      CALL  LAPACK_ggev('N','V',N ,K, M, AlphaR, AlphaI, Beta, VL, EigVect, WORK, LWORK, ErrStat2, ErrMsg2)
+      if(Failed()) return
+
+      ! --- Determining and sorting eigen frequencies
+      Omega2(:) =0.0_R8Ki
+      DO I=1,N !Initialize the key and calculate Omega
+         KEY(I)=I
+         !Omega2(I) = AlphaR(I)/Beta(I)
+         if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
+            ! --- Beta =0
+            if (bCheckSingularity) call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
+            Omega2(I) = MAX_EIGENVALUE
+         elseif ( EqualRealNos(real(AlphaI(I),ReKi),0.0_ReKi) ) THEN
+            ! --- Real Eigenvalues
+            IF ( AlphaR(I)<0.0_R8Ki ) THEN
+               if ( (AlphaR(I)/Beta(I))<1e-6_R8Ki ) then
+                  ! Tolerating very small negative eigenvalues
+                  if (bCheckSingularity) call WrScr('[INFO] Negative eigenvalue found with small norm (system may contain rigid body mode)')
+                  Omega2(I)=0.0_R8Ki
+               else
+                  if (bCheckSingularity) call WrScr('[WARN] Negative eigenvalue found, system may be ill-conditioned.')
+                  Omega2(I)=AlphaR(I)/Beta(I)
+               endif
+            else
+               Omega2(I) = AlphaR(I)/Beta(I)
+            endif
+         else
+            ! --- Complex Eigenvalues
+            normA = sqrt(AlphaR(I)**2 + AlphaI(I)**2)
+            if ( (normA/Beta(I))<1e-6_R8Ki ) then
+               ! Tolerating very small eigenvalues with imaginary part
+               if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small norm, approximating as 0')
+               Omega2(I) = 0.0_R8Ki
+            elseif ( abs(AlphaR(I))>1e3_R8Ki*abs(AlphaI(I)) ) then
+               ! Tolerating very small imaginary part compared to real part... (not pretty)
+               if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with small Im compare to Re')
+               Omega2(I) = AlphaR(I)/Beta(I)
+            else
+               if (bCheckSingularity) call WrScr('[WARN] Complex eigenvalue found with large imaginary value)')
+               Omega2(I) = MAX_EIGENVALUE
+            endif
+            !call Fatal('Complex eigenvalue found, system may be ill-conditioned'); return
+         endif
+         ! Capping to avoid overflow
+         if (Omega2(I)> MAX_EIGENVALUE) then
+            Omega2(I) = MAX_EIGENVALUE
+         endif
+      enddo
+
+      ! Sorting. LASRT has issues for double precision 64 bit on windows
+      !CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return
+      CALL sort_in_place(Omega2,KEY)
+
+      ! --- Sorting eigen vectors
+      ! KEEP ME: scaling of the eigenvectors using generalized mass =identity criterion
+      ! ALLOCATE(normcoeff(N,N), STAT = ErrStat )
+      ! result1 = matmul(M,EigVect)
+      ! result2 = matmul(transpose(EigVect),result1)
+      ! normcoeff=sqrt(result2)  !This should be a diagonal matrix which contains the normalization factors
+      ! normcoeff=sqrt(matmul(transpose(EigVect),matmul(M,EigVect)))  !This should be a diagonal matrix which contains the normalization factors
+      VL=EigVect  !temporary storage for sorting EigVect
+      DO I=1,N
+         !EigVect(:,I)=VL(:,KEY(I))/normcoeff(KEY(I),KEY(I))  !reordered and normalized
+         EigVect(:,I)=VL(:,KEY(I))  !just reordered as Huimin had a normalization outside of this one
+      ENDDO
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+
+      ! --- Return Omega (capped by huge(ReKi)) and check for singularity
+      Omega(:) = 0.0_R8Ki
+      do I=1,N
+         if (EqualRealNos(real(Omega2(I),ReKi), 0.0_ReKi)) then  ! NOTE: may be necessary for some corner numerics
+            Omega(i)=0.0_R8Ki
+            if (bCheckSingularity) then
+               call Fatal('Zero eigenvalue found, system may contain rigid body mode'); return
+            endif
+         elseif (Omega2(I)>0) then
+            Omega(i)=sqrt(Omega2(I))
+         else
+            ! Negative eigenfrequency
+            print*,'>>> Wrong eigenfrequency, Omega^2=',Omega2(I) ! <<< This should never happen
+            Omega(i)= 0.0_R8Ki
+            call Fatal('Negative eigenvalue found, system may be ill-conditioned'); return
+         endif
+      enddo
+
+      CALL CleanupEigen()
+      RETURN
+
+   CONTAINS
+      LOGICAL FUNCTION Failed()
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'EigenSolve')
+         Failed =  ErrStat >= AbortErrLev
+         if (Failed) call CleanUpEigen()
+      END FUNCTION Failed
+
+      SUBROUTINE Fatal(ErrMsg_in)
+         character(len=*), intent(in) :: ErrMsg_in
+         CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'EigenSolve');
+         CALL CleanUpEigen()
+      END SUBROUTINE Fatal
+
+      SUBROUTINE CleanupEigen()
+         IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
+         IF (ALLOCATED(AlphaR)) DEALLOCATE(AlphaR)
+         IF (ALLOCATED(AlphaI)) DEALLOCATE(AlphaI)
+         IF (ALLOCATED(Beta)  ) DEALLOCATE(Beta)
+         IF (ALLOCATED(VL)    ) DEALLOCATE(VL)
+         IF (ALLOCATED(KEY)   ) DEALLOCATE(KEY)
+      END SUBROUTINE CleanupEigen
+
+      pure subroutine sort_in_place(a,key)
+         real(R8Ki), intent(inout), dimension(:) :: a
+         integer(IntKi), intent(inout), dimension(:) :: key
+         integer(IntKi) :: tempI
+         real(R8Ki) :: temp
+         integer(IntKi) :: i, j
+         do i = 2, size(a)
+            j = i - 1
+            temp  = a(i)
+            tempI = key(i)
+            do while (j>=1 .and. a(j)>temp)
+               a(j+1) = a(j)
+               key(j+1) = key(j)
+               j = j - 1
+               if (j<1) then
+                  exit
+               endif
+            end do
+            a(j+1)   = temp
+            key(j+1) = tempI
+         end do
+      end subroutine sort_in_place
+   END SUBROUTINE EigenSolve
 !=======================================================================
 END MODULE NWTC_Num

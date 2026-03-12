@@ -70,6 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
     INTEGER(IntKi)  :: Mod_AmbWind = 0_IntKi      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing InflowWind module input parameters [-]
+    character(12)  :: DirStartIndex      !< Starting directory index suffix for AMReX wind [-]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X0_high      !< X-component of the origin of the high-resolution spatial domain for each turbine [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y0_high      !< Y-component of the origin of the high-resolution spatial domain for each turbine [m]
@@ -224,6 +225,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_AmbWind = 0_IntKi      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
     INTEGER(IntKi)  :: n_rp_max = 0_IntKi      !< Maximum possible number of points in the polar grid for the wake plane at each rotor [-]
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low [-]
+    INTEGER(IntKi)  :: n_high_low_p1 = 0_IntKi      !< Number of high-resolution time steps per low, plus one at t_low-dt_high [-]
     REAL(DbKi)  :: dt_low = 0.0_R8Ki      !< Low-resolution (FAST.Farm driver/glue code) time step [s]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     INTEGER(IntKi)  :: NumDT = 0_IntKi      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
@@ -231,6 +233,11 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [-]
     REAL(ReKi)  :: C_ScaleDiam = 0.0_ReKi      !< Normalized wake volume radius for wake meandering (normalized by the wake diameter) [-]
     INTEGER(IntKi)  :: Mod_Projection = 0_IntKi      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
+    character(12)  :: DirStartIndex      !< Starting directory index suffix for AMReX wind [-]
+    INTEGER(IntKi)  :: DirIndexLen = 0_IntKi      !< Number of characters in directory index [-]
+    INTEGER(IntKi)  :: DirStartNum = 0_IntKi      !< Starting directory index number for AMReX wind [-]
+    INTEGER(IntKi)  :: DirIndexDeltaLow = 0_IntKi      !< Directory index delta for low-resolution AMReX wind [-]
+    INTEGER(IntKi)  :: DirIndexDeltaHigh = 0_IntKi      !< Directory index delta for high-resolution AMReX wind [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
     INTEGER(IntKi)  :: WrDisSkp1 = 0_IntKi      !< Number of time steps to skip plus one [-]
     LOGICAL  :: WrDisWind = .false.      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
@@ -456,6 +463,7 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    DstInputFileTypeData%C_Meander = SrcInputFileTypeData%C_Meander
    DstInputFileTypeData%Mod_AmbWind = SrcInputFileTypeData%Mod_AmbWind
    DstInputFileTypeData%InflowFile = SrcInputFileTypeData%InflowFile
+   DstInputFileTypeData%DirStartIndex = SrcInputFileTypeData%DirStartIndex
    DstInputFileTypeData%dt_high = SrcInputFileTypeData%dt_high
    if (allocated(SrcInputFileTypeData%X0_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%X0_high)
@@ -618,6 +626,7 @@ subroutine AWAE_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%C_Meander)
    call RegPack(RF, InData%Mod_AmbWind)
    call RegPack(RF, InData%InflowFile)
+   call RegPack(RF, InData%DirStartIndex)
    call RegPack(RF, InData%dt_high)
    call RegPackAlloc(RF, InData%X0_high)
    call RegPackAlloc(RF, InData%Y0_high)
@@ -668,6 +677,7 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_AmbWind); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InflowFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirStartIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%X0_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y0_high); if (RegCheckErr(RF, RoutineName)) return
@@ -2055,6 +2065,7 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Mod_AmbWind = SrcParamData%Mod_AmbWind
    DstParamData%n_rp_max = SrcParamData%n_rp_max
    DstParamData%n_high_low = SrcParamData%n_high_low
+   DstParamData%n_high_low_p1 = SrcParamData%n_high_low_p1
    DstParamData%dt_low = SrcParamData%dt_low
    DstParamData%dt_high = SrcParamData%dt_high
    DstParamData%NumDT = SrcParamData%NumDT
@@ -2062,6 +2073,11 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%C_Meander = SrcParamData%C_Meander
    DstParamData%C_ScaleDiam = SrcParamData%C_ScaleDiam
    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
+   DstParamData%DirStartIndex = SrcParamData%DirStartIndex
+   DstParamData%DirIndexLen = SrcParamData%DirIndexLen
+   DstParamData%DirStartNum = SrcParamData%DirStartNum
+   DstParamData%DirIndexDeltaLow = SrcParamData%DirIndexDeltaLow
+   DstParamData%DirIndexDeltaHigh = SrcParamData%DirIndexDeltaHigh
    if (allocated(SrcParamData%IfW)) then
       LB(1:1) = lbound(SrcParamData%IfW)
       UB(1:1) = ubound(SrcParamData%IfW)
@@ -2248,6 +2264,7 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%Mod_AmbWind)
    call RegPack(RF, InData%n_rp_max)
    call RegPack(RF, InData%n_high_low)
+   call RegPack(RF, InData%n_high_low_p1)
    call RegPack(RF, InData%dt_low)
    call RegPack(RF, InData%dt_high)
    call RegPack(RF, InData%NumDT)
@@ -2255,6 +2272,11 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%C_Meander)
    call RegPack(RF, InData%C_ScaleDiam)
    call RegPack(RF, InData%Mod_Projection)
+   call RegPack(RF, InData%DirStartIndex)
+   call RegPack(RF, InData%DirIndexLen)
+   call RegPack(RF, InData%DirStartNum)
+   call RegPack(RF, InData%DirIndexDeltaLow)
+   call RegPack(RF, InData%DirIndexDeltaHigh)
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
       call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
@@ -2324,6 +2346,7 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Mod_AmbWind); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_rp_max); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_high_low); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_high_low_p1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_low); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dt_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumDT); if (RegCheckErr(RF, RoutineName)) return
@@ -2331,6 +2354,11 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_ScaleDiam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_Projection); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirStartIndex); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirIndexLen); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirStartNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirIndexDeltaLow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DirIndexDeltaHigh); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%IfW)) deallocate(OutData%IfW)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

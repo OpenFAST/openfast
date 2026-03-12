@@ -260,21 +260,13 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
 
       IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1) THEN
          SeaSt%InitInp%hasCurrField = .TRUE.
+         SeaSt%InitInp%CurrField => ADI%p%AD%FlowField
       ELSE
          SeaSt%InitInp%hasCurrField = .FALSE.
       END IF
 
       CALL SeaSt_Init( SeaSt%InitInp, SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherState, SeaSt%y, SeaSt%m, dvr%dt, SeaSt%InitOut, ErrStat, ErrMsg )
-      
-      IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1 ) THEN ! MHK turbine
-         ! Simulating an MHK turbine; load dynamic current from IfW
-         SeaSt%p%WaveField%CurrField  => ADI%p%AD%FlowField
-         SeaSt%p%WaveField%hasCurrField = .TRUE.
-         ! Set AD pointers to wavefield
-         ADI%p%AD%WaveField => SeaSt%InitOut%WaveField
-      ELSE ! Wind turbine
-         SeaSt%p%WaveField%hasCurrField = .FALSE.
-      END IF
+      ADI%p%AD%WaveField => SeaSt%InitOut%WaveField
 
       if (iCase==1) then
          call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, SeaSt%InitOut%WriteOutputHdr, SeaSt%InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
@@ -871,7 +863,7 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          call interpTimeValue(wt%hub%motion, time, wt%hub%iMotion, hubMotion)
          !print*,hubMotion
          wt%hub%rotSpeed  = hubMotion(2)
-         wt%hub%rotAcc    = hubMotion(2)
+         wt%hub%rotAcc    = hubMotion(3)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
       else if (wt%hub%motionType == idHubMotionUserFunction) then
          ! We call a user-defined function to determined the azimuth, speed (and potentially acceleration...)

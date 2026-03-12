@@ -533,16 +533,8 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry)
       j = mod(iLin - 1, 3)                      ! component being modified (0, 1, 2)
       i = i - j                                 ! index of start of quaternion parameters (3)
       quat = BaseAry(i:i + 2)                   ! Current quat parameters value
-      if (MV_HasFlagsAll(Var, VF_SmallAngle)) then
-         dcm = quat_to_dcm(quat)
-         rv = GetSmllRotAngs(dcm, ErrStat, ErrMsg)
-         rv(j + 1) = rv(j + 1) + Perturb
-         call SmllRotTrans('linearization perturbation', rv(1), rv(2), rv(3), dcm, ErrStat=ErrStat, ErrMsg=ErrMsg)
-         quat = dcm_to_quat(dcm)
-      else
-         quat_p = perturb_quat(Perturb, j + 1)     ! Quaternion of perturbed angle
-         quat = quat_compose(quat, quat_p)         ! Compose perturbation and current rotation
-      end if
+      quat_p = perturb_quat(Perturb, j + 1)     ! Quaternion of perturbed angle
+      quat = quat_compose(quat, quat_p)         ! Compose perturbation and current rotation
       PerturbAry(i:i + 2) = quat                ! Save perturbed quaternion in array
    else
       PerturbAry(i) = PerturbAry(i) + Perturb   ! Add perturbation directly
@@ -580,21 +572,11 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             ! If flag set to use small angle rotations
             if (UseSmallRotAngles) then
 
-               ! If variable has flag to use small angles when computing difference
-               if (MV_HasFlagsAll(VarAry(i), VF_SmallAngle)) then
+               ! Calculate relative rotation from negative to positive perturbation
+               delta = quat_compose(-quat_neg, quat_pos)
 
-                  ang_pos = GetSmllRotAngs(quat_to_dcm(quat_pos), ErrStat, ErrMsg)
-                  ang_neg = GetSmllRotAngs(quat_to_dcm(quat_neg), ErrStat, ErrMsg)
-
-                  DiffAry(k:k + 2) = ang_pos - ang_neg
-               else
-
-                  ! Calculate relative rotation from negative to positive perturbation
-                  delta = quat_compose(-quat_neg, quat_pos)
-
-                  ! Convert relative rotation from quaternion to rotation vector
-                  DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg)
-               end if
+               ! Convert relative rotation from quaternion to rotation vector
+               DiffAry(k:k + 2) = GetSmllRotAngs(quat_to_dcm(delta), ErrStat, ErrMsg)
 
             else
 

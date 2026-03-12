@@ -21,7 +21,7 @@ testsuites = [ &
 total_tests = 0
 do is = 1, size(testsuites)
    write (error_unit, fmt) "Testing:", testsuites(is)%name
-   call run_testsuite(testsuites(is)%collect, error_unit, stat)
+   call run_testsuite(testsuites(is)%collect, error_unit, stat, parallel=.false.)
 end do
 
 if (stat > 0) then

@@ -107,6 +107,7 @@ jobs:
             -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
             -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
             -DBUILD_FASTFARM:BOOL=ON \
+            -DAMREX_READER=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{github.workspace}}/build
@@ -116,7 +117,7 @@ jobs:
         run: |
           tar -cvf workspace.tar -C ${{github.workspace}} \
           --exclude='*.a' --exclude='*.o' --exclude='build/ftnmods' \
-          --exclude='.git' --exclude='docs' --exclude='vs-build' \
+          --exclude='docs' --exclude='vs-build' \
           .
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v4
@@ -166,6 +167,7 @@ jobs:
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DAMREX_READER=ON \
             ${GITHUB_WORKSPACE}
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all

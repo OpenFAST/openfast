@@ -605,6 +605,46 @@ where :math:`{\underline{\underline{O}}}_{12}` and
 matrices of :math:`\mathcal{{\underline{\underline{O}}}}` and
 :math:`\mathcal{{\underline{\underline{G}}}}` as
 :math:`{\underline{\underline{C}}}_{12}` in Eq. :eq:`E1-PartC`.
+Modal Damping
+-------------
+
+In addition to the stiffness-proportional viscous damping described above, BeamDyn
+also supports modal damping. This is currently only supported when run in tight coupling
+with OpenFAST. When modal damping is selected (``damp_flag = 2``), 
+BeamDyn computes the natural frequencies and mode shapes of the blade and applies 
+damping in the modal coordinates.
+
+The modal damping approach constructs a damping matrix :math:`{\underline{\underline{C}}}_{modal}` 
+based on user-specified modal damping ratios :math:`\zeta_i` for modes :math:`i = 1, 2, \ldots, n_{modes}`.
+Past the user-specified :math:`n_{modes}`, BeamDyn assigns :math:`\zeta_i` to grow proportional to the
+modal natural frequency and match the last prescribed :math:`\zeta_i` value.
+The modal damping matrix is defined in terms of the modal properties:
+
+.. math::
+       :label: ModalDamping
+
+       {\underline{\underline{C}}}_{modal} = {\underline{\underline{\Phi}}}^{-T} {\underline{\underline{Z}}} {\underline{\underline{\Phi}}}^{-1} 
+       = {\underline{\underline{M}}} {\underline{\underline{\Phi}}} {\underline{\underline{Z}}} {\underline{\underline{\Phi}}}^T {\underline{\underline{M}}}
+
+
+where :math:`\underline{\underline{Z}}` is a diagonal matrix with diagonal entry :math:`i` equal to
+:math:`2 \omega_i \zeta_i` for natural frequency in rad/s of :math:`\omega_i`.
+Additionally, :math:`\underline{\underline{\Phi}}` is the matrix of mass-normalized mode shapes
+(each as a column).
+:math:`\underline{\underline{M}}` is the mass matrix after the quasi-static initialization.
+
+At each time step, a vector of nodal velocities is calculated subtracting off the rigid body motion of the root.
+This vector of velocities is rotated at each node to be aligned with the beam as initialized.
+Damping forces at nodes are then simply the product of the damping matrix and the vector of velocities.
+These forces are then rotated back to the global coordinates with the inverse of the velocity rotation.
+The extra rotations appear to give better modal damping results than fixing the damping matrix in the
+root frame.
+
+Modal damping gives the user mode-specific control of damping levels to better match
+experiments or theoretical damping predictions.
+Furthermore, modal damping need not grow proportional to frequency (as prescribed by
+stiffness proportional damping). Rather, more constant damping factors across frequency
+can be used as have been observed in some experiments and model predictions.
 
 .. _convergence-criterion:
 
@@ -637,7 +677,8 @@ Time integration is performed using the generalized-\ :math:`\alpha`
 scheme in BeamDyn, which is an unconditionally stable (for linear
 systems), second-order accurate algorithm. The scheme allows for users
 to choose integration parameters that introduce high-frequency numerical
-dissipation. More details regarding the generalized-\ :math:`\alpha`
+dissipation. The amount of numerical dissipation is controlled by the user-specified
+spectral radius at infinity, :math:`\rho_{\infty}`. More details regarding the generalized-\ :math:`\alpha`
 method can be found in :cite:`Chung-Hulbert:1993,Bauchau:2010`.
 
 Calculation of Reaction Loads
@@ -651,14 +692,14 @@ mode), the reaction loads at the root are needed to satisfy equality of
 the governing equations. The reaction loads at the root are also the
 loads passing from blade to hub in a full turbine analysis.
 
-The governing equations in Eq. :eq:`GovernGEBT-1-2` can be recast in a compact form
+The governing equations in Eq. :eq:`GovernGEBT-1-2` can be recast in a compact form
 
 .. math::
    :label: CompactGovern
 
    {\underline{\mathcal{F}}}^I - {\underline{\mathcal{F}}}^{C\prime} + {\underline{\mathcal{F}}}^D = {\underline{\mathcal{F}}}^{ext}
 
-with all the vectors defined in Section [sec:LinearProcess]. At the
+with all the vectors defined in Section [sec:LinearProcess]. At the
 blade root, the governing equation is revised as
 
 .. math::
@@ -668,14 +709,14 @@ blade root, the governing equation is revised as
 
 where :math:`{\underline{\mathcal{F}}}^R = \left[ {\underline{F}}^R~~~{\underline{M}}^R\right]^T`
 is the reaction force vector and it can be solved from
-Eq. :eq:`CompactGovernRoot` given that the motion fields are known at this
+Eq. :eq:`CompactGovernRoot` given that the motion fields are known at this
 point.
 
 Calculation of Blade Loads
 --------------------------
 
 BeamDyn can also calculate the blade loads at each finite element node
-along the blade axis. The governing equation in Eq. :eq:`CompactGovern` are
+along the blade axis. The governing equation in Eq. :eq:`CompactGovern` are
 recast as
 
 .. math::

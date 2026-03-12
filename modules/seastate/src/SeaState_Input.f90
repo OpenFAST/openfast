@@ -697,12 +697,16 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
       ! WaveTp - Peak spectral period.
-   if ( InputFileData%Waves%WaveTp <= 0.0 )  then
-      call SetErrStat( ErrID_Fatal,'WaveTp must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-      return
+   if ( InputFileData%WaveMod == WaveMod_Regular      .OR. &
+        InputFileData%WaveMod == WaveMod_RegularUsrPh .OR. &
+        InputFileData%WaveMod == WaveMod_JONSWAP ) then
+
+      if ( InputFileData%Waves%WaveTp <= 0.0_SiKi )  then
+         call SetErrStat( ErrID_Fatal,'WaveTp must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+
    end if
-
-
 
        ! WavePkShp - Peak shape parameter
    if ( InputFileData%WaveMod == WaveMod_JONSWAP ) then   ! Only used for JONSWAP/Pierson-Moskowitz spectrum

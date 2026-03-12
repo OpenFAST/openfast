@@ -19,4 +19,5 @@ InflowWind Users Guide and Theory Manual
    
    driver.rst
    input.rst
+   user_defined.rst
    appendix.rst

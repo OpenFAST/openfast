@@ -13,11 +13,10 @@ from pathlib import Path
 from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
 
 
-
-# Exercising the  various OpenFAST modules
+# Exercising the various OpenFAST modules
 FOLDERS_TO_RUN = [
     "AWT_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn"
-    # "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn"
+    "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_YFree_WSt"                          , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_WSt_StartUpShutDown"                , # "openfast;elastodyn;aerodyn;servodyn"
@@ -56,6 +55,7 @@ FOLDERS_TO_RUN = [
     "5MW_Land_DLL_WTurb_ADsk"                , # "openfast;elastodyn;aerodisk"
     "5MW_Land_DLL_WTurb_ADsk_SED"            , # "openfast;simple-elastodyn;aerodisk"
     "5MW_Land_DLL_WTurb_SED"                 , # "openfast;simple-elastodyn;aerodyn"
+    # "5MW_MRSemi_DLL_WSt_WavesIrr"            , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore;subdyn;olaf;multirotor"
 ]
 
 

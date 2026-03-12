@@ -64,6 +64,9 @@ ElastoDyn                                     79       PBrIner(3)           200 
 ElastoDyn                                     80       BlPIner(1)           28578         BlPIner(1)  - Pitch inertia of an undeflected blade, blade 1 (kg m^2)
 ElastoDyn                                     81       BlPIner(2)           28578         BlPIner(2)  - Pitch inertia of an undeflected blade, blade 2 (kg m^2)
 ElastoDyn                                     82       BlPIner(3)           28578         BlPIner(3)  - Pitch inertia of an undeflected blade, blade 3 (kg m^2) [unused for 2 blades]
+BeamDyn                                       10                            ------ Modal Damping [used only if damp_type=2] --------------------------------
+BeamDyn                                       11       n_modes              3             n_modes     - Number of modal damping coefficients (-)
+BeamDyn                                       12       zeta                 0.1, 0.2, 0.3 zeta        - Damping coefficients for mode 1 through n_modes
 ServoDyn                                      9        PitNeut(1)           0             PitNeut(1)  - Blade 1 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
 ServoDyn                                      10       PitNeut(2)           0             PitNeut(2)  - Blade 2 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
 ServoDyn                                      11       PitNeut(3)           0             PitNeut(3)  - Blade 3 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]* *[unused for 2 blades]*
@@ -73,6 +76,12 @@ ServoDyn                                      14       PitSpr(3)            3.6E
 ServoDyn                                      15       PitDamp(1)           1.4E6         PitDamp(1)  - Blade 1 pitch damping constant
 ServoDyn                                      16       PitDamp(2)           1.4E6         PitDamp(2)  - Blade 2 pitch damping constant
 ServoDyn                                      17       PitDamp(3)           1.4E6         PitDamp(3)  - Blade 3 pitch damping constant *[unused for 2 blades]*
+HydroDyn                                      \*       HstMod               1             HstMod      - Method of computing hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) *[overwrite to 0 when WaveStMod = 0 in SeaState]*
+FAST.Farm                                     35                            --- AMBIENT WIND: AMReX MODULE --- [used only for Mod_AmbWind=4]
+FAST.Farm                                     36       WindDirPrefix        "inflow/ffboxes"   WindDirPrefix - Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)
+FAST.Farm                                     37       DirStartIndex        00110              DirStartIndex - AMReX sub-volume directory suffix to consider as time=0 (quoted string)
+FAST.Farm                                     38       DT_Low-AMReX         2.0                DT_Low-AMReX  - Time step for low-resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
+FAST.Farm                                     39       DT_High-AMReX        1.0                DT_High-AMReX - Time step for high-resolution wind data interpolation (s) [>0.0]
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 
 
@@ -107,6 +116,13 @@ BeamDyn                                       \*       PitchK               2000
 BeamDyn                                       \*       PitchC               500000        PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
 ElastoDyn Blade Input File                    \*                            The PitchAxis column has been removed from the DISTRIBUTED BLADE PROPERTIES table. The table should now only have 5 columns: BlFract, StrcTwst, BMassDen, FlpStff, and EdgStff
 ============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+OpenFAST v4.2.0 to OpenFAST v4.2.1
+----------------------------------
+
+No input file changes were made.
+
 
 
 OpenFAST v4.1.x to OpenFAST v4.2.0
