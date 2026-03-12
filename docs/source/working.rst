@@ -294,7 +294,7 @@ Other related NLR tools
 
 Additional repositories maintained by NLR are listed below:
 
-- `WISDEM <https://github.com/WISDEM/WISDEM>`__: models for assessing overall wind plant cost of energy (COE), also contains file IO, (DLC) case generation, polar manipulations, visualization, and much more! 
+- `WISDEM <https://github.com/NLRWindSystems/WISDEM>`__: models for assessing overall wind plant cost of energy (COE), also contains file IO, (DLC) case generation, polar manipulations, visualization, and much more! 
 - `ROSCO_toolbox <https://github.com/natlabrockies/ROSCO_toolbox>`__: tools to work with the `ROSCO <https://github.com/natlabrockies/ROSCO>`__ controller that is supported by OpenFAST
 
 
@@ -368,7 +368,7 @@ Parametric studies can be run by using the scripts to read and write OpenFAST in
 and the Python 
 `openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`__
 .  The openfast_toolbox provides dedicated Python scripts and examples to automatize the process (see the README of the repository for more).
-The `AeroelasticSE` module of `WEIS <https://github.com/WEIS>`__ can generate input files for the design load cases specified in the standards. 
+The `AeroelasticSE` module of `WEIS <https://github.com/NLRWindSystems/WEIS>`__ can generate input files for the design load cases specified in the standards. 
 Consult the WEIS repository for more information.
 
 
