@@ -298,8 +298,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                                  2.0_R8Ki*D2R_D, &  ! TranslationVel
                                  2.0_R8Ki*D2R_D, &  ! RotationVel
                                  2.0_R8Ki*D2R_D, &  ! TranslationAcc
-                                 2.0_R8Ki*D2R_D],&  ! RotationalAcc
-                       Flags=VF_SmallAngle)
+                                 2.0_R8Ki*D2R_D])   ! RotationalAcc
 
     call MV_AddMeshVar(Vars%u, 'Rigid-body load mesh', LoadFields, &
                        DatLoc(ExtPtfm_u_FBMesh), &
@@ -307,13 +306,12 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
                                  MaxTorque/100.0_R8Ki])   ! Moment
 
-    if ( p%nConn > 0_IntKi ) then
-      call MV_AddMeshVar(Vars%u, 'Connection load mesh', LoadFields, &
-                        DatLoc(ExtPtfm_u_ConnLDMesh), &
-                        Mesh=u%ConnLdMesh, &
-                        PerTurbs=[MaxThrust/100.0_R8Ki, &  ! Force
-                                  MaxTorque/100.0_R8Ki])   ! Moment
-    end if
+    call MV_AddMeshVar(Vars%u, 'Connection load mesh', LoadFields, &
+                       DatLoc(ExtPtfm_u_ConnLDMesh), &
+                       Mesh=u%ConnLdMesh, &
+                       PerTurbs=[MaxThrust/100.0_R8Ki,  & ! Force
+                                 MaxTorque/100.0_R8Ki], & ! Moment
+                       Active=p%nConn > 0_IntKi)
 
     if ( p%nCB > 0_IntKi ) then
        call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
@@ -336,11 +334,10 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        DL=DatLoc(ExtPtfm_y_FBMesh), &
                        Mesh=y%FBMesh)
 
-    if ( p%nConn > 0_IntKi ) then
-       call MV_AddMeshVar(Vars%y, 'Connection point mesh', MotionFields, &
-                         DL=DatLoc(ExtPtfm_y_ConnMesh), &
-                         Mesh=y%ConnMesh)
-    end if
+    call MV_AddMeshVar(Vars%y, 'Connection point mesh', MotionFields, &
+                       DL=DatLoc(ExtPtfm_y_ConnMesh), &
+                       Mesh=y%ConnMesh, &
+                       Active=p%nConn > 0_IntKi)
 
     if ( p%nCB>0_IntKi ) then
        call MV_AddVar(Vars%y, "qm", FieldScalar, &
@@ -372,13 +369,10 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
     !---------------------------------------------------------------------------
 
     call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
-
-    ! if (Linearize) then
     call ExtPtfm_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
     call ExtPtfm_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
     call ExtPtfm_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
     call ExtPtfm_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-    ! end if
 
 contains
     function WriteOutLinName(iParam) result(Name)
