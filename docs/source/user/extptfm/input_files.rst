@@ -216,7 +216,7 @@ The file follows the following specifications:
       zeros. Again, if the input matrix does not follow this structure, a 
       warning will be given.
 
-.. _epSuperelementInputFile:
+.. _epConnectInputFile:
 
 Connections input file (provided through ``Conn_Filename``)
 -----------------------------------------------------------
