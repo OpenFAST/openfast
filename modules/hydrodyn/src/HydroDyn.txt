@@ -46,6 +46,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -          -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 typedef   ^                            ^                             ReKi                     PtfmVol0                        {:}        -          -         ""    -
 typedef   ^                            ^                             LOGICAL                  HasWAMIT                        -          -          -         ".TRUE. if using WAMIT model, .FALSE. otherwise"    -
+typedef   ^                            ^                             LOGICAL                  HasAddDOF                       -          -          -         ".TRUE. if additional generalized DOF are present, .FALSE. otherwise" -
 typedef   ^                            ^                             ReKi                     WAMITULEN                       {:}        -          -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmRefxt                       {:}        -          -         "The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
 typedef   ^                            ^                             ReKi                     PtfmRefyt                       {:}        -          -         "The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
@@ -53,6 +54,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             R8Ki                     PtfmRefztRot                    {:}        -          -         "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 typedef   ^                            ^                             ReKi                     PtfmCOBxt                       {:}        -          -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmCOByt                       {:}        -          -         ""    -
+typedef   ^                            ^                             INTEGER                  NAddDOF                         {:}        -          -         "Number of additional generalized degrees of freedom"    -
 typedef   ^                            ^                             WAMIT_InitInputType      WAMIT                           -          -          -         "Initialization data for WAMIT module"    -
 typedef   ^                            ^                             WAMIT2_InitInputType     WAMIT2                          -          -          -         "Initialization data for WAMIT2 module"    -
 typedef   ^                            ^                             Morison_InitInputType    Morison                         -          -          -         "Initialization data for Morison module"    -
@@ -135,7 +137,11 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             Morison_ParameterType    Morison                         -          -          -         "Parameter data for the Morison module"        -
 typedef   ^                            ^                             INTEGER                  PotMod                          -          -          -         "1 if using WAMIT model, 0 if no potential flow model, or 2 if FIT model"    -
 typedef   ^                            ^                             INTEGER                  NBody                           -          -          -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
-typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -          -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -           -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef   ^                            ^                             LOGICAL                  HasAddDOF                       -          -          -         ".TRUE. if additional generalized DOF are present, .FALSE. otherwise" -
+typedef   ^                            ^                             INTEGER                  NAddDOF                        {:}         -          -         "Number of additional generalized degrees of freedom" -
+typedef   ^                            ^                             INTEGER                  NDOF                            -          -          -         "Total number of degrees of freedom" -
+typedef   ^                            ^                             INTEGER                  BDOFStrt                       {:}         -          -         "Starting DOF index for each body" -
 typedef   ^                            ^                             INTEGER                  totalStates                     -          -          -         "Number of excitation and radiation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalExctnStates                -          -          -         "Number of excitation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalRdtnStates                 -          -          -         "Number of radiation states for all WAMIT bodies"        -
@@ -163,17 +169,20 @@ typedef   ^                            ^                             ReKi       
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
-typedef   ^                            InputType                     MeshType                 WAMITMesh                       -          -          -         "Motions at the WAMIT reference point(s) in the inertial frame" -
-typedef   ^                            InputType                     MeshType                 PRPMesh                         -          -          -         "Motions at the Platform reference point in the inertial frame" -
-#
+typedef   ^                            ^                             MeshType                 WAMITMesh                       -          -          -         "Motions at the WAMIT reference point(s) in the inertial frame" -
+typedef   ^                            ^                             MeshType                 PRPMesh                         -          -          -         "Motions at the Platform reference point in the inertial frame" -
+typedef   ^                            ^                             ReKi                     qAddDOF                        {:}         -          -         "Displacement of potential-flow generalized DOF" -
+typedef   ^                            ^                             ReKi                     qAddDOFDot                     {:}         -          -         "Velocity     of potential-flow generalized DOF" -
+typedef   ^                            ^                             ReKi                     qAddDOFDotDot                  {:}         -          -         "Acceleration of potential-flow generalized DOF" -
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                   WAMIT_OutputType          WAMIT                           {:}        -          -         "WAMIT module outputs"  -
-typedef   ^                            OutputType                   WAMIT2_OutputType         WAMIT2                          {:}        -          -         "WAMIT2 module outputs"  -
-typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
-typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -           "Point Loads at the WAMIT reference point(s) in the inertial frame" -
-typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         "Outputs to be written to the output file(s)"  -
+typedef   ^                            OutputType                    WAMIT_OutputType         WAMIT                          {:}         -          -         "WAMIT module outputs"  -
+typedef   ^                            ^                             WAMIT2_OutputType        WAMIT2                         {:}         -          -         "WAMIT2 module outputs"  -
+typedef   ^                            ^                             Morison_OutputType       Morison                         -          -          -         "Morison module outputs"  -
+typedef   ^                            ^                             MeshType                 WAMITMesh                       -          -          -         "Point Loads at the WAMIT reference point(s) in the inertial frame" -
+typedef   ^                            ^                             ReKi                     WriteOutput                    {:}         -          -         "Outputs to be written to the output file(s)"  -
+typedef   ^                            ^                             ReKi                     FAddDOF                        {:}         -          -         "Additional generalized DOF forcing " -
 #
 #
 # ..... Misc/Optimization variables.................................................................................................

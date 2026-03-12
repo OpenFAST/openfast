@@ -70,7 +70,18 @@ rotation first, followed by pitch rotation, and roll last. Furthermore,
 HydroDyn now expects the first and second time derivatives of the 
 Tait-Bryan roll, pitch, and yaw angles in place of angular velocity and 
 acceleration. The standalone HydroDyn driver will convert these inputs 
-to angular velocity and acceleration internally. 
+to angular velocity and acceleration internally.
+
+**NAddDOF** indicates the number of additional degrees of freedom included 
+with a potential-flow body. These additional modes can be used to describe 
+a flexible or articulated body. **NAddDOF** > 0 is only allowed with a single 
+potential-flow body, and the value of **NAddDOF** in the driver input file 
+must match that in the HydroDyn primary input file. If more than one 
+potential-flow bodies are included, **NAddDOF** should be a single zero in 
+the driver input file. This is different from the HydroDyn primary input file, 
+where **NAddDOF** should contain **NBody** zeros. See details below on 
+the HydroDyn primary input file. Note that the generalized modes with 
+**NAddDOF** > 0 are still an experimental feature.
 
 Setting **PRPInputsMod** = 0 forces all platform reference point (PRP)
 input motions to zero for all time. If you set **PRPInputsMod** = 1,
@@ -115,7 +126,7 @@ to specify different motions for the PRP, which controls the motion of
 all strip-theory members based on rigid-body kinematics, and for each 
 potential-flow bodies separately. With this option, the user only specifies 
 the translational and rotational displacements. HydroDyn will compute the 
-velocity and acceleration by numerically differentiating the displacement 
+velocity and acceleration by numerically differentiating the displacements 
 with respect to time. 
 
 .. _hd-prp_input_table_2:
@@ -134,6 +145,26 @@ with respect to time.
    14-16         Translational displacements of the 2nd potential-flow body along *X*, *Y*, and *Z*  .. math:: m
    17-19         Tait-Bryan roll, pitch, and yaw angles of the 2nd potential-flow body               .. math:: \text{radians}
    ...           ...                                                                                 ...
+   ============= =================================================================================== ========================
+
+Finally, when a single potential-flow body with additional generalized degrees 
+of freedom is modeled, motions of the generalized modes can be prescribed by 
+setting **PRPInputsMod** = -1 (only one body allowed). HydroDyn will compute the 
+velocity and acceleration of the generalized modes by numerically differentiating 
+the displacements with respect to time. 
+
+.. _hd-prp_input_table_3:
+
+.. table:: PRP Inputs Time-Series Data File Contents (**PRPInputsMod** = -1 with **NAddDOF** > 0)
+   :widths: auto
+
+   ============= =================================================================================== ========================
+   Column Number Input                                                                               Units
+   ============= =================================================================================== ========================
+   1             Time step value                                                                     .. math:: s
+   2-4           Translational displacements of the PRP along *X*, *Y*, and *Z*                      .. math:: m
+   5-7           Tait-Bryan roll, pitch, and yaw angles of the PRP                                   .. math:: \text{radians}
+   8-(NAddDOF+7) Displacements of the **NAddDOF** generalized modes                                  .. math:: -
    ============= =================================================================================== ========================
 
 .. _hd-primary-input:
@@ -389,6 +420,36 @@ to the value computed by WAMIT as output in the WAMIT ``.out`` file.
 center of buoyancy of each body from the origin/PRP, NOT from 
 **PtfmRefxt** and **PtfmRefyt**.
 
+*Experimental feature*
+
+**NAddDOF** is an array of **NBody** numbers indicating the number of 
+additional generalized degrees of freedom of each potential-flow body. These 
+additional modes can be used to describe flexible or articulated bodies and 
+must match the modes in the 1st-order WAMIT-style input files, i.e., the .1, 
+.3, and .hst files. The convention for the WAMIT-style input files requires 
+the first 6 modes to be rigid-body modes always, and the additional generalized 
+modes are numbered from 7 onward. The total number of modes in the 1st-order 
+WAMIT-style input files should be **6+NAddDOF** for each body. Currently, only 
+one potential-flow body is allowed when additional degrees of freedom are used, 
+requiring **NBody = 1**. In this case, the choice of **NBodyMod** does not 
+matter. If more than one potential-flow bodies are present, **NAddDOF** should 
+be populated with **NBody** zeros. This because, internally, HydroDyn supports 
+additional degrees of freedom for an arbitrary number of bodies with any of the 
+**NBodyMod** options. The limitation of one potential-flow body only is due 
+to constraints with coupling to ExtPtfm, the only module that can make use of the 
+additional modes so far and input file limitations. Generalized modes have not 
+been implemented for 2nd-order loads; therefore, the 2nd-order WAMIT-style input 
+files, if included, should always contain **6NBody** modes irrespective of 
+**NAddDOF**. Finally, when **NAddDOF > 0**, **WAMITULEN** must be 1.
+
+Currently, the HydroDyn loads for the additional degrees of freedom can only be 
+used by the ExtPtfm module of OpenFAST with externally generated structural 
+mass (M), stiffness (K), and damping (C) matrices. This workflow is intended for
+floating structures only with 6DOF rigid-body motions and a user-defined number 
+of additional elastic modes. The number of modes in HydroDyn and ExtPtfm must match. 
+More specifically, the number of modes active in ExtPtfm must be equal to 
+**6+NAddDOF** with the first 6 modes also being rigid-body modes.
+
 .. _hd-2nd_order_floating_platform_forces_input:
 
 2\ :sup:`nd`-Order Floating Platform Forces
@@ -486,20 +547,26 @@ where :math:`\overrightarrow{F}_{0}` corresponds to the **AddF0** static load (p
 :math:`\overrightarrow{q}` corresponds to the displacement vector of the potential-flow bodies 
 (translation and rotation), where the overdot refers to the first time-derivative.
 
+In the absence of additional degrees of freedom, i.e., **NAddDOF** is all zeros,
 **AddF0** is either a column vector with 6\ **NBody** entries 
 if **NBodyMod** = 1 or **NBody** column vectors with six entries each 
 if **NBodyMod** = 2 or 3. In the former case, **AddF0** will span 
 6\ **NBody** lines with each line containing a single number in the 
 input file. In the latter case, **AddF0** will span six lines with each line 
-containing **NBody** numbers in the input file.
+containing **NBody** numbers in the input file. When additional degrees of 
+freedom are included, only one potential-flow body is allowed, and **AddF0** 
+should be a column vector spanning 6 + **NAddDOF** rows. 
 
+In the absence of additional degrees of freedom, 
 **AddCLin**, **AddBLin**, and **AddBQuad** are either a single 
 6\ **NBody**\ -by-6\ **NBody** matrix if **NBodyMod** = 1 or 
 six 6-by-6 matrices if **NBodyMod** = 2 or 3. In the former case, 
 each matrix spans 6\ **NBody** lines in the input file with each line 
 containing 6\ **NBody** numbers. In the latter case, each matrix 
 spans six lines in the input file, with each line containing 6\ **NBody** 
-numbers.
+numbers. When additional degrees of freedom are included, only one 
+potential-flow body is allowed, and each of these matrices should span 
+6 + **NAddDOF** rows, with each row containing 6 + **NAddDOF** numbers.
 
 These terms can be used, e.g., to model a linearized mooring system, to
 augment strip-theory members with a linear hydrostatic restoring matrix
@@ -508,7 +575,9 @@ HydroDyn to match damping to experimental results, such as free-decay tests.
 While likely most useful for floating systems, these matrices can also be 
 used for fixed-bottom systems; in both cases, the resulting load is applied 
 at the reference point of each potential-flow body given by **PtfmRefxt**, 
-**PtfmRefyt**, and **PtfmRefzt**.
+**PtfmRefyt**, and **PtfmRefzt**. When additional generalized degrees of 
+freedom are included with a potential-flow body, **AddF0** can be used to 
+apply constant hydrostatic/buoyancy loads to the generalized modes. 
 
 Strip theory options
 --------------------

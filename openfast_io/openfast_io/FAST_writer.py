@@ -1646,6 +1646,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmVol0']]), 'PtfmVol0', '- Displaced volume of water when the body is in its undisplaced position (m^3) [1 to NBody] [only used when PotMod=1; USE THE SAME VALUE COMPUTED BY WAMIT AS OUTPUT IN THE .OUT FILE!]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmCOBxt']]), 'PtfmCOBxt', '- The xt offset of the center of buoyancy (COB) from (0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmCOByt']]), 'PtfmCOByt', '- The yt offset of the center of buoyancy (COB) from (0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['NAddDOF']]), 'NAddDOF', '- Number of additional generalized DOF of each WAMIT body (-) [1 to NBody] [>=0; =0 if NBody>1; only used when PotMod=1]\n'))
         f.write('---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6, or PotMod=0 or 2]\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['MnDrift'], 'MnDrift', "- Mean-drift 2nd-order forces computed                                       {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]\n"))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NewmanApp'], 'NewmanApp', "- Mean- and slow-drift 2nd-order forces computed with Newman's approximation {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. Used only when WaveDirMod=0]\n"))
@@ -2369,14 +2370,18 @@ class InputWriter_OpenFAST(object):
         f.close()
 
     def write_ExtPtfm(self):
-        # Generate ExtPtfm input file
+        # Generate ExtPtfm input files
 
-        if self.fst_vt['ExtPtfm']['FileFormat'] == 0:
-            None
-            # self.write_Guyan() # TODO: need to impliment this. An example file not found to test
-        elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
-            self.write_Superelement()
+        self.write_Superelement()
 
+        if self.fst_vt['ExtPtfm']['HasConnections']:
+            self.write_Connections()
+
+        if self.fst_vt['ExtPtfm']['HasUserForcing']:
+            self.write_UserForcing()
+
+        if self.fst_vt['ExtPtfm']['HasConnForcing']:
+            self.write_ConnForcing()
 
         self.fst_vt['Fst']['SubFile'] = self.FAST_namingOut + '_ExtPtfm.dat'
         ep_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['SubFile'])
@@ -2389,16 +2394,22 @@ class InputWriter_OpenFAST(object):
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['DT'], 'DT', '- Communication interval for controllers (s) (or "default")\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['IntMethod'], 'IntMethod', '- Integration Method {1:RK4; 2:AB4, 3:ABM4} (switch)\n'))
         f.write('---------------------- REDUCTION INPUTS ----------------------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['FileFormat'], 'FileFormat', '- File Format {0:Guyan; 1:FlexASCII} (switch)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['RBMod'], 'RBMod', '- Method for handling rigid-body motion (switch) {0: No special handling for rigid-body motion; 1: Transform to rigid-body frame of reference; 2: Transform to rigid-body frame of reference and add fictitious forces and exact self-weight}\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Red_FileName'], 'Red_FileName', '- Path of the file containing Guyan/Craig-Bampton inputs (-)\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['RedCst_FileName'], 'RedCst_FileName', '- Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NActiveDOFList'], 'NActiveDOFList', '- Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['ActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitPosList'], 'NInitPosList', '- Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['InitPosList']]), 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitVelList'], 'NInitVelList', '- Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['InitVelList']]), 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
-
+        f.write('---------------------- CONNECTION INPUTS ---------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['HasConnections'], 'Connections', '- Flag for connection points on the structure (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Conn_FileName'], 'Conn_FileName', '- Path of the file containing connection points (-)\n'))
+        f.write('---------------------- USER FORCING INPUTS -------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['HasUserForcing'], 'UserForcing', '- Flag for user-prescribed modal forcing (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Force_FileName'], 'Force_FileName', '- Path of the file containing user forcing time series (-)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['HasConnForcing'], 'ConnForcing', '- Flag for user-prescribed connection forcing (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['FConn_FileName'], 'FConn_FileName', '- Path of the file containing user connection force time series (-)\n'))
         f.write('---------------------- OUTPUT --------------------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['SumPrint'], 'SumPrint', '- Print summary data to <RootName>.sum (flag)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['OutFile'], 'OutFile', '- Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)\n'))
@@ -2417,34 +2428,29 @@ class InputWriter_OpenFAST(object):
         f.close()
 
 
-
     def write_Superelement(self):
 
         def toString(SuperElement):
             # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
             # Developed by Emmanuel Branlard (https://github.com/ebranlard)
             s=''
-            s+='!Comment\n'
-            s+='!Comment Flex 5 Format\n'
             s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
-            s+='!Time increment in simulation: {}\n'.format(SuperElement['dt'])
-            s+='!Total simulation time in file: {}\n'.format(SuperElement['T'])
 
             s+='\n!Mass Matrix\n'
-            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
             s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['MassMatrix'])
 
             s+='\n\n!Stiffness Matrix\n'
-            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
             s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['StiffnessMatrix'])
 
             s+='\n\n!Damping Matrix\n'
-            s+='!Dimension: {}\n'.format(SuperElement['nDOF'])
             s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['DampingMatrix'])
 
-            s+='\n\n!Loading and Wave Elevation\n'
-            s+='!Dimension: 1 time column -  {} force columns\n'.format(SuperElement['nDOF'])
-            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['Loading'])
+            s+='\n\n!Weight constant\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['WeightConstant'])
+
+            s+='\n\n!Weight stiffness matrix\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in SuperElement['WeightStiffness'])
+
             return s
 
         # Generate Superelement input file
@@ -2457,6 +2463,85 @@ class InputWriter_OpenFAST(object):
         f.flush()
         os.fsync(f)
         f.close()
+
+
+    def write_Connections(self):
+
+        def toString(Connections):
+            # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
+            # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+            s=''
+            s+='!nConn: {}\n'.format(Connections['nConn'])
+
+            s+='\n!Connections\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in Connections['Position'])
+
+            s+='\n\n!Displacement\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in Connections['Displacement'])
+
+            return s
+
+        # Generate Superelement input file
+        self.fst_vt['ExtPtfm']['Conn_FileName'] = self.FAST_namingOut + '_ExtPtfm_Conn.dat'
+        conn_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['Conn_FileName'])
+        f = open(conn_file, 'w')
+
+        f.write(toString(self.fst_vt['ExtPtfm']['Connections']))
+
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+
+    def write_UserForcing(self):
+
+        def toString(UserForcing):
+            # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
+            # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+            s=''
+            s+='!nSteps: {}\n'.format(UserForcing['nSteps'])
+
+            s+='\n!Forcing:\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in UserForcing['ForceTimeSeries'])
+
+            return s
+
+        # Generate user forcing input file
+        self.fst_vt['ExtPtfm']['Force_FileName'] = self.FAST_namingOut + '_ExtPtfm_UserFrc.dat'
+        UserFrc_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['Force_FileName'])
+        f = open(UserFrc_file, 'w')
+
+        f.write(toString(self.fst_vt['ExtPtfm']['UserForcing']))
+
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+
+    def write_ConnForcing(self):
+
+        def toString(ConnForcing):
+            # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L2034
+            # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+            s=''
+            s+='!nSteps: {}\n'.format(ConnForcing['nSteps'])
+
+            s+='\n!Forcing:\n'
+            s+='\n'.join(''.join('{:16.8e}'.format(x) for x in y) for y in ConnForcing['ForceTimeSeries'])
+
+            return s
+
+        # Generate user forcing input file
+        self.fst_vt['ExtPtfm']['FConn_FileName'] = self.FAST_namingOut + '_ExtPtfm_ConnFrc.dat'
+        ConnFrc_file = os.path.join(self.FAST_runDirectory, self.fst_vt['ExtPtfm']['FConn_FileName'])
+        f = open(ConnFrc_file, 'w')
+
+        f.write(toString(self.fst_vt['ExtPtfm']['ConnForcing']))
+
+        f.flush()
+        os.fsync(f)
+        f.close()
+
 
     def write_MAP(self):
 

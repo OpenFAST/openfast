@@ -43,6 +43,11 @@ INTERFACE GridInterp4DVec6
    MODULE PROCEDURE GridInterp4DVec6R8
 END INTERFACE
 
+INTERFACE GridInterp4DVecN
+   MODULE PROCEDURE GridInterp4DVecNR4
+   MODULE PROCEDURE GridInterp4DVecNR8
+END INTERFACE
+
 INTERFACE GridInterpN
    MODULE PROCEDURE GridInterpNR4
    MODULE PROCEDURE GridInterpNR8
@@ -725,6 +730,61 @@ function GridInterp4DVec6R8( data, m )
    end do
 
 end function GridInterp4DVec6R8
+
+!=============================================================================================================
+! INTERFACE GridInterp4DVec6
+!              - GridInterp4DVec6R4
+!              - GridInterp4DVec6R8
+!=============================================================================================================
+function GridInterp4DVecNR4( vDim, data, m )
+   integer(IntKi),               intent(in   )  :: vDim
+   real(SiKi),                   intent(in   )  :: data(0:,0:,0:,0:,:)   !< 4D grid of vector data
+   type(GridInterp_MiscVarType), intent(in   )  :: m                     !< MiscVars
+
+   character(*),   parameter                    :: RoutineName = 'GridInterp4DVecNR4'
+   integer(IntKi)                               :: i,j,k,l,vi
+   real(SiKi)                                   :: GridInterp4DVecNR4(vDim)
+
+   ! interpolate
+   GridInterp4DVecNR4 = 0.0_SiKi
+   do l = 1,4
+      do k = 1,4
+         do j = 1,4
+            do i = 1,4
+               do vi = 1,vDim
+                  GridInterp4DVecNR4(vi) = GridInterp4DVecNR4(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+               end do
+            end do
+         end do
+      end do
+   end do
+
+end function GridInterp4DVecNR4
+
+function GridInterp4DVecNR8( vDim, data, m )
+   integer(IntKi),               intent(in   )  :: vDim
+   real(DbKi),                   intent(in   )  :: data(0:,0:,0:,0:,:)   !< 4D grid of vector data
+   type(GridInterp_MiscVarType), intent(in   )  :: m                     !< MiscVars
+
+   character(*),   parameter                    :: RoutineName = 'GridInterp4DVecNR8'
+   integer(IntKi)                               :: i,j,k,l,vi
+   real(DbKi)                                   :: GridInterp4DVecNR8(vDim)
+
+   ! interpolate
+   GridInterp4DVecNR8 = 0.0_DbKi
+   do l = 1,4
+      do k = 1,4
+         do j = 1,4
+            do i = 1,4
+               do vi = 1,vDim
+                  GridInterp4DVecNR8(vi) = GridInterp4DVecNR8(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+               end do
+            end do
+         end do
+      end do
+   end do
+
+end function GridInterp4DVecNR8
 
 !=============================================================================================================
 ! INTERFACE GridInterpN

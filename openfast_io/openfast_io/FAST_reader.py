@@ -1943,6 +1943,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['PtfmVol0']      = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOBxt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOByt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
+        self.fst_vt['HydroDyn']['NAddDOF']       = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=int)
 
         # 2ND-ORDER FLOATING PLATFORM FORCES
         f.readline()
@@ -2902,15 +2903,26 @@ class InputReader_OpenFAST(object):
         f.readline()
 
         # Reduction inputs
-        self.fst_vt['ExtPtfm']['FileFormat'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['RBMod'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['Red_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
-        self.fst_vt['ExtPtfm']['RedCst_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         self.fst_vt['ExtPtfm']['NActiveDOFList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['ActiveDOFList'] = read_array(f,None,split_val='ActiveDOFList',array_type=int)
         self.fst_vt['ExtPtfm']['NInitPosList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitPosList'] = read_array(f,None,split_val='InitPosList',array_type=float)
         self.fst_vt['ExtPtfm']['NInitVelList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitVelList'] = read_array(f,None,split_val='InitVelList',array_type=float)
+        f.readline()
+
+        # Connection inputs
+        self.fst_vt['ExtPtfm']['HasConnections'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Conn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        f.readline()
+
+        # User forcing inputs
+        self.fst_vt['ExtPtfm']['HasUserForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Force_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        self.fst_vt['ExtPtfm']['HasConnForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['FConn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         f.readline()
 
         # Output
@@ -2941,18 +2953,25 @@ class InputReader_OpenFAST(object):
             self.set_outlist(self.fst_vt['outlist']['ExtPtfm'], channel_list) # TODO: Need to figure this out as we dont have a full outlist for now, similar to MoorDyn
             data = f.readline()
 
-        if self.fst_vt['ExtPtfm']['FileFormat'] == 0:
-            self.fst_vt['ExtPtfm']['Guyan'] = {}
-            # self.read_Guyan(f) # TODO: need to impliment this. An example file not found to test
-        elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
-            self.fst_vt['ExtPtfm']['FlexASCII'] = {}
-            self.read_Superelement(self.fst_vt['ExtPtfm']['Red_FileName'])
+        self.fst_vt['ExtPtfm']['FlexASCII'] = {}
+        self.read_Superelement(self.fst_vt['ExtPtfm']['Red_FileName'])
+
+        if self.fst_vt['ExtPtfm']['HasConnections']:
+            self.fst_vt['ExtPtfm']['Connections'] = {}
+            self.read_Connections(self.fst_vt['ExtPtfm']['Conn_FileName'], self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+
+        if self.fst_vt['ExtPtfm']['HasUserForcing']:
+            self.fst_vt['ExtPtfm']['UserForcing'] = {}
+            self.read_UserForcing(self.fst_vt['ExtPtfm']['Force_FileName'], self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+
+        if self.fst_vt['ExtPtfm']['HasConnForcing']:
+            self.fst_vt['ExtPtfm']['ConnForcing'] = {}
+            self.read_ConnForcing(self.fst_vt['ExtPtfm']['FConn_FileName'], self.fst_vt['ExtPtfm']['Connections']['nConn'])
 
         f.close()
 
 
     def read_Superelement(self, superelement_file):
-        
 
         def detectAndReadExtPtfmSE(lines):
         # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
@@ -2964,59 +2983,43 @@ class InputReader_OpenFAST(object):
                     i=iStart+j
                     M[j,:]=np.array(lines[i].split()).astype(float)
                 return M
-            
-            if len(lines)<10:
-                return False
-            if not (lines[0][0]=='!' and lines[1][0]=='!'):
-                return False
-            if lines[1].lower().find('flex')<0:
-                return
-            if  lines[2].lower().find('!dimension')<0:
-                return
-            
+
             # --- At this stage we assume it's in the proper format
-            nDOFCommon = -1
-            i=2
+            nDOF = -1
+            i=0
             try:
                 while i<len(lines):
                     l=lines[i].lower()
                     if l.find('!mass')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm stiffness matrix nDOF issue. nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif l.find('!stiffness')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm stiffness matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif l.find('!damping')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm damping matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
-                    elif l.find('!loading')==0:
-                        try: 
-                            nt=int(self.fst_vt['ExtPtfm']['FlexASCII']['T']/self.fst_vt['ExtPtfm']['FlexASCII']['dt'])+1
-                        except:
-                            raise NameError('Cannot read loading since time step and simulation time not properly set.')
-                        self.fst_vt['ExtPtfm']['FlexASCII']['Loading'] = readmat(nt,nDOFCommon+1,lines,i+2)
-                        i=i+nt+1
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
+                    elif l.find('!weight constant')==0:
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['WeightConstant'] = readmat(1,nDOF,lines,i+1)
+                        i=i+1
+                    elif l.find('!weight stiffness')==0:
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['WeightStiffness'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif len(l)>0:
                         if l[0]=='!':
                             if l.find('!dimension')==0:
                                 self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'] = int(l.split(':')[1])
-                                nDOFCommon = self.fst_vt['ExtPtfm']['FlexASCII']['nDOF']
-                            elif l.find('!time increment')==0:
-                                self.fst_vt['ExtPtfm']['FlexASCII']['dt'] = float(l.split(':')[1])
-                            elif l.find('!total simulation time')==0:
-                                self.fst_vt['ExtPtfm']['FlexASCII']['T'] = float(l.split(':')[1])
+                                nDOF = self.fst_vt['ExtPtfm']['FlexASCII']['nDOF']
                         elif len(l.strip())==0:
                             pass
                         else:
@@ -3035,6 +3038,159 @@ class InputReader_OpenFAST(object):
         if not detectAndReadExtPtfmSE(lines):
             raise NameError('Could not read Superelement file')
         f.close()
+
+
+    def read_Connections(self, connection_file, nDOF):
+
+        def detectAndReadExtPtfmConnections(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            nConn = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!connection')==0:
+                        if nConn < 0:
+                            raise NameError('ExtPtfm number of connections not properly set.')
+                        self.fst_vt['ExtPtfm']['Connections']['Position'] = readmat(nConn,3,lines,i+1)
+                        i=i+nConn
+                    elif l.find('!displacement')==0:
+                        if nConn < 0:
+                            raise NameError('ExtPtfm number of connections not properly set.')
+                        self.fst_vt['ExtPtfm']['Connections']['Displacement'] = readmat(3*nConn,nDOF,lines,i+1)
+                        i=i+3*nConn
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nconn')==0:
+                                self.fst_vt['ExtPtfm']['Connections']['nConn'] = int(l.split(':')[1])
+                                nConn = self.fst_vt['ExtPtfm']['Connections']['nConn']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(connection_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmConnections(lines):
+            raise NameError('Could not read Connections file')
+        f.close()
+
+
+    def read_UserForcing(self, userforcing_file, nDOF):
+
+        def detectAndReadExtPtfmUserForcing(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            NSteps = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!forcing')==0:
+                        if nSteps < 0:
+                            raise NameError('ExtPtfm user forcing number of time steps not properly set.')
+                        self.fst_vt['ExtPtfm']['UserForcing']['ForceTimeSeries'] = readmat(nSteps,1+nDOF,lines,i+1)
+                        i=i+nSteps
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nsteps')==0:
+                                self.fst_vt['ExtPtfm']['UserForcing']['nSteps'] = int(l.split(':')[1])
+                                nSteps = self.fst_vt['ExtPtfm']['UserForcing']['nSteps']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(userforcing_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmUserForcing(lines):
+            raise NameError('Could not read User Forcing file')
+        f.close()
+
+
+    def read_ConnForcing(self, connforcing_file, nConn):
+
+        def detectAndReadExtPtfmConnForcing(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            NSteps = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!forcing')==0:
+                        if nSteps < 0:
+                            raise NameError('ExtPtfm connections forcing number of time steps not properly set.')
+                        self.fst_vt['ExtPtfm']['ConnForcing']['ForceTimeSeries'] = readmat(nSteps,1+3*nConn,lines,i+1)
+                        i=i+nSteps
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nsteps')==0:
+                                self.fst_vt['ExtPtfm']['ConnForcing']['nSteps'] = int(l.split(':')[1])
+                                nSteps = self.fst_vt['ExtPtfm']['ConnForcing']['nSteps']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(connforcing_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmConnForcing(lines):
+            raise NameError('Could not read Connections Forcing file')
+        f.close()
+
 
     def read_MAP(self, map_file):
         # MAP++

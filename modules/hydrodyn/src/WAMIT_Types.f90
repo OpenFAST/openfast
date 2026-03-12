@@ -50,6 +50,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOBxt      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOByt      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
     INTEGER(IntKi)  :: RdtnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
@@ -116,6 +117,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT_ParameterType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
+    LOGICAL  :: HasAddDOF = .false.      !< .TRUE. if additional generalized DOF are present, .FALSE. otherwise [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
+    INTEGER(IntKi)  :: NDOF = 0_IntKi      !< Total number of degrees of freedom [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDOFStrt      !< Starting DOF index for each body [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_HS_Moment_Offset      !< The offset moment due to the COB being offset from the WAMIT body's local location {matrix 3xNBody} [N-m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroAdMsI      !<  [(sec)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroSttc      !<  [-]
@@ -140,11 +145,15 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT_InputType
     TYPE(MeshType)  :: Mesh      !< Displacements at the WAMIT reference point in the inertial frame [-]
     REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference yaw offset [(rad)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qAddDOF      !< Displacement of generalized DOF [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qAddDOFDot      !< Velocity     of generalized DOF [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qAddDOFDotDot      !< Acceleration of generalized DOF [-]
   END TYPE WAMIT_InputType
 ! =======================
 ! =========  WAMIT_OutputType  =======
   TYPE, PUBLIC :: WAMIT_OutputType
     TYPE(MeshType)  :: Mesh      !< Loads at the WAMIT reference point in the inertial frame [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FAddDOF      !< Additional generalized DOF forcing  [-]
   END TYPE WAMIT_OutputType
 ! =======================
    integer(IntKi), public, parameter :: WAMIT_x_SS_Rdtn_x                =   1 ! WAMIT%SS_Rdtn%x
@@ -152,7 +161,11 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: WAMIT_x_Conv_Rdtn_DummyContState =   3 ! WAMIT%Conv_Rdtn%DummyContState
    integer(IntKi), public, parameter :: WAMIT_u_Mesh                     =   4 ! WAMIT%Mesh
    integer(IntKi), public, parameter :: WAMIT_u_PtfmRefY                 =   5 ! WAMIT%PtfmRefY
-   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   6 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_u_qAddDOF                  =   6 ! WAMIT%qAddDOF
+   integer(IntKi), public, parameter :: WAMIT_u_qAddDOFDot               =   7 ! WAMIT%qAddDOFDot
+   integer(IntKi), public, parameter :: WAMIT_u_qAddDOFDotDot            =   8 ! WAMIT%qAddDOFDotDot
+   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   9 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_y_FAddDOF                  =  10 ! WAMIT%FAddDOF
 
 contains
 
@@ -257,6 +270,18 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       end if
       DstInitInputData%PtfmCOByt = SrcInitInputData%PtfmCOByt
    end if
+   if (allocated(SrcInitInputData%NAddDOF)) then
+      LB(1:1) = lbound(SrcInitInputData%NAddDOF)
+      UB(1:1) = ubound(SrcInitInputData%NAddDOF)
+      if (.not. allocated(DstInitInputData%NAddDOF)) then
+         allocate(DstInitInputData%NAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%NAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%NAddDOF = SrcInitInputData%NAddDOF
+   end if
    DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
@@ -303,6 +328,9 @@ subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%PtfmCOByt)) then
       deallocate(InitInputData%PtfmCOByt)
    end if
+   if (allocated(InitInputData%NAddDOF)) then
+      deallocate(InitInputData%NAddDOF)
+   end if
    call Conv_Rdtn_DestroyInitInput(InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitInputData%WaveField)
@@ -326,6 +354,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%PtfmRefztRot)
    call RegPackAlloc(RF, InData%PtfmCOBxt)
    call RegPackAlloc(RF, InData%PtfmCOByt)
+   call RegPackAlloc(RF, InData%NAddDOF)
    call RegPack(RF, InData%RdtnMod)
    call RegPack(RF, InData%ExctnMod)
    call RegPack(RF, InData%ExctnDisp)
@@ -369,6 +398,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOBxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOByt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnDisp); if (RegCheckErr(RF, RoutineName)) return
@@ -859,6 +889,32 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    ErrMsg  = ''
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
+   DstParamData%HasAddDOF = SrcParamData%HasAddDOF
+   if (allocated(SrcParamData%NAddDOF)) then
+      LB(1:1) = lbound(SrcParamData%NAddDOF)
+      UB(1:1) = ubound(SrcParamData%NAddDOF)
+      if (.not. allocated(DstParamData%NAddDOF)) then
+         allocate(DstParamData%NAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%NAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%NAddDOF = SrcParamData%NAddDOF
+   end if
+   DstParamData%NDOF = SrcParamData%NDOF
+   if (allocated(SrcParamData%BDOFStrt)) then
+      LB(1:1) = lbound(SrcParamData%BDOFStrt)
+      UB(1:1) = ubound(SrcParamData%BDOFStrt)
+      if (.not. allocated(DstParamData%BDOFStrt)) then
+         allocate(DstParamData%BDOFStrt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BDOFStrt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%BDOFStrt = SrcParamData%BDOFStrt
+   end if
    if (allocated(SrcParamData%F_HS_Moment_Offset)) then
       LB(1:2) = lbound(SrcParamData%F_HS_Moment_Offset)
       UB(1:2) = ubound(SrcParamData%F_HS_Moment_Offset)
@@ -951,6 +1007,12 @@ subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%NAddDOF)) then
+      deallocate(ParamData%NAddDOF)
+   end if
+   if (allocated(ParamData%BDOFStrt)) then
+      deallocate(ParamData%BDOFStrt)
+   end if
    if (allocated(ParamData%F_HS_Moment_Offset)) then
       deallocate(ParamData%F_HS_Moment_Offset)
    end if
@@ -985,6 +1047,10 @@ subroutine WAMIT_PackParam(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%NBody)
    call RegPack(RF, InData%NBodyMod)
+   call RegPack(RF, InData%HasAddDOF)
+   call RegPackAlloc(RF, InData%NAddDOF)
+   call RegPack(RF, InData%NDOF)
+   call RegPackAlloc(RF, InData%BDOFStrt)
    call RegPackAlloc(RF, InData%F_HS_Moment_Offset)
    call RegPackAlloc(RF, InData%HdroAdMsI)
    call RegPackAlloc(RF, InData%HdroSttc)
@@ -1024,6 +1090,10 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BDOFStrt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_HS_Moment_Offset); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HdroAdMsI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%HdroSttc); if (RegCheckErr(RF, RoutineName)) return
@@ -1067,6 +1137,7 @@ subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT_CopyInput'
@@ -1076,6 +1147,42 @@ subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInputData%PtfmRefY = SrcInputData%PtfmRefY
+   if (allocated(SrcInputData%qAddDOF)) then
+      LB(1:1) = lbound(SrcInputData%qAddDOF)
+      UB(1:1) = ubound(SrcInputData%qAddDOF)
+      if (.not. allocated(DstInputData%qAddDOF)) then
+         allocate(DstInputData%qAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%qAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%qAddDOF = SrcInputData%qAddDOF
+   end if
+   if (allocated(SrcInputData%qAddDOFDot)) then
+      LB(1:1) = lbound(SrcInputData%qAddDOFDot)
+      UB(1:1) = ubound(SrcInputData%qAddDOFDot)
+      if (.not. allocated(DstInputData%qAddDOFDot)) then
+         allocate(DstInputData%qAddDOFDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%qAddDOFDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%qAddDOFDot = SrcInputData%qAddDOFDot
+   end if
+   if (allocated(SrcInputData%qAddDOFDotDot)) then
+      LB(1:1) = lbound(SrcInputData%qAddDOFDotDot)
+      UB(1:1) = ubound(SrcInputData%qAddDOFDotDot)
+      if (.not. allocated(DstInputData%qAddDOFDotDot)) then
+         allocate(DstInputData%qAddDOFDotDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%qAddDOFDotDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%qAddDOFDotDot = SrcInputData%qAddDOFDotDot
+   end if
 end subroutine
 
 subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1089,6 +1196,15 @@ subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call MeshDestroy( InputData%Mesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(InputData%qAddDOF)) then
+      deallocate(InputData%qAddDOF)
+   end if
+   if (allocated(InputData%qAddDOFDot)) then
+      deallocate(InputData%qAddDOFDot)
+   end if
+   if (allocated(InputData%qAddDOFDotDot)) then
+      deallocate(InputData%qAddDOFDotDot)
+   end if
 end subroutine
 
 subroutine WAMIT_PackInput(RF, Indata)
@@ -1098,6 +1214,9 @@ subroutine WAMIT_PackInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
    call RegPack(RF, InData%PtfmRefY)
+   call RegPackAlloc(RF, InData%qAddDOF)
+   call RegPackAlloc(RF, InData%qAddDOFDot)
+   call RegPackAlloc(RF, InData%qAddDOFDotDot)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1105,9 +1224,15 @@ subroutine WAMIT_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WAMIT_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackInput'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
    call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qAddDOFDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qAddDOFDotDot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1116,6 +1241,7 @@ subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT_CopyOutput'
@@ -1124,6 +1250,18 @@ subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    call MeshCopy(SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcOutputData%FAddDOF)) then
+      LB(1:1) = lbound(SrcOutputData%FAddDOF)
+      UB(1:1) = ubound(SrcOutputData%FAddDOF)
+      if (.not. allocated(DstOutputData%FAddDOF)) then
+         allocate(DstOutputData%FAddDOF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%FAddDOF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%FAddDOF = SrcOutputData%FAddDOF
+   end if
 end subroutine
 
 subroutine WAMIT_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -1137,6 +1275,9 @@ subroutine WAMIT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(OutputData%FAddDOF)) then
+      deallocate(OutputData%FAddDOF)
+   end if
 end subroutine
 
 subroutine WAMIT_PackOutput(RF, Indata)
@@ -1145,6 +1286,7 @@ subroutine WAMIT_PackOutput(RF, Indata)
    character(*), parameter         :: RoutineName = 'WAMIT_PackOutput'
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
+   call RegPackAlloc(RF, InData%FAddDOF)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1152,8 +1294,12 @@ subroutine WAMIT_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WAMIT_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackOutput'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
+   call RegUnpackAlloc(RF, OutData%FAddDOF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -1234,6 +1380,8 @@ SUBROUTINE WAMIT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
    INTEGER(IntKi)                             :: ErrStat2 ! local errors
    CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1254,6 +1402,15 @@ SUBROUTINE WAMIT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
+   IF (ALLOCATED(u_out%qAddDOF) .AND. ALLOCATED(u1%qAddDOF)) THEN
+      u_out%qAddDOF = a1*u1%qAddDOF + a2*u2%qAddDOF
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%qAddDOFDot) .AND. ALLOCATED(u1%qAddDOFDot)) THEN
+      u_out%qAddDOFDot = a1*u1%qAddDOFDot + a2*u2%qAddDOFDot
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%qAddDOFDotDot) .AND. ALLOCATED(u1%qAddDOFDotDot)) THEN
+      u_out%qAddDOFDotDot = a1*u1%qAddDOFDotDot + a2*u2%qAddDOFDotDot
+   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1286,6 +1443,8 @@ SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    INTEGER(IntKi)                             :: ErrStat2 ! local errors
    CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
    CHARACTER(*),            PARAMETER         :: RoutineName = 'WAMIT_Input_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1312,6 +1471,15 @@ SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
+   IF (ALLOCATED(u_out%qAddDOF) .AND. ALLOCATED(u1%qAddDOF)) THEN
+      u_out%qAddDOF = a1*u1%qAddDOF + a2*u2%qAddDOF + a3*u3%qAddDOF
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%qAddDOFDot) .AND. ALLOCATED(u1%qAddDOFDot)) THEN
+      u_out%qAddDOFDot = a1*u1%qAddDOFDot + a2*u2%qAddDOFDot + a3*u3%qAddDOFDot
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%qAddDOFDotDot) .AND. ALLOCATED(u1%qAddDOFDotDot)) THEN
+      u_out%qAddDOFDotDot = a1*u1%qAddDOFDotDot + a2*u2%qAddDOFDotDot + a3*u3%qAddDOFDotDot
+   END IF ! check if allocated
 END SUBROUTINE
 
 subroutine WAMIT_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)
@@ -1392,6 +1560,8 @@ SUBROUTINE WAMIT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrM
    REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
    INTEGER(IntKi)                             :: ErrStat2 ! local errors
    CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1411,6 +1581,9 @@ SUBROUTINE WAMIT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrM
    
    CALL MeshExtrapInterp1(y1%Mesh, y2%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(y_out%FAddDOF) .AND. ALLOCATED(y1%FAddDOF)) THEN
+      y_out%FAddDOF = a1*y1%FAddDOF + a2*y2%FAddDOF
+   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE WAMIT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
@@ -1443,6 +1616,8 @@ SUBROUTINE WAMIT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    INTEGER(IntKi)                             :: ErrStat2 ! local errors
    CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
    CHARACTER(*),            PARAMETER         :: RoutineName = 'WAMIT_Output_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1468,6 +1643,9 @@ SUBROUTINE WAMIT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(y_out%FAddDOF) .AND. ALLOCATED(y1%FAddDOF)) THEN
+      y_out%FAddDOF = a1*y1%FAddDOF + a2*y2%FAddDOF + a3*y3%FAddDOF
+   END IF ! check if allocated
 END SUBROUTINE
 
 function WAMIT_InputMeshPointer(u, DL) result(Mesh)
@@ -1609,6 +1787,12 @@ subroutine WAMIT_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
       case (WAMIT_u_PtfmRefY)
          VarVals(1) = u%PtfmRefY                                              ! Scalar
+      case (WAMIT_u_qAddDOF)
+         VarVals = u%qAddDOF(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (WAMIT_u_qAddDOFDot)
+         VarVals = u%qAddDOFDot(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (WAMIT_u_qAddDOFDotDot)
+         VarVals = u%qAddDOFDotDot(V%iLB:V%iUB)                               ! Rank 1 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -1635,6 +1819,12 @@ subroutine WAMIT_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
       case (WAMIT_u_PtfmRefY)
          u%PtfmRefY = VarVals(1)                                              ! Scalar
+      case (WAMIT_u_qAddDOF)
+         u%qAddDOF(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (WAMIT_u_qAddDOFDot)
+         u%qAddDOFDot(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (WAMIT_u_qAddDOFDotDot)
+         u%qAddDOFDotDot(V%iLB:V%iUB) = VarVals                               ! Rank 1 Array
       end select
    end associate
 end subroutine
@@ -1647,6 +1837,12 @@ function WAMIT_InputFieldName(DL) result(Name)
        Name = "u%Mesh"
    case (WAMIT_u_PtfmRefY)
        Name = "u%PtfmRefY"
+   case (WAMIT_u_qAddDOF)
+       Name = "u%qAddDOF"
+   case (WAMIT_u_qAddDOFDot)
+       Name = "u%qAddDOFDot"
+   case (WAMIT_u_qAddDOFDotDot)
+       Name = "u%qAddDOFDotDot"
    case default
        Name = "Unknown Field"
    end select
@@ -1670,6 +1866,8 @@ subroutine WAMIT_VarPackOutput(V, y, ValAry)
       select case (DL%Num)
       case (WAMIT_y_Mesh)
          call MV_PackMesh(V, y%Mesh, ValAry)                                  ! Mesh
+      case (WAMIT_y_FAddDOF)
+         VarVals = y%FAddDOF(V%iLB:V%iUB)                                     ! Rank 1 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -1694,6 +1892,8 @@ subroutine WAMIT_VarUnpackOutput(V, ValAry, y)
       select case (DL%Num)
       case (WAMIT_y_Mesh)
          call MV_UnpackMesh(V, ValAry, y%Mesh)                                ! Mesh
+      case (WAMIT_y_FAddDOF)
+         y%FAddDOF(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
       end select
    end associate
 end subroutine
@@ -1704,6 +1904,8 @@ function WAMIT_OutputFieldName(DL) result(Name)
    select case (DL%Num)
    case (WAMIT_y_Mesh)
        Name = "y%Mesh"
+   case (WAMIT_y_FAddDOF)
+       Name = "y%FAddDOF"
    case default
        Name = "Unknown Field"
    end select

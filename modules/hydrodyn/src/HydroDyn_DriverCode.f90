@@ -233,6 +233,20 @@ PROGRAM HydroDynDriver
       end if
    END IF
 
+   IF ( drvrData%PRPInputsMod<-1_IntKi .and. drvrData%NAddDOF>0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'When multiple WAMIT bodies are present, additional generalized DOF are not supported. Need to set NAddDOF=0.'
+      CALL CheckError()
+   END IF
+
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( drvrData%NAddDOF > p%NAddDOF(1) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'NAddDOF in the HydroDyn driver input file is greater than that in the HydroDyn primary input file. This is not allowed.'
+         CALL CheckError()
+      END IF
+   END IF
+
    ! Set initial inputs at t = 0
    IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
       ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)

@@ -30,7 +30,7 @@ MODULE WAMIT_Interp
 
    USE NWTC_Library
    use GridInterp_Types, only: GridInterp_ParameterType, GridInterp_MiscVarType
-   use GridInterp, only: GridInterpSetup3D, GridInterpSetup4D, GridInterp3DVec6, GridInterp4DVec6
+   use GridInterp, only: GridInterpSetup3D, GridInterpSetup4D, GridInterp3DVec6, GridInterp4DVec6, GridInterp4DVecN
 
    IMPLICIT NONE
 
@@ -48,6 +48,7 @@ MODULE WAMIT_Interp
    interface WAMIT_ForceWaves_Interp
       module procedure WAMIT_ForceWaves_Interp_3D_vec6
       module procedure WAMIT_ForceWaves_Interp_4D_vec6
+      module procedure WAMIT_ForceWaves_Interp_4D_vecN
    end interface
 
 CONTAINS
@@ -683,6 +684,27 @@ function WAMIT_ForceWaves_Interp_4D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3
 
    call GridInterpSetup4D( (/Real(Time,ReKi),pos(1),pos(2),pos(3)/), WF_p, WF_m, ErrStat3, ErrMsg3 )
    WAMIT_ForceWaves_Interp_4D_vec6 = GridInterp4DVec6( pKinXX, WF_m )
+
+end function
+
+
+!> retrieve indices from the WaveField info, and do interpolation for this point.  This is for interpolating on 4D
+!! NOTE: the WAMIT field passed in here through pKinXX is based on WaveField sizing, which is why we can do this.
+function WAMIT_ForceWaves_Interp_4D_vecN(N, Time, pos, pKinXX, WF_p, WF_m, ErrStat3, ErrMsg3)
+   integer(IntKi),                        intent(in   ) :: N
+   real(DbKi),                            intent(in   ) :: Time
+   real(ReKi),                            intent(in   ) :: pos(3)             !< position
+   real(SiKi),                            intent(in   ) :: pKinXX(0:,:,:,:,:) !< 4D Wave excitation data (SiKi for storage space reasons)
+   type(GridInterp_ParameterType),        intent(in   ) :: WF_p               !< wavefield parameters
+   type(GridInterp_MiscVarType),          intent(inout) :: WF_m               !< wavefield misc/optimization variables
+   integer(IntKi),                        intent(  out) :: ErrStat3
+   character(*),                          intent(  out) :: ErrMsg3
+
+   real(SiKi)                             :: WAMIT_ForceWaves_Interp_4D_vecN(N)
+
+   ! get the bounding indices from the WaveField info (same indexing used in WAMIT)
+   call GridInterpSetup4D( (/Real(Time,ReKi),pos(1),pos(2),pos(3)/), WF_p, WF_m, ErrStat3, ErrMsg3 )
+   WAMIT_ForceWaves_Interp_4D_vecN = GridInterp4DVecN( N, pKinXX, WF_m )
 
 end function
 

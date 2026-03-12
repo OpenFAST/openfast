@@ -1090,7 +1090,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        SrcDispDL=DatLoc(FEAM_u_PtFairleadDisplacement), & ! FEAM%u%PtFairleadDisplacement
                        DstDL=DatLoc(ED_u_PlatformPtMesh), &               ! ED%u%PlatformPtMesh
                        DstDispDL=DatLoc(ED_y_PlatformPtMesh), &           ! ED%y%PlatformPtMesh
-                       Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                       Active=Turbine%p_FAST%CompSub == Module_None, &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
@@ -1148,7 +1148,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        SrcDispDL=DatLoc(MAP_u_PtFairDisplacement), &   ! MAP%u%PtFairDisplacement
                        DstDL=DatLoc(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
                        DstDispDL=DatLoc(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                       Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                       Active=Turbine%p_FAST%CompSub == Module_None, &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
@@ -1160,7 +1160,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        SrcDispDL=DatLoc(MD_u_CoupledKinematics, 1), &  ! MD%u%CoupledKinematics(1)
                        DstDL=DatLoc(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
                        DstDispDL=DatLoc(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                       Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                       Active=Turbine%p_FAST%CompSub == Module_None, &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
@@ -1489,8 +1489,57 @@ subroutine InitMappings_ExtPtfm(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &                    ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(ExtPtfm_u_PtfmMesh), &                     ! ExtPtfm%u%PtfmMesh
-                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_HD)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(HydroDyn_y_Morison_Mesh), &
+                       SrcDispDL=DatLoc(HydroDyn_u_Morison_Mesh), &
+                       DstDL=DatLoc(ExtPtfm_u_FBMesh), &
+                       DstDispDL=DatLoc(ExtPtfm_y_FBMesh), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2);  if (Failed()) return
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(HydroDyn_y_WAMITMesh), &
+                       SrcDispDL=DatLoc(HydroDyn_u_WAMITMesh), &
+                       DstDL=DatLoc(ExtPtfm_u_FBMesh), &
+                       DstDispDL=DatLoc(ExtPtfm_y_FBMesh), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2);  if (Failed()) return
+
+      if ( Turbine%ExtPtfm%p%nCB>0_IntKi) then
+         call MapVariable(Mappings, &
+                          SrcMod=SrcMod, SrcDL=DatLoc(HydroDyn_y_FAddDOF), &
+                          DstMod=DstMod, DstDL=DatLoc(ExtPtfm_u_Fm), &
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+      end if
+
+   case (Module_MD)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(MD_y_CoupledLoads, 1), &             ! MD%y%CoupledLoads(1)
+                       SrcDispDL=DatLoc(MD_u_CoupledKinematics, 1), &    ! MD%u%CoupledKinematics(1)
+                       DstDL=DatLoc(ExtPtfm_u_ConnLDMesh), &             ! ExtPtfm%u%ConnLDMesh
+                       DstDispDL=DatLoc(ExtPtfm_y_ConnMesh), &           ! ExtPtfm%y%ConnMesh
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_MAP)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(MAP_y_ptFairleadLoad), &             ! MAP%y%PtFairleadLoad
+                       SrcDispDL=DatLoc(MAP_u_PtFairDisplacement), &     ! MAP%u%PtFairDisplacement
+                       DstDL=DatLoc(ExtPtfm_u_ConnLDMesh), &             ! ExtPtfm%u%ConnLDMesh
+                       DstDispDL=DatLoc(ExtPtfm_y_ConnMesh), &           ! ExtPtfm%y%ConnMesh
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_FEAM)
+
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(FEAM_y_PtFairleadLoad), &             ! FEAM%y%PtFairleadLoad, &
+                       SrcDispDL=DatLoc(FEAM_u_PtFairleadDisplacement), & ! FEAM%u%PtFairleadDisplacement
+                       DstDL=DatLoc(ExtPtfm_u_ConnLDMesh), &             ! ExtPtfm%u%ConnLDMesh
+                       DstDispDL=DatLoc(ExtPtfm_y_ConnMesh), &           ! ExtPtfm%y%ConnMesh
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
 
@@ -1523,7 +1572,7 @@ subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &             ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(FEAM_u_PtFairleadDisplacement), &   ! FEAM%u%PtFairleadDisplacement
-                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                         Active=Turbine%p_FAST%CompSub == Module_None, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_SD)
@@ -1531,6 +1580,13 @@ subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y3Mesh), &                     ! SD%y%y3Mesh
                          DstDL=DatLoc(FEAM_u_PtFairleadDisplacement), &   ! FEAM%u%PtFairleadDisplacement
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_ConnMesh), &              ! ExtPtfm_y_ConnMesh
+                         DstDL=DatLoc(FEAM_u_PtFairleadDisplacement), &   ! MD%u%CoupledKinematics(1)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
@@ -1564,20 +1620,20 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &          ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
-                         Active=Turbine%p_FAST%NRotors == 1, &
+                         Active=Turbine%p_FAST%CompSub == Module_None, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &       ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(HydroDyn_u_Morison_Mesh), &   ! HD%u%Morison%Mesh
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
-                         Active=Turbine%p_FAST%CompSub /= Module_SD); if(Failed()) return
+                         Active=Turbine%p_FAST%CompSub == Module_None); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &       ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(HydroDyn_u_WAMITMesh), &      ! HD%u%WAMITMesh
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
-                         Active=Turbine%p_FAST%CompSub /= Module_SD); if(Failed()) return
+                         Active=Turbine%p_FAST%CompSub == Module_None); if(Failed()) return
 
    case (Module_SeaSt)
 
@@ -1592,7 +1648,6 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y0Mesh), &                  ! SD%y%Y0Mesh
                          DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
-                         Active=Turbine%p_FAST%NRotors > 1, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -1604,6 +1659,40 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          SrcDL=DatLoc(SD_y_Y2Mesh), &                  ! SD%y%Y2Mesh
                          DstDL=DatLoc(HydroDyn_u_WAMITMesh), &         ! HD%u%WAMITMesh
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_FBMesh), &             ! ExtPtfm%y%FBMesh
+                         DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_FBMesh), &             ! ExtPtfm%y%FBMesh
+                         DstDL=DatLoc(HydroDyn_u_Morison_Mesh), &      ! HD%u%Morison%Mesh
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_FBMesh), &             ! ExtPtfm%y%FBMesh
+                         DstDL=DatLoc(HydroDyn_u_WAMITMesh), &         ! HD%u%WAMITMesh
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+      if ( Turbine%HD%p%HasAddDOF ) then
+         call MapVariable(Mappings, &
+                          SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qm), &
+                          DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOF), &
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+         call MapVariable(Mappings, &
+                          SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qmdot), &
+                          DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOFDot), &
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+         call MapVariable(Mappings, &
+                          SrcMod=SrcMod, SrcDL=DatLoc(ExtPtfm_y_qmdotdot), &
+                          DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_qAddDOFDotDot), &
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+      end if
    end select
 
 contains
@@ -1741,7 +1830,7 @@ subroutine InitMappings_MAP(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &       ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(MAP_u_PtFairDisplacement), &  ! MAPp%u%PtFairDisplacement
-                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                         Active=Turbine%p_FAST%CompSub == Module_None, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_SD)
@@ -1749,6 +1838,13 @@ subroutine InitMappings_MAP(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y3Mesh), &                  ! SD%y%y3Mesh
                          DstDL=DatLoc(MAP_u_PtFairDisplacement), &     ! MAPp%u%PtFairDisplacement
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_ConnMesh), &          ! ExtPtfm_y_ConnMesh
+                         DstDL=DatLoc(MAP_u_PtFairDisplacement), &    ! MD%u%CoupledKinematics(1)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
@@ -1781,13 +1877,20 @@ subroutine InitMappings_MD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &          ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(MD_u_CoupledKinematics, 1), &    ! MD%u%CoupledKinematics(1)
-                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
+                         Active=Turbine%p_FAST%CompSub == Module_None, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_SD)
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y3Mesh), &                  ! SD%y%y3Mesh
+                         DstDL=DatLoc(MD_u_CoupledKinematics, 1), &    ! MD%u%CoupledKinematics(1)
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
+
+   case (Module_ExtPtfm)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(ExtPtfm_y_ConnMesh), &           ! ExtPtfm%y%ConnMesh
                          DstDL=DatLoc(MD_u_CoupledKinematics, 1), &    ! MD%u%CoupledKinematics(1)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 

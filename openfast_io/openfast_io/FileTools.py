@@ -389,7 +389,7 @@ def cleanup_fstvt(fst_vt, ignoreVars=None, removeFileRef=False, removeArrayProps
                     'HydroFile',
                     'SubFile',
                     'MooringFile',
-                    'Red_FileName',
+                    'Red_FileName', 'Conn_FileName', 'Force_FileName', 'FConn_FileName',
                     'PrescribedForcesFile',
                     'actuatorDiskFile',
                     'BDBldFile(1)', 'BDBldFile(2)', 'BDBldFile(3)',

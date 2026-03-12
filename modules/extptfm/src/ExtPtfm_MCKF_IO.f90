@@ -27,19 +27,11 @@ MODULE ExtPtfm_MCKF_Parameters
 
    TYPE(ProgDesc), PARAMETER :: ExtPtfm_Ver = ProgDesc( 'ExtPtfm_MCKF', '', '' ) !< module date/version information
    !
-   INTEGER(IntKi), parameter :: N_INPUTS = 18
-   INTEGER(IntKi), parameter :: N_OUTPUTS = 6
-
-
    CHARACTER(len=4), DIMENSION(3), PARAMETER :: StrIntMethod = (/'RK4 ','AB4 ','ABM4'/)
 
    ! Variables for output channels
-   INTEGER(IntKi), PARAMETER :: FILEFORMAT_GUYANASCII = 0
-   INTEGER(IntKi), PARAMETER :: FILEFORMAT_FLEXASCII  = 1
-
-   ! Variables for output channels
-   INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
-                                                        ! Harcoded to outputs of 200 CB modes
+   INTEGER(IntKi), PARAMETER :: MaxOutChs   = 1 + 12 + 4*200 ! Maximum number of output channels
+                                                             ! Harcoded to outputs of 200 CB modes
    INTEGER(IntKi), PARAMETER :: ID_Time     = 0
    INTEGER(IntKi), PARAMETER :: ID_PtfFx    = 1
    INTEGER(IntKi), PARAMETER :: ID_PtfFy    = 2
@@ -47,14 +39,13 @@ MODULE ExtPtfm_MCKF_Parameters
    INTEGER(IntKi), PARAMETER :: ID_PtfMx    = 4
    INTEGER(IntKi), PARAMETER :: ID_PtfMy    = 5
    INTEGER(IntKi), PARAMETER :: ID_PtfMz    = 6
-   INTEGER(IntKi), PARAMETER :: ID_WaveElev = 7
-   INTEGER(IntKi), PARAMETER :: ID_InpFx    = 8
-   INTEGER(IntKi), PARAMETER :: ID_InpFy    = 9
-   INTEGER(IntKi), PARAMETER :: ID_InpFz    = 10
-   INTEGER(IntKi), PARAMETER :: ID_InpMx    = 11
-   INTEGER(IntKi), PARAMETER :: ID_InpMy    = 12
-   INTEGER(IntKi), PARAMETER :: ID_InpMz    = 13
-   INTEGER(IntKi), PARAMETER :: ID_QStart   = 14
+   INTEGER(IntKi), PARAMETER :: ID_InpFx    = 7
+   INTEGER(IntKi), PARAMETER :: ID_InpFy    = 8
+   INTEGER(IntKi), PARAMETER :: ID_InpFz    = 9
+   INTEGER(IntKi), PARAMETER :: ID_InpMx    = 10
+   INTEGER(IntKi), PARAMETER :: ID_InpMy    = 11
+   INTEGER(IntKi), PARAMETER :: ID_InpMz    = 12
+   INTEGER(IntKi), PARAMETER :: ID_QStart   = 13
 END MODULE ExtPtfm_MCKF_Parameters
 
 !**********************************************************************************************************************************
@@ -82,7 +73,7 @@ subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
   CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
   INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
-      print*,'ErrMess',ErrMess
+     print*,'ErrMess',TRIM(ErrMess)
      write(ErrMess,'(A)') TRIM(RoutineName)//':'//TRIM(ErrMess)
      if (present(LineNumber)) then
          ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
@@ -208,21 +199,19 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(13) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "INPF_FX  ","INPF_FY  ","INPF_FZ  ","INPF_MX  ","INPF_MY  ","INPF_MZ  ",&
-                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  ",&
-                               "WAVELEV  "/) 
-   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(13) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(12) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "EXTRNFX  ","EXTRNFY  ","EXTRNFZ  ","EXTRNMX  ","EXTRNMY  ","EXTRNMZ  ",&
+                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  "/)
+   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(12) =  (/ &                     ! This lists the units corresponding to the allowed parameters
                                "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ",&
-                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(13) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(12) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                               ID_InpFx, ID_InpFy, ID_InpFz, ID_InpMx, ID_InpMy, ID_InpMz,&
-                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz,&
-                              ID_WaveElev  /)
+                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz/)
    character(ErrMsgLen)                         :: WarnMsg  !Warning Message
    ErrStat = ErrID_None
    ErrMsg  = ""
-   WarnMsg  = ""
+   WarnMsg = ""
    
    p%NumOuts = NumOuts_in
    allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
@@ -256,18 +245,20 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
       if (Indx>0) then
           p%OutParam(I)%Indx  = ParamIndxAry(Indx)
           p%OutParam(I)%Units = ParamUnitsAry(Indx)
-      else if (index(OutListTmp,'CBQ_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+0*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
-      else if (index(OutListTmp,'CBQD_') > 0 ) then
-          call setDOFChannel(6,ID_QStart+1*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
-      else if (index(OutListTmp,'CBF_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+2*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBD') > 0 ) then
+          call setDOFChannel(4,ID_QStart+0*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBV') > 0 ) then
+          call setDOFChannel(4,ID_QStart+1*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBA') > 0 ) then
+          call setDOFChannel(4,ID_QStart+2*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
+      else if (index(OutListTmp,'CBF') > 0 ) then
+          call setDOFChannel(4,ID_QStart+3*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
       else
           call setInvalidChannel() ! INVALID
       endif
       !write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
    end do
-   if (len(WarnMsg)>0) then
+   if (len(trim(WarnMsg))>0) then
        call SetErrStat(ErrID_Warn, WarnMsg,ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
        write(*,'(A)')trim(WarnMsg)
    endif
@@ -304,31 +295,201 @@ contains
 END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Checks that all inputs were correctly read
-subroutine CheckInputs(Inp, p, ErrStat, ErrMsg)
+subroutine CheckReducedInputs(Inp, p, ErrStat, ErrMsg)
     TYPE(ExtPtfm_InputFile),     INTENT(INOUT) :: Inp        !< Data stored in the module's input file
     TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p          !< All the parameter matrices stored in this input file
-    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat    !< Error status                              
+    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat    !< Error status
     CHARACTER(*),                INTENT(OUT)   :: ErrMsg     !< Error message
+    INTEGER(IntKi)                             :: i,j
+    REAL(ReKi),                  PARAMETER     :: RelTol = 0.001_ReKi
+    REAL(ReKi),                  PARAMETER     :: AbsTol = 0.0001_ReKi
     ErrStat = ErrID_None
     ErrMsg  = ""
-    if (ErrStat/=0) return
+
     if (p%nTot<0)                 then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; return; endif
     if (.not.allocated(p%Mass))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; return; endif
     if (.not.allocated(p%Stff))   then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; return; endif
     if (.not.allocated(p%Damp))   then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; return; endif
-    if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';return; endif
-    if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; return; endif
+    if (.not.allocated(p%W0))     then ; ErrStat=ErrID_Fatal; ErrMsg='Constant self-weight was not allocated.';return; endif
+    if (.not.allocated(p%WStff))  then ; ErrStat=ErrID_Fatal; ErrMsg='Self-weight stiffness matrix was not allocated.';return; endif
+    !if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';return; endif
+    !if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; return; endif
     if (allocated(Inp%ActiveCBDOF)) then 
         if (maxval(Inp%ActiveCBDOF)>size(p%Mass,1)-6) then
             ErrStat=ErrID_Fatal; ErrMsg='The maximum index of `ActiveCBDOF` (active CB DOF) should be less than the total number of CB DOF.'; return;
         endif
     endif
-end subroutine CheckInputs
+
+    ! Check mass matrix
+    do i = 1,p%nTot
+        do j = i+1,p%nTot
+            if ( ABS( p%Mass(i,j) - p%Mass(j,i) ) > MAX(RelTol*ABS(p%Mass(i,j)),AbsTol) ) then
+                   ErrStat=ErrID_Warn; ErrMsg='Mass matrix is not symmetric'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+        end do
+    end do
+    if (Inp%HasRBMode) then
+        ! Check stiffness matrix
+        do i = 1,p%nTot
+            do j = 1,6
+                if ( ABS( p%Stff(i,j) ) > AbsTol ) then
+                     ErrStat=ErrID_Warn; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; IF (ErrStat >= AbortErrLev) RETURN
+                end if
+            end do
+        end do
+        do i = 1,6
+            do j = 7,p%nTot
+                if ( ABS( p%Stff(i,j) ) > AbsTol ) then
+                     ErrStat=ErrID_Warn; ErrMsg='When rigid-body modes are enabled, the stiffness matrix should have only zeros in the first 6 rows and columns.'; IF (ErrStat >= AbortErrLev) RETURN
+                end if
+            end do
+        end do
+        ! Check mass matrix
+        p%RBMass   =  p%Mass(1,1)
+        p%RBCoG(1) =  p%Mass(2,6)/p%RBMass
+        p%RBCoG(2) = -p%Mass(1,6)/p%RBMass
+        p%RBCoG(3) =  p%Mass(1,5)/p%RBMass
+        p%RBInertia = p%Mass(4:6,4:6)
+        do i = 1,3
+            do j = i,3
+                if ( i == j ) then
+                    if ( ABS( p%Mass(i,j) - p%RBMass ) > MAX( RelTol*ABS(p%RBMass), AbsTol) ) then
+                        ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+                    end if
+                else
+                    if ( ABS( p%Mass(i,j) ) > AbsTol ) then
+                        ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+                    end if
+                end if
+            end do
+            if ( ABS( p%Mass(i,i+3) ) > AbsTol ) then
+                ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+        end do
+        if ( ABS( p%Mass(1,5) + p%Mass(2,4) ) > MAX( RelTol*ABS(p%Mass(1,5)), AbsTol ) ) then
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+        end if
+        if ( ABS( p%Mass(1,6) + p%Mass(3,4) ) > MAX( RelTol*ABS(p%Mass(1,6)), AbsTol ) ) then
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+        end if
+        if ( ABS( p%Mass(2,6) + p%Mass(3,5) ) > MAX( RelTol*ABS(p%Mass(2,6)), AbsTol ) ) then
+            ErrStat=ErrID_Warn; ErrMsg='Mass matrix associated with the first 6 modes inconsistent with rigid-body modes.'; IF (ErrStat >= AbortErrLev) RETURN
+        end if
+        ! Check W0
+        if (     ABS(p%W0(1)) > AbsTol &
+            .or. ABS(p%W0(2)) > AbsTol &
+            .or. ABS(p%W0(6)) > AbsTol ) then
+            ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, constant self-weight can only have non-zero entires in the (3) heave, (4) roll, and (5) pitch directions.'; IF (ErrStat >= AbortErrLev) RETURN
+        end if
+        if ( ABS( p%W0(4) - p%W0(3)*p%RBCoG(2) ) > MAX(RelTol*ABS(p%W0(4)), AbsTol) .or. &
+             ABS( p%W0(5) + p%W0(3)*p%RBCoG(1) ) > MAX(RelTol*ABS(p%W0(4)), AbsTol) ) then
+            ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, rigid-body center of mass inconsistent between constant self-weight and mass matrix.'; IF (ErrStat >= AbortErrLev) RETURN
+        end if
+        ! Check WStff
+        do i = 1,p%nTot
+           if (     ABS(p%WStff(i,1)) > AbsTol &
+               .or. ABS(p%WStff(i,2)) > AbsTol &
+               .or. ABS(p%WStff(i,3)) > AbsTol &
+               .or. ABS(p%WStff(i,6)) > AbsTol ) then
+               ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix must contain only zeros in the first (surge), second (sway), third (heave), and sixth (yaw) columns.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+        end do
+        do i = 1,6
+            do j = 4,5
+               if (i==1 .and. j==5) then
+                  if ( ABS( p%WStff(i,j) - p%W0(3)) > MAX( RelTol * ABS(p%W0(3)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (1,5) must be equal to  W0(3).'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else if (i==2 .and. j==4) then
+                  if ( ABS( p%WStff(i,j) + p%W0(3)) > MAX( RelTol * ABS(p%W0(3)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (2,4) must be equal to -W0(3).'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else if (i==4 .and. j==4) then 
+                  if ( ABS( p%WStff(i,j) - p%W0(3)*p%RBCoG(3) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(3)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (4,4) must be equal to  W0(3)*zCG.'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else if (i==5 .and. j==5) then
+                  if ( ABS( p%WStff(i,j) - p%W0(3)*p%RBCoG(3) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(3)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (5,5) must be equal to  W0(3)*zCG.'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else if (i==6 .and. j==4) then 
+                  if ( ABS( p%WStff(i,j) + p%W0(3)*p%RBCoG(1) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(1)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,4) must be equal to -W0(3)*xCG.'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else if (i==6 .and. j==5) then
+                  if ( ABS( p%WStff(i,j) + p%W0(3)*p%RBCoG(2) ) > MAX( RelTol * ABS(p%W0(3)*p%RBCoG(2)), AbsTol) ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry (6,5) must be equal to -W0(3)*yCG.'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               else
+                  if ( ABS( p%WStff(i,j) ) > AbsTol ) then
+                     ErrStat=ErrID_Warn; ErrMsg='With RBMod>0, self-weight stiffness matrix entry ('//TRIM(num2lstr(i))//','//TRIM(num2lstr(j))//') should be zero.'; IF (ErrStat >= AbortErrLev) RETURN
+                  end if
+               end if
+            end do
+        end do
+    end if
+end subroutine CheckReducedInputs
+subroutine CheckConnInputs(Inp, InitInp, p, ErrStat, ErrMsg)
+    TYPE(ExtPtfm_InputFile),     INTENT(INOUT) :: Inp        !< Data stored in the module's input file
+    TYPE(ExtPtfm_InitInputType), INTENT(IN   ) :: InitInp     !< Input data for initialization routine
+    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p          !< All the parameter matrices stored in this input file
+    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat    !< Error status
+    CHARACTER(*),                INTENT(OUT)   :: ErrMsg     !< Error message
+    INTEGER(IntKi)                             :: i,j,iConn
+    real(ReKi), dimension(3)                   :: RelPosConn0
+    REAL(ReKi),                  PARAMETER     :: RelTol = 0.001_ReKi
+    REAL(ReKi),                  PARAMETER     :: AbsTol = 0.0001_ReKi
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    if ( Inp%HasRBMode ) then
+        ! If rigid-body modes are present, the first six columns of PhiConn must be consistent with rigid-body kinematics
+        do iConn=1,p%nConn
+            RelPosConn0 = p%PosConn(iConn,:) - [InitInp%PtfmRefxt,InitInp%PtfmRefyt,InitInp%PtfmRefzt]
+            do i = 1,3
+               do j = 1,3
+                  if ( i == j ) then
+                     if ( ABS( p%PhiConn(3*(iConn-1)+i,j) - 1.0_ReKi ) > AbsTol ) then
+                        ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 1.'; IF (ErrStat >= AbortErrLev) RETURN
+                     end if
+                  else
+                     if ( ABS( p%PhiConn(3*(iConn-1)+i,j) ) > AbsTol ) then
+                        ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(j))//') of the connection displacement matrix should be 0.'; IF (ErrStat >= AbortErrLev) RETURN
+                     end if
+                  end if
+               end do
+               if ( ABS( p%PhiConn(3*(iConn-1)+i,i+3) ) > AbsTol ) then
+                  ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+i))//','//TRIM(num2lstr(i+3))//') of the connection displacement matrix should be 0.'; IF (ErrStat >= AbortErrLev) RETURN
+               end if
+            end do
+            if ( ABS( p%PhiConn(3*(iConn-1)+1,5) - RelPosConn0(3) ) > MAX( RelTol*ABS(RelPosConn0(3)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(3)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            if ( ABS( p%PhiConn(3*(iConn-1)+1,6) + RelPosConn0(2) ) > MAX( RelTol*ABS(RelPosConn0(2)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+1))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(2)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            if ( ABS( p%PhiConn(3*(iConn-1)+2,4) + RelPosConn0(3) ) > MAX( RelTol*ABS(RelPosConn0(3)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(3)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            if ( ABS( p%PhiConn(3*(iConn-1)+2,6) - RelPosConn0(1) ) > MAX( RelTol*ABS(RelPosConn0(1)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+2))//','//TRIM(num2lstr(6))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(1)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            if ( ABS( p%PhiConn(3*(iConn-1)+3,4) - RelPosConn0(2) ) > MAX( RelTol*ABS(RelPosConn0(2)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(4))//') of the connection displacement matrix should be '//TRIM(num2lstr( RelPosConn0(2)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            if ( ABS( p%PhiConn(3*(iConn-1)+3,5) + RelPosConn0(1) ) > MAX( RelTol*ABS(RelPosConn0(1)) , AbsTol) ) then
+               ErrStat=ErrID_Warn; ErrMsg='With rigid-body modes, entry ('//TRIM(num2lstr(3*(iConn-1)+3))//','//TRIM(num2lstr(5))//') of the connection displacement matrix should be '//TRIM(num2lstr(-RelPosConn0(1)))//'.'; IF (ErrStat >= AbortErrLev) RETURN
+            end if
+        end do
+    end if
+
+end subroutine CheckConnInputs
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, ErrMsg)
+SUBROUTINE ReadPrimaryFile(InputFile, InitInp, p, OutFileRoot, InputFileData, ErrStat, ErrMsg)
 !..................................................................................................................................
    ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile      !< Name of the file containing the primary input data
+   TYPE(ExtPtfm_InitInputType), INTENT(IN)    :: InitInp        !< Initialization input
    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
    CHARACTER(*),                INTENT(IN)    :: OutFileRoot    !< The rootname of all the output files written by this routine.
    TYPE(ExtPtfm_InputFile),     INTENT(OUT)   :: InputFileData ! Data stored in the module's input file
@@ -401,13 +562,14 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
 
    !---------------------- REDUCTION INPUTS ---------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: ReductionInputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
-   ! File Format switch
-   CALL ReadVar(UnIn, InputFile, InputFileData%FileFormat, "FileFormat", "File format switch", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! Rigid-body mode flag
+   CALL ReadVar(UnIn, InputFile, InputFileData%RBMod, "RBMod", "Method for handling rigid-body motion", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   InputFileData%hasRBMode = InputFileData%RBMod > 0_IntKi
    ! Reduction Filename
    CALL ReadVar(UnIn, InputFile, InputFileData%RedFile   , 'Red_FileName', 'Path containing Guyan/Craig-Bampton inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    IF ( PathIsRelative(InputFileData%RedFile) ) InputFileData%RedFile = TRIM(PriPath)//TRIM(InputFileData%RedFile)
-   CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
-   IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
+   !CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   !IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
    CALL ReadVar(UnIn, InputFile, N , 'NActiveCBDOF','Number of active CB mode listed in ActiveCBDOF, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    if (N<0) then
        CALL ReadCom(UnIn, InputFile, 'ActiveCBDOF', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
@@ -434,6 +596,19 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
        CALL AllocAry(InputFileData%InitVelList, N, 'InitVelList',  ErrStat, ErrMsg ); if (Failed()) return
        CALL ReadAry(UnIn, InputFile, InputFileData%InitVelList, N, 'InitVelList', 'Initial velocities', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    endif
+   !---------------------- CONNECTION INPUTS ---------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: Connections', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasConnections, 'Connections','Flag for connections', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%ConnFile, 'Conn_FileName', 'Path containing connections inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%ConnFile) ) InputFileData%ConnFile = TRIM(PriPath)//TRIM(InputFileData%ConnFile)
+   !---------------------- USER FORCING INPUTS ---------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: User Forcing', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasUserForcing, 'UserForcing','Flag for user prescribed modal forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%ForceFile, 'Force_FileName', 'Path containing user modal forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%ForceFile) ) InputFileData%ForceFile = TRIM(PriPath)//TRIM(InputFileData%ForceFile)
+   CALL ReadVar(UnIn, InputFile, InputFileData%HasConnForcing, 'ConnForcing','Flag for user prescribed connection forcing', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, InputFileData%FConnFile, 'FConn_FileName', 'Path containing user connection forcing inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%FConnFile) ) InputFileData%FConnFile = TRIM(PriPath)//TRIM(InputFileData%FConnFile)
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! SumPrint - Print summary data to <RootName>.sum (flag):
@@ -454,10 +629,39 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    call cleanup()
 
    ! --- Reading Reduced file
-   call ReadReducedFile(InputFileData%RedFile, p, InputFileData%FileFormat, ErrStat, ErrMsg); if(Failed()) return;
+   call ReadReducedFile(InputFileData%RedFile, p, ErrStat, ErrMsg); if(Failed()) return
    ! Checking that everyting was correctly read and set
-   call CheckInputs(InputFileData, p, ErrStat, ErrMsg);  if(Failed()) return
+   call CheckReducedInputs(InputFileData, p, ErrStat, ErrMsg);  if(Failed()) return
 
+   ! --- Reading connection file
+   if (InputFileData%hasConnections) then
+      call ReadConnFile(InputFileData%ConnFile, p, ErrStat, ErrMsg); if(Failed()) return
+      call CheckConnInputs(InputFileData, InitInp, p, ErrStat, ErrMsg); if(Failed()) return
+   else
+      p%NConn = 0_IntKi
+   end if
+
+   ! --- Reading user modal forcing file
+   if (InputFileData%HasUserForcing) then
+      call ReadForceFile(InputFileData%ForceFile, p%nTot, p%UsrModeF, ErrStat, ErrMsg); if(Failed()) return
+   else
+      p%UsrModeF%nTimeSteps = 1_IntKi
+      call allocAry( p%UsrModeF%Forces, 1_IntKi, p%nTot, 'p%UsrModeF%Forces', ErrStat, ErrMsg); if(Failed()) return
+      call allocAry( p%UsrModeF%times , 1_IntKi,         'p%UsrModeF%times' , ErrStat, ErrMsg); if(Failed()) return
+      p%UsrModeF%Forces= 0.0_ReKi
+      p%UsrModeF%times = 0.0_ReKi
+   end if
+
+   ! --- Reading user connection forcing file
+   if (InputFileData%HasConnForcing) then
+      call ReadForceFile(InputFileData%FConnFile, p%nConn*3, p%UsrConnF, ErrStat, ErrMsg); if(Failed()) return
+   else
+      p%UsrConnF%nTimeSteps = 1_IntKi
+      call allocAry( p%UsrConnF%Forces, 1_IntKi, p%nConn*3, 'p%UsrConnF%Forces', ErrStat, ErrMsg); if(Failed()) return
+      call allocAry( p%UsrConnF%times , 1_IntKi,            'p%UsrConnF%times' , ErrStat, ErrMsg); if(Failed()) return
+      p%UsrConnF%Forces= 0.0_ReKi
+      p%UsrConnF%times = 0.0_ReKi
+   end if
  
    ! --- Reducing the number of DOF if needed
    p%nCBFull=p%nCB
@@ -515,7 +719,10 @@ SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
    call SquareMatRed(p%Mass)
    call SquareMatRed(p%Stff)
    call SquareMatRed(p%Damp)
-   call TimeMatRed(p%Forces)
+   call TimeMatRed(p%UsrModeF%Forces)
+   if (allocated(p%PhiConn)) then
+      call RectMatRed(p%PhiConn)
+   end if
 
    ! Trigger
    p%nCB = size(p%ActiveCBDOF)
@@ -539,6 +746,22 @@ CONTAINS
         enddo
         deallocate(tmp)
     end subroutine 
+    !> Takes M and returns M(:,I) where I is a list of indexes to keep
+    subroutine RectMatRed(M)
+        real(Reki), dimension(:,:), allocatable :: M
+        real(Reki), dimension(:,:), allocatable :: tmp
+        integer(IntKi) :: J
+        ! Storing M to a tmp array
+        call allocAry( tmp, size(M,1), size(M,2), 'Mtmp',  ErrStat, ErrMsg); if(Failed()) return
+        tmp=M
+        ! Reallocating M and storing only the desired DOF
+        deallocate(M)
+        call allocAry(M, size(tmp,1), nActive, 'M',  ErrStat, ErrMsg); if(Failed()) return
+        do J=1,nActive
+            M(:,J) = tmp(:, FullActiveCBDOF(J))
+        enddo
+        deallocate(tmp)
+    end subroutine
     !> Takes M and returns M(:,I) where I is a list of indexes to keep
     subroutine TimeMatRed(M)
         real(Reki), dimension(:,:), allocatable :: M
@@ -565,13 +788,12 @@ END SUBROUTINE ReduceNumberOfDOF
 
 
 !..................................................................................................................................
-SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
+SUBROUTINE ReadReducedFile( InputFile, p, ErrStat, ErrMsg )
 !..................................................................................................................................
    ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
-   INTEGER(IntKi),              INTENT(IN)    :: FileFormat                          !< File format for reduction inputs
-   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
    REAL(ReKi), dimension(:),allocatable :: TmpAry                                 ! temporary array for reading row from file
@@ -581,230 +803,247 @@ SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
    CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
    ErrStat = ErrID_None
    ErrMsg  = ""
-   if     (FileFormat==FILEFORMAT_GUYANASCII) then
-       call ReadGuyanASCII()
-   elseif (FileFormat==FILEFORMAT_FLEXASCII) then
-       call ReadFlexASCII()
-   else
-       call SetErrStat(ErrID_Fatal, 'FileFormat not implemented: '//trim(Num2LStr(FileFormat)), ErrStat, ErrMsg, 'ExtPtfm_ReadReducedFile')
-       return
-   endif
-   ! --- The code below can detect between FlexASCII and GuyanASCII format by looking at the two first lines
-   ! Get an available unit number for the file.
-   !CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if(Failed()) return
-   !! Open the Primary input file.
-   !CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if(Failed()) return
-   !iLine=1
-   !!-------------------------- Read the first two lines
-   !CALL ReadStr( UnIn, InputFile, Line, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
-   !if(Failed()) return
-   !iLine=iLine+1
-   !CALL ReadStr( UnIn, InputFile, Line2, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
-   !if(Failed()) return
-   !iLine=iLine+1
-   !call CONV2UC(Line)
-   !call CONV2UC(Line2)
-   !call cleanup()
-   !!-------------------------- Detecting file format
-   !if (index(Line2,'#MASS')==1) then
-   !    write(*,*) 'File detected as Guyan ASCII file format: '//trim(InputFile)
-   !    call ReadGuyanASCII()
-   !else if (index(Line2,'FLEX 5 FORMAT')>=1) then
-   !    write(*,*) 'File detected as FLEX ASCII file format: '//trim(InputFile)
-   !    call ReadFlexASCII()
-   !endif
+
+    ! Get an available unit number for the file.
+    CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
+    ! Open the Primary input file.
+    CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
+
+    ! --- Reading file line by line
+    ErrStat=0
+    iLine=0
+    do while (ErrStat==0)
+        iLine=iLine+1
+        read(UnIn,'(A)', iostat=ErrStat) Line
+        if (ErrStat/=0) then
+            if (ErrStat < 0) then
+                ErrStat=0 ! End of file is fine
+            else
+                ErrMsg='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
+            endif
+            exit
+        endif
+        ! Line content is analyzed as case insensitive
+        call Conv2UC(Line)
+        if (index(Line,'!DIMENSION')==1) then
+            p%nTot = ReadIntFromStr(Line(12:), '`dimension`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
+            p%nCB=p%nTot-6
+
+        else if (index(Line,'!MASS')==1) then
+            if (p%nTot<0) exit
+            call ReadRealMatrix(UnIn, InputFile, p%Mass, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+        else if (index(Line,'!STIFFNESS')==1) then
+            if (p%nTot<0) exit
+            call ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+        else if (index(Line,'!DAMPING')==1) then
+            if (p%nTot<0) exit
+            call ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+        else if (index(Line,'!WEIGHT CONSTANT')==1) then
+            if (p%nTot<0) exit
+            CALL AllocAry(p%W0, p%nTot, 'W0', ErrStat, ErrMsg ); if (Failed()) return
+            call ReadAry(UnIn, InputFile, p%W0, p%nTot, 'W0', 'Weight constant', ErrStat, ErrMsg)
+        else if (index(Line,'!WEIGHT STIFFNESS')==1) then
+            if (p%nTot<0) exit
+            call ReadRealMatrix(UnIn, InputFile, p%WStff, 'Weight stiffness', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+        ! elseif (index(Line,'!')==1) then
+            !write(*,*) 'Ignored comment: '//trim(Line)
+        ! else
+            ! Ignore unsupported lines
+            !write(*,*) 'Ignored line: '//trim(Line)
+        endif
+    enddo
+    close( UnIn )
 
 CONTAINS
-    !> 
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadReducedFile')
         Failed =  ErrStat >= AbortErrLev
         if(Failed) call cleanup()
     end function Failed
-    !> 
     subroutine cleanup()
         close( UnIn )
         if (allocated(TmpAry)) deallocate(TmpAry)
     end subroutine cleanup
+END SUBROUTINE ReadReducedFile
 
-   !> Reads a FLEX ASCII file for Guyan or CraigBampton reductions
-   SUBROUTINE ReadFlexASCII()
-       REAL(ReKi) :: dt !< time step
-       REAL(ReKi) :: T  !< total simulation time
+!..................................................................................................................................
+SUBROUTINE ReadConnFile( InputFile, p, ErrStat, ErrMsg )
+!..................................................................................................................................
+   ! Passed variables
+   CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+   ! Local variables:
+   INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                       :: iLine                                     ! Current position in file
+   CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
-       T=-1
-       dt=-1
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
-       ! Open the Primary input file.
-       CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
+   ! Get an available unit number for the file.
+   CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if (Failed()) return
+   ! Open the Primary input file.
+   CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if (Failed()) return
 
-       ! --- Reading file line by line
-       ErrStat=0
-       iLine=0
-       do while (ErrStat==0)
-           iLine=iLine+1
-           read(UnIn,'(A)', iostat=ErrStat) Line
-           if (ErrStat/=0) then
-               if (ErrStat < 0) then
-                   ErrStat=0 ! End of file is fine
-               else
-                   ErrMsg='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
-               endif
-               exit
-           endif
-           ! Line content is analyzed as case incensitive 
-           call Conv2UC(Line)
-           if (index(Line,'!DIMENSION')==1) then
-               p%nTot = ReadIntFromStr(Line(12:), '`dimension`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               p%nCB=p%nTot-6
-
-           else if (index(Line,'!TIME INCREMENT IN SIMULATION:')==1) then
-               dt =  ReadFloatFromStr(Line(31:), '`time increment`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
-
-           else if (index(Line,'!TOTAL SIMULATION TIME IN FILE:')==1) then
-               T =  ReadFloatFromStr(Line(32:), '`total simulation time`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg ); if (ErrStat /= 0) exit
-
-           else if (index(Line,'!MASS MATRIX')==1) then
-               iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               if (p%nTot<0) exit
-               call ReadRealMatrix(UnIn, InputFile, p%Mass, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-
-           else if (index(Line,'!STIFFNESS MATRIX')==1) then
-               iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg);  if (ErrStat /= 0) exit
-               if (p%nTot<0) exit
-               call ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-
-           else if (index(Line,'!DAMPING MATRIX')==1) then
-               iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               if (p%nTot<0) exit
-               call ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-
-           else if (index(Line,'!LOADING')==1) then
-               iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg)
-               if (ErrStat /= 0) exit
-               p%nTimeSteps = nint(T/dt)+1
-               if (p%nTot<0) exit
-               call allocAry( p%Forces, max(1,p%nTimeSteps), p%nTot, 'p%Forces'   , ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               call allocAry( p%times , max(1,p%nTimeSteps),         'p%times', ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               if (p%nTimeSteps == 0) then
-                  p%Forces= 0.0_ReKi
-                  p%times = 0.0_ReKi
-                  p%nTimeSteps  = 1
-               else
-                  allocate(TmpAry(1:p%nTot+1))
-                  do i=1,p%nTimeSteps
-                     iLine=iLine+1
-                     TmpAry(1:p%nTot+1)=-999.9E-09
-                     read(UnIn, fmt='(A)', iostat=ErrStat) Line
-                     if (ErrStat/=0) then
-                        ErrStat = ErrID_Fatal
-                        ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
-                        exit
-                     end if
-                     ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
-                     CALL ReadAry(Line, TmpAry, p%nTot+1, 'Forces', 'Forces', ErrStat, ErrMsg)
-                     if (ErrStat/=0) then
-                        ErrStat = ErrID_Fatal
-                        ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
-                        exit
-                     end if
-                     if (ErrStat /= 0) exit
-                     p%times(i)    = TmpAry(1)
-                     p%Forces(i,:) = TmpAry(2:p%nTot+1)
-                  end do
-               end if
-
-           elseif (index(Line,'!')==1) then
-               !write(*,*) 'Ignored comment: '//trim(Line)
+   ! --- Reading file line by line
+   ErrStat=0
+   iLine=0
+   do while (ErrStat==0)
+       iLine=iLine+1
+       read(UnIn,'(A)', iostat=ErrStat) Line
+       if (ErrStat/=0) then
+           if (ErrStat < 0) then
+               ErrStat=0 ! End of file is fine
            else
-               ! Ignore unsupported lines
-               !write(*,*) 'Ignored line: '//trim(Line)
+               ErrMsg='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
            endif
-       enddo
-       close( UnIn )
-   END SUBROUTINE ReadFlexASCII
+           exit
+       endif
+       ! Line content is analyzed as case insensitive
+       call Conv2UC(Line)
+       if (index(Line,'!NCONN:')==1) then
+           p%nConn = ReadIntFromStr(Line(8:), '`Nconn`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (Failed()) return
+           if (p%nConn<=0_IntKi) return
+        else if (index(Line,'!CONNECTIONS')==1) then
+           call ReadRealMatrix(UnIn, InputFile, p%PosConn, 'Connections', p%nConn, 3_IntKi, ErrStat, ErrMsg, iLine)
+        else if (index(Line,'!DISPLACEMENT')==1) then
+           call ReadRealMatrix(UnIn, InputFile, p%PhiConn, 'Displacement', 3*p%nConn, p%nTot, ErrStat, ErrMsg, iLine)
+        ! else if (index(Line,'!')==1) then
+           !write(*,*) 'Ignored comment: '//trim(Line)
+        ! else
+           ! Ignore unsupported lines
+           !write(*,*) 'Ignored line: '//trim(Line)
+        end if
+    end do
+    close( UnIn )
 
-   !> Reads a Guyan ASCII file 
-   SUBROUTINE ReadGuyanASCII()
-       ! Guyan reduction has 6 DOF, 0 CB DOFs
-       p%nCB  = 0
-       p%nTot = 6
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if ( ErrStat /= 0 ) return
-       ! Open the Primary input file.
-       CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if ( ErrStat /= 0 ) return
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadConnFile')
+        Failed =  ErrStat >= AbortErrLev
+        if(Failed) call cleanup()
+    end function Failed
+    subroutine cleanup()
+        close( UnIn )
+    end subroutine cleanup
+END SUBROUTINE ReadConnFile
 
-       !-------------------------- HEADER ---------------------------------------------
-       CALL ReadStr( UnIn, InputFile, Line, 'Header line', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat, ErrMsg)
-       if ( ErrStat /= 0 ) return
-       !---------------------- MASS MATRIX --------------------------------------
-       CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat, ErrMsg)
-       if ( ErrStat /= 0 ) return
-       CALL ReadRealMatrix(UnIn, InputFile, p%Mass, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-       if ( ErrStat /= 0 ) return
-       !---------------------- DAMPING MATRIX --------------------------------------
-       CALL ReadCom( UnIn, InputFile, 'Section Header: Damping Matrix', ErrStat, ErrMsg)
-       if ( ErrStat /= 0 ) return
-       CALL ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-       if ( ErrStat /= 0 ) return
-       !---------------------- STIFFNESS MATRIX --------------------------------------
-       CALL ReadCom( UnIn, InputFile, 'Section Header: Stiffness Matrix', ErrStat, ErrMsg)
-       if ( ErrStat /= 0 ) return
-       CALL ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
-       if ( ErrStat /= 0 ) return
-       !---------------------- LOAD time-history --------------------------------------
-       p%nTimeSteps = 0
-       CALL ReadCom( UnIn, InputFile, 'Section Header: Loads time-history', ErrStat, ErrMsg)
-       CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel names', ErrStat, ErrMsg)
-       CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel units', ErrStat, ErrMsg)
-       allocate(TmpAry(1:p%nTot+1))
-       if (ErrStat < AbortErrLev) then
-          ! let's figure out how many rows of data are in the time-history table:
-          read( UnIn, *, IOSTAT=ErrStat ) TmpAry
-          do while (ErrStat==0)
-             p%nTimeSteps = p%nTimeSteps + 1
-             read( UnIn, *, IOSTAT=ErrStat ) TmpAry
-          end do
-       end if
-       call allocAry( p%Forces, max(1,p%nTimeSteps), p%nTot, 'p%Forces', ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
-       call allocAry( p%times , max(1,p%nTimeSteps),         'p%times' , ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
-       if (p%nTimeSteps == 0) then
-          p%Forces    = 0.0_ReKi
-          p%times = 0.0_ReKi
-          p%nTimeSteps = 1
-       else
-          rewind(UnIn)
-          do i=1,25 ! skip the first 25 rows of the file until we get to the data for the time-history table
-             read(UnIn,*,IOSTAT=ErrStat) line
-          end do
-          do i=1,p%nTimeSteps
-             read(UnIn, fmt='(A)', iostat=ErrStat) Line
-             if (ErrStat/=0) then
+!..................................................................................................................................
+SUBROUTINE ReadForceFile( InputFile, n, UserForcing, ErrStat, ErrMsg )
+!..................................................................................................................................
+   ! Passed variables
+   CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
+   INTEGER(IntKi),              INTENT(IN)    :: n                                   !< Number of load components expected
+   TYPE(UserForcingType),       INTENT(INOUT) :: UserForcing                         !< User-specified forcing time series
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+   ! Local variables:
+   REAL(ReKi), dimension(:),allocatable :: TmpAry                                    ! temporary array for reading row from file
+   INTEGER(IntKi)                       :: I                                         ! loop counter
+   INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                       :: iLine                                     ! Current position in file
+   CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   LOGICAL                              :: foundNSteps
+   LOGICAL                              :: foundForcing
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   foundNSteps  = .false.
+   foundForcing = .false.
+
+   UserForcing%nTimeSteps = 0_IntKi
+
+   ! Get an available unit number for the file.
+   CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if (Failed()) return
+   ! Open the Primary input file.
+   CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if (Failed()) return
+
+    ! --- Reading file line by line
+    ErrStat=0
+    iLine=0
+    do while (ErrStat==0)
+        iLine=iLine+1
+        read(UnIn,'(A)', iostat=ErrStat) Line
+        if (ErrStat/=0) then
+            if (ErrStat < 0) then
+                ErrStat=0 ! End of file is fine
+            else
+                ErrMsg='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
+            endif
+            exit
+        endif
+        ! Line content is analyzed as case insensitive
+        call Conv2UC(Line)
+        if (index(Line,'!NSTEPS')==1) then
+            foundNSteps = .true.
+            UserForcing%nTimeSteps =  ReadIntFromStr(Line(9:), '`Nsteps`, file '//trim(InputFile)//', line '//Num2LStr(iLine), ErrStat, ErrMsg); if (Failed()) return
+        else if (index(Line,'!FORCING')==1) then
+            foundForcing = .true.
+            if (n<0 .or. UserForcing%nTimeSteps==0) exit
+            call allocAry( UserForcing%Forces, max(1,UserForcing%nTimeSteps), n, 'UserForcing%Forces', ErrStat, ErrMsg); if (Failed()) return
+            call allocAry( UserForcing%times , max(1,UserForcing%nTimeSteps),    'UserForcing%times' , ErrStat, ErrMsg); if (Failed()) return
+            allocate(TmpAry(1:n+1))
+            do i=1,UserForcing%nTimeSteps
+                iLine=iLine+1
+                TmpAry(1:n+1)=-999.9E-09
+                read(UnIn, fmt='(A)', iostat=ErrStat) Line
+                if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
-                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
+                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(UserForcing%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
                 exit
-             end if
-             ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
-             CALL ReadAry(Line, TmpAry, p%nTot+1, 'Forces', 'Forces', ErrStat, ErrMsg)
-             if (ErrStat/=0) then
+                end if
+                ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
+                CALL ReadAry(Line, TmpAry, n+1, 'Forces', 'Forces', ErrStat, ErrMsg)
+                if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
                 ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
                 exit
-             end if
-             if ( ErrStat /= 0 ) return
-             p%times(i)     = TmpAry(1)
-             p%Forces(i,:)  = TmpAry(2:p%nTot+1)
-          end do
-       end if
-       !---------------------- END OF FILE -----------------------------------------
-       close( UnIn )
-   END SUBROUTINE ReadGuyanASCII
-END SUBROUTINE ReadReducedFile
+                end if
+                if (ErrStat /= 0) exit
+                UserForcing%times(i)    = TmpAry(1)
+                UserForcing%Forces(i,:) = TmpAry(2:n+1)
+            end do
+        ! elseif (index(Line,'!')==1) then
+            !write(*,*) 'Ignored comment: '//trim(Line)
+        ! else
+            ! Ignore unsupported lines
+            !write(*,*) 'Ignored line: '//trim(Line)
+        end if
+    enddo
+    close( UnIn )
+
+    if (.not.foundNSteps) then
+        ErrStat = ErrID_Fatal
+        ErrMsg  = "Did not find '!NSteps:' followed by the number of time steps in file "//trim(InputFile)//"."
+        if(Failed()) return
+    end if
+
+    if (.not.foundForcing) then
+        ErrStat = ErrID_Fatal
+        ErrMsg  = "Did not find forcing time series after '!FORCING' in file "//trim(InputFile)//". Note that the time series should be after '!NSteps:'."
+        if(Failed()) return
+    end if
+
+    if (UserForcing%nTimeSteps <= 0_IntKi) then
+        UserForcing%nTimeSteps = 1_IntKi
+        call allocAry( UserForcing%Forces, 1_IntKi, n, 'UserForcing%Forces', ErrStat, ErrMsg); if(Failed()) return
+        call allocAry( UserForcing%times , 1_IntKi,    'UserForcing%times' , ErrStat, ErrMsg); if(Failed()) return
+        UserForcing%Forces= 0.0_ReKi
+        UserForcing%times = 0.0_ReKi
+    end if
+
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadForceFile')
+        Failed =  ErrStat >= AbortErrLev
+        if(Failed) call cleanup()
+    end function Failed
+    subroutine cleanup()
+        close( UnIn )
+        if (allocated(TmpAry)) deallocate(TmpAry)
+    end subroutine cleanup
+END SUBROUTINE ReadForceFile
 
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
@@ -843,9 +1082,9 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    write(UnSu,'(A,A)')    'Time integration method      : ',StrIntMethod(p%IntMethod)
    write(UnSu,'(A,F13.8)')'Integration time step        : ',p%EP_DeltaT
    write(UnSu,'(A)')      '!Reduction input file'
-   write(UnSu,'(A,I0)')   'Number of time steps         : ',p%nTimeSteps
-   write(UnSu,'(A,F13.8)')'Start time                   : ',p%times(1)
-   write(UnSu,'(A,F13.8)')'End time                     : ',p%times(p%nTimeSteps)
+   !write(UnSu,'(A,I0)')   'Number of time steps         : ',p%nTimeSteps
+   !write(UnSu,'(A,F13.8)')'Start time                   : ',p%times(1)
+   !write(UnSu,'(A,F13.8)')'End time                     : ',p%times(p%nTimeSteps)
    write(UnSu,'(A,I0)')   'Total number of DOF (input)  : ',p%nCBFull+6
    write(UnSu,'(A,I0)')   'Number of CB modes (input)   : ',p%nCBFull
    write(UnSu,'(A)')      '!Degrees of freedom'
@@ -861,11 +1100,11 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp1r8(UnSu, 'qm'   ,x%qm)
    call disp1r8(UnSu, 'qmdot',x%qmdot)
 
-   write(UnSu,'(A)')'!State matrices'
-   call disp2r8(UnSu, 'A',p%AMat)
-   call disp2r8(UnSu, 'B',p%BMat)
-   call disp2r8(UnSu, 'C',p%CMat)
-   call disp2r8(UnSu, 'D',p%DMat)
+   !write(UnSu,'(A)')'!State matrices'
+   !call disp2r8(UnSu, 'A',p%AMat)
+   !call disp2r8(UnSu, 'B',p%BMat)
+   !call disp2r8(UnSu, 'C',p%CMat)
+   !call disp2r8(UnSu, 'D',p%DMat)
    write(UnSu,'(A)')'!Input matrices'
    call disp2r8(UnSu, 'M',p%Mass)
    call disp2r8(UnSu, 'K',p%Stff)
@@ -882,6 +1121,13 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp2r8(UnSu, 'C12',p%C12)
    call disp2r8(UnSu, 'C21',p%C21)
    call disp2r8(UnSu, 'C22',p%C22)
+
+   write(UnSu,'(//,A,//)')  '!Connections:'
+   write(UnSu,'(A,I0)')     'Number of connections        : ',p%nConn
+   if (p%nConn>0) then
+      call disp2r8(UnSu, 'PosConn',p%PosConn)
+      call disp2r8(UnSu, 'PhiConn',p%PhiConn)
+   end if
 
    OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    OutPFmtS = '( A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'

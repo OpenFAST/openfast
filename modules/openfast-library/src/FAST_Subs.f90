@@ -997,6 +997,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_ExtPtfm%InputFile = p_FAST%SubFile
       Init%InData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//y_FAST%Module_Abrev(Module_ExtPtfm)
       Init%InData_ExtPtfm%Linearize = p_FAST%Linearize
+      Init%InData_ExtPtfm%PtfmRefxt = ED%p(1)%PtfmRefxt
+      Init%InData_ExtPtfm%PtfmRefyt = ED%p(1)%PtfmRefyt
       Init%InData_ExtPtfm%PtfmRefzt = ED%p(1)%PtfmRefzt ! Required
 
       ! Call module initialization routine
@@ -2024,7 +2026,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       END IF
    ELSE
       IF (p%CompMooring == Module_Orca) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if OrcaFlex is used. Set CompHydro = 0 or CompMooring < 4 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
-      IF (p%CompSub == Module_ExtPtfm) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if ExtPtfm_MCKF is used. Set CompHydro = 0 or CompSub < 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+      ! IF (p%CompSub == Module_ExtPtfm) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if ExtPtfm_MCKF is used. Set CompHydro = 0 or CompSub < 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
 
    ! SED cannot be used with certain modules
@@ -2140,7 +2142,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       ! now, make sure we haven't asked for any modules that we can't yet linearize:
       if (p%CompAero == MODULE_ADsk) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDisk module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompInflow == MODULE_ExtInfw) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the ExternalInflow coupling.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None .and. p%CompSub /= MODULE_SD )     call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the ExtPtfm_MCKF substructure module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None .and. p%CompMooring == MODULE_FEAM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the FEAMooring mooring module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
 
