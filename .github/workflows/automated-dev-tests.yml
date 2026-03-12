@@ -1,6 +1,12 @@
 
 name: 'Development Pipeline'
 
+#-------------------------------------------------------------------------------
+# Notes
+# - ATLAS BLAS is used instead of OpenBLAS because it gives more consistent
+#   results when OpenMP is enabled. This is likely due to a bug in OpenBLAS.
+#-------------------------------------------------------------------------------
+
 on:
   push:
     paths-ignore:
