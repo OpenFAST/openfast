@@ -555,7 +555,7 @@ if **NBodyMod** = 2 or 3. In the former case, **AddF0** will span
 input file. In the latter case, **AddF0** will span six lines with each line 
 containing **NBody** numbers in the input file. When additional degrees of 
 freedom are included, only one potential-flow body is allowed, and **AddF0** 
-should be a column vector spanning **6 + NAddDOF** rows. 
+should be a column vector spanning 6 + **NAddDOF** rows. 
 
 In the absence of additional degrees of freedom, 
 **AddCLin**, **AddBLin**, and **AddBQuad** are either a single 
@@ -566,7 +566,7 @@ containing 6\ **NBody** numbers. In the latter case, each matrix
 spans six lines in the input file, with each line containing 6\ **NBody** 
 numbers. When additional degrees of freedom are included, only one 
 potential-flow body is allowed, and each of these matrices should span 
-**6 + NAddDOF** rows, with each row containing **6 + NAddDOF** numbers.
+6 + **NAddDOF** rows, with each row containing 6 + **NAddDOF** numbers.
 
 These terms can be used, e.g., to model a linearized mooring system, to
 augment strip-theory members with a linear hydrostatic restoring matrix
@@ -577,7 +577,7 @@ used for fixed-bottom systems; in both cases, the resulting load is applied
 at the reference point of each potential-flow body given by **PtfmRefxt**, 
 **PtfmRefyt**, and **PtfmRefzt**. When additional generalized degrees of 
 freedom are included with a potential-flow body, **AddF0** can be used to 
-apply constant hydrostatic loads to the generalized modes. 
+apply constant hydrostatic/buoyancy loads to the generalized modes. 
 
 Strip theory options
 --------------------
