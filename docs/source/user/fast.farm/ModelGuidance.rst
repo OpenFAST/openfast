@@ -194,7 +194,7 @@ High-Fidelity Precursor Ambient Inflow
 There are many different methods by which high-fidelity precursor
 ambient inflow can be generated. This section focuses on generating such
 inflow using
-`SOWFA <https://github.com/NREL/SOWFA-6/blob/ee5b13875ea8f1088f4ca79ba41ff8be34870761/SOWFA_Training.NAWEA.2017_web.pdf>`__.
+`SOWFA <https://github.com/NatLabRockies/SOWFA-6/blob/ee5b13875ea8f1088f4ca79ba41ff8be34870761/SOWFA_Training.NAWEA.2017_web.pdf>`__.
 
 When using SOWFA to generate FAST.Farm precursor inflow, the *ABLSolver*
 preprocessor is used. It is important to note the baseline high-fidelity

@@ -7,7 +7,7 @@ on the `GitHub repository <http://github.com/openfast/openfast>`__. There,
 `issues <http://github.com/openfast/openfast/issues>`__ and
 `pull requests <http://github.com/openfast/openfast/pulls>`__
 are discussed and new versions are released. It is the best mechanism for
-engaging with the NREL OpenFAST team and other developers throughout
+engaging with the NLR OpenFAST team and other developers throughout
 the OpenFAST community.
 
 Issues and work assignment
@@ -22,7 +22,7 @@ make clear any intention to complete a task.
 Pull Requests
 -------------
 When a code modification is ready for review, a pull request should be
-submitted along with all appropriate documentation and tests. An NREL OpenFAST
+submitted along with all appropriate documentation and tests. An NLR OpenFAST
 team member will assign a reviewer and work with the  developer to have the
 code merged into the main repository.
 

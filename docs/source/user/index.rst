@@ -41,7 +41,7 @@ Additional module documentation
 
 The following modules do not currently have formal documentation
 or are contributed to OpenFAST from organizations
-external to NREL and the core OpenFAST team. As documentation is added,
+external to NLR and the core OpenFAST team. As documentation is added,
 these resources will be moved to their appropriate location. If newer versions
 of the external resources are available, please open a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
 with the information for the new documentation.

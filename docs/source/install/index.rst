@@ -143,9 +143,9 @@ openfast_x64.exe                                    64-bit single precision
 openfast_x64_double.exe                             64-bit double precision
 Map_Win32.dll                                       32-bit MAP++ library
 Map_x64.dll                                         64-bit MAP++ library
-DISCON_DLLS/<64bit or Win32>/DISCON.dll             Controller library for NREL 5MW
-DISCON_DLLS/<64bit or Win32>/DISCON_ITIBarge.dll    Controller library for NREL 5MW - ITI Barge
-DISCON_DLLS/<64bit or Win32>/DISCON_OC3Hywind.dll   Controller library for NREL 5MW - OC3 Hywind
+DISCON_DLLS/<64bit or Win32>/DISCON.dll             Controller library for Jonkman 5-MW (formerly called the NREL 5-MW)
+DISCON_DLLS/<64bit or Win32>/DISCON_ITIBarge.dll    Controller library for Jonkman 5-MW (formerly called the NREL 5-MW) - ITI Barge
+DISCON_DLLS/<64bit or Win32>/DISCON_OC3Hywind.dll   Controller library for Jonkman 5-MW (formerly called the NREL 5-MW) - OC3 Hywind
 ================================================== ==============================================
 
 After extracting the contents, the OpenFAST executables
@@ -248,7 +248,7 @@ For more information and installation options, see the `OpenFAST Python readme <
 
 Compile from source
 ~~~~~~~~~~~~~~~~~~~
-To compile from source code, the NREL OpenFAST team has developed an
+To compile from source code, the NLR OpenFAST team has developed an
 approach that uses CMake to generate build files for all platforms. Currently,
 CMake support for Visual Studio while doing active development
 is not well supported, so OpenFAST maintains a Visual Studio Solution

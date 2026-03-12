@@ -106,7 +106,7 @@ The input file format specifications of OpenFAST input files are given in
 :ref:`input_file_overview`.
 
 We provide a minimal working example to get you started on your first OpenFAST run. 
-This example uses the `NREL 5-MW <https://www.nrel.gov/docs/fy09osti/38060.pdf>`__ wind turbine, which is a fictitious but representative multi-MW wind turbine, with rated power 5 MW, rated rotor speed
+This example uses the `historic NREL 5-MW <https://www.nrel.gov/docs/fy09osti/38060.pdf>`__ wind turbine, which is a fictitious but representative multi-MW wind turbine, with rated power 5 MW, rated rotor speed
 12.1 rpm, Hub Height 90 m, and rotor diameter 126 m.
 This example is for an "onshore" version of the turbine, with only the structure (no aerodynamics), where the tower is initially displaced by 3m at the tower top.  The files are located in the following 
 `github directory <https://github.com/OpenFAST/r-test/blob/main/glue-codes/openfast/MinimalExample/>`__ .
@@ -269,40 +269,50 @@ Guidelines for the different modules can be found throughout this documentation,
 
 
 
-Scripting
----------
+Scripting and other support tools
+---------------------------------
 
-NREL maintains several repositories of scripts to work with OpenFAST. 
+NLR maintains several repositories of scripts to work with OpenFAST. 
 The scripts can for instance be used to read the input and outputs of OpenFAST, visualize them, and generate multiple simulation inputs, and postprocess them. Some of these applications will be detailed in the following sections.
 
 
-The repositories maintained by NREL are the following:
+NLR toolboxes
+~~~~~~~~~~~~~
 
 - `openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`__:  collection of low-level Python tools to work with OpenFAST and perform simple operations, with granularity.
 
 - `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`__: collection of low-level Matlab tools to work with OpenFAST. 
   
-- `WEIS <https://github.com/WEIS>`__ : high-level Python scripts, stands for Wind Energy with Integrated Servo-control. It can perform multifidelity co-design of wind turbines. WEIS is a framework that combines multiple NREL-developed tools to enable design optimization of floating offshore wind turbines.
+- `WEIS <https://github.com/WEIS>`__ : high-level Python scripts, stands for Wind Energy with Integrated Servo-control. It can perform multifidelity co-design of wind turbines. WEIS is a framework that combines multiple NLR-developed tools to enable design optimization of floating offshore wind turbines.
 
-The users are invited to consult the documentations of the individual repository, and discuss related issues on their individual github pages. Contribution by the community to the NREL repositories are welcome and encouraged.
-
-
-
-Additional repositories maintained by NREL are listed below:
-
-- `WISDEM <https://github.com/WISDEM/WISDEM>`__: models for assessing overall wind plant cost of energy (COE), also contains file IO, (DLC) case generation, polar manipulations, visualization, and much more! 
-- `ROSCO_toolbox <https://github.com/NREL/ROSCO_toolbox>`__: tools to work with the `ROSCO <https://github.com/NREL/ROSCO>`__ controller that is supported by OpenFAST
+Users are invited to consult the documentation of the individual repositories and discuss related issues on their individual GitHub pages. Contributions by the community to the NLR repositories are welcome and encouraged.
 
 
 
-Repositories maintained by third-parties are listed below:
+Other related NLR tools
+~~~~~~~~~~~~~~~~~~~~~~~
 
+Additional repositories maintained by NLR are listed below:
+
+- `WISDEM <https://github.com/NLRWindSystems/WISDEM>`__: models for assessing overall wind plant cost of energy (COE), also contains file IO, (DLC) case generation, polar manipulations, visualization, and much more! 
+- `ROSCO_toolbox <https://github.com/natlabrockies/ROSCO_toolbox>`__: tools to work with the `ROSCO <https://github.com/natlabrockies/ROSCO>`__ controller that is supported by OpenFAST
+
+
+
+Third party tools
+~~~~~~~~~~~~~~~~~
 
 - `pyDatView <https://github.com/ebranlard/pyDatView>`_ : tool to plot the input and output files of OpenFAST, CSV-files, and other files from other wind energy software (Hawc2, Flex, Bladed). Multiple files can be opened at once to compare results from different simulations.
 
 - `WindEnergyToolbox <https://gitlab.windenergy.dtu.dk/toolbox/WindEnergyToolbox>`_: library developed by DTU, providing some support for different file formats
 
-- `FASTTool <https://github.com/TUDelft-DataDrivenControl/FASTTool>`_ : NREL FASTv8, MATLAB GUI and Simulink integration developed by TUDelft
+- `FASTTool <https://github.com/TUDelft-DataDrivenControl/FASTTool>`_ : MATLAB GUI and Simulink integration developed by TUDelft for FASTv8
+
+- `Continuous Section Field (CSF) <https://github.com/giovanniboscu/continuous-section-field>`_: a small Python utility developed by Giovanni Boscu for calculating cross-sectional properties for towers.  The tool focuses on:
+
+   - Modeling non-prismatic members using ruled surfaces.
+   - Calculating sectional properties :math:`(A, I, Ip)` along the tower height.
+   - Providing a simplified estimation of torsional rigidity :math:`( J )`.
 
 
 
@@ -317,7 +327,7 @@ Open-source OpenFAST wind turbine models can be found here:
 
 - `r-test <https://github.com/OpenFAST/r-test>`__: regression tests for OpenFAST, contains models for OpenFAST and its drivers (AeroDyn, SubDyn, HydroDyn, etc.). This repository is not intended to be used as a "database" of models, but it has the advantage that the input files are always up to date with the latest `format specifications <https://openfast.readthedocs.io/en/master/source/user/api_change.html>`_ . OpenFAST input files for previous version can be accessed via the git tags of this repository.
 - `IEA Wind Task 37 repository <https://github.com/IEAWindTask37>`_ :  contains OpenFAST models of the IEA Wind 3.4-MW, 10-MW, 15-MW, and up-and-coming 22-MW reference wind turbines.
-- `openfast-turbine-models <https://github.com/NREL/openfast-turbine-models>`_: open source wind turbine models (in development and out of date).
+- `openfast-turbine-models <https://github.com/natlabrockies/openfast-turbine-models>`_: open source wind turbine models (in development and out of date).
 
 
 
@@ -358,7 +368,7 @@ Parametric studies can be run by using the scripts to read and write OpenFAST in
 and the Python 
 `openfast_toolbox <https://github.com/OpenFAST/openfast_toolbox>`__
 .  The openfast_toolbox provides dedicated Python scripts and examples to automatize the process (see the README of the repository for more).
-The `AeroelasticSE` module of `WEIS <https://github.com/WEIS>`__ can generate input files for the design load cases specified in the standards. 
+The `AeroelasticSE` module of `WEIS <https://github.com/NLRWindSystems/WEIS>`__ can generate input files for the design load cases specified in the standards. 
 Consult the WEIS repository for more information.
 
 
@@ -384,7 +394,7 @@ It is necessary to linearize at different operating points over a period of revo
 
 An additional complication is that some of the states of OpenFAST are in the rotating frame of reference (e.g. the ElastoDyn blade states). To obtain a linear state space model of the system that is in a fixed (non-rotating) frame of reference the multiblade coordinate transformation (MBC) is applied. For a purely periodic system, the MBC can be applied to the linearized outputs at different azimuthal positions which can be combined to form a linearized system in a fixed frame of reference. 
 We note that the MBC only applies to 3 or more blades. 
-Floquet theory would be needed 1 or 2 blades, although NREL does not currently have a post-processor that makes use of Floquet theory.
+Floquet theory would be needed 1 or 2 blades, although NLR does not currently have a post-processor that makes use of Floquet theory.
 
 
 .. note::
