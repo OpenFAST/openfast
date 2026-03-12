@@ -283,9 +283,9 @@ NLR toolboxes
 
 - `matlab-toolbox <https://github.com/OpenFAST/matlab-toolbox>`__: collection of low-level Matlab tools to work with OpenFAST. 
   
-- `WEIS <https://github.com/WEIS>`__ : high-level Python scripts, stands for Wind Energy with Integrated Servo-control. It can perform multifidelity co-design of wind turbines. WEIS is a framework that combines multiple NREL-developed tools to enable design optimization of floating offshore wind turbines.
+- `WEIS <https://github.com/WEIS>`__ : high-level Python scripts, stands for Wind Energy with Integrated Servo-control. It can perform multifidelity co-design of wind turbines. WEIS is a framework that combines multiple NLR-developed tools to enable design optimization of floating offshore wind turbines.
 
-The users are invited to consult the documentations of the individual repository, and discuss related issues on their individual github pages. Contribution by the community to the NLR repositories are welcome and encouraged.
+Users are invited to consult the documentation of the individual repositories and discuss related issues on their individual GitHub pages. Contributions by the community to the NLR repositories are welcome and encouraged.
 
 
 
@@ -308,7 +308,7 @@ Third party tools
 
 - `FASTTool <https://github.com/TUDelft-DataDrivenControl/FASTTool>`_ : MATLAB GUI and Simulink integration developed by TUDelft for FASTv8
 
-- `Continuous Section Field (CSF) <https://github.com/giovanniboscu/continuous-section-field>`_: a small Python utility developed by Giovanni Boscu for calculating cross sectional properties for towers.  The tool focuses on:
+- `Continuous Section Field (CSF) <https://github.com/giovanniboscu/continuous-section-field>`_: a small Python utility developed by Giovanni Boscu for calculating cross-sectional properties for towers.  The tool focuses on:
 
    - Modeling non-prismatic members using ruled surfaces.
    - Calculating sectional properties :math:`(A, I, Ip)` along the tower height.

@@ -3,7 +3,7 @@
 FAST v8 and the transition to OpenFAST
 ======================================
 
-This page describes the transition from FAST v8, a computer-aided engineering tool for simulating the coupled dynamic response of wind turbines, to OpenFAST. OpenFAST was established by researchers at the National Renewable Energy Laboratory (NREL) in 2017, who were supported by the U.S. Department of Energy Wind Energy Technology Office (DOE-WETO).  In the fall of 2025 the laboratory name changed to National Labororatory of the Rockies (NLR).
+This page describes the transition from FAST v8, a computer-aided engineering tool for simulating the coupled dynamic response of wind turbines, to OpenFAST. OpenFAST was established by researchers at the National Renewable Energy Laboratory (NREL) in 2017, who were supported by the U.S. Department of Energy Wind Energy Technology Office (DOE-WETO).  In the fall of 2025 the laboratory name changed to National Laboratory of the Rockies (NLR).
 
 FAST v8
 -------
@@ -196,4 +196,4 @@ For unit testing, we will employ the pFUnit framework (https://sourceforge.net/p
 
 For the time being OpenFAST provides project and solution files to support users developing and compiling using Visual Studio. However, the team is continually working to automate the generation of Visual Studio build files via CMake in future releases.
 
-Please contact `Jason.Jonkman@nlr.gov <mailto:jason.jonkman@nlr.gov>`_ or `Andy.Platt@nlr.gov <mailto:andy.platt@nlr.gov>_`. with questions regarding the OpenFAST development plan.
+Please contact `Jason.Jonkman@nlr.gov <mailto:jason.jonkman@nlr.gov>`_ or `Andy.Platt@nlr.gov <mailto:andy.platt@nlr.gov>`_ with questions regarding the OpenFAST development plan.
