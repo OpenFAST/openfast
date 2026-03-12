@@ -527,12 +527,15 @@ contains
    subroutine Set_WAT_DxDyDz()
       real(ReKi) :: TmpDx,TmpDy,TmpDz
       logical    :: HResDimsSame
-      ! If Mod_AmbWind<2, we don't read high res discretizations
-      if (AWAE_InitInput%InputFileData%Mod_AmbWind < 2) then
+      ! If Mod_AmbWind is 1 or 4, automatically calculate WAT DxDyDz
+      select case (AWAE_InitInput%InputFileData%Mod_AmbWind)
+      case (1,4)
          write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
-         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (calculated based on guidance for Mod_AmbWind==1)')
+         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)// &
+                    ' (calculated based on guidance for Mod_AmbWind=='// &
+                    trim(Num2LStr(AWAE_InitInput%InputFileData%Mod_AmbWind))//')')
          return
-      endif
+      end select
       ! Check if all turbines use the same high res deltas
       HResDimsSame = .true.
       TmpDx = AWAE_InitInput%InputFileData%dX_high(1)
@@ -1211,7 +1214,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       
    ! set the inputs needed for FAST (these are slow-varying so can just be done once per farm time step)
    do nt = 1,farm%p%NumTurbines
-      call FWrap_SetInputs(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
+      call FWrap_SetWindTStart(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
    end do
    
    

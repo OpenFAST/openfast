@@ -8,7 +8,7 @@ The following is a HydroDyn primary input file for OC4 semi-submersible
 structure::
 
       ------- HydroDyn Input File ----------------------------------------------------
-      NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
+      historic NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
       False            Echo           - Echo the input file data (flag)
       ---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
                    1   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)

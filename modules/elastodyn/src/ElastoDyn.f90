@@ -11120,7 +11120,7 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
    do i = 1, p%NumBl
       call MV_AddVar(Vars%x, 'Blade'//trim(Num2LStr(i))//'Pitch', FieldAngularDisp, &
                   DL=DatLoc(ED_x_QT), iAry=DOF_BP(i), &
-                  Flags=VF_DerivOrder2, &
+                  Flags=ior(VF_RotFrame, VF_DerivOrder2), &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Blade pitch DOF (internal DOF index = DOF_BP('//trim(Num2LStr(i))//')), rad'], &
                   Active=InputFileData%PitchDOF)
@@ -11314,13 +11314,12 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
 
    call MV_AddMeshVar(Vars%y, 'Platform', MotionFields, &
                       DatLoc(ED_y_PlatformPtMesh), &
-                      Mesh=y%PlatformPtMesh, &
-                      Flags=VF_SmallAngle)
+                      Mesh=y%PlatformPtMesh)
 
    call MV_AddMeshVar(Vars%y, 'Tower', MotionFields, &
                       DatLoc(ED_y_TowerLn2Mesh), &
                       Mesh=y%TowerLn2Mesh, &
-                      Flags=ior(VF_Line, VF_SmallAngle))
+                      Flags=VF_Line)
 
    call MV_AddMeshVar(Vars%y, 'Hub', [FieldTransDisp, FieldOrientation, FieldAngularVel], &
                       DatLoc(ED_y_HubPtMotion), &

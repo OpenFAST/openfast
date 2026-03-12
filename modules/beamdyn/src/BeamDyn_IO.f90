@@ -1056,49 +1056,28 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    CALL ReadCom(UnIn,BldFile,'unused beam file header line 2',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   !  -------------- BLADE PARAMETER-----------------------------------------------
-   CALL ReadCom(UnIn,BldFile,'beam parameters',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Blade Parameters ----------------------------------------------------------
+   CALL ReadCom(UnIn, BldFile, 'Blade Parameters', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar(UnIn, BldFile, BladeInputFileData%station_total,'station_total','Number of blade input stations', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL AllocAry(BladeInputFileData%stiff0, 6, 6, BladeInputFileData%station_total, 'Cross-sectional 6 by 6 stiffness matrix', ErrStat2, ErrMsg2); if (Failed()) return
+   CALL AllocAry(BladeInputFileData%mass0, 6, 6, BladeInputFileData%station_total, 'Cross-sectional 6 by 6 mass matrix', ErrStat2, ErrMsg2); if (Failed()) return
+   CALL AllocAry(BladeInputFileData%station_eta, BladeInputFileData%station_total, 'Station eta array', ErrStat2, ErrMsg2); if (Failed()) return
+   CALL ReadVar(UnIn, BldFile, BladeInputFileData%damp_flag, 'damp_flag', 'Damping type (switch) {0: None, 1: Stiffness-Proportional, 2: Modal}', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
-   CALL ReadVar(UnIn,BldFile,BladeInputFileData%station_total,'station_total','Number of blade input stations',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Stiffness Proportional Damping --------------------------------------------
+   CALL ReadCom(UnIn, BldFile, 'Stiffness-Proportional Damping Header', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadCom(UnIn, BldFile, 'Mu Table Header 1', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadCom(UnIn, BldFile, 'Mu Table Header 2', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadAry(UnIn, BldFile, BladeInputFileData%beta, 6, 'beta', 'Mu damping coefficients', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   
+   ! Modal Damping -------------------------------------------------------------
+   CALL ReadCom(UnIn, BldFile, 'Modal Damping Header', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar(UnIn, BldFile, BladeInputFileData%n_modes, 'n_modes', 'Number of modal damping coefficients (-)', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL AllocAry(BladeInputFileData%zeta, BladeInputFileData%n_modes, 'Modal damping coefficients (zeta)', ErrStat2, ErrMsg2); if (Failed()) return
+   CALL ReadAry(UnIn, BldFile, BladeInputFileData%zeta, BladeInputFileData%n_modes, 'zeta', 'Damping coefficients for mode 1 through n_modes', ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
-   CALL AllocAry(BladeInputFileData%stiff0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 stiffness matrix',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(BladeInputFileData%mass0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 mass matrix',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(BladeInputFileData%station_eta,BladeInputFileData%station_total,'Station eta array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      !after allocating these arrays, we'll make sure it was successful:
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
-
-!FIXME: any reason not to use a logical for this?
-   CALL ReadVar(UnIn,BldFile,BladeInputFileData%damp_flag,'damp_flag','Damping flag',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   !  -------------- DAMPING PARAMETER-----------------------------------------------
-   CALL ReadCom(UnIn,BldFile,'damping parameters',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadCom(UnIn,BldFile,'mu1 to mu6',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadAry(UnIn,BldFile,BladeInputFileData%beta,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-
-!  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
-   CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
+   ! Distributed Properties ----------------------------------------------------
+   CALL ReadCom(UnIn,BldFile,'Distributed Properties',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    DO i=1,BladeInputFileData%station_total
@@ -1111,7 +1090,7 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       DO j=1,6
-         CALL ReadAry(UnIn,BldFile,temp66(j,:),6,'siffness_matrix','Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
+         CALL ReadAry(UnIn,BldFile,temp66(j,:),6,'stiffness_matrix','Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ENDDO
       if (ErrStat >= AbortErrLev) then
@@ -1137,7 +1116,10 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    return
 
 contains
-   !.....................
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
    subroutine cleanup()
       close(UnIn)
       return

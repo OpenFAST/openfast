@@ -308,11 +308,35 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    case (User_FieldType)
 
       !-------------------------------------------------------------------------
-      ! User Flow Field
+      ! User-Defined Flow Field
+      !-------------------------------------------------------------------------
+      ! This case handles custom wind fields implemented by the user.
+      ! The UserField_GetVel function must be implemented to return velocities
+      ! at any requested position and time.
+      !
+      ! Note: User-defined wind fields currently do not support acceleration
+      ! calculations. If accelerations are requested, an error will be returned.
+      !
+      ! To implement a user-defined wind field:
+      !   1. Define data structure in UserFieldType (IfW_FlowField.txt)
+      !   2. Initialize data in IfW_User_Init() (InflowWind_IO.f90)
+      !   3. Implement UserField_GetVel() (below in this file)
       !-------------------------------------------------------------------------
 
-      call SetErrStat(ErrID_Fatal, "User Field not implemented", ErrStat, ErrMsg, RoutineName)
-      return
+      ! Check if accelerations are requested
+      if (OutputAccel) then
+         call SetErrStat(ErrID_Fatal, &
+                         "Acceleration calculation not supported for user-defined wind fields", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Get velocities for each position by calling user-defined function
+      do i = 1, NumPoints
+         call UserField_GetVel(FF%User, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
 
    case default
       call SetErrStat(ErrID_Fatal, "Invalid FieldType "//trim(num2lstr(FF%FieldType)), ErrStat, ErrMsg, RoutineName)
@@ -1701,6 +1725,50 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
 
 end subroutine
 
+!> UserField_GetVel computes wind velocities for a user-defined wind field.
+!!
+!! This subroutine must be implemented by users who want to create custom wind fields.
+!! It is called for each position where wind velocities are needed during the simulation.
+!!
+!! The implementation should:
+!!   1. Use the data in UF (populated by IfW_User_Init) to compute velocities
+!!   2. Return velocity components in the global coordinate system (not rotated)
+!!   3. Handle any spatial or temporal interpolation as needed
+!!   4. Set appropriate error status if position/time is out of bounds
+!!
+!! Coordinate system:
+!!   - Position(1) = X position (aligned with mean wind direction after rotation)
+!!   - Position(2) = Y position (lateral/crosswind)
+!!   - Position(3) = Z position (vertical, measured from ground)
+!!   - Velocity(1) = U velocity (along X, positive downwind)
+!!   - Velocity(2) = V velocity (along Y, positive to left when looking downwind)
+!!   - Velocity(3) = W velocity (along Z, positive upward)
+!!
+!! Example implementations:
+!!
+!!   ! Example 1: Constant uniform wind
+!!   Velocity(1) = 10.0_ReKi  ! m/s
+!!   Velocity(2) = 0.0_ReKi
+!!   Velocity(3) = 0.0_ReKi
+!!
+!!   ! Example 2: Power-law wind profile
+!!   if (Position(3) > 0.0_ReKi) then
+!!      Velocity(1) = UF%Data(1,1) * (Position(3)/UF%RefHeight)**0.2_ReKi
+!!      Velocity(2) = 0.0_ReKi
+!!      Velocity(3) = 0.0_ReKi
+!!   else
+!!      call SetErrStat(ErrID_Fatal, \"Position below ground\", ErrStat, ErrMsg, RoutineName)
+!!   end if
+!!
+!!   ! Example 3: Time-varying wind from data array
+!!   call InterpolateInTime(UF%DTime, UF%Data, Time, Velocity, ErrStat, ErrMsg)
+!!
+!! @param UF          User field data structure (populated in IfW_User_Init)
+!! @param Time        Current simulation time (seconds)
+!! @param Position    Position vector [X, Y, Z] where velocity is needed (meters)
+!! @param Velocity    Output velocity vector [U, V, W] (m/s)
+!! @param ErrStat     Error status
+!! @param ErrMsg      Error message if ErrStat /= ErrID_None
 subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
 
    type(UserFieldType), intent(in)     :: UF             !< user-field data
@@ -1715,8 +1783,26 @@ subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
+   !---------------------------------------------------------------------------
+   ! TODO: Implement your user-defined wind velocity calculation here
+   !---------------------------------------------------------------------------
+   
+   ! Default: return zero velocity and error message
    Velocity = 0.0_ReKi
-   call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented", ErrStat, ErrMsg, RoutineName)
+   call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented. "// &
+                   "To use user-defined wind (WindType=6), you must implement "// &
+                   "this function in IfW_FlowField.f90.", ErrStat, ErrMsg, RoutineName)
+
+   ! Remove the error statement above and add your implementation, for example:
+   !
+   ! ! Simple power-law profile
+   ! if (Position(3) > 0.0_ReKi) then
+   !    Velocity(1) = 10.0_ReKi * (Position(3) / UF%RefHeight)**0.2_ReKi
+   !    Velocity(2) = 0.0_ReKi
+   !    Velocity(3) = 0.0_ReKi
+   ! else
+   !    Velocity = 0.0_ReKi
+   ! end if
 
 end subroutine
 

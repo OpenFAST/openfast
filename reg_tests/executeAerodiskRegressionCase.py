@@ -88,7 +88,8 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'adsk_driver.outb':'adsk_driver_ref.outb'})
+if not os.path.isdir(testBuildDirectory):
+    rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'adsk_driver.outb':'adsk_driver_ref.outb'})
 
 ### Run aerodisk on the test case
 if not noExec:

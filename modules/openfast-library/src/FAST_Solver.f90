@@ -46,6 +46,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    character(ErrMsgLen)                      :: ErrMsg2
    integer(IntKi)                            :: i, j, k
    integer(IntKi), allocatable               :: modIDs(:), modInds(:), iMod(:)
+   logical                                   :: SrvDOpt1
 
    !----------------------------------------------------------------------------
    ! Initialize data in TC structure
@@ -91,6 +92,17 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    p%BetaPrime = p%h*p%h*p%Beta*(1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)
    p%GammaPrime = p%h*p%Gamma*(1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)
 
+   ! ServoDyn is an Option 1 module if it has structural controllers
+   SrvDOpt1 = .false.
+   do i = 1, size(Turbine%SrvD%p)
+      SrvDOpt1 = SrvDOpt1 .or. &
+                 (Turbine%SrvD%p(i)%NumBStC > 0) .or. &
+                 (Turbine%SrvD%p(i)%NumTStC > 0) .or. &
+                 (Turbine%SrvD%p(i)%NumSStC > 0) .or. &
+                 (Turbine%SrvD%p(i)%NumNStC > 0)
+   end do
+
+
    !----------------------------------------------------------------------------
    ! Module ordering for solve
    !----------------------------------------------------------------------------
@@ -117,7 +129,8 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                pack(modInds, ModIDs == Module_ExtPtfm .and. p%ModCoupling /= LooseCoupling)]
 
    ! Indices of Option 1 modules
-   p%iModOpt1 = [pack(modInds, ModIDs == Module_ED .and. p%ModCoupling == LooseCoupling), &
+   p%iModOpt1 = [pack(modInds, ModIDs == Module_SrvD .and. SrvDOpt1), &
+                 pack(modInds, ModIDs == Module_ED .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_BD .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_SD .and. p%ModCoupling == LooseCoupling), &
                  pack(modInds, ModIDs == Module_ExtPtfm .and. p%ModCoupling == LooseCoupling), &
@@ -174,7 +187,20 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    end do
 
    !----------------------------------------------------------------------------
-   ! Set solve flags and combine relevant modules into TC module
+   ! Check module attributes based on category
+   !----------------------------------------------------------------------------
+
+   ! Loop through tight-coupling modules
+   do i = 1, size(p%iModTC)
+      if (GlueModData(i)%SubSteps > 1) then
+         call WrScr('Info: tightly coupled module "'//trim(GlueModData(i)%Abbr)//'" requested '// &
+                    'time step of '//trim(Num2Lstr(GlueModData(i)%DT))//', which is different than '// &
+                    'glue-code time step of '//trim(Num2Lstr(p%h))//'. Sub-stepping disabled for this module.')
+      end if
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Set solve flags and combine relevant modules into Solver module
    !----------------------------------------------------------------------------
 
    ! Set VF_Solve flag on Jacobian variables use by the tight coupling solver
@@ -453,7 +479,6 @@ contains
                         end associate
                      end do
                   end if
-
                end if
 
             case (Map_Variable)
@@ -466,7 +491,12 @@ contains
                do i = 1, size(SrcMod%Vars%y)
                   associate (Var => SrcMod%Vars%y(i))
                      if (.not. MV_EqualDL(Mapping%SrcDL, Var%DL)) cycle
-                     call MV_SetFlags(Var, VF_Solve)
+                     select case (Var%Field)
+                     case (FieldForce, FieldMoment)
+                        call MV_SetFlags(Var, VF_Solve)
+                     case (FieldScalar)
+                        if (Var%DerivOrder == 2) call MV_SetFlags(Var, VF_Solve)
+                     end select
                   end associate
                end do
 
@@ -474,7 +504,12 @@ contains
                do i = 1, size(DstMod%Vars%u)
                   associate (Var => DstMod%Vars%u(i))
                      if (.not. MV_EqualDL(Mapping%DstDL, Var%DL)) cycle
-                     call MV_SetFlags(Var, VF_Solve)
+                     select case (Var%Field)
+                     case (FieldForce, FieldMoment)
+                        call MV_SetFlags(Var, VF_Solve)
+                     case (FieldScalar)
+                        if (Var%DerivOrder == 2) call MV_SetFlags(Var, VF_Solve)
+                     end select
                   end associate
                end do
 
@@ -978,6 +1013,14 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    ! Set algorithmic acceleration from actual acceleration
    m%StatePred%a = m%StatePred%vd
 
+   ! Initialize the algorithmic acceleration to actual acceleration in BeamDyn
+   do i = 1, size(GlueModData)
+      if (GlueModData(i)%ID == Module_BD) then
+         Turbine%BD%OtherSt(GlueModData(i)%Ins, STATE_CURR)%xcc = &
+            Turbine%BD%OtherSt(GlueModData(i)%Ins, STATE_CURR)%acc
+      end if
+   end do
+
    !----------------------------------------------------------------------------
    ! Set Outputs
    !----------------------------------------------------------------------------
@@ -1297,9 +1340,11 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
             call FAST_InputSolve(p%iModOpt2(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
 
-            ! Update states
-            call FAST_UpdateStates(ModData, t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
+            ! Update states of modules not in the tight coupling category
+            if (iand(ModData%Category, MC_Tight) == 0) then
+               call FAST_UpdateStates(ModData, t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
+               if (Failed()) return
+            end if
 
             ! Calculate outputs
             call FAST_CalcOutput(ModData, GlueModMaps, t_global_next, INPUT_CURR, STATE_PRED, Turbine, ErrStat2, ErrMsg2)
@@ -1312,12 +1357,18 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
       !-------------------------------------------------------------------------
 
       do i = 1, size(p%iModOpt1)
+         associate (ModData => GlueModData(p%iModOpt1(i)))
 
-         call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
+            ! Solve for inputs to module
+            call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
 
-         call FAST_UpdateStates(GlueModData(p%iModOpt1(i)), t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
+            ! Update states for modules not updated in Option 2
+            if (iand(ModData%Category, MC_Option2) == 0) then
+               call FAST_UpdateStates(GlueModData(p%iModOpt1(i)), t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
+               if (Failed()) return
+            end if
+         end associate
       end do
 
       !-------------------------------------------------------------------------
@@ -1530,9 +1581,9 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
                if (Failed()) return
 
                ! Transfer accelerations to BeamDyn
-               if (ModData%ID == Module_BD) then
-                  call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_PRED))
-               end if
+               ! if (ModData%ID == Module_BD) then
+               !    call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_PRED))
+               ! end if
 
             end associate
          end do

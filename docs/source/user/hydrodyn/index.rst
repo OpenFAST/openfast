@@ -26,11 +26,11 @@ development plans, and publications are made available for reference.
 Note that some of these may be outdated and pertain to older versions
 of HydroDyn.
 
-- :download:`Computation of Wave Loads Under Multidirectional Sea States for Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/61161.pdf>`
-- :download:`Effects of Second-Order Hydrodynamic Forces on Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/60966.pdf>`
-- :download:`State-Space Realization of the Wave-Radiation Force within FAST <https://www.nrel.gov/docs/fy13osti/58099.pdf>`
+- :download:`Computation of Wave Loads Under Multidirectional Sea States for Floating Offshore Wind Turbines <https://www.nlr.gov/docs/fy14osti/61161.pdf>`
+- :download:`Effects of Second-Order Hydrodynamic Forces on Floating Offshore Wind Turbines <https://www.nlr.gov/docs/fy14osti/60966.pdf>`
+- :download:`State-Space Realization of the Wave-Radiation Force within FAST <https://www.nlr.gov/docs/fy13osti/58099.pdf>`
 - :download:`Dynamics of Offshore Floating Wind Turbines—Model Development and Verification <https://dx.doi.org/10.1002/we.347>`
-- :download:`Dynamics Modeling and Loads Analysis of an Offshore Floating Wind Turbine <https://www.nrel.gov/docs/fy08osti/41958.pdf>`
+- :download:`Dynamics Modeling and Loads Analysis of an Offshore Floating Wind Turbine <https://www.nlr.gov/docs/fy08osti/41958.pdf>`
 - :download:`Draft Implementation Plan - Changes in HydroDyn to Support Time-Varying Buoyancy Loads on Morison Members <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_Morison.docx>`
 - :download:`Implementation Plan - Modifications to State-Space Modules in HydroDyn to Support Multiple WAMIT Bodies <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_NBodyStateSpace.docx>`
 - :download:`Implementation Plan (Revised) - Changes in HydroDyn to Support Multiple WAMIT Bodies <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_NBody.docx>`
@@ -77,7 +77,7 @@ a separate frequency-domain panel code (e.g., WAMIT) from a
 pre-computation step. The radiation memory effect can be calculated
 either through direct time-domain convolution or through a linear
 state-space approach, with a state-space model derived through the
-`SS_Fitting <https://www.nrel.gov/wind/nwtc/ss-fitting.html>`_
+`SS_Fitting <https://www.nlr.gov/wind/nwtc/ss-fitting.html>`_
 preprocessor. The second-order terms can be derived from the full
 difference- and sum-frequency quadratic transfer functions (QTFs) or the
 difference-frequency terms can be estimated via Standing et al.’s :cite:`Standing:1987`

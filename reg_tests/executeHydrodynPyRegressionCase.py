@@ -90,7 +90,8 @@ if not os.path.isdir(inputsDirectory):
 
     
 # create the local output directory and initialize it with input files 
-rtl.copyTree(inputsDirectory, testBuildDirectory)
+if not os.path.isdir(testBuildDirectory):
+    rtl.copyTree(inputsDirectory, testBuildDirectory)
        # , excludeExt=['.out','.outb'])
 
 ### Run HydroDyn on the test case

@@ -93,7 +93,7 @@ releases:
 
 -  Interface FAST.Farm to the Wind-Plant Integrated System Design &
    Engineering Model
-   (`WISDEM <https://github.com/NREL/WISDEM>`__\ :math:`^\text{TM}`) for
+   (`WISDEM <https://github.com/NatLabRockies/WISDEM>`__\ :math:`^\text{TM}`) for
    systems-engineering applications (multidisciplinary design, analysis,
    and optimization; uncertainty quantification; and so on).
 
