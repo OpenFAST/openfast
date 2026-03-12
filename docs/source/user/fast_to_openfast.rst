@@ -3,7 +3,7 @@
 FAST v8 and the transition to OpenFAST
 ======================================
 
-This page describes the transition from FAST v8, a computer-aided engineering tool for simulating the coupled dynamic response of wind turbines, to OpenFAST. OpenFAST was established by researchers at the National Renewable Energy Laboratory (NREL) in 2017, who were supported by the U.S. Department of Energy Wind Energy Technology Office (DOE-WETO).
+This page describes the transition from FAST v8, a computer-aided engineering tool for simulating the coupled dynamic response of wind turbines, to OpenFAST. OpenFAST was established by researchers at the National Renewable Energy Laboratory (NREL) in 2017, who were supported by the U.S. Department of Energy Wind Energy Technology Office (DOE-WETO).  In the fall of 2025 the laboratory name changed to National Laboratory of the Rockies (NLR).
 
 FAST v8
 -------
@@ -32,7 +32,7 @@ OpenFAST includes the following organizational changes relative to FAST v8.16:
 
 *	Version numbering has been updated for OpenFAST (starting from OpenFAST v1.0.0), e.g., OpenFAST-v1.0.0-123-gabcd1234-dirty, where:
 
-  *	v1.0.0 is the major-minor-bugfix numbering system and corresponds to a tagged commit made by NREL on GitHub
+  *	v1.0.0 is the major-minor-bugfix numbering system and corresponds to a tagged commit made by NREL (now NLR) on GitHub
 
   *	123-g is the number of additional commits after the most recent tag for a build [the ‘-g’ is for ‘git’]
 
@@ -46,13 +46,13 @@ OpenFAST includes the following organizational changes relative to FAST v8.16:
 
 *	Unit testing has been introduced at the subroutine level (starting with BeamDyn from OpenFAST v1.0.0).
 
-*	An online documentation system has been established to replace existing documentation of FAST v8: http://openfast.readthedocs.io/; during the transition to OpenFAST, most user-related documentation is still provided through the NWTC Information Portal, https://nwtc.nrel.gov
+*	An online documentation system has been established to replace existing documentation of FAST v8: http://openfast.readthedocs.io/; during the transition to OpenFAST, most user-related documentation is still provided through the NWTC Information Portal, https://nwtc.nrel.gov (now deprecated)
 
 *	Cross platform compiling is accomplished with CMake on macOS, Linux, and Cygwin (Windows) systems
 
 *	Visual Studio Projects (VS-Build) are provided for compiling OpenFAST on Windows (starting from OpenFAST v1.0.0), but the development team is working to automate the generation of Visual Studio build files via CMake in a future release
 
-*	`GitHub Issues <https://github.com/openfast/openfast/issues>`__ has been made the primary platform for developers to report and track bugs, request feature enhancements, and to ask questions related to the source code, compiling, and regression/unit testing; general user-related questions on OpenFAST theory and usage should still be handled through the forum at https://wind.nrel.gov/forum/wind
+*	`GitHub Issues <https://github.com/openfast/openfast/issues>`__ has been made the primary platform for developers to report and track bugs, request feature enhancements, and to ask questions related to the source code, compiling, and regression/unit testing; general user-related questions on OpenFAST theory and usage should still be handled through the forum at https://forums.nlr.gov/
 
 *	A new API has been added that provides a high level interface to run OpenFAST through a C++ driver code helping to interface OpenFAST with external programs like CFD solvers written in C++ (starting in OpenFAST v1.0.0)
 
@@ -77,7 +77,7 @@ Algorithmically, OpenFAST v0.1.0 is the release most closely related to FAST v8.
 
   *	An online documentation system has been established to replace existing documentation of FAST v8: http://openfast.readthedocs.io/
 
-  *	`GitHub Issues <https://github.com/openfast/openfast/issues>`__ has been made the primary platform for developers to report and track bugs, request feature enhancements, and to ask questions related to the source code, compiling, and regression/unit testing; general user-related questions on OpenFAST theory and usage should still be handled through the forum at https://wind.nrel.gov/forum/wind
+  *	`GitHub Issues <https://github.com/openfast/openfast/issues>`__ has been made the primary platform for developers to report and track bugs, request feature enhancements, and to ask questions related to the source code, compiling, and regression/unit testing; general user-related questions on OpenFAST theory and usage should still be handled through the forum at https://forums.nlr.gov/
 
 * The AeroDyn v15 aerodynamics module has been significantly updated. The blade-element/momentum theory (BEMT) solution algorithm has been improved as follows:
 
@@ -196,5 +196,4 @@ For unit testing, we will employ the pFUnit framework (https://sourceforge.net/p
 
 For the time being OpenFAST provides project and solution files to support users developing and compiling using Visual Studio. However, the team is continually working to automate the generation of Visual Studio build files via CMake in future releases.
 
-Please contact `Michael.A.Sprague@NREL.gov <mailto:Michael.A.Sprague@NREL.gov>`_ with questions regarding the OpenFAST
-development plan.
+Please contact `Jason.Jonkman@nlr.gov <mailto:jason.jonkman@nlr.gov>`_ or `Andy.Platt@nlr.gov <mailto:andy.platt@nlr.gov>`_ with questions regarding the OpenFAST development plan.

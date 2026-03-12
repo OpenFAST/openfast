@@ -6,7 +6,7 @@ for the most computationally expensive use cases. The process generally involves
 initial profiling and hotspot analysis, then identifying specific subroutines to
 target for optimization in the physics modules and glue-codes.
 
-A portion of this work was supported by Intel® through its designation of NREL as an
+A portion of this work was supported by Intel® through its designation of NLR as an
 `Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_.
 
 The procedures, findings, and recommended programming practices are presented here.
@@ -245,17 +245,17 @@ The physics modules used in this case are:
 * AeroDyn 15
 * ServoDyn
 
-This is a land based NREL 5-MW turbine simulation using BeamDyn as the
+This is a land based Jonkman 5-MW (formerly called the NREL 5-MW) turbine simulation using BeamDyn as the
 structural module. It simulates 20 seconds with a time step size of 0.001
 seconds and executes in `3m 55s <https://my.cdash.org/testDetails.php?test=40171217&build=1649048>`__
-on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
-supercomputer.
+on NLR's former Peregrine 
+supercomputer (retired).
 
 **5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth**
 
 Download case files `here <https://github.com/OpenFAST/r-test/tree/dev/glue-codes/openfast/5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth>`__.
 
-This is an offshore, fixed-bottom NREL 5-MW turbine simulation with the
+This is an offshore, fixed-bottom Jonkman 5-MW (formerly called the NREL 5-MW) turbine simulation with the
 majority of the computational expense occurring in the HydroDyn wave-dynamics
 calculation.
 
@@ -270,8 +270,8 @@ The physics modules used in this case are:
 
 It simulates 60 seconds with a time step size of 0.01 seconds and executes in
 `20m 27s <https://my.cdash.org/testDetails.php?test=40171219&build=1649048>`__
-on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
-supercomputer.
+on NLR's former Peregrine 
+supercomputer (retired).
 
 Profiling
 +++++++++
@@ -324,7 +324,7 @@ Some keys outcomes from the first year of the IPCC project are as follows:
 * Core algorithms need significant modification to enable OpenMP and SIMD
   benefits
 
-Tuning the Intel® tools to perform best on NREL's hardware and adding high level
+Tuning the Intel® tools to perform best on NLR's hardware and adding high level
 multithreading yielded a maximum 3.8x time-to-solution improvement for one
 of the benchmark cases.
 
@@ -373,14 +373,14 @@ areas:
 .. has continuously contributed code and expertise in this area.
 
 
-.. Furthermore, NREL is optimizing OpenFAST for the future through profiling on
+.. Furthermore, NLR is optimizing OpenFAST for the future through profiling on
 .. Intel next generation platform (NGP) simulators.
 
 .. bd_5MW_dynamic
 .. ~~~~~~~~~~~~~~
 .. Download files `here <https://github.com/OpenFAST/r-test/tree/dev/modules/beamdyn/bd_5MW_dynamic>`__.
 
-.. This is a standalone BeamDyn case of the NREL 5MW wind turbine. It simulates 30
+.. This is a standalone BeamDyn case of the Jonkman 5-MW (formerly called the NREL 5-MW) wind turbine. It simulates 30
 .. seconds with a time step size of 0.002 seconds and executes in 24s on NREL's
 .. Peregrine supercomputer.
 

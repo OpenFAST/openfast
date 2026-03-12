@@ -222,7 +222,7 @@ trailing edge (low :math:`\Theta_e`).
 
 
 .. [2]
-   https://github.com/NREL/ROSCO
+   https://github.com/NatLabRockies/ROSCO
 
 .. [3]
    https://github.com/OpenFAST/python-toolbox

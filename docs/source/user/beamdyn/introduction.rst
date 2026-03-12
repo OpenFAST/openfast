@@ -4,9 +4,9 @@ Introduction
 ============
 
 BeamDyn is a time-domain structural-dynamics module for slender
-structures created by the National Renewable Energy Laboratory (NREL)
+structures created by the National Laboratory of the Rockies (NLR)
 through support from the U.S. Department of Energy Wind and Water Power
-Program and the NREL Laboratory Directed Research and Development (LDRD)
+Program and the NLR Laboratory Directed Research and Development (LDRD)
 program through the grant “High-Fidelity Computational Modeling of
 Wind-Turbine Structural Dynamics”, see References :cite:`Wang:SFE2013,Wang:GEBT2013,Wang:GEBT2014,Wang:2015`.
 The module has been coupled into the FAST aero-hydro-servo-elastic wind

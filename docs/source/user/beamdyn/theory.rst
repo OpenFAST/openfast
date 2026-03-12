@@ -27,7 +27,7 @@ Coordinate Systems
    :width: 100%
    :align: center
 
-   Global, blade reference, and internal coordinate systems in BeamDyn. Illustration by Al Hicks, NREL.
+   Global, blade reference, and internal coordinate systems in BeamDyn. Illustration by Al Hicks, NLR.
 
 
 Global Coordinate System
