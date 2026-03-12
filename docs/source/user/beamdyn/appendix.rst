@@ -16,6 +16,12 @@ OpenFAST+BeamDyn and stand-alone BeamDyn (static and dynamic) simulations all re
 :download:`(NREL 5MW static example) <examples/bd_primary_nrel_5mw.inp>`: This file includes information on the numerical-solution parameters (e.g., numerical damping, quadrature rules), and the geometric definition of the beam reference line via "members" and "key points".  This file also specifies the "blade input file."
 
 2) BeamDyn blade input file :download:`(NREL 5MW example) <examples/nrel_5mw_blade.inp>`: 
+   This file specifies the blade sectional properties at various stations along the blade.
+   The file includes stiffness and mass matrices at each station, as well as damping parameters.
+   Note that the example file uses stiffness-proportional damping (damp_flag = 1). For modal
+   damping (damp_flag = 2), the n_modes parameter should be set to a non-zero value and 
+   followed by the corresponding modal damping ratios (zeta values) represented as the
+   fraction of critical damping.
 
 Stand-alone BeamDyn simulation also require a driver input file; we list here examples for static and dynamic simulations:
 
@@ -56,3 +62,21 @@ outputs are expressed in one of the following three coordinate systems:
    :align: center
 
    BeamDyn Output Channel List
+
+.. note::
+
+   **New Output Channels (v5.0 and later):**
+   
+   BeamDyn now includes additional output channels for applied loads mapped to the root node.
+   These channels provide the total applied loads (both distributed and point loads) resolved
+   at the root of the blade, expressed in both the root coordinate system (r) and global 
+   inertial frame (g):
+   
+   - **RootAppliedFxr, RootAppliedFyr, RootAppliedFzr**: Applied force components in r-frame
+   - **RootAppliedMxr, RootAppliedMyr, RootAppliedMzr**: Applied moment components in r-frame
+   - **RootAppliedFxg, RootAppliedFyg, RootAppliedFzg**: Applied force components in g-frame
+   - **RootAppliedMxg, RootAppliedMyg, RootAppliedMzg**: Applied moment components in g-frame
+   
+   These outputs are useful for understanding the total aerodynamic and other external loads
+   acting on the blade, particularly when diagnosing load imbalances or validating force 
+   distributions.

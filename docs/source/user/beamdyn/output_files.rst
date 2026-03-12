@@ -26,7 +26,7 @@ Summary File
 In stand-alone mode, BeamDyn generates a summary file with the naming
 convention, ``InputFile.sum`` if the ``SumPrint`` parameter is set
 to TRUE. When coupled to FAST, the summary file is named
-``InputFile.BD.sum``. This file summarizes key information about the
+``InputFile.BD.R*.B*.sum.yaml``. This file summarizes key information about the
 simulation, including:
 
 -  Blade mass.

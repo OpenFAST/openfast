@@ -22,9 +22,9 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             xEnd              -  -  -  "xEnd" -
 typedef     ^                   ^               ReKi                             yEnd              -  -  -  "yEnd" -
 typedef     ^                   ^               ReKi                             zEnd              -  -  -  "zEnd" -
-typedef     ^                   ^               IntKi                            nx                -  -  -  "nx" -
-typedef     ^                   ^               IntKi                            ny                -  -  -  "ny" -
-typedef     ^                   ^               IntKi                            nz                -  -  -  "nz" -
+typedef     ^                   ^               IntKi                            nx                -  0  -  "nx" -
+typedef     ^                   ^               IntKi                            ny                -  0  -  "ny" -
+typedef     ^                   ^               IntKi                            nz                -  0  -  "nz" -
 typedef     ^                   ^               ReKi                             uGrid    {:}{:}{:}{:} - -  "Grid velocity 3 x nz x ny x nx" -
 typedef     ^                   ^               ReKi                             omGrid   {:}{:}{:}{:} - -  "Grid vorticity 3 x nz x ny x nx" -
 typedef     ^                   ^               DbKi                             tLastOutput       -  -  -  "Last output time" -
@@ -35,15 +35,43 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             Gamma      :     -  -  "Segment circulations" - 
 typedef     ^                   ^               ReKi                             Epsilon    :     -  -  "Segment regularization parameter" - 
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
-typedef     ^                   ^               IntKi                            nAct          -  -  -  "Number of active segments"          -
-typedef     ^                   ^               IntKi                            nActP         -  -  -  "Number of active segment points"          -
+typedef     ^                   ^               IntKi                            nAct          -  0  -  "Number of active segments"          -
+typedef     ^                   ^               IntKi                            nActP         -  0  -  "Number of active segment points"          -
 # TODO add tree
 #####################  Particles        ###############
 typedef  FVW/FVW           T_Part               ReKi                             P          ::    -  -  "Particle Points" - 
 typedef     ^                   ^               ReKi                             Alpha      ::    -  -  "Particle intensity 3 x nP" - 
 typedef     ^                   ^               ReKi                             RegParam   :     -  -  "Particle regularization parameter" - 
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (FVW_BiotSavart)"          -
-typedef     ^                   ^               IntKi                            nAct          -  -  -  "Number of active particles <=nP"          -
+typedef     ^                   ^               IntKi                            nAct          -  0  -  "Number of active particles <=nP"          -
+#####################  Panels           ###############
+typedef  FVW/FVW           T_SrcPanlParam       IntKi                            n          -     0  -  "Number of panels" -
+typedef     ^                   ^               CHARACTER(1024)                  Comment    -     "" - "Area" - 
+typedef     ^                   ^               ReKi                             Area       :     -  -  "Area" - 
+typedef     ^                   ^               ReKi                             P          ::    -  -  "Points database" - 
+typedef     ^                   ^               IntKi                            IDs        ::    -  -  "Points connectivity ID for each panel 4xnPn" - 
+typedef     ^                   ^               IntKi                            BodyIDs    :     -  -  "Body ID for each panel" - 
+typedef     ^                   ^               ReKi                             Pcent      ::    -  -  "Centroid point" - 
+typedef     ^                   ^               ReKi                             Pmid       ::    -  -  "Mid point" - 
+typedef     ^                   ^               ReKi                             Normal     ::    -  -  "Normal to panel" - 
+typedef     ^                   ^               ReKi                             xi         ::    -  -  "Xi coordinate for each panel point" - 
+typedef     ^                   ^               ReKi                             eta        ::    -  -  "eta coordinate for each panel point" - 
+typedef     ^                   ^               ReKi                             R_g2p      :::   -  -  "Transformation matrix global to Panel" - 
+
+typedef  FVW/FVW           T_SrcPanlVar         ReKi                             Sigma   :   -  -  "Intensities" - 
+
+typedef  FVW/FVW           T_SrcPanlMisc        ReKi                             AI      ::  -  -  "Influence matrix to solve for intensity" - 
+typedef     ^                   ^               ReKi                             UUI    :::  -  -  "Unit induced velocity" - 
+typedef     ^                   ^               ReKi                             Uext    ::  -  -  "External inflow velocity at panel control points" - 
+typedef     ^                   ^               ReKi                             Uwnd    ::  -  -  "Inflow velocity vector at panel control points" - 
+typedef     ^                   ^               ReKi                             Uind    ::  -  -  "Induced velocity vector at panel control points" - 
+typedef     ^                   ^               ReKi                             Utot    ::  -  -  "Full velocity (include induced) vector at panel control points" - 
+typedef     ^                   ^               ReKi                             Cp       : -  -  "Pressure coefficient" - 
+typedef     ^                   ^               ReKi                             p        : -  -  "Pressure (1/2 rho Utot^2)" - 
+typedef     ^                   ^               ReKi                             F       :: -  -  "Force from pressure" - 
+typedef     ^                   ^               ReKi                             FpA     :: -  -  "Force per area" - 
+typedef     ^                   ^               ReKi                             RHS      :  -  -  "Right hand side" - 
+typedef     ^                   ^               IntKi                            IPIV     :  -  -  "Pivot for factorization" - 
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
@@ -51,24 +79,24 @@ typedef  FVW/FVW           Wng_ParameterType    ReKi                            
 typedef     ^                   ^               ReKi                             chord_CP     : -  -  "Chord on LL cp " m
 typedef     ^                   ^               ReKi                             s_LL         : -  -  "Spanwise coordinate of LL elements" m
 typedef     ^                   ^               ReKi                             s_CP         : -  -  "Spanwise coordinate of LL CP" m
-typedef     ^                   ^               IntKi                            iRotor       - -  -  "Index of rotor the wing belong to" -
+typedef     ^                   ^               IntKi                            iRotor       - 0  -  "Index of rotor the wing belong to" -
 typedef     ^                   ^               IntKi                            AFindx       :: -  - "Index to the airfoils from AD15 [BladeNode,BladeIndex=1]" - 
-typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
+typedef     ^                   ^               IntKi                            nSpan             -  0  -  "TODO, should be defined per wing. Number of spanwise element"          -
 typedef     ^                   ^               ReKi                             PrescribedCirculation    :  -  - "Prescribed circulation on all lifting lines" "m/s" 
 
 
 #FVW_ParameterType  
 
-typedef  FVW/FVW           ParameterType        IntKi                            nRotors            -  -   - "Number of Wings"  -
-typedef     ^                   ^               IntKi                            nWings            -  -   - "Number of Wings"  -
+typedef  FVW/FVW           ParameterType        IntKi                            nRotors            -  0   - "Number of Rotors"  -
+typedef     ^                   ^               IntKi                            nWings            -  0   - "Number of Wings"  -
 #typedef     ^                   ^               IntKi                            Rot2Wings         :  -   - "Index mapping from wings to rotors"  -
 typedef     ^                   ^               Wng_ParameterType                W                 :  -   - "Wings parameters"  -
 typedef     ^                   ^               IntKi                            Bld2Wings        :: -  - "Index mapping from blades to wings" - 
-typedef     ^                   ^               IntKi                            iNWStart          -  -  -  "Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1)"          -
-typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
-typedef     ^                   ^               IntKi                            nNWFree           -  -  -  "Number of nw panels that are free, per wing"          -
-typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
-typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
+typedef     ^                   ^               IntKi                            iNWStart          -  0  -  "Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1)"          -
+typedef     ^                   ^               IntKi                            nNWMax            -  0  -  "Maximum number of nw panels, per wing"          -
+typedef     ^                   ^               IntKi                            nNWFree           -  0  -  "Number of nw panels that are free, per wing"          -
+typedef     ^                   ^               IntKi                            nFWMax            -  0  -  "Maximum number of fw panels, per wing"          -
+typedef     ^                   ^               IntKi                            nFWFree           -  0  -  "Number of fw panels that are free, per wing"          -
 typedef     ^                   ^               Logical                          FWShedVorticity   -  -  -  "Include shed vorticity in the far wake"          -
 typedef     ^                   ^               IntKi                            IntMethod         -  -  -  "Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1)" -
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
@@ -92,6 +120,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            PartPerSegment     2   -    -  "Number of particles per segment, e.g. for tree method, for full wake and lifting line" 
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
+typedef     ^                   ^               ReKi                             AirDens       -  - -   "Air density"  kg/m^3 
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
 typedef     ^                   ^               IntKi                            MHK           -  - -   "MHK flag"   -
 typedef     ^                   ^               ReKi                             WtrDpth       -  - -   "Water depth"   m
@@ -103,7 +132,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               CHARACTER(1024)                  RootName      -  -  - "RootName for writing output files"	-
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileRoot - - - "Rootdirectory for writing VTK files"	-
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
-typedef     ^                   ^               IntKi                            nGridOut      -  - -    "Number of VTK grid to output" -
+typedef     ^                   ^               IntKi                            nGridOut      -  0 -    "Number of VTK grid to output" -
 # Parameters advanced options
 typedef     ^                   ^               Logical                          InductionAtCP - .true.  -  "Compute induced velocities at nodes or CP" 
 typedef     ^                   ^               Logical                          WakeAtTE      - .true.  -  "Start the wake at the trailing edge, or at the LL" 
@@ -111,6 +140,11 @@ typedef     ^                   ^               Logical                         
 typedef     ^                   ^               Logical                          Induction     - .true.  -  "Compute induction" 
 typedef     ^                   ^               ReKi                             kFrozenNWStart - 0.75   -  "Fraction of wake induced velocity at start of frozen wake. 1 seems too strong." 
 typedef     ^                   ^               ReKi                             kFrozenNWEnd   - 0.5    -  "Fraction of wake induced velocity at end of frozen wake" 
+typedef     ^                   ^               ReKi                             zGround        - 0.0    -  "Ground height" 
+typedef     ^                   ^               ReKi                             zGroundPush    - 0.1    -  "Distance above ground where vortices are pushed back" 
+typedef     ^                   ^               IntKi                            nSrcPnlUpdate  - 1      -  "How often do src panel updates (in time steps of OLAF)" 
+# Parameters panels
+typedef     ^                   ^               T_SrcPanlParam                   SrcPnl         -   -    -  "Source panel parameters" -
 
 #.......... ContinuousStateType ......
 typedef FVW/FVW            Wng_ContinuousStateType   ReKi                        Gamma_NW     ::  -  -  "Circulation of the near wake panels (    nSpan     x nNW  )" -
@@ -204,6 +238,7 @@ typedef     ^                   ^               LOGICAL                         
 # Element storage (buffers)
 typedef     ^                   ^               T_Sgmt                           Sgmt           -   -  -  "Segments storage" -
 typedef     ^                   ^               T_Part                           Part           -   -  -  "Particle storage" -
+typedef     ^                   ^               T_SrcPanlMisc                    SrcPnl         -   -  -  "Source panels storage" -
 # Wake rollup storage (buffer)
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
@@ -237,11 +272,13 @@ typedef FVW/FVW            Wng_ConstraintStateType  Reki                        
 # FVW_ConstraintStateType
 typedef FVW/FVW            ConstraintStateType  Wng_ConstraintStateType          W             :  -  -  "rotors constr. states" -
 typedef    ^                     ^              Reki                             residual      -   -  -  "Residual" -
+typedef      ^                   ^              T_SrcPanlVar                     SrcPnl        -   -  -  "Source panel constraints" -
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
-typedef  FVW/FVW           OtherStateType       IntKi                            Dummy             -  -  - "Empty to satisfy framework"
+typedef  FVW/FVW           OtherStateType       ReKi                             ShedScale         -  -  - "Scale shed vorticity at begining of simulation"
 typedef   ^                       ^             UA_OtherStateType                UA                :  -  -  "other states for UnsteadyAero for each wing"        -
+typedef   ^                       ^             LOGICAL                          Initialized       -  .false. -  "True if OLAF is initialized"        -
 
 
 #.......... InitInputType ......
@@ -260,6 +297,7 @@ typedef     ^                   ^               Wng_InitInputType               
 typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
 typedef     ^                   ^               IntKi                            numBladeNodes     -  -  - "Number of nodes on each blade"          -
 typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
+typedef     ^                   ^               ReKi                             AirDens       -  - -   "Air density"  kg/m^3 
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
 typedef     ^                   ^               IntKi                            MHK           -  - -   "MHK flag"   -
 typedef     ^                   ^               ReKi                             WtrDpth       -  - -   "Water depth"   m
@@ -302,6 +340,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "Requested timestep between VTK outputs (calculated from the VTK_fps read in)" s
 typedef     ^                   ^               IntKi                            VTKCoord      -  - -    "Switch for VTK outputs coordinate  system" -
+typedef     ^                   ^               CHARACTER(1024)                  SrcPnlFile    -  - ''   "Input file for source panels"  -
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

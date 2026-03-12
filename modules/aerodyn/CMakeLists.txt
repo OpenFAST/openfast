@@ -72,7 +72,7 @@ add_library(aerodynlib STATIC
   src/FVW_Tests.f90
   src/FVW_Types.f90
 )
-target_link_libraries(aerodynlib basicaerolib aeroacousticslib nwtclibs)
+target_link_libraries(aerodynlib basicaerolib aeroacousticslib seastlib nwtclibs)
 
 # ADI lib
 add_library(adilib STATIC
@@ -120,13 +120,14 @@ add_library(aerodyn_inflow_c_binding_object OBJECT
 )
 target_link_libraries(aerodyn_inflow_c_binding_object adilib aerodyn_driver_subs nwtclibs versioninfolib)
 set_property(TARGET aerodyn_inflow_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 1) # required for shared libs
+if(APPLE OR UNIX)
+   target_compile_definitions(aerodyn_inflow_c_binding_object PRIVATE IMPLICIT_DLLEXPORT)
+endif()
 
 #   shared
 add_library(aerodyn_inflow_c_binding SHARED $<TARGET_OBJECTS:aerodyn_inflow_c_binding_object>)
 target_link_libraries(aerodyn_inflow_c_binding adilib aerodyn_driver_subs nwtclibs versioninfolib)
-if(APPLE OR UNIX)
-   target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
-endif()
+
 
 # C-bindings non-shared interface
 # This is a workaround for building wavetank into a single DLL (also allows setting CU globaly for sending screen to file for labview integration)

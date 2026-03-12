@@ -33,13 +33,18 @@ MODULE StrucCtrl_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+! =========  StC_PrescrFrcTseries  =======
+  TYPE, PUBLIC :: StC_PrescrFrcTseries
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: data      !< StC prescribed force time-series info [(s,N,N-m)]
+  END TYPE StC_PrescrFrcTseries
+! =======================
 ! =========  StC_InputFile  =======
   TYPE, PUBLIC :: StC_InputFile
     CHARACTER(1024)  :: StCFileName      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
-    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
+    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -50,7 +55,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: StC_X_M = 0.0_ReKi      !< StC X mass [kg]
     REAL(ReKi)  :: StC_Y_M = 0.0_ReKi      !< StC Y mass [kg]
     REAL(ReKi)  :: StC_Z_M = 0.0_ReKi      !< StC Z mass [kg]
-    REAL(ReKi)  :: StC_XY_M = 0.0_ReKi      !< StC XY mass [kg]
+    REAL(ReKi)  :: StC_Omni_M = 0.0_ReKi      !< StC omni mass [kg]
     REAL(ReKi)  :: StC_X_K = 0.0_ReKi      !< StC X stiffness [N/m]
     REAL(ReKi)  :: StC_Y_K = 0.0_ReKi      !< StC Y stiffness [N/m]
     REAL(ReKi)  :: StC_Z_K = 0.0_ReKi      !< StC Y stiffness [N/m]
@@ -98,8 +103,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: StC_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys = 0_IntKi      !< Prescribed forces coordinate system {0: global; 1: local} [-]
-    CHARACTER(1024)  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
+    TYPE(StC_PrescrFrcTseries) , DIMENSION(:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StC_CChan      !< StC control chan to use -- one per instance [-]
   END TYPE StC_InputFile
 ! =======================
@@ -183,7 +188,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: StC_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
+    INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF = .false.      !< DOF on or off [-]
@@ -191,7 +196,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: M_X = 0.0_ReKi      !< StC mass [kg]
     REAL(ReKi)  :: M_Y = 0.0_ReKi      !< StC mass [kg]
     REAL(ReKi)  :: M_Z = 0.0_ReKi      !< StC mass [kg]
-    REAL(ReKi)  :: M_XY = 0.0_ReKi      !< StCXY mass [kg]
+    REAL(ReKi)  :: M_Omni = 0.0_ReKi      !< StC omni mass [kg]
     REAL(ReKi)  :: K_X = 0.0_ReKi      !< StC stiffness [N/m]
     REAL(ReKi)  :: K_Y = 0.0_ReKi      !< StC stiffness [N/m]
     REAL(ReKi)  :: K_Z = 0.0_ReKi      !< StC stiffness [N/m]
@@ -203,7 +208,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: P_SP = 0.0_ReKi      !< Positive stop position (maximum mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: N_SP = 0.0_ReKi      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration vector [m/s^2]
-    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
+    INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: StC_X_C_HIGH = 0.0_ReKi      !< StC X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_LOW = 0.0_ReKi      !< StC X low damping for ground hook control [N/(m/s)]
@@ -230,7 +235,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: NumMeshPts = 0_IntKi      !< Number of mesh points [-]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys = 0_IntKi      !< Prescribed forces coordinate system {0: global; 1: local} [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
+    TYPE(StC_PrescrFrcTseries) , DIMENSION(:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StC_CChan      !< StC control chan to use [-]
   END TYPE StC_ParameterType
 ! =======================
@@ -251,7 +256,75 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MeasVel      !< StC measured relative velocity     of tmd mass (local coordinates) signal to controller [m/s]
   END TYPE StC_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: StC_x_StC_x                      =   1 ! StC%StC_x
+   integer(IntKi), public, parameter :: StC_u_Mesh                       =   2 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_u_CmdStiff                   =   3 ! StC%CmdStiff
+   integer(IntKi), public, parameter :: StC_u_CmdDamp                    =   4 ! StC%CmdDamp
+   integer(IntKi), public, parameter :: StC_u_CmdBrake                   =   5 ! StC%CmdBrake
+   integer(IntKi), public, parameter :: StC_u_CmdForce                   =   6 ! StC%CmdForce
+   integer(IntKi), public, parameter :: StC_u_CmdMoment                  =   7 ! StC%CmdMoment
+   integer(IntKi), public, parameter :: StC_y_Mesh                       =   8 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_y_MeasDisp                   =   9 ! StC%MeasDisp
+   integer(IntKi), public, parameter :: StC_y_MeasVel                    =  10 ! StC%MeasVel
+
+contains
+
+subroutine StC_CopyPrescrFrcTseries(SrcPrescrFrcTseriesData, DstPrescrFrcTseriesData, CtrlCode, ErrStat, ErrMsg)
+   type(StC_PrescrFrcTseries), intent(in) :: SrcPrescrFrcTseriesData
+   type(StC_PrescrFrcTseries), intent(inout) :: DstPrescrFrcTseriesData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'StC_CopyPrescrFrcTseries'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcPrescrFrcTseriesData%data)) then
+      LB(1:2) = lbound(SrcPrescrFrcTseriesData%data)
+      UB(1:2) = ubound(SrcPrescrFrcTseriesData%data)
+      if (.not. allocated(DstPrescrFrcTseriesData%data)) then
+         allocate(DstPrescrFrcTseriesData%data(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPrescrFrcTseriesData%data.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstPrescrFrcTseriesData%data = SrcPrescrFrcTseriesData%data
+   end if
+end subroutine
+
+subroutine StC_DestroyPrescrFrcTseries(PrescrFrcTseriesData, ErrStat, ErrMsg)
+   type(StC_PrescrFrcTseries), intent(inout) :: PrescrFrcTseriesData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'StC_DestroyPrescrFrcTseries'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(PrescrFrcTseriesData%data)) then
+      deallocate(PrescrFrcTseriesData%data)
+   end if
+end subroutine
+
+subroutine StC_PackPrescrFrcTseries(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(StC_PrescrFrcTseries), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'StC_PackPrescrFrcTseries'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%data)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine StC_UnPackPrescrFrcTseries(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(StC_PrescrFrcTseries), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'StC_UnPackPrescrFrcTseries'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%data); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
 subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(StC_InputFile), intent(in) :: SrcInputFileData
@@ -259,8 +332,10 @@ subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
    integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'StC_CopyInputFile'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -279,7 +354,7 @@ subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    DstInputFileData%StC_X_M = SrcInputFileData%StC_X_M
    DstInputFileData%StC_Y_M = SrcInputFileData%StC_Y_M
    DstInputFileData%StC_Z_M = SrcInputFileData%StC_Z_M
-   DstInputFileData%StC_XY_M = SrcInputFileData%StC_XY_M
+   DstInputFileData%StC_Omni_M = SrcInputFileData%StC_Omni_M
    DstInputFileData%StC_X_K = SrcInputFileData%StC_X_K
    DstInputFileData%StC_Y_K = SrcInputFileData%StC_Y_K
    DstInputFileData%StC_Z_K = SrcInputFileData%StC_Z_K
@@ -338,18 +413,33 @@ subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
       DstInputFileData%F_TBL = SrcInputFileData%F_TBL
    end if
    DstInputFileData%PrescribedForcesCoordSys = SrcInputFileData%PrescribedForcesCoordSys
-   DstInputFileData%PrescribedForcesFile = SrcInputFileData%PrescribedForcesFile
+   if (allocated(SrcInputFileData%PrescribedForcesFile)) then
+      LB(1:1) = lbound(SrcInputFileData%PrescribedForcesFile)
+      UB(1:1) = ubound(SrcInputFileData%PrescribedForcesFile)
+      if (.not. allocated(DstInputFileData%PrescribedForcesFile)) then
+         allocate(DstInputFileData%PrescribedForcesFile(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PrescribedForcesFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PrescribedForcesFile = SrcInputFileData%PrescribedForcesFile
+   end if
    if (allocated(SrcInputFileData%StC_PrescribedForce)) then
-      LB(1:2) = lbound(SrcInputFileData%StC_PrescribedForce)
-      UB(1:2) = ubound(SrcInputFileData%StC_PrescribedForce)
+      LB(1:1) = lbound(SrcInputFileData%StC_PrescribedForce)
+      UB(1:1) = ubound(SrcInputFileData%StC_PrescribedForce)
       if (.not. allocated(DstInputFileData%StC_PrescribedForce)) then
-         allocate(DstInputFileData%StC_PrescribedForce(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstInputFileData%StC_PrescribedForce(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%StC_PrescribedForce.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInputFileData%StC_PrescribedForce = SrcInputFileData%StC_PrescribedForce
+      do i1 = LB(1), UB(1)
+         call StC_CopyPrescrFrcTseries(SrcInputFileData%StC_PrescribedForce(i1), DstInputFileData%StC_PrescribedForce(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
    end if
    if (allocated(SrcInputFileData%StC_CChan)) then
       LB(1:1) = lbound(SrcInputFileData%StC_CChan)
@@ -369,13 +459,26 @@ subroutine StC_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    type(StC_InputFile), intent(inout) :: InputFileData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'StC_DestroyInputFile'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(InputFileData%F_TBL)) then
       deallocate(InputFileData%F_TBL)
    end if
+   if (allocated(InputFileData%PrescribedForcesFile)) then
+      deallocate(InputFileData%PrescribedForcesFile)
+   end if
    if (allocated(InputFileData%StC_PrescribedForce)) then
+      LB(1:1) = lbound(InputFileData%StC_PrescribedForce)
+      UB(1:1) = ubound(InputFileData%StC_PrescribedForce)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyPrescrFrcTseries(InputFileData%StC_PrescribedForce(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
       deallocate(InputFileData%StC_PrescribedForce)
    end if
    if (allocated(InputFileData%StC_CChan)) then
@@ -387,6 +490,8 @@ subroutine StC_PackInputFile(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(StC_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'StC_PackInputFile'
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%StCFileName)
    call RegPack(RF, InData%Echo)
@@ -403,7 +508,7 @@ subroutine StC_PackInputFile(RF, Indata)
    call RegPack(RF, InData%StC_X_M)
    call RegPack(RF, InData%StC_Y_M)
    call RegPack(RF, InData%StC_Z_M)
-   call RegPack(RF, InData%StC_XY_M)
+   call RegPack(RF, InData%StC_Omni_M)
    call RegPack(RF, InData%StC_X_K)
    call RegPack(RF, InData%StC_Y_K)
    call RegPack(RF, InData%StC_Z_K)
@@ -451,8 +556,16 @@ subroutine StC_PackInputFile(RF, Indata)
    call RegPack(RF, InData%StC_F_TBL_FILE)
    call RegPackAlloc(RF, InData%F_TBL)
    call RegPack(RF, InData%PrescribedForcesCoordSys)
-   call RegPack(RF, InData%PrescribedForcesFile)
-   call RegPackAlloc(RF, InData%StC_PrescribedForce)
+   call RegPackAlloc(RF, InData%PrescribedForcesFile)
+   call RegPack(RF, allocated(InData%StC_PrescribedForce))
+   if (allocated(InData%StC_PrescribedForce)) then
+      call RegPackBounds(RF, 1, lbound(InData%StC_PrescribedForce), ubound(InData%StC_PrescribedForce))
+      LB(1:1) = lbound(InData%StC_PrescribedForce)
+      UB(1:1) = ubound(InData%StC_PrescribedForce)
+      do i1 = LB(1), UB(1)
+         call StC_PackPrescrFrcTseries(RF, InData%StC_PrescribedForce(i1)) 
+      end do
+   end if
    call RegPackAlloc(RF, InData%StC_CChan)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -461,6 +574,7 @@ subroutine StC_UnPackInputFile(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(StC_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'StC_UnPackInputFile'
+   integer(B4Ki)   :: i1, i2
    integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
@@ -480,7 +594,7 @@ subroutine StC_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%StC_X_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Z_M); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%StC_XY_M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StC_Omni_M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_X_K); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Y_K); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StC_Z_K); if (RegCheckErr(RF, RoutineName)) return
@@ -528,8 +642,20 @@ subroutine StC_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%StC_F_TBL_FILE); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_TBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PrescribedForcesCoordSys); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%PrescribedForcesFile); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StC_PrescribedForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PrescribedForcesFile); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%StC_PrescribedForce)) deallocate(OutData%StC_PrescribedForce)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%StC_PrescribedForce(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%StC_PrescribedForce.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackPrescrFrcTseries(RF, OutData%StC_PrescribedForce(i1)) ! StC_PrescribedForce 
+      end do
+   end if
    call RegUnpackAlloc(RF, OutData%StC_CChan); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1435,8 +1561,10 @@ subroutine StC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
    integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'StC_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1450,7 +1578,7 @@ subroutine StC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%M_X = SrcParamData%M_X
    DstParamData%M_Y = SrcParamData%M_Y
    DstParamData%M_Z = SrcParamData%M_Z
-   DstParamData%M_XY = SrcParamData%M_XY
+   DstParamData%M_Omni = SrcParamData%M_Omni
    DstParamData%K_X = SrcParamData%K_X
    DstParamData%K_Y = SrcParamData%K_Y
    DstParamData%K_Z = SrcParamData%K_Z
@@ -1501,16 +1629,20 @@ subroutine StC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumMeshPts = SrcParamData%NumMeshPts
    DstParamData%PrescribedForcesCoordSys = SrcParamData%PrescribedForcesCoordSys
    if (allocated(SrcParamData%StC_PrescribedForce)) then
-      LB(1:2) = lbound(SrcParamData%StC_PrescribedForce)
-      UB(1:2) = ubound(SrcParamData%StC_PrescribedForce)
+      LB(1:1) = lbound(SrcParamData%StC_PrescribedForce)
+      UB(1:1) = ubound(SrcParamData%StC_PrescribedForce)
       if (.not. allocated(DstParamData%StC_PrescribedForce)) then
-         allocate(DstParamData%StC_PrescribedForce(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstParamData%StC_PrescribedForce(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%StC_PrescribedForce.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%StC_PrescribedForce = SrcParamData%StC_PrescribedForce
+      do i1 = LB(1), UB(1)
+         call StC_CopyPrescrFrcTseries(SrcParamData%StC_PrescribedForce(i1), DstParamData%StC_PrescribedForce(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
    end if
    if (allocated(SrcParamData%StC_CChan)) then
       LB(1:1) = lbound(SrcParamData%StC_CChan)
@@ -1530,6 +1662,10 @@ subroutine StC_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(StC_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'StC_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1537,6 +1673,12 @@ subroutine StC_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%F_TBL)
    end if
    if (allocated(ParamData%StC_PrescribedForce)) then
+      LB(1:1) = lbound(ParamData%StC_PrescribedForce)
+      UB(1:1) = ubound(ParamData%StC_PrescribedForce)
+      do i1 = LB(1), UB(1)
+         call StC_DestroyPrescrFrcTseries(ParamData%StC_PrescribedForce(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
       deallocate(ParamData%StC_PrescribedForce)
    end if
    if (allocated(ParamData%StC_CChan)) then
@@ -1548,6 +1690,8 @@ subroutine StC_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(StC_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'StC_PackParam'
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%RootName)
@@ -1559,7 +1703,7 @@ subroutine StC_PackParam(RF, Indata)
    call RegPack(RF, InData%M_X)
    call RegPack(RF, InData%M_Y)
    call RegPack(RF, InData%M_Z)
-   call RegPack(RF, InData%M_XY)
+   call RegPack(RF, InData%M_Omni)
    call RegPack(RF, InData%K_X)
    call RegPack(RF, InData%K_Y)
    call RegPack(RF, InData%K_Z)
@@ -1598,7 +1742,15 @@ subroutine StC_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%F_TBL)
    call RegPack(RF, InData%NumMeshPts)
    call RegPack(RF, InData%PrescribedForcesCoordSys)
-   call RegPackAlloc(RF, InData%StC_PrescribedForce)
+   call RegPack(RF, allocated(InData%StC_PrescribedForce))
+   if (allocated(InData%StC_PrescribedForce)) then
+      call RegPackBounds(RF, 1, lbound(InData%StC_PrescribedForce), ubound(InData%StC_PrescribedForce))
+      LB(1:1) = lbound(InData%StC_PrescribedForce)
+      UB(1:1) = ubound(InData%StC_PrescribedForce)
+      do i1 = LB(1), UB(1)
+         call StC_PackPrescrFrcTseries(RF, InData%StC_PrescribedForce(i1)) 
+      end do
+   end if
    call RegPackAlloc(RF, InData%StC_CChan)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1607,6 +1759,7 @@ subroutine StC_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(StC_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'StC_UnPackParam'
+   integer(B4Ki)   :: i1, i2
    integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
@@ -1621,7 +1774,7 @@ subroutine StC_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%M_X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_Z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%M_XY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_Omni); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%K_Z); if (RegCheckErr(RF, RoutineName)) return
@@ -1660,7 +1813,19 @@ subroutine StC_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_TBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumMeshPts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PrescribedForcesCoordSys); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StC_PrescribedForce); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%StC_PrescribedForce)) deallocate(OutData%StC_PrescribedForce)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%StC_PrescribedForce(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%StC_PrescribedForce.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call StC_UnpackPrescrFrcTseries(RF, OutData%StC_PrescribedForce(i1)) ! StC_PrescribedForce 
+      end do
+   end if
    call RegUnpackAlloc(RF, OutData%StC_CChan); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2360,5 +2525,266 @@ SUBROUTINE StC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       y_out%MeasVel = a1*y1%MeasVel + a2*y2%MeasVel + a3*y3%MeasVel
    END IF ! check if allocated
 END SUBROUTINE
+
+function StC_InputMeshPointer(u, DL) result(Mesh)
+   type(StC_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (StC_u_Mesh)
+       Mesh => u%Mesh(DL%i1)
+   end select
+end function
+
+function StC_OutputMeshPointer(y, DL) result(Mesh)
+   type(StC_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (StC_y_Mesh)
+       Mesh => y%Mesh(DL%i1)
+   end select
+end function
+
+subroutine StC_VarsPackContState(Vars, x, ValAry)
+   type(StC_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         x%StC_x(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_x_StC_x)
+       Name = "x%StC_x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine StC_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(StC_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsPackInput(Vars, u, ValAry)
+   type(StC_InputType), intent(in)         :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call StC_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_PackMesh(V, u%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_u_CmdStiff)
+         VarVals = u%CmdStiff(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         VarVals = u%CmdDamp(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         VarVals = u%CmdBrake(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdForce)
+         VarVals = u%CmdForce(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdMoment)
+         VarVals = u%CmdMoment(V%iLB:V%iUB,V%j)                               ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_InputType), intent(inout)      :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call StC_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_UnpackMesh(V, ValAry, u%Mesh(DL%i1))                         ! Mesh
+      case (StC_u_CmdStiff)
+         u%CmdStiff(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         u%CmdDamp(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         u%CmdBrake(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdForce)
+         u%CmdForce(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdMoment)
+         u%CmdMoment(V%iLB:V%iUB, V%j) = VarVals                              ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_u_Mesh)
+       Name = "u%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_u_CmdStiff)
+       Name = "u%CmdStiff"
+   case (StC_u_CmdDamp)
+       Name = "u%CmdDamp"
+   case (StC_u_CmdBrake)
+       Name = "u%CmdBrake"
+   case (StC_u_CmdForce)
+       Name = "u%CmdForce"
+   case (StC_u_CmdMoment)
+       Name = "u%CmdMoment"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine StC_VarsPackOutput(Vars, y, ValAry)
+   type(StC_OutputType), intent(in)        :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call StC_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_PackMesh(V, y%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_y_MeasDisp)
+         VarVals = y%MeasDisp(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_y_MeasVel)
+         VarVals = y%MeasVel(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_OutputType), intent(inout)     :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call StC_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Mesh(DL%i1))                         ! Mesh
+      case (StC_y_MeasDisp)
+         y%MeasDisp(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_y_MeasVel)
+         y%MeasVel(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_y_Mesh)
+       Name = "y%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_y_MeasDisp)
+       Name = "y%MeasDisp"
+   case (StC_y_MeasVel)
+       Name = "y%MeasVel"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE StrucCtrl_Types
+
 !ENDOFREGISTRYGENERATEDFILE

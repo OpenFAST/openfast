@@ -580,7 +580,6 @@ MODULE NWTC_LAPACK
       END IF
 
       ErrStat = ErrID_None
-      ErrMsg  = ""
 
       
       IF ( K /= Kb ) THEN

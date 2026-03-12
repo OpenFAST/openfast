@@ -291,6 +291,79 @@ CONTAINS
 
       RETURN
       END SUBROUTINE UserWaveSpctrm
+
+
+      SUBROUTINE WaveDispRel ( Omega, g, h, CurrVw0, OmegaCrit, Omega_i_Crit, Omega_i, k, ErrStat, ErrMsg )
+
+      IMPLICIT                        NONE
+
+         ! Passed Variables:
+
+      REAL(ReKi),    INTENT(IN )   :: g                                               ! Gravitational acceleration (m/s^2)
+      REAL(ReKi),    INTENT(IN )   :: h                                               ! Water depth (meters)
+      REAL(SiKi),    INTENT(IN )   :: Omega                                           ! Absolute wave frequency (rad/s)
+      REAL(SiKi),    INTENT(IN )   :: OmegaCrit                                       ! Critical absolute wave frequency (rad/s)
+      REAL(SiKi),    INTENT(IN )   :: Omega_i_Crit                                    ! Critical intrinsic wave frequency (rad/s)
+      REAL(ReKi),    INTENT(IN )   :: CurrVw0                                         ! Current velocity projected onto the mean wave direction (m/s)
+      REAL(SiKi),    INTENT(  OUT) :: Omega_i                                         ! Intrinsic wave frequency (rad/s)
+      REAL(SiKi),    INTENT(  OUT) :: k                                               ! Wave number (1/m)
+      INTEGER(IntKi),INTENT(  OUT) :: ErrStat                                         ! Error status of the operation
+      CHARACTER(*),  INTENT(  OUT) :: ErrMsg                                          ! Error message if ErrStat /= ErrID_None
+
+         ! Local variables
+
+      REAL(SiKi)                   :: kh                                              ! Depth normalized wave number
+      REAL(SiKi)                   :: Vg                                              ! Group velocity
+      REAL(SiKi)                   :: F
+      REAL(SiKi)                   :: FPrime
+      INTEGER(IntKi)               :: i
+      LOGICAL                      :: tolMet = .TRUE.
+
+      INTEGER(IntKi),  PARAMETER   :: maxIter = 20
+      REAL(SiKi),      PARAMETER   :: tol = 1.0E-5
+      CHARACTER(*),    PARAMETER   :: RoutineName = 'WaveDispRel'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF ( CurrVw0 < 0.0_ReKi .and. Omega > OmegaCrit ) THEN ! No solution
+         k       = -1.0_SiKi
+         Omega_i = -1.0_SiKi
+         RETURN
+      END IF
+
+      ! Initial guess
+      omega_i = omega
+
+      DO i = 1,maxIter
+         if ( CurrVw0 < 0.0_ReKi .and. omega_i >= omega_i_crit ) then
+            omega_i = omega_i_crit - tol
+         end if
+         if ( omega_i < 0.0_SiKi ) then
+            omega_i = 0.0_SiKi
+         end if
+         k = WaveNumber ( omega_i, g, h )
+         F = omega - omega_i - CurrVw0 * k
+         IF ( ABS(F) < tol ) THEN
+            tolMet = .TRUE.
+            EXIT
+         ELSE
+            kh = k * h
+            Vg = 0.5_SiKi * (omega_i/k) * ( 1.0_SiKi + 2.0_SiKi * kh / sinh(2.0*kh) )
+            FPrime = - CurrVw0/Vg - 1.0_SiKi
+            IF ( FPrime == 0.0_SiKi) EXIT
+            omega_i = omega_i - F/FPrime
+         END IF
+      END DO
+      IF ( .NOT. tolMet ) THEN
+         k = WaveNumber ( omega_i, g, h )
+         CALL SetErrStat(ErrID_Warn,' Failed to converge. ',ErrStat,ErrMsg,RoutineName)
+         CALL WrScr('[WARNING] SeaState dispersion relation solver did not reach the predefined tolerance within the maximum allowed number of iterations. The problematic wave (absolute) frequency is '//TRIM(Num2LStr(omega))//' rad/s.')
+      END IF
+
+      END SUBROUTINE WaveDispRel
+
+
       !=======================================================================
       FUNCTION WaveNumber ( Omega, g, h )
 
@@ -629,7 +702,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! Local Variables
-   COMPLEX(SiKi)                :: ImagOmega                ! = ImagNmbr*Omega (rad/s)
+   COMPLEX(SiKi)                :: ImagOmegaI               ! = ImagNmbr*OmegaI (rad/s)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0(:,:)    ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0(:,:)    ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0(:,:)      ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2)
@@ -668,6 +741,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    COMPLEX(SiKi)                :: WaveElevxiPrime0
    REAL(SiKi), ALLOCATABLE      :: WaveKinzi0Prime(:)       ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
+   REAL(SiKi)                   :: OmegaI                   ! Wave intrinsic frequency (rad/sec)
    REAL(SiKi)                   :: WaveNmbr                 ! Wavenumber of the current frequency component (1/meter)
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)     ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)     ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
@@ -700,7 +774,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    REAL(SiKi),    ALLOCATABLE   :: PWaveAcc0HxiMCFPz0(:,:)  ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    REAL(SiKi),    ALLOCATABLE   :: PWaveAcc0HyiMCFPz0(:,:)  ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    REAL(SiKi),    ALLOCATABLE   :: PWaveAcc0VMCFPz0(:,:)    ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      
+
+
+   REAL(ReKi)                   :: CurrVw0                  ! Projection of MSL current velocity on to the mean wave direction
+   REAL(SiKi)                   :: CurrV0                   ! Magnitude of MSL current velocity
+   REAL(SiKi)                   :: OmegaCrit                ! Critial absolute wave angular frequency at which wave energy cannot propagate
+   REAL(SiKi)                   :: Omega_i_Crit             ! Critial intrinsic wave angular frequency at which wave energy cannot propagate
+   LOGICAL                      :: bFirstNonzeroWaveComponent
 
    ! Variables for error handling
    INTEGER(IntKi)               :: ErrStatTmp               !< Temporary error status
@@ -772,8 +852,52 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    !          WaveDOmega = 2*Pi/(NStepWave*WaveDT)
    !                     = 2*Pi/WaveTMax
 
+   ! Determine the critical wave frequencies at which wave energy can no longer propogate against an opposing current
+   ! Note that OmegaCrit and Omega_i_Crit will be -1 if no current or aligned waves and current
+   IF ( WaveField%WvCrntMod /= WvCrntMod_Superpose ) THEN
+      IF ( WaveField%WaveMod == WaveMod_UserFreq .or. WaveField%WaveMod == WaveMod_UserSpctrm) THEN ! Need to determine wave heading and check for multidirectional waves based on components
+         bFirstNonzeroWaveComponent = .true.
+         DO I = 0,WaveField%NStepWave2
+            IF ( .not. EqualRealNos(WaveField%WaveElevC0(1,I),0.0_SiKi) .or. .not. EqualRealNos(WaveField%WaveElevC0(2,I),0.0_SiKi) ) THEN
+               IF ( bFirstNonzeroWaveComponent ) THEN
+                  WaveField%WaveDir = WaveField%WaveDirArr(I)
+                  bFirstNonzeroWaveComponent = .false.
+               ELSE
+                  IF ( .not. EqualRealNos( WaveField%WaveDir, WaveField%WaveDirArr(I) ) ) then ! Multidirectional waves
+                     CALL SetErrStat(ErrID_Fatal,' Multidirectional waves are not supported with WvCrntMod = 1 or 2. Set WvCrntMod to 0. ',ErrStat,ErrMsg,RoutineName)
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+               END IF
+            END IF
+         END DO
+      ELSE  ! Can check for multidirectional waves based on input settings
+         IF ( WaveField%WaveMultiDir ) THEN
+            CALL SetErrStat( ErrID_Fatal,'Multidirectional waves are not supported with WvCrntMod = 1 or 2. Set WvCrntMod to 0.',ErrStat,ErrMsg,RoutineName)
+            CALL CleanUp()
+            RETURN
+         END IF
+      END IF
+      CurrVw0   = InitInp%CurrVxi0 * COS( D2R*WaveField%WaveDir ) + InitInp%CurrVyi0 * SIN( D2R*WaveField%WaveDir )
+   ELSE
+      CurrVw0   = 0.0_ReKi
+   ENDIF
 
+   CurrV0 = SQRT( InitInp%CurrVxi0**2 + InitInp%CurrVyi0**2 )
+   IF ( WaveField%WvCrntMod == WvCrntMod_Full .and. CurrV0 > 0.0_ReKi ) THEN  ! Check if waves and current are colinear
+      IF ( ABS( CurrVw0/CurrV0 ) < COS( D2R*10.0 ) ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Waves and current must be colinear (aligned or opposing) when WvCrntMod = 2. Set WvCrntMod to 0 or 1. ',ErrStat,ErrMsg,RoutineName)
+         CALL CleanUp()
+         RETURN
+      END IF
+   END IF
 
+   CALL GetOmegaCritical( CurrVw0, InitInp%Gravity, WaveField%EffWtrDpth, OmegaCrit, Omega_i_Crit, ErrStatTmp, ErrMsgTmp )
+     CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+       IF ( ErrStat >= AbortErrLev ) THEN
+       CALL CleanUp()
+       RETURN
+     END IF
 
    ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
    ! used to calculate the number of multidirectional wave directions (WaveNDir) and the UserWaveElevations_Init subroutine
@@ -884,6 +1008,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    call Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr)
 
+   IF ( WaveField%WvCrntMod == WvCrntMod_Full ) THEN
+      ! Scale wave spectrum and wave amplitudes to account for wave-current interaction
+      ! Valid for colinear waves and current in deepwater only
+      call WaveCurrentInteraction(CurrVw0, InitInp%Gravity, WaveField, OmegaArr, WaveS1SddArr)
+   END IF
 
    !> #  Multi Directional Waves
    call CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp); if (Failed()) return;
@@ -912,7 +1041,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod /= ConstWaveMod_None
    IF ( WaveField%WaveMod == WaveMod_JONSWAP .AND. InitInp%ConstWaveMod /= ConstWaveMod_None ) THEN
       ! adjust InitOut%WaveElevC0 for constrained wave:
-      call ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStatTmp, ErrMsgTmp)
+      call ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, CurrVw0, OmegaCrit, Omega_I_Crit, FFT_Data, ErrStatTmp, ErrMsgTmp)
          call SetErrStat(ErrStatTmp,ErrMsgTmp, ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -936,8 +1065,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          tmpComplex  = CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))
          
          ! some redundant calculations with later, but insignificant
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
-         
+         CALL WaveDispRel ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth, CurrVw0, OmegaCrit, Omega_i_Crit, OmegaI, WaveNmbr, ErrStatTmp, ErrMsgTmp )
+           CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+             IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+           END IF
+
          ! apply the phase shift
          tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
    
@@ -959,11 +1093,17 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! Set tmpComplex to the Ith element of the WAveElevC0 array
       tmpComplex  = CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))
 
-      ! Compute the frequency of this component and its imaginary value:
-      ImagOmega = ImagNmbr*OmegaArr(I)
-
       ! Compute the wavenumber:
-      WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
+      CALL WaveDispRel ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth, CurrVw0, OmegaCrit, Omega_i_Crit, OmegaI, WaveNmbr, ErrStatTmp, ErrMsgTmp )
+        CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+          IF ( ErrStat >= AbortErrLev ) THEN
+          CALL CleanUp()
+          RETURN
+        END IF
+      IF (OmegaI < 0.0_SiKi) EXIT
+
+      ! Compute the frequency of this component and its imaginary value:
+      ImagOmegaI = ImagNmbr*OmegaI
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
       MCFC = 0.0_ReKi
@@ -986,14 +1126,14 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          WaveDynPC0 (I,J)     = WaveField%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-         WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
-         WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
+         WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaI*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
+         WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaI*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-         WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
-         WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
+         WaveVelC0V (I,J)     = ImagOmegaI*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
+         WaveAccC0Hxi (I,J)   = ImagOmegaI*        WaveVelC0Hxi (I,J)
 
-         WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
-         WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
+         WaveAccC0Hyi (I,J)   = ImagOmegaI*        WaveVelC0Hyi (I,J)
+         WaveAccC0V (I,J)     = ImagOmegaI*        WaveVelC0V   (I,J)
 
          IF (WaveField%MCFD > 0.0_SiKi) THEN
             WaveAccC0HxiMCF(I,J) = WaveAccC0Hxi(I,J) * MCFC
@@ -1008,18 +1148,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                                                          InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
             ! Partial derivatives at zi = 0
             PWaveDynPC0BPz0 (I,J) = WaveField%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*WaveField%EffWtrDpth )
-            PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
-            PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
+            PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaI*tmpComplex*WaveElevxiPrime0*WaveNmbr
+            PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaI*tmpComplex*WaveElevxiPrime0*WaveNmbr
          
             IF (I == 0_IntKi) THEN ! Zero frequency component - Need to avoid division by zero.
               PWaveVelC0VPz0  (I,J) =         0.0_ReKi
             ELSE
-              PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*WaveField%EffWtrDpth )
+              PWaveVelC0VPz0  (I,J) =         ImagOmegaI*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*WaveField%EffWtrDpth )
             END IF
          
-            PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
-            PWaveAccC0HyiPz0(I,J) =           ImagOmega*PWaveVelC0HyiPz0(I,J)
-            PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
+            PWaveAccC0HxiPz0(I,J) =           ImagOmegaI*PWaveVelC0HxiPz0(I,J)
+            PWaveAccC0HyiPz0(I,J) =           ImagOmegaI*PWaveVelC0HyiPz0(I,J)
+            PWaveAccC0VPz0  (I,J) =           ImagOmegaI*PWaveVelC0VPz0  (I,J)
             
             
             IF (WaveField%MCFD > 0.0_SiKi) THEN
@@ -1348,7 +1488,14 @@ CONTAINS
          ! Loop through the positive frequency components (including zero).
       DO I = 0,WaveField%NStepWave2
 
-         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
+         CALL WaveDispRel ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth, CurrVw0, OmegaCrit, Omega_i_Crit, OmegaI, WaveNmbr, ErrStatTmp, ErrMsgTmp )
+           CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+             IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+           END IF
+         IF (OmegaI < 0.0_SiKi) EXIT
+
          tmpComplexArr(I)  =  CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))   *          &
                                       EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
                                                                  Ycoord*SinWaveDir(I) )   )
@@ -1364,6 +1511,71 @@ CONTAINS
       WaveElevAtXY(WaveField%NStepWave) = WaveElevAtXY(0)
 
    END SUBROUTINE WaveElevTimeSeriesAtXY
+
+!--------------------------------------------------------------------------------
+   SUBROUTINE GetOmegaCritical( CurrVw0, Gravity, EffWtrDpth, Omega_Critical, Omega_i_Critical, ErrStat, ErrMsg )
+      ! This subroutine solves for the absolute and intrinsic critical wave frequencies
+      ! at which wave energy can no longer propagate against the current
+
+      ! Passed Variables:
+      REAL(ReKi),     INTENT(IN   ) :: CurrVw0
+      REAL(ReKi),     INTENT(IN   ) :: EffWtrDpth
+      REAL(ReKi),     INTENT(IN   ) :: Gravity
+      REAL(SiKi),     INTENT(  OUT) :: Omega_Critical
+      REAL(SiKi),     INTENT(  OUT) :: Omega_i_Critical
+      INTEGER(IntKi), INTENT(  OUT) :: ErrStat       ! Error status of the operation
+      CHARACTER(*),   INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+      ! Local Variables:
+      REAL(ReKi)                    :: x  ! = k*h unknown to solve
+      REAL(ReKi)                    :: k  ! wave number
+      REAL(ReKi)                    :: c
+      REAL(ReKi)                    :: F
+      REAL(ReKi)                    :: FPrime
+
+      LOGICAL                       :: tolMet = .FALSE.
+      INTEGER(IntKi)                :: i
+      INTEGER(IntKi), PARAMETER     :: maxIter = 20
+      REAL(ReKi),     PARAMETER     :: tol = 1.0E-5
+
+      ! Error handling
+      CHARACTER(*),   PARAMETER     :: RoutineName = 'GetOmegaCritical'
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF (CurrVw0 >= 0.0_ReKi) THEN ! Aligned waves and current, no Omega_Critical
+         Omega_Critical = -1.0_SiKi
+         RETURN
+      END IF
+
+      c = 2.0_ReKi * CurrVw0 / SQRT( Gravity * EffWtrDpth )
+      IF ( c < -2.0_ReKi ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Current opposing the waves is too fast; waves cannot propagate. ',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
+
+      ! Solve for Omega_Critical using Newton-Raphson method
+      x = InitInp%Gravity * WaveField%EffWtrDpth / ( 4.0_ReKi * CurrVw0 * CurrVw0 ) ! Initial guess based on deepwater limit
+      DO i = 1,maxIter
+         F = c + SQRT( tanh(x) / x ) * ( 1.0_ReKi + 2.0_ReKi * x / sinh( 2.0_ReKi * x ) )
+         IF ( ABS(F) < tol ) THEN
+            tolMet = .TRUE.
+            EXIT
+         ELSE
+            FPrime = 1.0_ReKi/sinh(x) * (1.0_ReKi/cosh(x))**3 * ( 8.0_ReKi*x**2 - cosh(4.0_ReKi*x) + 8.0_ReKi*x*(sinh(2.0_ReKi*x)-2.0_ReKi*x*cosh(2.0_ReKi*x)) + 1.0_ReKi )/( 16.0_ReKi*SQRT(x**3*tanh(x)) )
+            IF ( FPrime == 0.0_ReKi ) EXIT
+            x = x - F/FPrime
+         END IF
+      END DO
+      IF ( .NOT. tolMet ) THEN
+         CALL SetErrStat(ErrID_Warn,' Failed to converge. ',ErrStat,ErrMsg,RoutineName)
+      END IF
+
+      k = x / EffWtrDpth
+      Omega_i_Critical = REAL( SQRT( Gravity * k * tanh( x ) ) , SiKi )
+      Omega_Critical   = Omega_i_Critical + REAL( k * CurrVw0  , SiKi )
+
+   END SUBROUTINE GetOmegaCritical
 
 !--------------------------------------------------------------------------------
    SUBROUTINE CleanUp( )
@@ -2159,8 +2371,37 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       
 END SUBROUTINE Get_1Spsd_and_WaveElevC0
 !------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE WaveCurrentInteraction(CurrVw0, Gravity, WaveField, OmegaArr, WaveS1SddArr)
+   REAL(ReKi),                      INTENT(IN   )  :: CurrVw0
+   REAL(ReKi),                      INTENT(IN   )  :: Gravity
+   TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:WaveField%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
+   REAL(SiKi),                      INTENT(INOUT)  :: WaveS1SddArr(0:WaveField%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
+
+   INTEGER(IntKi)                                  :: I
+   REAL(SiKi)                                      :: c0, c1, c2, Sc
+
+   c0 = 4.0_SiKi * REAL( CurrVw0 / Gravity , SiKi )
+
+   DO I = 0,WaveField%NStepWave2
+
+      c1 = 1.0_SiKi + c0 * OmegaArr(I)
+      IF ( c1 <= 0.0_SiKi ) THEN
+         Sc = 0.0_SiKi
+      ELSE
+         c2 = SQRT( c1 )
+         Sc = 4.0_SiKi / ( (1+c2)**2 * c2 )
+      END IF
+
+      WaveField%WaveElevC0(:,I) = SQRT( Sc ) * WaveField%WaveElevC0(:,I)
+      WaveS1SddArr(I)           =       Sc   * WaveS1SddArr(I)
+
+   END DO
+
+END SUBROUTINE WaveCurrentInteraction
+!------------------------------------------------------------------------------------------------------------------------
 !> update WaveField%WaveElevC0; call InitFFT before calling this routine!
-SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStat, ErrMsg)
+SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, CurrVw0, OmegaCrit, Omega_I_Crit, FFT_Data, ErrStat, ErrMsg)
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut                                       ! Output data
@@ -2169,12 +2410,16 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
    REAL(SiKi),                      INTENT(IN   )  :: WaveS1SddArr(0:WaveField%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
    REAL(SiKi),                      INTENT(IN   )  :: CosWaveDir(0:WaveField%NStepWave2)              !< COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
    REAL(SiKi),                      INTENT(IN   )  :: SinWaveDir(0:WaveField%NStepWave2)              !< SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
+   REAL(ReKi),                      INTENT(IN   )  :: CurrVw0                                         !< Current velocity along the mean wave direction at MSL
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaCrit                                       !< Critical absolute wave frequency (rad/s)
+   REAL(SiKi),                      INTENT(IN   )  :: Omega_I_Crit                                    !< Critical intrinsic wave frequency (rad/s)
    TYPE(FFT_DataType),              INTENT(IN   )  :: FFT_Data                                      !< data for FFT computations, already initialized
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat                                       !< error level/status
    CHARACTER(ErrMsgLen),            INTENT(  OUT)  :: ErrMsg                                        !< error message
 
    
    REAL(SiKi)                                      :: WaveNmbr                                      ! Wavenumber of the current frequency component (1/meter)
+   REAL(SiKi)                                      :: OmegaI                                        ! Intrinsic wave frequency (rad/s)
    INTEGER                                         :: I                                             ! Generic index
    
    ! Variables for constrained wave
@@ -2199,7 +2444,7 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
    COMPLEX(SiKi)                                   :: tmpComplex                                    ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    
    INTEGER(IntKi)                                  :: ErrStatTmp                                    !< error level/status
-!   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                     !< error message
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                     !< error message
    CHARACTER(*), PARAMETER                         :: RoutineName = 'ConstrainedNewWaves'
    
    
@@ -2273,7 +2518,11 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       
       ! Modify the wave phase so that the crest shows up at the right place and the right time
       DO I = 1,WaveField%NStepWave2-1
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
+         CALL WaveDispRel ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth, CurrVw0, OmegaCrit, Omega_i_Crit, OmegaI, WaveNmbr, ErrStatTmp, ErrMsgTmp )
+           CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+             IF ( ErrStat >= AbortErrLev ) THEN
+             RETURN
+           END IF
          ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
                                     SinWaveDir(I)*InitInp%CrestYi) - &
                                     OmegaArr(I)*InitInp%CrestTime

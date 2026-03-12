@@ -8,6 +8,7 @@ module FVW_VortexTools
 
    use NWTC_LIBRARY, only: ReKi, IntKi, num2lstr, ErrID_Fatal, ErrID_None, EqualRealNos !< Not desired
    use NWTC_LIBRARY, only: InterpArray
+   use NWTC_LIBRARY, only: Pi
    use FVW_BiotSavart, only: fourpi_inv
 
    implicit none
@@ -2147,7 +2148,56 @@ contains
       !endif
    end subroutine curl_regular_grid
 
+   !> Return an ellipsoid made of panels
+   subroutine EllipsoidPanels(n1, n2, L1, L2, L3, Points, IDs, zoff)
+      integer,    intent(in) :: n1, n2     !< Number of points in main and secondary direction (spherical coordinates)
+      real(ReKi), intent(in) :: L1, L2, L3 !< Main axes of ellipsoid in 3 directions
+      real(ReKi), dimension(:,:), allocatable, intent(out) :: Points !< 3 x nP
+      integer, dimension(:,:), allocatable,    intent(out) :: IDs    !< 4 x nPanels, connectivity
+      real(ReKi), intent(in) :: zOff !< zoffset
+      ! Variables
+      integer                  :: ip, it, node,e
+      real(ReKi)               :: phi                                       !< 
+      real(ReKi)               :: theta                                     !< 
+      real(ReKi)               :: dphi                                      !< 
+      real(ReKi)               :: dtheta                                    !< 
+      integer                  :: nphi                                      !< 
+      integer                  :: ntheta                                    !< 
+      real(ReKi), dimension(3) :: P
+      ntheta = n2+1
+      nphi   = n1
+      dtheta = pi/(ntheta-1) ! -1
+      dphi   = 2*pi/nphi
+      allocate(Points(3, nphi*ntheta    ))
+      allocate(IDs   (4, nphi*(ntheta-1)))
+      IDs    = 0.0_ReKi
+      Points = 0.0_ReKi
 
+      ! Building Points
+      do it=1,ntheta 
+         theta=-pi/2 + real((it-1),ReKi)*dtheta !
+         do ip=1,nphi 
+            phi  = (ip-1)*dphi
+            node = (it-1)*nphi +ip
+            Points(1, node) = L1*cos(theta)*cos(phi)
+            Points(2, node) = L2*cos(theta)*sin(phi)
+            Points(3, node) = L3*sin(theta) +zoff
+         end do
+      end do 
+      ! Ugly for loops for Panl 
+      do it=1,ntheta-1 
+         do ip=1,nphi-1 
+            node = (it-1)*nphi +ip
+            e    = (it-1)*(nphi)+ip
+            IDs(:, e)=(/node,node+nphi,node+nphi+1,node+1 /) 
+         end do 
+         ! special case, ip=nphi 
+         ip        = nphi                                        ! 
+         node      = (it-1)*nphi +ip
+         e         = (it-1)*(nphi)+ip
+         IDs(:, e) = (/node,node+nphi,node+nphi-ip+1,node-ip+1/)
+      end do 
+   end subroutine EllipsoidPanels
 
    ! --- TIC TOC MODULE
    !> Simpler version of matlab tic

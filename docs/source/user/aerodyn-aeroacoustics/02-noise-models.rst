@@ -541,7 +541,7 @@ at high frequency, :math:`\overline{D}` is:
       {\left( 1 + M\cos\Theta_{e} \right)^{3}}
    :label:  aa-eq:33
 
-Note that this equation was not reported in the NREL Tech Report NREL/TP-5000-75731!
+Note that this equation was not reported in the NLR Tech Report NREL/TP-5000-75731!
 
 At low frequency, the equation is identical for both leading and trailing edges:
 

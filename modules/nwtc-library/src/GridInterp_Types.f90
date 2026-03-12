@@ -49,7 +49,8 @@ IMPLICIT NONE
     LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
   END TYPE GridInterp_MiscVarType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine GridInterp_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(GridInterp_ParameterType), intent(in) :: SrcParamData
@@ -144,5 +145,7 @@ subroutine GridInterp_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FirstWarn_Clamp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE GridInterp_Types
+
 !ENDOFREGISTRYGENERATEDFILE

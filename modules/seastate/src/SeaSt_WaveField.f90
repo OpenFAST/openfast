@@ -2,6 +2,7 @@ MODULE SeaSt_WaveField
 
 USE GridInterp
 USE SeaSt_WaveField_Types
+USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
 USE GridInterp_Types
 
 IMPLICIT NONE
@@ -9,86 +10,29 @@ IMPLICIT NONE
 PRIVATE
 
 ! Public functions and subroutines
-PUBLIC WaveField_GetNodeWaveElev1
-PUBLIC WaveField_GetNodeWaveElev2
 PUBLIC WaveField_GetNodeTotalWaveElev
 PUBLIC WaveField_GetMinMaxWaveElevEstimate
 PUBLIC WaveField_GetNodeWaveNormal
 PUBLIC WaveField_GetNodeWaveKin
+PUBLIC WaveField_GetNodeWaveVel
 PUBLIC WaveField_GetNodeWaveVelAcc
 PUBLIC WaveField_GetWaveKin
+PUBLIC WaveField_GetWaveVelAcc_AD
+PUBLIC WaveField_GetMeanDynSurfCurr
 PUBLIC WaveField_GetDynP
 
 CONTAINS
 
 !-------------------- Subroutine for wave elevation ------------------!
-function WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
+
+FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg, Elev1, Elev2 )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
    real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev1
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev1'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev1)) THEN
-      CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, pos, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = GridInterp3D(WaveField%WaveElev1,WaveField_m)
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev1 = Zeta
-
-end function WaveField_GetNodeWaveElev1
-
-
-function WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev2
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev2'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev2)) THEN
-      CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, pos, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = GridInterp3D(WaveField%WaveElev2,WaveField_m)
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev2 = Zeta
-
-end function WaveField_GetNodeWaveElev2
-
-
-FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+   real(SiKi), optional,               intent(  out) :: Elev1, Elev2 ! Elev1 and Elev2 components
 
    real(SiKi)                                        :: WaveField_GetNodeTotalWaveElev
    real(SiKi)                                        :: Zeta1, Zeta2
@@ -97,17 +41,30 @@ FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrS
    character(ErrMsgLen)                              :: errMsg2
 
    ErrStat   = ErrID_None
-   ErrMsg    = ""
 
-   Zeta1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   Zeta2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   IF (ALLOCATED(WaveField%WaveElev1) .or. ALLOCATED(WaveField%WaveElev2)) then
+      CALL WaveField_Interp_Setup3D(Time, pos, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+
+   IF (ALLOCATED(WaveField%WaveElev1)) THEN
+      Zeta1 = GridInterp3D(WaveField%WaveElev1, WaveField_m)
+   ELSE
+      Zeta1 = 0.0_SiKi
+   END IF
+
+   IF (ALLOCATED(WaveField%WaveElev2)) THEN
+      Zeta2 = GridInterp3D(WaveField%WaveElev2, WaveField_m)
+   ELSE
+      Zeta2 = 0.0_SiKi
+   END IF
+
+   if (present(Elev1)) Elev1 = Zeta1
+   if (present(Elev2)) Elev2 = Zeta2
+
    WaveField_GetNodeTotalWaveElev = Zeta1 + Zeta2
 
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function
 END FUNCTION WaveField_GetNodeTotalWaveElev
 
 
@@ -146,7 +103,7 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, n, Er
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+   real(ReKi),                         intent(in   ) :: pos(:)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
    real(ReKi),                         intent(  out) :: n(3)    ! Free-surface normal vector
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
@@ -157,7 +114,6 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, n, Er
    character(ErrMsgLen)                              :: errMsg2
 
    ErrStat   = ErrID_None
-   ErrMsg    = ""
 
    call GridInterpSetupN( (/Real(Time+WaveField%WaveTimeShift,ReKi),pos(1),pos(2)/), WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 )
    slope = GridInterpS( WaveField%WaveElev1, WaveField%SrfGridParams, WaveField_m )
@@ -177,12 +133,13 @@ END SUBROUTINE WaveField_GetNodeWaveNormal
 
 
 !-------------------- Subroutine for full wave field kinematics --------------------!
-SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInWater, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
    real(ReKi),                         intent(in   ) :: pos(3)
    logical,                            intent(in   ) :: forceNodeInWater
+   logical,                            intent(in   ) :: fetchDynCurrent
    real(SiKi),                         intent(  out) :: WaveElev1
    real(SiKi),                         intent(  out) :: WaveElev2
    real(SiKi),                         intent(  out) :: WaveElev
@@ -194,22 +151,22 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
-   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3)
+   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3), PosOffset(3), posDummy(3,1)
+   integer(IntKi)                                    :: startNode
+   real(ReKi), allocatable                           :: FV_DC(:,:), FA_DC(:,:)
    character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveKin'
    integer(IntKi)                                    :: errStat2
    character(ErrMsgLen)                              :: errMsg2
 
    ErrStat   = ErrID_None
-   ErrMsg    = ""
 
    posXY    = pos(1:2)
    posXY0   = (/pos(1),pos(2),0.0_ReKi/)
    FAMCF(:) = 0.0
 
-   ! Wave elevation
-   WaveElev1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev  = WaveElev1 + WaveElev2
+   ! Wave elevation (Calls WaveField_Interp_Setup3D internally so WaveField_Interp_3D can be used below)
+   WaveElev = WaveField_GetNodeTotalWaveElev(WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2, Elev1=WaveElev1, Elev2=WaveElev2)
+   if (Failed()) return
 
    IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
 
@@ -261,7 +218,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
                   FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
                END IF
 
-               ! Extrapoled wave stretching
+               ! Extrapolated wave stretching
                IF (WaveField%WaveStMod == 2) THEN
                   CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, posXY, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                   FV(:) = FV(:) + GridInterp3DVec( WaveField%PWaveVel0,  WaveField_m ) * pos(3)
@@ -303,10 +260,27 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
 
    END IF ! If wave stretching is on or off
 
+   ! Get dynamic current velocity and acceleration
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = -1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      posDummy(:,1) = pos
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return;
+      ALLOCATE(FA_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FA_DC')) return;    
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, posDummy, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+      FV = FV + nodeInWater * FV_DC(:,1)
+      FA = FA + nodeInWater * FA_DC(:,1)
+   END IF
+
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
+   end function
+   logical function FailedMsg(ErrMsg2)
+      character(*), intent(in   ) :: ErrMsg2
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE WaveField_GetNodeWaveKin
 
@@ -330,8 +304,6 @@ SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWate
    character(ErrMsgLen)                              :: errMsg2
 
    ! Temporary vars not kept
-   real(SiKi)                                        :: WaveElev1
-   real(SiKi)                                        :: WaveElev2
    real(SiKi)                                        :: WaveElev
 
    ErrStat   = ErrID_None
@@ -340,10 +312,8 @@ SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWate
    posXY    = pos(1:2)
    posXY0   = (/pos(1),pos(2),0.0_ReKi/)
 
-   ! Wave elevation
-   WaveElev1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev  = WaveElev1 + WaveElev2
+   ! Wave elevation (Calls WaveField_Interp_Setup3D internally so WaveField_Interp_3D_vec can be used below)
+   WaveElev  = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
 
@@ -409,33 +379,148 @@ END SUBROUTINE WaveField_GetDynP
 
 
 !-------------------- Subroutine for wave field velocity only --------------------!
-SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, forceNodeInWater, nodeInWater, FV, FA, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, FV, ErrStat, ErrMsg )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
    real(ReKi),                         intent(in   ) :: pos(3)
    logical,                            intent(in   ) :: forceNodeInWater
+   logical,                            intent(in   ) :: fetchDynCurrent
    integer(IntKi),                     intent(  out) :: nodeInWater
    real(SiKi),                         intent(  out) :: FV(3)
-   real(SiKi),                         intent(  out) :: FA(3)
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
    real(SiKi)                                        :: WaveElev
-   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3)
+   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3), PosOffset(3), posDummy(3,1)
+   real(ReKi), allocatable                           :: FV_DC(:,:), FA_DC(:,:)
+   integer(IntKi)                                    :: startNode
    character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveVel'
    integer(IntKi)                                    :: errStat2
    character(ErrMsgLen)                              :: errMsg2
 
    ErrStat   = ErrID_None
-   ErrMsg    = ""
 
    posXY    = pos(1:2)
    posXY0   = (/pos(1),pos(2),0.0_ReKi/)
 
-   ! Wave elevation
+   ! Wave elevation (Calls WaveField_Interp_Setup3D internally so WaveField_Interp_3D_vec can be used below)
    WaveElev  = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
+   IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
+
+      IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
+         nodeInWater = 1_IntKi
+         ! Use location to obtain interpolated values of kinematics
+         CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+      ELSE ! Node is above the SWL
+         nodeInWater = 0_IntKi
+         FV(:)       = 0.0
+      END IF
+
+   ELSE ! Wave stretching enabled
+
+      IF ( (pos(3) <= WaveElev) .OR. forceNodeInWater ) THEN ! Node is submerged
+
+         nodeInWater = 1_IntKi
+
+         IF ( WaveField%WaveStMod < 3 ) THEN ! Vertical or extrapolated wave stretching
+
+            IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
+
+               ! Use location to obtain interpolated values of kinematics
+               CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+
+            ELSE ! Node is above SWL - need wave stretching
+
+               ! Vertical wave stretching
+               CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+
+               ! Extrapolated wave stretching
+               IF (WaveField%WaveStMod == 2) THEN
+                  CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, posXY, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+                  FV(:) = FV(:) + GridInterp3DVec( WaveField%PWaveVel0, WaveField_m ) * pos(3)
+               END IF
+
+            END IF ! Node is submerged
+
+         ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
+
+            ! Map the node z-position linearly from [-EffWtrDpth,m%WaveElev(j)] to [-EffWtrDpth,0]
+            posPrime    = pos
+            posPrime(3) = WaveField%EffWtrDpth*(WaveField%EffWtrDpth+pos(3))/(WaveField%EffWtrDpth+WaveElev)-WaveField%EffWtrDpth
+            posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE.
+
+            ! Obtain the wave-field variables by interpolation with the mapped position.
+            CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+            FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+
+         END IF
+
+      ELSE ! Node is out of water - zero-out all wave dynamics
+
+         nodeInWater = 0_IntKi
+         FV(:)       = 0.0
+
+      END IF ! If node is in or out of water
+
+   END IF ! If wave stretching is on or off
+
+   ! Get dynamic current velocity
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = -1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      posDummy(:,1) = pos
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return; 
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, posDummy, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+      FV = FV + nodeInWater * FV_DC(:,1)
+   END IF
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+   logical function FailedMsg(ErrMsg2)
+      character(*), intent(in   ) :: ErrMsg2
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
+   end function
+END SUBROUTINE WaveField_GetNodeWaveVel
+
+
+SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, FV, FA, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
+   type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
+   real(DbKi),                         intent(in   ) :: Time
+   real(ReKi),                         intent(in   ) :: pos(3)
+   logical,                            intent(in   ) :: forceNodeInWater
+   logical,                            intent(in   ) :: fetchDynCurrent
+   real(SiKi),                         intent(  out) :: FV(3)
+   real(SiKi),                         intent(  out) :: FA(3)
+   integer(IntKi),                     intent(  out) :: nodeInWater
+   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+
+   real(SiKi)                                        :: WaveElev
+   real(ReKi)                                        :: posXY(2), posPrime(3), posXY0(3), PosOffset(3), posDummy(3,1)
+   integer(IntKi)                                    :: startNode
+   real(ReKi), allocatable                           :: FV_DC(:,:), FA_DC(:,:)
+   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveVelAcc'
+   integer(IntKi)                                    :: errStat2
+   character(ErrMsgLen)                              :: errMsg2
+
+   ErrStat   = ErrID_None
+
+   posXY    = pos(1:2)
+   posXY0   = (/pos(1),pos(2),0.0_ReKi/)
+   
+   ! Wave elevation
+   WaveElev  = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
+    
    IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
 
       IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
@@ -472,7 +557,7 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
                FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
                FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
 
-               ! Extrapoled wave stretching
+               ! Extrapolated wave stretching
                IF (WaveField%WaveStMod == 2) THEN
                   CALL WaveField_Interp_Setup3D( Time+WaveField%WaveTimeShift, posXY, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                   FV(:) = FV(:) + GridInterp3DVec( WaveField%PWaveVel0, WaveField_m ) * pos(3)
@@ -492,7 +577,6 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
             CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
             FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
             FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
-
          END IF
 
       ELSE ! Node is out of water - zero-out all wave dynamics
@@ -500,25 +584,42 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
          nodeInWater = 0_IntKi
          FV(:)       = 0.0
          FA(:)       = 0.0
-
       END IF ! If node is in or out of water
 
    END IF ! If wave stretching is on or off
+   
+   ! Get dynamic current velocity and acceleration
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = -1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      posDummy(:,1) = pos
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return;    
+      ALLOCATE(FA_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FA_DC')) return;
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, posDummy, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+      FV = FV + nodeInWater * FV_DC(:,1)
+      FA = FA + nodeInWater * FA_DC(:,1)
+   END IF
 
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function
+   logical function FailedMsg(ErrMsg2)
+      character(*), intent(in   ) :: ErrMsg2
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
+   end function
 END SUBROUTINE WaveField_GetNodeWaveVelAcc
 
 
-SUBROUTINE WaveField_GetWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInWater, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
    real(ReKi),                         intent(in   ) :: pos(:,:)
    logical,                            intent(in   ) :: forceNodeInWater
+   logical,                            intent(in   ) :: fetchDynCurrent
    real(SiKi),                         intent(  out) :: WaveElev1(:)
    real(SiKi),                         intent(  out) :: WaveElev2(:)
    real(SiKi),                         intent(  out) :: WaveElev(:)
@@ -534,15 +635,16 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInW
    integer(IntKi)                                    :: errStat2
    character(ErrMsgLen)                              :: errMsg2
 
-   integer(IntKi)                                    :: NumPoints, i
+   integer(IntKi)                                    :: NumPoints, i, startNode
    real(SiKi)                                        :: FDynP_node, FV_node(3), FA_node(3), FAMCF_node(3)
+   real(ReKi)                                        :: PosOffset(3)
+   real(ReKi),                         allocatable   :: FV_DC(:,:), FA_DC(:,:)
 
    ErrStat   = ErrID_None
-   ErrMsg    = ""
 
    NumPoints = size(pos, dim=2)
    DO i = 1, NumPoints
-      CALL WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos(:,i), forceNodeInWater, nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos(:,i), forceNodeInWater, .FALSE., nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
       if (Failed()) return;
       FDynP(i) = REAL(FDynP_node,ReKi)
       FV(:, i) = REAL(FV_node,   ReKi)
@@ -552,13 +654,170 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInW
       END IF
    END DO
 
+   ! If dynamic current field from IfW is present, get velocity and acceleration contributions
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = -1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      ALLOCATE(FV_DC( 3, NumPoints ), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return;  
+      ALLOCATE(FA_DC( 3, NumPoints ), STAT=ErrStat2); if (FailedMsg('Error allocating FA_DC')) return;
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, pos, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+
+      ! Add contributions from IfW current field if node is in water
+      DO i = 1, NumPoints
+         FV(:,i) = FV(:,i) + nodeInWater(i) * FV_DC(:,i)
+         FA(:,i) = FA(:,i) + nodeInWater(i) * FA_DC(:,i)
+      END DO
+
+   END IF
+
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function
+   logical function FailedMsg(ErrMsgTmp)
+      character(*), intent(in   ) :: ErrMsgTmp
+      call SetErrStat( ErrStat2, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
+   end function
 end subroutine WaveField_GetWaveKin
 
+
+! This subroutine is intended for AeroDyn when modeling MHK turbines
+SUBROUTINE WaveField_GetWaveVelAcc_AD( WaveField, WaveField_m, StartNode, Time, pos, FV, FA, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
+   type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
+   integer(IntKi),                     intent(in   ) :: StartNode
+   real(DbKi),                         intent(in   ) :: Time
+   real(ReKi),                         intent(in   ) :: pos(:,:) ! z=0 at MSL
+   real(ReKi),                         intent(  out) :: FV(:,:)
+   real(ReKi),       allocatable,      intent(inout) :: FA(:,:)
+   integer(IntKi),                     intent(  out) :: ErrStat  ! Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg   ! Error message if errStat /= ErrID_None
+   integer(IntKi),   allocatable                     :: nodeInWater(:)
+   integer(IntKi)                                    :: NumPoints, i
+   real(SiKi)                                        :: FV_node(3), FA_node(3)
+   real(ReKi)                                        :: PosOffset(3), MSL2SWL, WtrDpth
+   real(ReKi),       allocatable                     :: FV_DC(:,:), FA_DC(:,:)
+   logical                                           :: getAcc
+   character(*),     parameter                       :: RoutineName = 'WaveField_GetWaveVelAcc_AD'
+   integer(IntKi)                                    :: errStat2
+   character(ErrMsgLen)                              :: errMsg2
+
+   ErrStat   = ErrID_None
+
+   MSL2SWL   = WaveField%MSL2SWL
+   WtrDpth   = WaveField%EffWtrDpth - MSL2SWL
+   getAcc    = ALLOCATED(FA)
+   NumPoints = size(pos, dim=2)
+
+   ALLOCATE( nodeInWater(NumPoints), STAT=ErrStat2); if (FailedMsg('Error allocating nodeInWater')) return;
+
+   ! Note: SeaState wavefield grid has z=0 on the SWL
+   IF (getAcc) THEN
+      DO i = 1, NumPoints
+         CALL WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos(:,i)-[0.0_ReKi,0.0_ReKi,real(MSL2SWL, ReKi)], .FALSE., .FALSE., nodeInWater(i), FV_node, FA_node, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         FV(:, i) = REAL(FV_node,   ReKi)
+         FA(:, i) = REAL(FA_node,   ReKi)
+      END DO
+   ELSE
+      DO i = 1, NumPoints
+         CALL WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos(:,i)-[0.0_ReKi,0.0_ReKi,real(MSL2SWL, ReKi)], .FALSE., .FALSE., nodeInWater(i), FV_node, ErrStat2, ErrMsg2 ); if (Failed()) return;
+         FV(:, i) = REAL(FV_node,   ReKi)
+      END DO
+   END IF
+
+   ! If dynamic current field from IfW is present, get velocity and acceleration contributions
+   IF (WaveField%hasCurrField) THEN
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WtrDpth/) ! IfW FlowField grid effectively has z=0 on the seabed
+      ALLOCATE(FV_DC( 3, NumPoints ), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return;
+      IF (getAcc) THEN
+         ALLOCATE(FA_DC( 3, NumPoints ), STAT=ErrStat2); if (FailedMsg('Error allocating FA_DC')) return;
+      END IF
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, StartNode, Time, pos, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+
+      ! Add contributions from IfW current field if node is in water
+      DO i = 1, NumPoints
+         FV(:,i) = FV(:,i) + nodeInWater(i) * FV_DC(:,i)
+      END DO
+      IF (getAcc) THEN
+         DO i = 1, NumPoints
+            FA(:,i) = FA(:,i) + nodeInWater(i) * FA_DC(:,i)
+         END DO
+      END IF
+   END IF
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+   logical function FailedMsg(ErrMsg2)
+      character(*), intent(in   ) :: ErrMsg2
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
+   end function
+END SUBROUTINE WaveField_GetWaveVelAcc_AD
+
+!-------------------- Subroutine for wave field velocity only --------------------!
+SUBROUTINE WaveField_GetMeanDynSurfCurr( WaveField, WaveTMax, WaveDT, CurrVxi0, CurrVyi0, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
+
+   real(DbKi),                         intent(in   ) :: WaveTMax
+   real(DbKi),                         intent(in   ) :: WaveDT
+
+   real(SiKi),                         intent(  out) :: CurrVxi0
+   real(SiKi),                         intent(  out) :: CurrVyi0
+   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+
+   real(ReKi)                                        :: pos(3,1), PosOffset(3)
+   real(ReKi), allocatable                           :: FV_DC(:,:), FA_DC(:,:)
+   integer(IntKi)                                    :: startNode
+   integer(IntKi)                                    :: step
+   real(DbKi)                                        :: time
+   character(*),                       parameter     :: RoutineName = 'WaveField_GetMeanDynSurfCurr'
+   integer(IntKi)                                    :: errStat2
+   character(ErrMsgLen)                              :: errMsg2
+
+   ErrStat   = ErrID_None
+
+   CurrVxi0 = 0.0_SiKi
+   CurrVyi0 = 0.0_SiKi
+
+   ! Get dynamic current velocity
+   IF ( WaveField%hasCurrField ) THEN
+
+      pos       = 0.0_ReKi
+      step      = 0_IntKi
+      time      = 0.0_DbKi
+      startNode = -1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2); if (FailedMsg('Error allocating FV_DC')) return;
+
+      DO WHILE ( time <= WaveTMax)
+         CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, pos, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset); if (Failed()) return;
+         CurrVxi0 = CurrVxi0 + FV_DC(1,1)
+         CurrVyi0 = CurrVyi0 + FV_DC(2,1)
+         step = step + 1
+         time = time + WaveDT
+      END DO
+      CurrVxi0 = CurrVxi0 / REAL(step,SiKi)
+      CurrVyi0 = CurrVyi0 / REAL(step,SiKi)
+
+   END IF
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+   logical function FailedMsg(ErrMsg2)
+      character(*), intent(in   ) :: ErrMsg2
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FailedMsg = ErrStat >= AbortErrLev
+   end function
+END SUBROUTINE WaveField_GetMeanDynSurfCurr
 
 !----------------------------------------------------------------------------------------------------
 ! Interpolation related functions
@@ -580,7 +839,6 @@ subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )
    character(ErrMsgLen)                 :: ErrMsg2
 
    ErrStat = ErrID_None
-   ErrMsg  = ""
 
    CALL GridInterpSetup3D((/Real(Time,ReKi),Position(1),Position(2)/), p, m, ErrStat2, ErrMsg2 )
      if (Failed()) return;

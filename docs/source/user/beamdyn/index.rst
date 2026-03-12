@@ -12,7 +12,7 @@ can be downladed from the list below.
 - :download:`BeamDyn inputs from sectional beam properties <../../../OtherSupporting/BeamDyn/beamdyn_inputs_sectional_props.pdf>`
 
 The authors are grateful to the U.S. Department of Energy Wind and Water
-Power Program and the NREL Laboratory Directed Research and Development
+Power Program and the NLR Laboratory Directed Research and Development
 (LDRD) program through the grant “High-Fidelity Computational Modeling
 of Wind-Turbine Structural Dynamics” for supporting the development of
 this software.

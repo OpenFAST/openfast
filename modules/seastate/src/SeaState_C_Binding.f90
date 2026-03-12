@@ -520,8 +520,7 @@ subroutine SeaSt_C_GetFluidVelAcc(Time_C, Pos_C, Vel_C, Acc_C, NodeInWater_C, Er
    real(SiKi)                 :: Vel(3)
    real(SiKi)                 :: Acc(3)
    logical                    :: forceNodeInWater
-!FIXME:dev-tc uncomment next line
-!   logical                    :: fetchDynCurrent
+   logical, parameter         :: fetchDynCurrent = .true.
    integer(IntKi)             :: nodeInWater
    integer                    :: ErrStat, ErrStat2
    character(ErrMsgLen)       :: ErrMsg,  ErrMsg2
@@ -554,9 +553,7 @@ subroutine SeaSt_C_GetFluidVelAcc(Time_C, Pos_C, Vel_C, Acc_C, NodeInWater_C, Er
    !     - if node is out of water, velocity and acceleration are zero
    !     - if position is outside the wave field boundary, it will simply return boundary edge value
    !     - time must be positive or a fatal error occurs
-   call WaveField_GetNodeWaveVelAcc( p%WaveField, m%WaveField_m, Time, pos, forceNodeInWater, nodeInWater, Vel, Acc, ErrStat, ErrMsg )
-!FIXME:dev-tc use next line instead of above
-!   call WaveField_GetNodeWaveVelAcc( p%WaveField, m%WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, Vel, Acc, ErrStat, ErrMsg )
+   call WaveField_GetNodeWaveVelAcc( p%WaveField, m%WaveField_m, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, Vel, Acc, ErrStat, ErrMsg )
 
    ! Store resulting velocity and acceleration as C type
    Vel_c = real(Vel,c_float)

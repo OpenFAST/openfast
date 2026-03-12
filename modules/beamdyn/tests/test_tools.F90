@@ -351,10 +351,6 @@ type(BD_InputFile) function simpleInputFile() result(i)
    i%refine = 1          ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
    i%rhoinf = 0.0        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
    i%DTBeam = 2E-03      ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
-   i%UsePitchAct = .false. ! -  - - "Whether to use a pitch actuator inside BeamDyn" (flag)
-   i%pitchJ = 0.0        ! - - -     "Pitch actuator inertia" (kg-m^2)
-   i%pitchK = 0.0        ! - - -     "Pitch actuator stiffness" (kg-m^2/s^2)
-   i%pitchC = 0.0        ! - - -     "Pitch actuator damping" - (kg-m^2/s)
    i%Echo = .true.       ! -  - - "Echo"
    i%NNodeOuts = 1       ! -  - - "Number of node outputs [0 - 9]" -
    i%OutNd = 1           ! {9} - - "Nodes whose values will be output" -

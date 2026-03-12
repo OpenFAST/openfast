@@ -21,10 +21,13 @@ MODULE SubDyn_Output
    USE NWTC_Library
    USE SubDyn_Types
    USE SD_FEM
-   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS, OutStrLenM1
-   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01, MaxOutPts
+   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, IntfTRe, ReactSS, RBTRDss, RBTRVss, RBTRAss
+   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01, OutStrLenM1
 
    IMPLICIT NONE
+
+   ! The maximum number of output channels which can be output by the code.
+   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21921
 
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
@@ -37,11 +40,6 @@ MODULE SubDyn_Output
    PUBLIC :: SDOut_WriteOutputUnits
    PUBLIC :: SDOut_WriteOutputs
    PUBLIC :: SDOut_Init
-   PUBLIC :: SD_Init_Jacobian
-   PUBLIC :: SD_Perturb_u
-   PUBLIC :: SD_Perturb_x
-   PUBLIC :: SD_Compute_dY
-   PUBLIC :: SD_Compute_dX
 
 CONTAINS
 
@@ -190,7 +188,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       ! Compute p%TIreact, rigid transf. matrix from reaction DOFs to base structure point (0,0,-WD)
       CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact  ', ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(T_TIreact, p%nDOFC__, 6, 'TIReact_T', ErrStat2, ErrMsg2); if(Failed()) return
-      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
+      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, 1_IntKi, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
       p%TIreact=transpose(T_TIreact)
       deallocate(T_TIreact)
    ENDIF
@@ -284,6 +282,8 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    integer(IntKi), pointer        :: DOFList(:) !< List of DOF indices for a given Nodes (Alias to shorten notation)
    real(R8Ki), dimension(3,3)     :: Rg2b  ! Rotation matrix global 2 body (Guyan) coordinates
    real(R8Ki), dimension(6,6)     :: RRg2b ! Rotation matrix global 2 body (Guyan) coordinates, acts on a 6-vector
+   real(R8Ki), dimension(6,6)     :: RRb2g ! Rotation matrix global 2 body (Guyan) coordinates, acts on a 6-vector
+   integer(IntKi)                 :: iTP, nTP
    INTEGER(IntKi)                 :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
 
@@ -291,15 +291,20 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    if ( p%Floating ) then
-      ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
-      ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
-      Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+      if ( p%TP1IsRBRefPt ) then
+         Rg2b = EulerConstructZYX(x%qR(4:6))
+      else
+         ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
+         ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
+         Rg2b = u%TPMesh(1)%Orientation(:,:,1)  ! global 2 body coordinates
+      endif
    else
       call Eye(Rg2b, ErrStat2, ErrMsg2)
    end if
    RRg2b = 0.0_R8Ki
    RRg2b(1:3,1:3) = Rg2b
    RRg2b(4:6,4:6) = Rg2b
+   RRb2g = transpose(RRg2b)
 
    AllOuts = 0.0_ReKi  ! initialize for those outputs that aren't valid (and thus aren't set in this routine)
          
@@ -367,15 +372,60 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ! --------------------------------------------------------------------------------
    ! --- Interface kinematics and loads (TP/platform reference point)
    ! --------------------------------------------------------------------------------
+   if (p%TP1IsRBRefPt) then
+      nTP = p%nTP-1
+   else
+      nTP = p%nTP
+   end if
+
    ! Total interface reaction forces and moments in SS coordinate system
    !    "IntfFXss, IntfFYss, IntfFZss, IntfMXss, IntfMYss, IntfMZss,"
-   AllOuts(IntfSS(1:nDOFL_TP))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   do iTP = 1,nTP
+      AllOuts(IntfSS(1:6,iTP)) = - (/y%Y1Mesh(iTP)%Force(:,1), y%Y1Mesh(iTP)%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   end do
+
    ! Interface translations and rotations in SS coordinate system 
    !    "IntfTDXss, IntfTDYss, IntfTDZss, IntfRDXss, IntfRDYss IntfRDZss"
-   AllOuts(IntfTRss(1:nDOFL_TP))=m%u_TP 
+   do iTP = 1,nTP
+      AllOuts(IntfTRss(1:3,iTP)) = u%TPMesh(iTP)%TranslationDisp(:,1)
+      AllOuts(IntfTRss(4:6,iTP)) = EulerExtractZYX(u%TPMesh(iTP)%Orientation(:,:,1))
+   end do
+
    ! Interface Translational and rotational accelerations in SS coordinate system
    !    "IntfTAXss, IntfTAYss, IntfTAZss, IntfRAXss, IntfRAYss IntfRAZss"
-   AllOuts(IntfTRAss(1:nDOFL_TP))= m%udotdot_TP 
+   do iTP = 1,nTP
+      AllOuts(IntfTRAss(1:3,iTP)) = u%TPMesh(iTP)%TranslationAcc(:,1)
+      AllOuts(IntfTRAss(4:6,iTP)) = u%TPMesh(iTP)%RotationAcc(:,1)
+   end do
+
+   ! Interface elastic translational and rotational deflection in rigid-body coordinate system relative to rigid-body configuration
+   !    "IntfTDXe, IntfTDYe, IntfTDZe, IntfRDXe, IntfRDYe IntfRDZe"
+   if (p%floating) then
+      if (p%TP1IsRBRefPt) then
+         do iTP = 1,nTP
+            AllOuts(IntfTRe(1:6,iTP)) = m%u_TP( iTP*6+1:iTP*6+6 )
+         end do
+      else
+         AllOuts(IntfTRe(1:6,1  )) = 0.0
+      endif
+   else
+      do iTP = 1,nTP
+         AllOuts(IntfTRe(1:6,iTP)) = m%u_TP( (iTP-1)*6+1:(iTP-1)*6+6 )
+      end do
+   end if
+
+   ! --------------------------------------------------------------------------------
+   ! --- Interface kinematics and loads (TP/platform reference point)
+   ! --------------------------------------------------------------------------------
+   if (p%floating) then
+      AllOuts(RBTRDss) = m%u_TP(1:6)
+      AllOuts(RBTRVss) = matmul( RRb2g, m%udot_TP(1:6)    )
+      AllOuts(RBTRAss) = matmul( RRb2g, m%udotdot_TP(1:6) )
+   else
+      AllOuts(RBTRDss) = 0.0
+      AllOuts(RBTRVss) = 0.0
+      AllOuts(RBTRAss) = 0.0
+   end if
 
    ! --------------------------------------------------------------------------------
    ! --- Modal parameters "SSqmXX, SSqmdotXX, SSqmddXX" amplitude, speed and acceleration
@@ -554,59 +604,67 @@ SUBROUTINE SDOut_OpenOutput( ProgVer, OutRootName,  p, InitOut, ErrStat, ErrMsg 
    CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    INTEGER                                        :: ErrStat2              
+
    ErrStat = ErrID_None  
    ErrMsg  = ""
-   ! Open the output file, if necessary, and write the header
-   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
-      ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.out'
-      CALL GetNewUnit( p%UnJckF )
+
+   ! Initialize to -1 to indicate that the output file unit is not valid
+   p%UnJckF = -1
+
+   ! No outputs requested, so just return
+   if ((.not. allocated(p%OutParam)) .or. (p%NumOuts == 0)) then
+      call WrScr('SubDyn: no outputs were requested, so separate output file will not be generated.')
+      return
+   end if
    
-      CALL OpenFOutFile ( p%UnJckF, OutFileName, ErrStat, ErrMsg ) 
-      IF ( ErrStat >= AbortErrLev ) THEN
-         ErrMsg = ' Error opening SubDyn-level output file: '//TRIM(ErrMsg)
-         RETURN
-      END IF
-       
-      ! Write the output file header
-      WRITE (p%UnJckF,'(/,A/)', IOSTAT=ErrStat2)  'These predictions were generated by '//TRIM(GETNVD(ProgVer))//&
-                      ' on '//CurDate()//' at '//CurTime()//'.'
+   ! Open the file for output
+   OutFileName = TRIM(OutRootName)//'.out'
+   call GetNewUnit( p%UnJckF )
+
+   call OpenFOutFile ( p%UnJckF, OutFileName, ErrStat, ErrMsg ) 
+   if (ErrStat >= AbortErrLev) then
+      ErrMsg = ' Error opening SubDyn-level output file: '//TRIM(ErrMsg)
+      return
+   end if
       
-      WRITE(p%UnJckF, '(//)') ! add 3 lines to make file format consistant with FAST v8 (headers on line 7; units on line 8) [this allows easier post-processing]
-      
-      ! Write the names of the output parameters:
-      Frmt = '(A8,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutSFmt )//'))'
-      WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-      
-      ! Write the units of the output parameters:                 
-      WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-   END IF   ! there are any requested outputs   
+   ! Write the output file header
+   write(p%UnJckF,'(/,A/)', IOSTAT=ErrStat2)  'These predictions were generated by '//TRIM(GETNVD(ProgVer))//&
+                  ' on '//CurDate()//' at '//CurTime()//'.'
+   
+   write(p%UnJckF, '(//)') ! add 3 lines to make file format consistant with FAST v8 (headers on line 7; units on line 8) [this allows easier post-processing]
+   
+   ! Write the names of the output parameters:
+   Frmt = '(A8,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutSFmt )//'))'
+   write(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
+   
+   ! Write the units of the output parameters:                 
+   write(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
 END SUBROUTINE SDOut_OpenOutput
 
 !====================================================================================================
 
 
 !====================================================================================================
-SUBROUTINE SDOut_CloseOutput ( p, ErrStat, ErrMsg )
-! This function cleans up after running the SubDyn output module. It closes the output file,
-! releases memory, and resets the number of outputs requested to 0.
+! SDOut_CloseOutput closes the output file, if open, after running the SubDyn output module.
 !----------------------------------------------------------------------------------------------------
-   TYPE(SD_ParameterType),  INTENT( INOUT )       :: p                    ! data for this instance of the floating platform module
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   LOGICAL                               :: Err
+SUBROUTINE SDOut_CloseOutput ( p, ErrStat, ErrMsg )
+   type(SD_ParameterType),  INTENT( INOUT ) :: p        ! data for this instance of the floating platform module
+   integer(IntKi),          INTENT(   OUT ) :: ErrStat  ! a non-zero value indicates an error occurred
+   character(*),            INTENT(   OUT ) :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)                           :: Stat
 
-   ErrStat = 0
+   ErrStat = ErrID_None
    ErrMsg  = ""
-   Err     = .FALSE.
+
+   ! If file is not open, return
+   if (p%UnJckF == -1) return
 
    ! Close our output file
-   CLOSE( p%UnJckF, IOSTAT = ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
- 
-   ! Make sure ErrStat is non-zero if an error occurred
-   IF ( Err ) ErrStat = ErrID_Fatal
-   RETURN
+   close(p%UnJckF, iostat=Stat)
+   if (Stat /= 0) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Problem closing SubDyn output file.'
+   end if
 
 END SUBROUTINE SDOut_CloseOutput
 !====================================================================================================
@@ -662,19 +720,14 @@ SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, SDWrOutput, p, ErrStat, ErrMsg )
    ! Local variables
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
+
    ErrStat = ErrID_None   
    ErrMsg  = ""
-   
-      ! Initialize ErrStat and determine if it makes any sense to write output
-   IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnJckF < 0 )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' To write outputs for SubDyn there must be a valid file ID and OutParam must be allocated.'
-      RETURN
-   ELSE
-      ErrStat = ErrID_None
-   END IF
 
-      ! Write the output parameters to the file
+   ! If output file is not open, return
+   if (p%UnJckF == -1) return
+
+   ! Write the output parameters to the file
    Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutFmt )//'))'
 
    WRITE(UnJckF,Frmt)  Time, ( p%Delim, SDWrOutput(I), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
@@ -734,6 +787,22 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          InvalidOutput(MNTRAe  (:,J,I)) = .true.  !translational accel local ref
       END DO
    END DO
+
+   IF (p%TP1IsRBRefPt) THEN
+      DO I=p%nTP,9
+         InvalidOutput(IntfSS(:,I))    = .true.
+         InvalidOutput(IntfTRe(:,I))   = .true.
+         InvalidOutput(IntfTRss(:,I))  = .true.
+         InvalidOutput(IntfTRAss(:,I)) = .true.
+      END DO
+   ELSE
+      DO I=p%nTP+1,9
+         InvalidOutput(IntfSS(:,I))    = .true.
+         InvalidOutput(IntfTRe(:,I))   = .true.
+         InvalidOutput(IntfTRss(:,I))  = .true.
+         InvalidOutput(IntfTRAss(:,I)) = .true.
+      END DO
+   END IF
   
    !-------------------------------------------------------------------------------------------------
    ! ALLOCATE the OutParam array
@@ -760,7 +829,14 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       p%OutParam(I)%Name = OutList(I)   
       OutListTmp         = OutList(I)
    
-   
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+      ! Interface output backward compatibility
+      k = INDEX( OutListTmp, 'INTF' )
+      IF ( k>0 .and. INDEX( '0123456789', OutListTmp(k+4:k+4) ) <= 0 ) THEN
+         OutListTmp = OutListTmp(1:k+3)//'1'//OutListTmp(k+4:)
+      END IF
+
       ! Reverse the sign (+/-) of the output channel if the user prefixed the
       !   channel name with a '-', '_', 'm', or 'M' character indicating "minus".
       
@@ -780,10 +856,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          OutListTmp = OutListTmp(1:1)//'0'//OutListTmp(2:)
          CheckOutListAgain  = .FALSE.
       end if
-      
-      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
-   
-   
+
       Indx =  IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         
@@ -829,245 +902,5 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
 
 END SUBROUTINE SDOut_ChkOutLst
 !====================================================================================================
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
-!! Do not change the order of this packing without changing subroutine !
-SUBROUTINE SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat, ErrMsg)
-   TYPE(SD_InitType)                 , INTENT(IN   ) :: Init                  !< Init
-   TYPE(SD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
-   TYPE(SD_InputType)                , INTENT(IN   ) :: u                     !< inputs
-   TYPE(SD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(SD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
-   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
-   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
-   real(ReKi) :: dx, dy, dz, maxDim
-   ! local variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   ! --- System dimension
-   dx = maxval(Init%Nodes(:,2))- minval(Init%Nodes(:,2))
-   dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
-   dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
-   maxDim = max(dx, dy, dz)
-   
-   ! --- System dimension
-   call Init_Jacobian_y(); if (Failed()) return
-   call Init_Jacobian_x(); if (Failed()) return
-   call Init_Jacobian_u(); if (Failed()) return
-
-contains
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init_Jacobian') 
-        Failed =  ErrStat >= AbortErrLev
-   END FUNCTION Failed
-   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
-
-   SUBROUTINE Init_Jacobian_y()
-      INTEGER(IntKi) :: index_next, i
-      ! Number of outputs
-      p%Jac_ny = y%Y1Mesh%nNodes * 6     & ! 3 forces + 3 moments at each node
-               + y%Y2Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
-               + y%Y3Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
-               + p%NumOuts                 ! WriteOutput values 
-      ! Storage info for each output (names, rotframe)
-      call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
-      ! Names
-      index_next = 1
-      call PackLoadMesh_Names(  y%Y1Mesh, 'Interface displacement', InitOut%LinNames_y, index_next)
-      call PackMotionMesh_Names(y%Y2Mesh, 'Nodes motion mixed'    , InitOut%LinNames_y, index_next)
-      call PackMotionMesh_Names(y%Y3Mesh, 'Nodes motion full'     , InitOut%LinNames_y, index_next)
-      do i=1,p%NumOuts
-         InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
-      end do
-      ! RotFrame
-      InitOut%RotFrame_y(:) = .false.
-   END SUBROUTINE Init_Jacobian_y
-
-   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
-   SUBROUTINE Init_Jacobian_x()
-      INTEGER(IntKi) :: i
-      p%Jac_nx = p%nDOFM ! qm 
-      ! allocate space for the row/column names and for perturbation sizes
-      CALL AllocAry(InitOut%LinNames_x  , 2*p%Jac_nx, 'LinNames_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%RotFrame_x  , 2*p%Jac_nx, 'RotFrame_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%DerivOrder_x, 2*p%Jac_nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      ! default perturbations, p%dx:
-      p%dx(1) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
-      p%dx(2) = 2.0_ReKi*D2R_D   ! deflection states in rad and rad/s
-      InitOut%RotFrame_x   = .false.
-      InitOut%DerivOrder_x = 2
-      ! set linearization output names:
-      do i=1,p%Jac_nx
-         InitOut%LinNames_x(i) = 'Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -'; 
-      end do
-      do i=1,p%Jac_nx
-         InitOut%LinNames_x(i+p%Jac_nx) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
-         InitOut%RotFrame_x(i+p%Jac_nx) = InitOut%RotFrame_x(i)
-      end do
-   END SUBROUTINE Init_Jacobian_x
-
-   SUBROUTINE Init_Jacobian_u()
-      REAL(R8Ki)     :: perturb
-      INTEGER(IntKi) :: i, j, idx, nu, i_meshField
-      ! Number of inputs
-      nu = u%TPMesh%nNodes * 18 & ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node
-         + u%LMesh%nNodes  * 6    ! 3 forces + 3 moments at each node
-      ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
-      call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%IsLoad_u  , nu, 'IsLoad_u'  , ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
-      idx = 1
-      call PackMotionMesh_Names(u%TPMesh, 'TPMesh', InitOut%LinNames_u, idx) ! all 6 motion fields
-      InitOut%IsLoad_u(1:idx-1) = .false. ! the TPMesh inputs are not loads
-      InitOut%IsLoad_u(idx:)    = .true.  ! the remaining inputs are loads
-      call PackLoadMesh_Names(  u%LMesh,   'LMesh', InitOut%LinNames_u, idx)
-
-      ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
-      ! (see perturb_u ... these MUST match )
-      ! column 1 indicates module's mesh and field
-      ! column 2 indicates the first index (x-y-z component) of the field
-      ! column 3 is the node
-      call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      idx = 1
-      !Module/Mesh/Field: u%TPMesh%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%TPMesh%Orientation      = 2;
-      !Module/Mesh/Field: u%TPMesh%TranslationVel   = 3;
-      !Module/Mesh/Field: u%TPMesh%RotationVel      = 4;
-      !Module/Mesh/Field: u%TPMesh%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%TPMesh%RotationAcc      = 6;
-      do i_meshField = 1,6
-         do i=1,u%TPMesh%nNodes
-            do j=1,3
-               p%Jac_u_indx(idx,1) =  i_meshField
-               p%Jac_u_indx(idx,2) =  j !component idx:  j
-               p%Jac_u_indx(idx,3) =  i !Node:   i
-               idx = idx + 1
-            end do !j
-         end do !i
-      end do
-      !Module/Mesh/Field: u%LMesh%Force   = 7;
-      !Module/Mesh/Field: u%LMesh%Moment  = 8;
-      do i_meshField = 7,8
-         do i=1,u%LMesh%nNodes
-            do j=1,3
-               p%Jac_u_indx(idx,1) =  i_meshField
-               p%Jac_u_indx(idx,2) =  j !component idx:  j
-               p%Jac_u_indx(idx,3) =  i !Node:   i
-               idx = idx + 1
-            end do !j
-         end do !i
-      end do
-
-      ! --- Default perturbations, p%du:
-      call allocAry( p%du, 8, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return ! 8 = number of unique values in p%Jac_u_indx(:,1)
-      perturb   = 2.0_R8Ki*D2R_D
-      p%du( 1) = perturb       ! u%TPMesh%TranslationDisp  = 1;
-      p%du( 2) = perturb       ! u%TPMesh%Orientation      = 2;
-      p%du( 3) = perturb       ! u%TPMesh%TranslationVel   = 3;
-      p%du( 4) = perturb       ! u%TPMesh%RotationVel      = 4;
-      p%du( 5) = perturb       ! u%TPMesh%TranslationAcc   = 5;
-      p%du( 6) = perturb       ! u%TPMesh%RotationAcc      = 6;
-      p%du( 7) = 170*maxDim**2 ! u%LMesh%Force             = 7;
-      p%du( 8) =  14*maxDim**3 ! u%LMesh%Moment            = 8;
-   END SUBROUTINE Init_Jacobian_u
-
-END SUBROUTINE SD_Init_Jacobian
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
-SUBROUTINE SD_Perturb_u( p, n, perturb_sign, u, du )
-   TYPE(SD_ParameterType)              , INTENT(IN   ) :: p            !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n            !< number of array element to use
-   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(SD_InputType)                  , INTENT(INOUT) :: u            !< perturbed SD inputs
-   REAL( R8Ki )                        , INTENT(  OUT) :: du           !< amount that specific input was perturbed
-   ! local variables
-   INTEGER :: fieldIndx
-   INTEGER :: node
-   fieldIndx = p%Jac_u_indx(n,2)
-   node      = p%Jac_u_indx(n,3)
-   du = p%du(  p%Jac_u_indx(n,1) )
-   ! determine which mesh we're trying to perturb and perturb the input:
-   SELECT CASE( p%Jac_u_indx(n,1) )
-   CASE ( 1) !Module/Mesh/Field: u%TPMesh%TranslationDisp = 1;
-      u%TPMesh%TranslationDisp( fieldIndx,node) = u%TPMesh%TranslationDisp( fieldIndx,node) + du * perturb_sign
-   CASE ( 2) !Module/Mesh/Field: u%TPMesh%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
-   CASE ( 3) !Module/Mesh/Field: u%TPMesh%TranslationVel = 3;
-      u%TPMesh%TranslationVel( fieldIndx,node) = u%TPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign
-   CASE ( 4) !Module/Mesh/Field: u%TPMesh%RotationVel = 4;
-      u%TPMesh%RotationVel(fieldIndx,node) = u%TPMesh%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE ( 5) !Module/Mesh/Field: u%TPMesh%TranslationAcc = 5;
-      u%TPMesh%TranslationAcc( fieldIndx,node) = u%TPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign
-   CASE ( 6) !Module/Mesh/Field: u%TPMesh%RotationAcc = 6;
-      u%TPMesh%RotationAcc(fieldIndx,node) = u%TPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign
-   CASE ( 7) !Module/Mesh/Field: u%LMesh%Force = 7;
-      u%LMesh%Force(fieldIndx,node) = u%LMesh%Force(fieldIndx,node) + du * perturb_sign 
-   CASE ( 8) !Module/Mesh/Field: u%LMesh%Moment  = 8;
-      u%LMesh%Moment(fieldIndx,node) = u%LMesh%Moment(fieldIndx,node) + du * perturb_sign
-   END SELECT
-END SUBROUTINE SD_Perturb_u
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
-SUBROUTINE SD_Compute_dY(p, y_p, y_m, delta, dY)
-   TYPE(SD_ParameterType)            , INTENT(IN   ) :: p     !< parameters
-   TYPE(SD_OutputType)               , INTENT(IN   ) :: y_p   !< SD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
-   TYPE(SD_OutputType)               , INTENT(IN   ) :: y_m   !< SD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:) !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
-   ! local variables:
-   INTEGER(IntKi) :: i              ! loop over outputs
-   INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
-   indx_first = 1
-   call PackLoadMesh_dY(  y_p%Y1Mesh, y_m%Y1Mesh, dY, indx_first)
-   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first, UseSmlAngle=.false.) ! all 6 motion fields
-   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first, UseSmlAngle=.false.) ! all 6 motion fields
-   do i=1,p%NumOuts
-      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
-   end do
-   dY = dY / (2.0_R8Ki*delta)
-END SUBROUTINE SD_Compute_dY
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the x array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine sd_init_jacobian is consistant with this routine!
-SUBROUTINE SD_Perturb_x( p, fieldIndx, mode, perturb_sign, x, dx )
-   TYPE(SD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
-   INTEGER( IntKi )            , INTENT(IN   ) :: fieldIndx    !< field in the state type: 1=displacements; 2=velocities
-   INTEGER( IntKi )            , INTENT(IN   ) :: mode         !< node number
-   INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(SD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed SD states
-   REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
-   if (fieldIndx==1) then
-      dx=p%dx(1)
-      x%qm(mode)    = x%qm(mode)    + dx * perturb_sign
-   else
-      dx=p%dx(2)
-      x%qmdot(mode) = x%qmdot(mode) + dx * perturb_sign
-   end if
-END SUBROUTINE SD_Perturb_x
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine sd_init_jacobian is consistant with this routine!
-SUBROUTINE SD_Compute_dX(p, x_p, x_m, delta, dX)
-   TYPE(SD_ParameterType)      , INTENT(IN   ) :: p                                !< parameters
-   TYPE(SD_ContinuousStateType), INTENT(IN   ) :: x_p                              !< SD continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
-   TYPE(SD_ContinuousStateType), INTENT(IN   ) :: x_m                              !< SD continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
-   REAL(R8Ki)                  , INTENT(IN   ) :: delta                            !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)                            !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
-   INTEGER(IntKi) :: i ! loop over modes
-   do i=1,p%Jac_nx
-      dX(i) = x_p%qm(i) - x_m%qm(i)
-   end do
-   do i=1,p%Jac_nx
-      dX(p%Jac_nx+i) = x_p%qmdot(i) - x_m%qmdot(i)
-   end do
-   dX = dX / (2.0_R8Ki*delta)
-END SUBROUTINE SD_Compute_dX
 
 END MODULE SubDyn_Output

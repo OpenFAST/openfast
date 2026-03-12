@@ -33,6 +33,7 @@ typedef  ^               ParameterType         DbKi            DT_high         -
 typedef  ^               ParameterType         DbKi            TMax            -    - - "Total run time" seconds
 typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -
 typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
+typedef  ^               ParameterType         IntKi           MaxNumPlanes   {:}   - - "Maximum number of wake planes for each rotor" -
 typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef  ^               ParameterType         IntKi           WaveFieldMod    -    - - "Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin}"   -

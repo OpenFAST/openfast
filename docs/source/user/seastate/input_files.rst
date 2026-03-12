@@ -175,6 +175,44 @@ always be evaluated up to the SWL. Extrapolation stretching (**WaveStMod** = 2)
 is not supported when **WaveMod** = 6 (externally generated full wave-kinematics 
 time series).
 
+**WvCrntMod** controls the modeling of combined wave and current conditions. 
+It can be set to 0, 1, or 2 with the following effects.
+
++----------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **WvCrntMod** value  | Effects                                                                                                                                                                                                                                                                                       |
++======================+===============================================================================================================================================================================================================================================================================================+
+| 0                    | Simple superposition where the current velocity and acceleration are added to those of the waves. Current has no direct impact on the waves. This option reproduces the behavior of previous versions of OpenFAST.                                                                            |
++----------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 1                    | Include Doppler effect on the waves by solving the wave dispersion relation corrected for current. The input wave spectrum/time series are assumed to be those directly measured in a region with the current and are not modified by SeaState. Wavelengths are corrected for Doppler effect. |
++----------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2                    | Full interaction between waves and current with both Doppler effect and wave amplitude/spectrum scaling for wave-current interactions. The input wave spectrum/time series are assumed to be those measured in a region without current and rescaled based on the current velocity/direction. |
++----------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Setting **WvCrntMod** to 1 and 2 imposes additional restrictions on the allowed waves and current. 
+
++----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **WvCrntMod** value  | Restrictions                                                                                                                                                                                                                 |
++======================+==============================================================================================================================================================================================================================+
+|  0                   | No additional restrictions                                                                                                                                                                                                   |
++----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|  1                   | First-order long-crested waves without directional spreading                                                                                                                                                                 |
++----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|  2                   | First-order long-crested waves without directional spreading; colinear (aligned or opposing) waves and current only; the amplitude/spectrum scaling implemented assumes deep-water conditions, although this is not checked. |
++----------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Strictly speaking, options 1 and 2 of **WvCrntMod** are only valid for a uniform current; 
+however, sheared current is allowed, and it is up to the user to ensure that the current 
+profile near the surface down to a depth relevant to the waves is reasonably uniform. 
+SeaState simply takes the current velocity at the still water level when computing the 
+effects of the current on the waves. The improved wave-current modeling can be used with 
+either SeaState current or dynamic current from InflowWind when simulating marine 
+hydrokinetic turbines. For the latter, wave-current interaction is based on the 
+time-averaged current velocity at the still water level. For applicable **WindType** in 
+InflowWind, users should ensure that the flow-field grid from InflowWind reaches the still 
+water level. **WvCrntMod** has no effect when **WaveMod** = 0 or 6, or when there is no 
+current from either SeaState (**CurrMod** = 0) or InflowWind if simulating marine 
+hydrokinetic turbines.
+
 **WaveTMax** sets the length of the incident wave kinematics time
 series, but it also determines the frequency step used in the inverse
 FFT, from which the internal wave time series are derived (*Δω* =

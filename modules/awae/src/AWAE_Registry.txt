@@ -31,7 +31,6 @@ typedef   AWAE/AWAE   AWAE_InputFileType  ReKi            dr             - - -  
 typedef   ^           ^                   DbKi            dt_low             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
 typedef   ^           ^                   IntKi           NumTurbines    - - -  "Number of wind turbines in the farm [>=1]" -
 typedef   ^           ^                   IntKi           NumRadii       - - -  "Number of radii in the radial finite-difference grid  [>=2]" -
-typedef   ^           ^                   IntKi           NumPlanes      - - -  "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
 typedef   ^           ^                   CHARACTER(1024) WindFilePath   - - -  "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
 typedef  ^            ^                   LOGICAL         WrDisWind          -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
 typedef  ^            ^                   IntKi           NOutDisWindXY      -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
@@ -46,6 +45,7 @@ typedef  ^            ^                   IntKi           Mod_Meander    - - -  
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
 typedef  ^            ^                   IntKi           Mod_AmbWind    - - -  "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef  ^            ^                   CHARACTER(1024) InflowFile     -  - -   "Name of file containing InflowWind module input parameters" -
+typedef  ^            ^                   character(12)   DirStartIndex  - - -    "Starting directory index suffix for AMReX wind" -
 typedef   ^           ^                   DbKi            dt_high        - - -    "High-resolution (FAST) time step" s
 typedef  ^            ^                   ReKi            X0_high       {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
 typedef  ^            ^                   ReKi            Y0_high       {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
@@ -76,6 +76,7 @@ typedef  ^            ^                   IntKi           Mod_Projection -  - - 
 typedef   ^ InitInputType  AWAE_InputFileType InputFileData    -  - -   "FAST.Farm input-file data for AWAE module" -
 typedef   ^ InitInputType  IntKi              n_high_low       -  - -   "Number of high-resolution time steps per low" -
 typedef   ^ InitInputType  IntKi              NumDT            -  - -   "Number of low-resolution (FAST.Farm driver/glue code) time steps" -
+typedef   ^ InitInputType  IntKi              MaxPlanes        -  - -   "Maximum number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
 typedef  ^  InitInputType  CHARACTER(1024)    OutFileRoot      -  - -   "The root name derived from the primary FAST.Farm input file" -
 #wake added turbulence (WAT)
 typedef  ^            ^    Logical            WAT_Enabled      - .false. - "Is WAT enabled?" -
@@ -86,41 +87,29 @@ typedef  ^  InitInputType  FlowFieldType     *WAT_FlowField    -  - -   "Pointer
 #typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 #typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
 typedef   ^ InitOutputType ProgDesc           Ver              -  - -   "This module's name, version, and date"      -
-typedef   ^ InitOutputType ReKi               X0_high         {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType ReKi               Y0_high         {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType ReKi               Z0_high         {:} - -   "Z-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType ReKi               dX_high         {:} - -   "X-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType ReKi               dY_high         {:} - -   "Y-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType ReKi               dZ_high         {:} - -   "Z-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ InitOutputType IntKi              nX_high          -  - -   "Number of high-resolution spatial nodes in X direction " -
-typedef   ^ InitOutputType IntKi              nY_high          -  - -   "Number of high-resolution spatial nodes in Y direction" -
-typedef   ^ InitOutputType IntKi              nZ_high          -  - -   "Number of high-resolution spatial nodes in Z direction" -
-typedef   ^ InitOutputType ReKi               dX_low           -  - -   "The spacing of the low-resolution nodes in X direction" m
-typedef   ^ InitOutputType ReKi               dY_low           -  - -   "The spacing of the low-resolution nodes in Y direction" m
-typedef   ^ InitOutputType ReKi               dZ_low           -  - -   "The spacing of the low-resolution nodes in Z direction" m
-typedef   ^ InitOutputType IntKi              nX_low           -  - -   "Number of low-resolution spatial nodes in X direction" -
-typedef   ^ InitOutputType IntKi              nY_low           -  - -   "Number of low-resolution spatial nodes in Y direction" -
-typedef   ^ InitOutputType IntKi              nZ_low           -  - -   "Number of low-resolution spatial nodes in Z direction" -
-typedef   ^ InitOutputType ReKi               X0_low           -  - -   "X-component of the origin of the low-resolution spatial domain" m
-typedef   ^ InitOutputType ReKi               Y0_low           -  - -   "Y-component of the origin of the low-resolution spatial domain" m
-typedef   ^ InitOutputType ReKi               Z0_low           -  - -   "Z-component of the origin of the low-resolution spatial domain" m
+typedef   ^ InitOutputType ReKi               oXYZ_high    {:}{:} - -   "XYZ components of the origin of the high-resolution spatial domain for each turbine" m
+typedef   ^ InitOutputType ReKi               dXYZ_high    {:}{:} - -   "XYZ components of the spatial increment of the high-resolution spatial domain for each turbine" m
+typedef   ^ InitOutputType IntKi              nXYZ_high    {:}{:} - -   "Number of high-resolution spatial nodes in XYZ directions" -
+typedef   ^ InitOutputType ReKi               dXYZ_low        {3} - -   "The spacing of the low-resolution nodes in XYZ directions" m
+typedef   ^ InitOutputType IntKi              nXYZ_low        {3} - -   "Number of low-resolution spatial nodes in XYZ directions" -
+typedef   ^ InitOutputType ReKi               oXYZ_low        {3} - -   "XYZ components of the origin of the low-resolution spatial domain" m
 typedef   ^ InitOutputType AWAE_HighWindGridPtr Vdist_High    {:} - -   "Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^ ContinuousStateType InflowWind_ContinuousStateType    IfW     {:} - -  "Dummy IfW continuous states" -
+typedef   ^ ContinuousStateType ReKi       Dummy     - - -  "Dummy continuous states" -
 
 # Define discrete (nondifferentiable) states here:
-typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     IfW          {:} - -  "Dummy IfW discrete states" -
+typedef   ^ DiscreteStateType   ReKi       Dummy     - - -  "Dummy discrete states" -
 #wake added turbulence
-typedef   ^ DiscreteStateType   ReKi                             WAT_B_Box    {3} - -  "Position of passive tracer used to offset the WAT box at each low res time step" m
-typedef   ^ DiscreteStateType   ReKi                             Ufarm        {3} - -  "mean velocity of all disk average flow for all turbines in farm" m/s
+typedef   ^ DiscreteStateType   ReKi       WAT_B_Box    {3} - -  "Position of passive tracer used to offset the WAT box at each low res time step" m
+typedef   ^ DiscreteStateType   ReKi       Ufarm        {3} - -  "mean velocity of all disk average flow for all turbines in farm" m/s
 
 # Define constraint states here:
-typedef   ^ ConstraintStateType InflowWind_ConstraintStateType   IfW     {:} - -  "Dummy IfW  constraint states" -
+typedef   ^ ConstraintStateType ReKi       Dummy     - - -  "Dummy constraint states" -
 
 # Define any other states, including integer or logical states here:
-typedef   ^ OtherStateType      InflowWind_OtherStateType    IfW     {:} - -  "Dummy IfW other states" -
+typedef   ^ OtherStateType      ReKi       Dummy     - - -  "Dummy other states" -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -130,6 +119,14 @@ typedef   ^ MiscVarType    ReKi     Vamb_lowpol     {:}{:} - -  "UVW components 
 typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
 typedef   ^ MiscVarType    SiKi     Vdist_low_full    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm, for outputs" m/s
 typedef   ^ MiscVarType    AWAE_HighWindGrid Vamb_High   {:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
+typedef   ^ MiscVarType    KdTreeType  KdT                          -  - -  "K-d Tree structure for fast lookup of wake points" -
+typedef   ^ MiscVarType    IntKi       KdTPointData             {:}{:} - -  "Plane and turbine index for points in K-d tree" -
+typedef   ^ MiscVarType    IntKi       KdTResults                  {:} - -  "KdTree search result indices" -
+typedef   ^ MiscVarType    ReKi        AllPlanePoints           {:}{:} - -  "X,Y plane coordinates for points (all planes/turbines) in K-d tree" -
+typedef   ^ MiscVarType    IntKi       iPlaneTurbTurb        {:}{:}{:} - -  "First and Last plane index by source turbine and destination turbine index" -
+typedef   ^ MiscVarType    IntKi       iPlaneTurbChunk       {:}{:}{:} - -  "First and Last plane index by source turbine and destination chunk index" -
+typedef   ^ MiscVarType    Logical     LowResChunkHasWake          {:} - -  "Low-res gridFirst and Last plane index by source turbine and destination chunk index" -
+typedef   ^ MiscVarType    ReKi        MaxWakePointSep              -  - -  "Maximum separation between wake points" -
 typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
@@ -141,15 +138,48 @@ typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    SiKi     outVizXYPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizYZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizXZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
-typedef   ^ MiscVarType    InflowWind_MiscVarType  IfW        {:} - - "InflowWind module misc vars" -
 typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_Low   - - -  "InflowWind module inputs for the low-resolution grid" -
-typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_High  - - -  "InflowWind module inputs for the high-resolution grid" -
+typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_High {:} - -  "InflowWind module inputs for the high-resolution grid" -
 typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_Low   - - -  "InflowWind module outputs for the low-resolution grid" -
-typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High  - - -  "InflowWind module outputs for the high-resolution grid" -
+typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High {:} - -  "InflowWind module outputs for the high-resolution grid" -
 
 #wake added turbulence
 typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
 typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:} 0 -  "Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed" -
+
+# Low-resolution grid chunk data
+typedef   ^ LRGChunkType     IntKi    iChunk                  {3} -  -  "XYZ index of chunk" -
+typedef   ^ LRGChunkType     IntKi    iSubGridX               {2} -  -  "start and end grid indices in X direction" -
+typedef   ^ LRGChunkType     IntKi    iSubGridY               {2} -  -  "start and end grid indices in Y direction" -
+typedef   ^ LRGChunkType     IntKi    iSubGridZ               {2} -  -  "start and end grid indices in Z direction" -
+typedef   ^ LRGChunkType     IntKi    iGridPoints             {:} -  -  "Indices into GridPoints array to get locations" -
+typedef   ^ LRGChunkType     IntKi    nPoints                  -  -  -  "Number of points in sub-grid" -
+typedef   ^ LRGChunkType     ReKi     oXYZ                    {3} -  -  "XYZ components of the origin of the resolution spatial domain" m
+typedef   ^ LRGChunkType     ReKi     Size                    {3} -  -  "size of the grid chunk" m
+typedef   ^ LRGChunkType     ReKi     Center                  {3} -  -  "center coordinates of the grid chunk" m
+typedef   ^ LRGChunkType     ReKi     Radius                   -  -  -  "Radius of cylinder encompassing grid" m
+
+# Low-resolution grid parameter data
+typedef   ^ LRGParamType     ReKi     oXYZ                    {3} -  -  "XYZ components of the origin of the resolution spatial domain" m
+typedef   ^ LRGParamType     ReKi     dXYZ                    {3} -  -  "XYZ components of the spatial increment of the spatial domain" m
+typedef   ^ LRGParamType     IntKi    nXYZ                    {3} -  -  "Number of spatial nodes in XYZ directions" -
+typedef   ^ LRGParamType     IntKi    nPoints                  -  -  -  "Number of spatial nodes" -
+typedef   ^ LRGParamType     ReKi     GridPoints           {:}{:} -  -  "XYZ components (global positions) of the spatial discretization of the grid" m
+typedef   ^ LRGParamType     ReKi     Size                    {3} -  -  "XYZ size of the grid" m
+typedef   ^ LRGParamType     ReKi     Center                  {3} -  -  "XYZ coordinates of the grid center" m
+typedef   ^ LRGParamType     LRGChunkType  WakeChunks         {:} -  -  "Chunks for updating grid from wake" -
+
+
+# High-resolution grid parameter data
+typedef   ^ HRGParamType     ReKi     WT_Position             {3} -  -  "Turbine position" m
+typedef   ^ HRGParamType     ReKi     oXYZ                    {3} -  -  "XYZ components of the origin of the resolution spatial domain" m
+typedef   ^ HRGParamType     ReKi     dXYZ                    {3} -  -  "XYZ components of the spatial increment of the spatial domain" m
+typedef   ^ HRGParamType     IntKi    nXYZ                    {3} -  -  "Number of spatial nodes in XYZ directions" -
+typedef   ^ HRGParamType     IntKi    nPoints                  -  -  -  "Number of spatial nodes" -
+typedef   ^ HRGParamType     ReKi     GridPoints           {:}{:} -  -  "XYZ components (global positions) of the spatial discretization of the grid" m
+typedef   ^ HRGParamType     ReKi     Size                    {3} -  -  "XYZ size of the grid" m
+typedef   ^ HRGParamType     ReKi     Center                  {3} -  -  "XYZ coordinates of the grid center" m
+typedef   ^ HRGParamType     ReKi     Radius                   -  -  -  "Radius of cylinder encompassing grid" m
 
 
 # ..... Parameters ................................................................................................................
@@ -158,35 +188,14 @@ typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:} 0 -  "Value indi
 typedef   ^ ParameterType  CHARACTER(1024)  WindFilePath     -  - -   "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
 typedef   ^ ParameterType  IntKi            NumTurbines      -  - -   "Number of wind turbines in the farm [>=1]" -
 typedef   ^ ParameterType  IntKi            NumRadii         -  - -   "Number of radii in the radial finite-difference grid  [>=2]" -
-typedef   ^ ParameterType  IntKi            NumPlanes        -  - -   "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
+typedef   ^ ParameterType  IntKi            MaxPlanes        -  - -   "Maximum number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
+typedef   ^ ParameterType  LRGParamType     LowRes           -  - -   "Low-resolution grid data" -
+typedef   ^ ParameterType  HRGParamType     HighRes         {:} - -   "High-resolution grid data" -
 typedef   ^ ParameterType  ReKi             y               {:} - -   "Horizontal discretization of the wake planes"        m
 typedef   ^ ParameterType  ReKi             z               {:} - -   "Vertical discretization of the wake planes"        m
+typedef   ^ ParameterType  ReKi             dPol             -  - -   "Spatial resolution of the polar grid for each wake plane of each turbine" m
 typedef   ^ ^              IntKi            Mod_AmbWind      -  - -   "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
-typedef   ^ ParameterType  IntKi            nX_low           -  - -   "Number of low-resolution spatial nodes in X direction" -
-typedef   ^ ParameterType  IntKi            nY_low           -  - -   "Number of low-resolution spatial nodes in Y direction" -
-typedef   ^ ParameterType  IntKi            nZ_low           -  - -   "Number of low-resolution spatial nodes in Z direction" -
-typedef   ^ ParameterType  IntKi            NumGrid_low      -  - -   "Total number of low-resolution spatial nodes" -
 typedef   ^ ParameterType  IntKi            n_rp_max         -  - -   "Maximum possible number of points in the polar grid for the wake plane at each rotor" -
-typedef   ^ ParameterTYpe  ReKi             dpol             -  - -   "Spatial resolution of the polar grid for each wake plane of each turbine" m
-typedef   ^ ParameterType  ReKi             dXYZ_low        {3} - -   "XYZ-components of the spatial increment of the low-resolution domain" m
-typedef   ^ ParameterType  ReKi             dX_low           -  - -   "The spacing of the low-resolution nodes in X direction" m
-typedef   ^ ParameterType  ReKi             dY_low           -  - -   "The spacing of the low-resolution nodes in Y direction" m
-typedef   ^ ParameterType  ReKi             dZ_low           -  - -   "The spacing of the low-resolution nodes in Z direction" m
-typedef   ^ ParameterType  ReKi             X0_low           -  - -   "X-component of the origin of the low-resolution spatial domain" m
-typedef   ^ ParameterType  ReKi             Y0_low           -  - -   "Y-component of the origin of the low-resolution spatial domain" m
-typedef   ^ ParameterType  ReKi             Z0_low           -  - -   "Z-component of the origin of the low-resolution spatial domain" m
-typedef   ^ ParameterType  ReKi             X0_high         {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  ReKi             Y0_high         {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  ReKi             Z0_high         {:} - -   "Z-component of the origin of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  ReKi             dX_high         {:} - -   "X-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  ReKi             dY_high         {:} - -   "Y-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  ReKi             dZ_high         {:} - -   "Z-component of the spatial increment of the high-resolution spatial domain for each turbine" m
-typedef   ^ ParameterType  IntKi            nX_high          -  - -   "Number of high-resolution spatial nodes in X direction " -
-typedef   ^ ParameterType  IntKi            nY_high          -  - -   "Number of high-resolution spatial nodes in Y direction" -
-typedef   ^ ParameterType  IntKi            nZ_high          -  - -   "Number of high-resolution spatial nodes in Z direction" -
-typedef   ^ ParameterType  ReKi             Grid_low        {:}{:}    - -   "XYZ components (global positions) of the spatial discretization of the low-resolution spatial domain" m
-typedef   ^ ParameterType  ReKi             Grid_high       {:}{:}{:} - -   "XYZ components (global positions) of the spatial discretization of the high-resolution spatial domain for each turbine " m
-typedef   ^ ParameterType  ReKi             WT_Position     {:}{:}    - -   "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef   ^ ParameterType  IntKi            n_high_low       -  - -   "Number of high-resolution time steps per low" -
 typedef   ^ ParameterType  IntKi            n_high_low_p1    -  - -   "Number of high-resolution time steps per low, plus one at t_low-dt_high" -
 typedef   ^ ParameterType  DbKi             dt_low           -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
@@ -196,6 +205,11 @@ typedef   ^ ParameterType  IntKi            Mod_Meander      -  - -   "Spatial f
 typedef   ^ ParameterType  ReKi             C_Meander        -  - -   "Calibrated parameter for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_ScaleDiam      -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
 typedef   ^ ParameterType  IntKi            Mod_Projection   -  - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
+typedef   ^ ParameterType  character(12)    DirStartIndex    -  - -    "Starting directory index suffix for AMReX wind" -
+typedef   ^ ParameterType  IntKi            DirIndexLen      -  - -    "Number of characters in directory index"
+typedef   ^ ParameterType  IntKi            DirStartNum      -  - -    "Starting directory index number for AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexDeltaLow -  - -    "Directory index delta for low-resolution AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexDeltaHigh -  - -   "Directory index delta for high-resolution AMReX wind"
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts           -  - -   "Number of parameters in the output list (number of outputs requested)"      -
@@ -229,6 +243,7 @@ typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -     
 
 # ..... Inputs ...........................................................................................................
 # Define inputs that are contained on the mesh here:
+typedef   ^ InputType      ReKi       NumPlanes    {:}                    -      -      "Number of active wake planes for each turbine"      -
 typedef   ^ InputType      ReKi       xhat_plane   {:}{:}{:}              -      -      "Orientations of wake planes, normal to wake planes, for each turbine"      -
 typedef   ^ InputType      ReKi       p_plane      {:}{:}{:}              -      -      "Center positions of wake planes for each turbine"      m
 typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}{:}           -      -      "Axial wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s

@@ -34,8 +34,8 @@ MODULE Morison_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Cyl = 1      ! MSecGeom = 1   [circular member cross section] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Rec = 2      ! MSecGeom = 2   [rectangular member cross section] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Cyl                     = 1      ! MSecGeom = 1   [circular member cross section] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Rec                     = 2      ! MSecGeom = 2   [rectangular member cross section] [-]
 ! =========  Morison_JointType  =======
   TYPE, PUBLIC :: Morison_JointType
     INTEGER(IntKi)  :: JointID = 0_IntKi      !< User-specified integer ID for the given joint [-]
@@ -405,7 +405,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
-    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !< Total number of nodes in the final software model [-]
     TYPE(Morison_JointType) , DIMENSION(:), ALLOCATABLE  :: InpJoints      !< Array of user-specified joints [-]
@@ -539,6 +540,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !<  [-]
@@ -579,7 +581,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !<  [-]
   END TYPE Morison_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: Morison_x_DummyContState         =   1 ! Morison%DummyContState
+   integer(IntKi), public, parameter :: Morison_u_Mesh                   =   2 ! Morison%Mesh
+   integer(IntKi), public, parameter :: Morison_u_PtfmRefY               =   3 ! Morison%PtfmRefY
+   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   4 ! Morison%Mesh
+   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   5 ! Morison%VisMesh
+   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   6 ! Morison%WriteOutput
+
+contains
 
 subroutine Morison_CopyJointType(SrcJointTypeData, DstJointTypeData, CtrlCode, ErrStat, ErrMsg)
    type(Morison_JointType), intent(in) :: SrcJointTypeData
@@ -3233,6 +3242,7 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
    DstInitInputData%AMMod = SrcInitInputData%AMMod
+   DstInitInputData%HstMod = SrcInitInputData%HstMod
    DstInitInputData%NJoints = SrcInitInputData%NJoints
    DstInitInputData%NNodes = SrcInitInputData%NNodes
    if (allocated(SrcInitInputData%InpJoints)) then
@@ -3680,6 +3690,7 @@ subroutine Morison_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
    call RegPack(RF, InData%AMMod)
+   call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NJoints)
    call RegPack(RF, InData%NNodes)
    call RegPack(RF, allocated(InData%InpJoints))
@@ -3885,6 +3896,7 @@ subroutine Morison_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NNodes); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%InpJoints)) deallocate(OutData%InpJoints)
@@ -4888,6 +4900,7 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WaveDisp = SrcParamData%WaveDisp
    DstParamData%AMMod = SrcParamData%AMMod
+   DstParamData%HstMod = SrcParamData%HstMod
    DstParamData%NMembers = SrcParamData%NMembers
    if (allocated(SrcParamData%Members)) then
       LB(1:1) = lbound(SrcParamData%Members)
@@ -5201,6 +5214,7 @@ subroutine Morison_PackParam(RF, Indata)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
    call RegPack(RF, InData%AMMod)
+   call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NMembers)
    call RegPack(RF, allocated(InData%Members))
    if (allocated(InData%Members)) then
@@ -5290,6 +5304,7 @@ subroutine Morison_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%Members)) deallocate(OutData%Members)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -5844,5 +5859,244 @@ SUBROUTINE Morison_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function Morison_InputMeshPointer(u, DL) result(Mesh)
+   type(Morison_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (Morison_u_Mesh)
+       Mesh => u%Mesh
+   end select
+end function
+
+function Morison_OutputMeshPointer(y, DL) result(Mesh)
+   type(Morison_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (Morison_y_Mesh)
+       Mesh => y%Mesh
+   case (Morison_y_VisMesh)
+       Mesh => y%VisMesh
+   end select
+end function
+
+subroutine Morison_VarsPackContState(Vars, x, ValAry)
+   type(Morison_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Morison_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine Morison_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Morison_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Morison_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Morison_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Morison_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine Morison_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Morison_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_x_DummyContState)
+         x%DummyContState = VarVals(1)                                        ! Scalar
+      end select
+   end associate
+end subroutine
+
+function Morison_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine Morison_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(Morison_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Morison_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine Morison_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Morison_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Morison_VarsPackInput(Vars, u, ValAry)
+   type(Morison_InputType), intent(in)     :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call Morison_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine Morison_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Morison_InputType), intent(in)     :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_u_Mesh)
+         call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
+      case (Morison_u_PtfmRefY)
+         VarVals(1) = u%PtfmRefY                                              ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Morison_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Morison_InputType), intent(inout)  :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call Morison_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine Morison_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Morison_InputType), intent(inout)  :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_u_Mesh)
+         call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
+      case (Morison_u_PtfmRefY)
+         u%PtfmRefY = VarVals(1)                                              ! Scalar
+      end select
+   end associate
+end subroutine
+
+function Morison_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_u_Mesh)
+       Name = "u%Mesh"
+   case (Morison_u_PtfmRefY)
+       Name = "u%PtfmRefY"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine Morison_VarsPackOutput(Vars, y, ValAry)
+   type(Morison_OutputType), intent(in)    :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call Morison_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine Morison_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Morison_OutputType), intent(in)    :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_y_Mesh)
+         call MV_PackMesh(V, y%Mesh, ValAry)                                  ! Mesh
+      case (Morison_y_VisMesh)
+         call MV_PackMesh(V, y%VisMesh, ValAry)                               ! Mesh
+      case (Morison_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Morison_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Morison_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call Morison_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine Morison_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Morison_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Morison_y_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Mesh)                                ! Mesh
+      case (Morison_y_VisMesh)
+         call MV_UnpackMesh(V, ValAry, y%VisMesh)                             ! Mesh
+      case (Morison_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function Morison_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Morison_y_Mesh)
+       Name = "y%Mesh"
+   case (Morison_y_VisMesh)
+       Name = "y%VisMesh"
+   case (Morison_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE Morison_Types
+
 !ENDOFREGISTRYGENERATEDFILE

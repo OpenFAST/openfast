@@ -490,7 +490,7 @@ subroutine SeaStOut_MapOutputs(  p, WaveElev, WaveElev1, WaveElev2, WaveVel, Wav
    REAL(SiKi),                         intent( in    )  :: WaveAcc(:,:)   ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(SiKi),                         intent( in    )  :: WaveAccMCF(:,:) ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(SiKi),                         intent( in    )  :: WaveDynP(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         intent(   out )  :: AllOuts(MaxOutpts)
+   REAL(ReKi),                         intent(   out )  :: AllOuts(0:MaxOutpts)
    INTEGER(IntKi),                     intent(   out )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       intent(   out )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
@@ -916,21 +916,16 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
       Indx = FindValidChannelIndx(OutList(I), ValidParamAry, p%OutParam(I)%SignM)
 
-      IF ( Indx > 0 ) THEN ! we found the channel name
-         IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
-            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
-            p%OutParam(I)%Units = "INVALID"
-            p%OutParam(I)%SignM = 0
-         ELSE
-            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
-            p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
-         END IF
-      ELSE ! this channel isn't valid
+      ! If channel has no index or is invalid
+      IF ( Indx <= 0 .or. InvalidOutput( ParamIndxAry(Indx) ) ) THEN
          p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
-
          CALL SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
+      ELSE
+         ! Channel is invalid
+         p%OutParam(I)%Indx  = ParamIndxAry(Indx)
+         p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
       END IF
 
    END DO

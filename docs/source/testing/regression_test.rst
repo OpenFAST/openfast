@@ -153,8 +153,8 @@ executing with the help option:
 
 .. note::
 
-    For the NREL 5MW turbine test cases, an external ServoDyn controller must
-    be compiled and included in the appropriate directory or all NREL 5MW
+    For the Jonkman 5-MW (formerly called the NREL 5-MW) turbine test cases, an external ServoDyn controller must
+    be compiled and included in the appropriate directory or all Jonkman 5-MW (formerly called the NREL 5-MW)
     cases will fail without starting. More information is available in the
     documentation for the `r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
     but be aware that these three DISCON controllers must exist
@@ -200,8 +200,8 @@ be sure to execute the build command with the ``install`` target:
 
 .. note::
 
-    REMINDER: For the NREL 5MW turbine test cases, an external ServoDyn controller must
-    be compiled and included in the appropriate directory or all NREL 5MW
+    REMINDER: For the 5MW turbine test cases, an external ServoDyn controller must
+    be compiled and included in the appropriate directory or all 5MW
     cases will fail without starting. More information is available in the
     documentation for the `r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
     but be aware that these three DISCON controllers must exist
@@ -443,7 +443,7 @@ with the naming scheme ``execute<Module>RegressionTest.py``.
 The first step to adding a new regression test case is to verify that
 a script exists for the target module. If it does not, an issue
 should be opened in `OpenFAST Issues <https://github.com/openfast/openfast/issues>`_
-to coordinate with the NREL team on creating this script.
+to coordinate with the NLR team on creating this script.
 
 The next step is to add the test case in the appropriate location in
 the `r-test` submodule. The directory structure in r-test mirrors the
@@ -481,4 +481,4 @@ CMake driver, so follow the instructions above to edit ``CTestList.cmake``.
 
 Finally, the new test cases in the r-test submodule must be added to the
 r-test repository. To do this, open a new issue in `r-test Issues <https://github.com/openfast/r-test/issues>`_
-requesting for support from the NREL team to commit your test.
+requesting for support from the NLR team to commit your test.

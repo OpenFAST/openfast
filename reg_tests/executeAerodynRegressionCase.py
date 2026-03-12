@@ -118,6 +118,24 @@ elif os.path.exists(localOutFileCase4) :
     localOutFile = localOutFileCase4
 baselineOutFile = os.path.join(targetOutputDirectory, os.path.basename(localOutFile))
 
+# --- Specific test for sphere (no output file generated)
+if caseName=='ad_Sphere_OLAF':
+    vtk_file = os.path.join(testBuildDirectory, 'vtk_fvw', 'ad_driver.FVW_Glb.SrcPnl.000000002.vtk')
+    if os.path.exists(vtk_file):
+        # Note: would need the VTKFile reader from openfast_toolbox to run PlotCp.py
+        CpMax = float(list(open(vtk_file))[1061]) # Read line 1062 ...
+        CpMaxRef = -1.259784 # Based on current resolution, not analytical
+        if np.abs(CpMax-CpMaxRef)<0.1:
+            print(f'[ OK ] Sphere Cp Max is {CpMax}')
+            sys.exit(0)
+        else:
+            print(f'[FAIL] Sphere Cp Max is {CpMax} instead of {CpMax}')
+            sys.exit(1)
+    else:
+        print(f'Error: source panel vtk file was not generated: {vtk_file}')
+        sys.exit(1)
+
+# --- Regular .outb comparison
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

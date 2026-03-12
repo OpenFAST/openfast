@@ -56,9 +56,12 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !<  [-]
     REAL(SiKi)  :: PCurrVxiPz0 = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: PCurrVyiPz0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrVxi0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrVyi0 = 0.0_R4Ki      !<  [-]
   END TYPE Current_InitOutputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Current_InitInputType), intent(in) :: SrcInitInputData
@@ -190,6 +193,8 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    end if
    DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
    DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0
+   DstInitOutputData%CurrVxi0 = SrcInitOutputData%CurrVxi0
+   DstInitOutputData%CurrVyi0 = SrcInitOutputData%CurrVyi0
 end subroutine
 
 subroutine Current_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -216,6 +221,8 @@ subroutine Current_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%CurrVyi)
    call RegPack(RF, InData%PCurrVxiPz0)
    call RegPack(RF, InData%PCurrVyiPz0)
+   call RegPack(RF, InData%CurrVxi0)
+   call RegPack(RF, InData%CurrVyi0)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -231,6 +238,10 @@ subroutine Current_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrVxi0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrVyi0); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Current_Types
+
 !ENDOFREGISTRYGENERATEDFILE

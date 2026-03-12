@@ -5,7 +5,7 @@ Introduction
 
 `SubDyn <https://nwtc.nrel.gov/SubDyn>`__ is a time-domain
 structural-dynamics module for multimember fixed-bottom substructures
-created by the National Renewable Energy Laboratory (NREL) through U.S.
+created by the National Laboratory of the Rockies (NLR) through U.S.
 Department of Energy Wind and Water Power Program support. The module
 has been coupled into the FAST aero-hydro-servo-elastic computer-aided
 engineering (CAE) tool. Substructure types supported by SubDyn include

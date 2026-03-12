@@ -1175,7 +1175,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    character(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
-   integer(IntKi)                               :: i,j, iNode, iOffset
+   integer(IntKi)                               :: i,j, iNode, iOffset, iOffAcc
    character(64)                                :: chanPrefix
    character(ErrMsgLen)                         :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
@@ -1205,6 +1205,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    else
       p%NumOuts = 45
    end if
+   p%NumOuts = p%NumOuts+6 ! Always including C*(alpha_T) and C*(alpha_Q)
       
    allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade),STAT=ErrStat2)
       if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'Error allocating WriteOutputHdr.',ErrStat,ErrMsg,RoutineName)
@@ -1257,6 +1258,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
             InitOut%WriteOutputUnt(iOffset+10)  = '(s)'
             InitOut%WriteOutputUnt(iOffset+11)  = '(deg)'
+            iOffAcc = iOffset+11
 
 
          elseif (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
@@ -1290,16 +1292,19 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+18)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+19)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+20)  = '(-)'
+            iOffAcc = iOffset+20
 
             
             if (p%UAmod == UA_HGMV) then
                InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'x5'
                InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
+               iOffAcc = iOffset+21
             else if (p%UAmod == UA_HGMV360) then
                InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'Q'
                InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'Qdot'
                InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
                InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
+               iOffAcc = iOffset+22
             end if
 
          elseif(p%UAMod == UA_BV) then
@@ -1342,6 +1347,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+24)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+25)  = '(m/s)'
             InitOut%WriteOutputUnt(iOffset+26)  = '(m/s)'
+            iOffAcc = iOffset+26
             
          else if (p%UAmod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
 
@@ -1423,10 +1429,19 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+43) ='(-)'
             InitOut%WriteOutputUnt(iOffset+44) ='(-)'
             InitOut%WriteOutputUnt(iOffset+45)  ='(deg)'
+            iOffAcc = iOffset+45
 
          else
             call SetErrStat( ErrID_Fatal, 'Programming error UAmod case not accounted for.', ErrStat, ErrMsg, RoutineName ); return
          end if
+
+         ! Quasi-steady airfoil coefficients at quarter chord (Q) and three quarter chord (T)
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cl_qs_Q'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cd_qs_Q'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cm_qs_Q'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cl_qs_T'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cd_qs_T'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
+         iOffAcc = iOffAcc +1 ; InitOut%WriteOutputHdr(iOffAcc) = trim(chanPrefix)//'Cm_qs_T'; InitOut%WriteOutputUnt(iOffAcc) = '(-)'
          
       end do
    end do
@@ -3862,6 +3877,7 @@ contains
 
    subroutine CalcWriteOutputs()
       integer :: iOffset
+      integer :: iOffAcc ! Accumulated offset
       iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
    
       y%WriteOutput(iOffset+ 1)    = u%alpha*R2D
@@ -3877,6 +3893,7 @@ contains
          y%WriteOutput(iOffset+ 9)    = alpha_34*R2D
          y%WriteOutput(iOffset+10)    = Tu
          y%WriteOutput(iOffset+11)    = alpha_34*R2D
+         iOffAcc = iOffset+11
    
       elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
@@ -3893,12 +3910,15 @@ contains
          y%WriteOutput(iOffset+18)    = k
          y%WriteOutput(iOffset+19)    = misc%weight(i,j)
          y%WriteOutput(iOffset+20)    = cl_fa
+         iOffAcc = iOffset+20
 
          if (p%UAMod == UA_HGMV) then
             y%WriteOutput(iOffset+21)    = x_in%x(5) !x%element(i,j)%x(5)
+            iOffAcc = iOffset+21
          else if (p%UAMod == UA_HGMV360) then
             y%WriteOutput(iOffset+21)    = x_in%x(6) !x%element(i,j)%x(6)
             y%WriteOutput(iOffset+22)    = x_in%x(7) !x%element(i,j)%x(7)
+            iOffAcc = iOffset+22
          end if
 
       elseif(p%UAMod == UA_BV) then
@@ -3921,6 +3941,7 @@ contains
          y%WriteOutput(iOffset+24)    = delN
          y%WriteOutput(iOffset+25)    = u%v_ac(1)
          y%WriteOutput(iOffset+26)    = u%v_ac(2)
+         iOffAcc = iOffset+26
          
       else
          ! Baseline, Gonzales, MinnemaPierce
@@ -3976,8 +3997,23 @@ contains
          y%WriteOutput(iOffset+43)    = k
          y%WriteOutput(iOffset+44)    = misc%weight(i,j)
          y%WriteOutput(iOffset+45)    = KC%alpha_filt_cur*R2D
+         iOffAcc = iOffset+45
          
       end if
+
+      ! --- Quasi steady airfoil coefficients at alpha
+      call AFI_ComputeAirfoilCoefs( u%alpha, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cl
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cd
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cm
+
+      ! --- Quasi steady airfoil coefficients at alpha_34
+      alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
+      call AFI_ComputeAirfoilCoefs( alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cl
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cd
+      iOffAcc=iOffAcc+1; y%WriteOutput(iOffAcc) = AFI_interp%Cm
+
    end subroutine CalcWriteOutputs
 
    !> Calc Outputs for Boeing-Vertol dynamic stall

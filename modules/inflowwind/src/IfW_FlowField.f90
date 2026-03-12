@@ -26,7 +26,6 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -73,7 +72,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    logical                                   :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
 
    ErrStat = ErrID_None
-   ErrMsg = ""
 
    ! Get number of points to evaluate
    NumPoints = size(PositionXYZ, dim=2)
@@ -310,11 +308,35 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    case (User_FieldType)
 
       !-------------------------------------------------------------------------
-      ! User Flow Field
+      ! User-Defined Flow Field
+      !-------------------------------------------------------------------------
+      ! This case handles custom wind fields implemented by the user.
+      ! The UserField_GetVel function must be implemented to return velocities
+      ! at any requested position and time.
+      !
+      ! Note: User-defined wind fields currently do not support acceleration
+      ! calculations. If accelerations are requested, an error will be returned.
+      !
+      ! To implement a user-defined wind field:
+      !   1. Define data structure in UserFieldType (IfW_FlowField.txt)
+      !   2. Initialize data in IfW_User_Init() (InflowWind_IO.f90)
+      !   3. Implement UserField_GetVel() (below in this file)
       !-------------------------------------------------------------------------
 
-      call SetErrStat(ErrID_Fatal, "User Field not implemented", ErrStat, ErrMsg, RoutineName)
-      return
+      ! Check if accelerations are requested
+      if (OutputAccel) then
+         call SetErrStat(ErrID_Fatal, &
+                         "Acceleration calculation not supported for user-defined wind fields", &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Get velocities for each position by calling user-defined function
+      do i = 1, NumPoints
+         call UserField_GetVel(FF%User, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
 
    case default
       call SetErrStat(ErrID_Fatal, "Invalid FieldType "//trim(num2lstr(FF%FieldType)), ErrStat, ErrMsg, RoutineName)
@@ -710,41 +732,6 @@ contains
 
 end subroutine
 
-!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial
-!! derivative dY/du is returned. This submodule does not follow the modularization framework.
-subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
-   type(UniformFieldType), intent(IN)  :: UF             !< Parameters
-   real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
-   logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(ReKi), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed, PLexp, and AngleH)
-
-   type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
-
-   ! Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
-   if (InterpCubic) then
-      op = UniformField_InterpCubic(UF, t)
-   else
-      op = UniformField_InterpLinear(UF, t)
-   end if
-
-   OP_out(1) = op%VelH
-   OP_out(2) = op%ShrV
-   OP_out(3) = op%AngleH
-end subroutine
-
-
-!> Routine to perturb the wind extended outputs (needed by AeroDyn)
-!! NOTE: we are not passing the pointer here, but doing pass by reference to the FlowField since
-!!    this can only be used with linearization, and linearization requires using Uniform winds.
-subroutine IfW_UniformWind_Perturb(FF_perturb, du)
-   type(FlowFieldType),    intent(INOUT)  :: FF_perturb     !< Parameters to be modified
-   real(R8Ki),             intent(IN   )  :: du(3)          !< perturbations to apply
-   FF_perturb%Uniform%VelH(:) = FF_perturb%Uniform%VelH(:) + du(1)
-   FF_perturb%Uniform%ShrV(:) = FF_perturb%Uniform%ShrV(:) + du(2)
-   FF_perturb%PropagationDir  = FF_perturb%PropagationDir  + du(3)
-end subroutine
-
-
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
 
@@ -773,7 +760,6 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
    logical                             :: InGrid
 
    ErrStat = ErrID_None
-   ErrMsg = ""
 
    ! Initialize to no extrapolation (modified in bounds routines)
    AllExtrap = ExtrapNone
@@ -1739,6 +1725,50 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
 
 end subroutine
 
+!> UserField_GetVel computes wind velocities for a user-defined wind field.
+!!
+!! This subroutine must be implemented by users who want to create custom wind fields.
+!! It is called for each position where wind velocities are needed during the simulation.
+!!
+!! The implementation should:
+!!   1. Use the data in UF (populated by IfW_User_Init) to compute velocities
+!!   2. Return velocity components in the global coordinate system (not rotated)
+!!   3. Handle any spatial or temporal interpolation as needed
+!!   4. Set appropriate error status if position/time is out of bounds
+!!
+!! Coordinate system:
+!!   - Position(1) = X position (aligned with mean wind direction after rotation)
+!!   - Position(2) = Y position (lateral/crosswind)
+!!   - Position(3) = Z position (vertical, measured from ground)
+!!   - Velocity(1) = U velocity (along X, positive downwind)
+!!   - Velocity(2) = V velocity (along Y, positive to left when looking downwind)
+!!   - Velocity(3) = W velocity (along Z, positive upward)
+!!
+!! Example implementations:
+!!
+!!   ! Example 1: Constant uniform wind
+!!   Velocity(1) = 10.0_ReKi  ! m/s
+!!   Velocity(2) = 0.0_ReKi
+!!   Velocity(3) = 0.0_ReKi
+!!
+!!   ! Example 2: Power-law wind profile
+!!   if (Position(3) > 0.0_ReKi) then
+!!      Velocity(1) = UF%Data(1,1) * (Position(3)/UF%RefHeight)**0.2_ReKi
+!!      Velocity(2) = 0.0_ReKi
+!!      Velocity(3) = 0.0_ReKi
+!!   else
+!!      call SetErrStat(ErrID_Fatal, \"Position below ground\", ErrStat, ErrMsg, RoutineName)
+!!   end if
+!!
+!!   ! Example 3: Time-varying wind from data array
+!!   call InterpolateInTime(UF%DTime, UF%Data, Time, Velocity, ErrStat, ErrMsg)
+!!
+!! @param UF          User field data structure (populated in IfW_User_Init)
+!! @param Time        Current simulation time (seconds)
+!! @param Position    Position vector [X, Y, Z] where velocity is needed (meters)
+!! @param Velocity    Output velocity vector [U, V, W] (m/s)
+!! @param ErrStat     Error status
+!! @param ErrMsg      Error message if ErrStat /= ErrID_None
 subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
 
    type(UserFieldType), intent(in)     :: UF             !< user-field data
@@ -1753,8 +1783,26 @@ subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
+   !---------------------------------------------------------------------------
+   ! TODO: Implement your user-defined wind velocity calculation here
+   !---------------------------------------------------------------------------
+   
+   ! Default: return zero velocity and error message
    Velocity = 0.0_ReKi
-   call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented", ErrStat, ErrMsg, RoutineName)
+   call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented. "// &
+                   "To use user-defined wind (WindType=6), you must implement "// &
+                   "this function in IfW_FlowField.f90.", ErrStat, ErrMsg, RoutineName)
+
+   ! Remove the error statement above and add your implementation, for example:
+   !
+   ! ! Simple power-law profile
+   ! if (Position(3) > 0.0_ReKi) then
+   !    Velocity(1) = 10.0_ReKi * (Position(3) / UF%RefHeight)**0.2_ReKi
+   !    Velocity(2) = 0.0_ReKi
+   !    Velocity(3) = 0.0_ReKi
+   ! else
+   !    Velocity = 0.0_ReKi
+   ! end if
 
 end subroutine
 

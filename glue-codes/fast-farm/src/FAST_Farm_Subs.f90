@@ -32,12 +32,16 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
+   USE InflowWind, only: InflowWind_End
+   USE MoorDyn, only: MD_UpdateStates, MD_CalcOutput, MD_End
    
 #ifdef _OPENMP
    USE OMP_LIB 
 #endif
 
    IMPLICIT NONE
+
+   integer(IntKi), private, parameter  :: iED = 1
    
 CONTAINS
 
@@ -203,11 +207,14 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
                    ! [note that FAST uses the ceiling function, so it might think we're doing one more step than FAST.Farm; 
                    ! This difference will be a problem only if FAST thinks it's doing FEWER timesteps than FAST.Farm does.]
    
-   IF ( WD_InitInput%InputFileData%NumPlanes > farm%p%n_TMax ) THEN
-      WD_InitInput%InputFileData%NumPlanes = max( 2, min( WD_InitInput%InputFileData%NumPlanes, farm%p%n_TMax ) )
-      call SetErrStat(ErrID_Warn, "For efficiency, NumPlanes has been reduced to the number of time steps ("//TRIM(Num2LStr(WD_InitInput%InputFileData%NumPlanes))//").", ErrStat, ErrMsg, RoutineName )
-   ENDIF
-   
+
+   call AllocAry( farm%p%MaxNumPlanes, farm%p%NumTurbines, 'farm%p%MaxNumPlanes', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (Failed()) return
+   do i=1,farm%p%NumTurbines
+      ! Eventually, we will have different settings for different rotors
+      farm%p%MaxNumPlanes(i) = ceiling( 15.0 * Real( WD_InitInput%InputFileData%NumDFull + WD_InitInput%InputFileData%NumDBuff , ReKi ) / AWAE_InitInput%InputFileData%C_Meander )
+      farm%p%MaxNumPlanes(i) = max( 2, min( farm%p%MaxNumPlanes(i) , farm%p%n_TMax + 2 ) )
+   end do
+
    !...............................................................................................................................  
    ! step 3: initialize WAT, AWAE, and WD (b, c, and d can be done in parallel)
    !...............................................................................................................................  
@@ -227,7 +234,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
-   AWAE_InitInput%InputFileData%NumPlanes    = WD_InitInput%InputFileData%NumPlanes
+   AWAE_InitInput%MaxPlanes                  = MAXVAL(farm%p%MaxNumPlanes)
    AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
@@ -241,15 +248,15 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       
    farm%AWAE%IsInitialized = .true.
 
-   farm%p%X0_Low = AWAE_InitOutput%X0_Low
-   farm%p%Y0_low = AWAE_InitOutput%Y0_low
-   farm%p%Z0_low = AWAE_InitOutput%Z0_low
-   farm%p%nX_Low = AWAE_InitOutput%nX_Low
-   farm%p%nY_low = AWAE_InitOutput%nY_low
-   farm%p%nZ_low = AWAE_InitOutput%nZ_low
-   farm%p%dX_low = AWAE_InitOutput%dX_low
-   farm%p%dY_low = AWAE_InitOutput%dY_low
-   farm%p%dZ_low = AWAE_InitOutput%dZ_low
+   farm%p%X0_Low = AWAE_InitOutput%oXYZ_Low(1)
+   farm%p%Y0_low = AWAE_InitOutput%oXYZ_Low(2)
+   farm%p%Z0_low = AWAE_InitOutput%oXYZ_Low(3)
+   farm%p%nX_Low = AWAE_InitOutput%nXYZ_Low(1)
+   farm%p%nY_low = AWAE_InitOutput%nXYZ_Low(2)
+   farm%p%nZ_low = AWAE_InitOutput%nXYZ_Low(3)
+   farm%p%dX_low = AWAE_InitOutput%dXYZ_Low(1)
+   farm%p%dY_low = AWAE_InitOutput%dXYZ_Low(2)
+   farm%p%dZ_low = AWAE_InitOutput%dXYZ_Low(3)
    farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
    
       !-------------------
@@ -520,12 +527,15 @@ contains
    subroutine Set_WAT_DxDyDz()
       real(ReKi) :: TmpDx,TmpDy,TmpDz
       logical    :: HResDimsSame
-      ! If Mod_AmbWind<2, we don't read high res discretizations
-      if (AWAE_InitInput%InputFileData%Mod_AmbWind < 2) then
+      ! If Mod_AmbWind is 1 or 4, automatically calculate WAT DxDyDz
+      select case (AWAE_InitInput%InputFileData%Mod_AmbWind)
+      case (1,4)
          write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
-         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (calculated based on guidance for Mod_AmbWind==1)')
+         call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)// &
+                    ' (calculated based on guidance for Mod_AmbWind=='// &
+                    trim(Num2LStr(AWAE_InitInput%InputFileData%Mod_AmbWind))//')')
          return
-      endif
+      end select
       ! Check if all turbines use the same high res deltas
       HResDimsSame = .true.
       TmpDx = AWAE_InitInput%InputFileData%dX_high(1)
@@ -607,8 +617,9 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
-         WD_InitInp%TurbNum     = nt
-         WD_InitInp%OutFileRoot = farm%p%OutFileRoot
+         WD_InitInp%TurbNum      = nt
+         WD_InitInp%MaxNumPlanes = farm%p%MaxNumPlanes(nt)
+         WD_InitInp%OutFileRoot  = farm%p%OutFileRoot
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -680,10 +691,6 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
       FWrap_InitInp%tmax          = farm%p%TMax
       FWrap_InitInp%n_high_low    = farm%p%n_high_low + 1   ! Add 1 because the FAST wrapper uses an index that starts at 1
       FWrap_InitInp%dt_high       = farm%p%dt_high
-     
-      FWrap_InitInp%nX_high       = AWAE_InitOutput%nX_high
-      FWrap_InitInp%nY_high       = AWAE_InitOutput%nY_high
-      FWrap_InitInp%nZ_high       = AWAE_InitOutput%nZ_high
       
       if (farm%p%MooringMod > 0) then
          FWrap_Interval = farm%p%dt_mooring    ! when there is a farm-level mooring model, FASTWrapper will be called at the mooring coupling time step
@@ -703,14 +710,17 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
          FWrap_InitInp%TurbNum       = nt
          FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          
-         
-         FWrap_InitInp%p_ref_high(1) = AWAE_InitOutput%X0_high(nt)
-         FWrap_InitInp%p_ref_high(2) = AWAE_InitOutput%Y0_high(nt)
-         FWrap_InitInp%p_ref_high(3) = AWAE_InitOutput%Z0_high(nt)
+         FWrap_InitInp%nX_high       = AWAE_InitOutput%nXYZ_high(1,nt)
+         FWrap_InitInp%nY_high       = AWAE_InitOutput%nXYZ_high(2,nt)
+         FWrap_InitInp%nZ_high       = AWAE_InitOutput%nXYZ_high(3,nt)
 
-         FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
-         FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
-         FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
+         FWrap_InitInp%p_ref_high(1) = AWAE_InitOutput%oXYZ_high(1,nt)
+         FWrap_InitInp%p_ref_high(2) = AWAE_InitOutput%oXYZ_high(2,nt)
+         FWrap_InitInp%p_ref_high(3) = AWAE_InitOutput%oXYZ_high(3,nt)
+
+         FWrap_InitInp%dX_high       = AWAE_InitOutput%dXYZ_high(1,nt)
+         FWrap_InitInp%dY_high       = AWAE_InitOutput%dXYZ_high(2,nt)
+         FWrap_InitInp%dZ_high       = AWAE_InitOutput%dXYZ_high(3,nt)
 
          FWrap_InitInp%Vdist_High   => AWAE_InitOutput%Vdist_High(nt)%data
 
@@ -872,14 +882,14 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
       
       ! loads
-      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%m_Glue%Ext%SubstructureLoadsFF, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
       if (Failed()) return;
      
       ! kinematics
       IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
          SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
       ELSE
-         SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+         SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
       END IF
    
       CALL MeshMapCreate( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
@@ -963,7 +973,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
          ELSE
-            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
          END IF
    
          CALL Transfer_Point_to_Point( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
@@ -993,11 +1003,11 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
          ELSE
-            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
          END IF
       
          ! mapping; Note: SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()
-         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm,  &
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%m_Glue%Ext%SubstructureLoadsFF,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
          if (Failed()) return;
@@ -1052,7 +1062,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    farm%AWAE%u%Vy_wake    = 0.0_ReKi     ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%Vz_wake    = 0.0_ReKi     ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%D_wake     = 0.0_ReKi     ! Wake diameters at wake planes for each turbine      
-   
+
       !--------------------
       ! 1b. CALL AWAE_CO      
    call AWAE_CalcOutput( 0.0_DbKi, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
@@ -1108,7 +1118,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    !.......................................................................................
    ! CALL AWAE_CO
    !.......................................................................................
-   
+
    call AWAE_CalcOutput( 0.0_DbKi, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                      farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1148,7 +1158,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: n_ss                      
    INTEGER(IntKi)                          :: n_FMD   
    REAL(DbKi)                              :: t2                              ! time within the FAST-MoorDyn substepping loop for shared moorings
-   INTEGER(IntKi)                          :: ErrStatAWAE, ErrStatMD, ErrStat2 
+   INTEGER(IntKi)                          :: ErrStatMD, ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(ErrMsgLen)                    :: ErrMsgAWAE
    CHARACTER(ErrMsgLen)                    :: ErrMsgMD
@@ -1275,21 +1285,11 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    !  write(*,*) 'Total FAST and Moordyn for FF_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
    !#endif 
 
-   call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
-
-   !#ifdef printthreads   
-   !  tm3 = omp_get_wtime()
-   !  write(*,*) 'AWAE_US took '//trim(num2lstr(tm3-tm2))//' seconds.'
-   !  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm3-tm1))//' seconds.'
-   !#endif 
    
    ! update error messages from FAST's and AWAE's time steps
    DO nt = 1,farm%p%NumTurbines 
       call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates') ! FAST error status
    END DO
-   
-   call SetErrStat(ErrStatAWAE, ErrMsgAWAE, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! AWAE error status
    
    ! calculate outputs from FAST as needed by FAST.Farm
    do nt = 1,farm%p%NumTurbines
@@ -1395,7 +1395,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             ! Loop over user-requested, downstream distances (OutDist), m   
          do iOutDist = 1, farm%p%NOutDist
             
-            if (  farm%p%OutDist(iOutDist) >= maxval( farm%WD(nt)%y%x_plane(0:min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) ) then
+            if ( farm%p%OutDist(iOutDist) >= maxval( farm%WD(nt)%y%x_plane( 0:NINT(farm%WD(nt)%y%NumPlanes)-1 ) ) ) then
                
                farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
                farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = 0.0_ReKi
@@ -1432,7 +1432,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             else
                
                   ! Find wake volume which contains the user-requested downstream location.
-               do np = 0, min(farm%WD(nt)%p%NumPlanes-2 , n)
+               do np = 0, NINT(farm%WD(nt)%y%NumPlanes)-2
 
                   if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np+1) ) ) then   ! A wake volume has been found
 
@@ -1593,6 +1593,9 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    
   ! tm1 = omp_get_wtime()
    
+   ! Determine time step number
+   n = nint(t/farm%p%DT_low)
+
    !.......................................................................................
    ! calculate module outputs and perform some input-output solves (steps 1. and 2. and 3. can be done in parallel,
    !  but be careful that step 3 doesn't modify the inputs to steps 1 or 2)
@@ -1638,6 +1641,12 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    !.......................................................................................
    
       !--------------------
+      ! 0. call AWAE_UpdateStates to get the ambient wind and calculate wake-grid interactions
+   call AWAE_UpdateStates( n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                     farm%AWAE%OtherSt, farm%AWAE%m, ErrStat2, ErrMsg2 )    
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      !--------------------
       ! 1. call AWAE_CO 
    call AWAE_CalcOutput( t, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                      farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
@@ -1652,7 +1661,6 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
       ! NOTE: Visualization data is output via the AWAE module
-   n = nint(t/farm%p%DT_low)
    call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
@@ -1802,12 +1810,14 @@ END SUBROUTINE Transfer_FAST_to_WD
 SUBROUTINE Transfer_AWAE_to_WD(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
-   integer(intKi)  :: nt
+   integer(IntKi)  :: nt
+   integer(IntKi)  :: MaxPln
    
    DO nt = 1,farm%p%NumTurbines
-      farm%WD(nt)%u%V_plane      = farm%AWAE%y%V_plane(:,:,nt)   ! Advection, deflection, and meandering velocity of wake planes, m/s
-      farm%WD(nt)%u%Vx_wind_disk = farm%AWAE%y%Vx_wind_disk(nt)  ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
-      farm%WD(nt)%u%TI_amb       = farm%AWAE%y%TI_amb(nt)        ! Ambient turbulence intensity of wind at rotor disk
+      MaxPln = NINT(farm%WD(nt)%y%NumPlanes)-1
+      farm%WD(nt)%u%V_plane(:,0:MaxPln) = farm%AWAE%y%V_plane(:,0:MaxPln,nt)  ! Advection, deflection, and meandering velocity of wake planes, m/s
+      farm%WD(nt)%u%Vx_wind_disk        = farm%AWAE%y%Vx_wind_disk(nt)        ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
+      farm%WD(nt)%u%TI_amb              = farm%AWAE%y%TI_amb(nt)              ! Ambient turbulence intensity of wind at rotor disk
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD
@@ -1816,16 +1826,19 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
    integer(intKi)  :: nt
+   integer(IntKi)  :: MaxPln
    
-   DO nt = 1,farm%p%NumTurbines   
-      farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
-      farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine
+   DO nt = 1,farm%p%NumTurbines
+      MaxPln = NINT(farm%WD(nt)%y%NumPlanes)-1
+      farm%AWAE%u%NumPlanes (             nt) = farm%WD(nt)%y%NumPlanes                 ! Number of active wake planes for each turbine
+      farm%AWAE%u%xhat_plane(  :,0:MaxPln,nt) = farm%WD(nt)%y%xhat_plane(  :,0:MaxPln)  ! Orientations of wake planes, normal to wake planes, for each turbine
+      farm%AWAE%u%p_plane   (  :,0:MaxPln,nt) = farm%WD(nt)%y%p_plane   (  :,0:MaxPln)  ! Center positions of wake planes for each turbine
+      farm%AWAE%u%Vx_wake   (:,:,0:MaxPln,nt) = farm%WD(nt)%y%Vx_wake2  (:,:,0:MaxPln)  ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake   (:,:,0:MaxPln,nt) = farm%WD(nt)%y%Vy_wake2  (:,:,0:MaxPln)  ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake   (:,:,0:MaxPln,nt) = farm%WD(nt)%y%Vz_wake2  (:,:,0:MaxPln)  ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%D_wake    (    0:MaxPln,nt) = farm%WD(nt)%y%D_wake    (    0:MaxPln)  ! Wake diameters at wake planes for each turbine
       if (farm%p%WAT /= Mod_WAT_None) then
-         farm%AWAE%u%WAT_k(:,:,:,nt) = farm%WD(nt)%y%WAT_k          ! scaling factor for each wake plane for WAT
+         farm%AWAE%u%WAT_k  (:,:,0:MaxPln,nt) = farm%WD(nt)%y%WAT_k     (:,:,0:MaxPln)  ! scaling factor for each wake plane for WAT
       endif
    END DO
    

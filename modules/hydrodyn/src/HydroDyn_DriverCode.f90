@@ -179,6 +179,7 @@ PROGRAM HydroDynDriver
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
    SeaState_Initialized = .true.
       CALL CheckError()
+   p_SeaSt%WaveField%hasCurrField = .FALSE.
 
    if ( Interval /= drvrData%TimeInterval) then
       ErrMsg = 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.'
@@ -230,6 +231,20 @@ PROGRAM HydroDynDriver
          ErrMsg = 'PRPInputsFile must contain data for '//trim(num2lstr(u(1)%WAMITMesh%NNodes))//' WAMIT nodes as well as PRPmesh when PRPInputsMod < 0.'
          CALL CheckError()
       end if
+   END IF
+
+   IF ( drvrData%PRPInputsMod<-1_IntKi .and. drvrData%NAddDOF>0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'When multiple WAMIT bodies are present, additional generalized DOF are not supported. Need to set NAddDOF=0.'
+      CALL CheckError()
+   END IF
+
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( drvrData%NAddDOF > p%NAddDOF(1) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'NAddDOF in the HydroDyn driver input file is greater than that in the HydroDyn primary input file. This is not allowed.'
+         CALL CheckError()
+      END IF
    END IF
 
    ! Set initial inputs at t = 0

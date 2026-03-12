@@ -62,38 +62,60 @@ CONTAINS
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transforms  WAMIT input file data from a local (heading-angle, based) coordinate system to the global system. 
-   subroutine TransformWAMITMatrices( NBody, RotZ, M )
+   subroutine TransformWAMITMatrices( p, RotZ, M )
 !..................................................................................................................................
-      integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
-      real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
-      real(SiKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+
+      TYPE(WAMIT_ParameterType), intent(in   ) :: p        ! Parameters
+      real(R8Ki),                intent(in   ) :: RotZ(:)  ! NBody heading angles (radians)
+      real(SiKi),                intent(inout) :: M(:,:)   ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub (6+NAddDOF)x(6+NAddDOF) matrices
       
       integer(IntKi)   :: i,j,ii,jj,iSub,jSub
-      real(R8Ki)       :: Rj(3,3)
-      real(R8Ki)       :: Ri(3,3)
+      real(R8Ki)       :: Rj(6,6)
+      real(R8Ki)       :: Ri(6,6)
       
-      do j = 1, NBody
-         Rj(1,:) = (/ cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki/)
-         Rj(2,:) = (/-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki/)
-         Rj(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
-         do i = 1, NBody
+      do j = 1, p%NBody
+
+         jSub = p%BDOFStrt(j)
+
+         Rj(1,:) = [ cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+         Rj(2,:) = [-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+         Rj(3,:) = [     0.0_R8Ki,     0.0_R8Ki, 1.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+         Rj(4,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki, cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki]
+         Rj(5,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki,-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki]
+         Rj(6,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 1.0_R8Ki]
+
+         do i = 1, p%NBody
+
             if ( (.not. EqualRealNos(RotZ(i), 0.0_R8Ki)) .or. (.not. EqualRealNos(RotZ(j), 0.0_R8Ki)) ) then
-               Ri(1,:) = (/ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki/)
-               Ri(2,:) = (/-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki/)
-               Ri(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
-               do jj = 1,2
-                  jSub = (j-1)*6 + (jj-1)*3 + 1  
-                  do ii = 1,2
-                     iSub = (i-1)*6 + (ii-1)*3 + 1
-                     M(iSub:iSub+2,jSub:jSub+2) = matmul( transpose(Ri), matmul( M(iSub:iSub+2,jSub:jSub+2), Rj ) )
-                  end do
-               end do 
+
+               iSub = p%BDOFStrt(i)
+
+               Ri(1,:) = [ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+               Ri(2,:) = [-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+               Ri(3,:) = [     0.0_R8Ki,     0.0_R8Ki, 1.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki]
+               Ri(4,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki, cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki]
+               Ri(5,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki,-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki]
+               Ri(6,:) = [     0.0_R8Ki,     0.0_R8Ki, 0.0_R8Ki,     0.0_R8Ki,     0.0_R8Ki, 1.0_R8Ki]
+
+               ! Rigid-body to rigid-body modes
+               M(iSub:iSub+5,jSub:jSub+5)                   = matmul( transpose(Ri), matmul( M(iSub:iSub+5,jSub:jSub+5),        Rj ) )
+               ! Rigid-body to generalized modes
+               if ( p%NAddDOF(i) > 0_IntKi ) then
+                  M(iSub+6:iSub+5+p%NAddDOF(i),jSub:jSub+5) = matmul(                M(iSub+6:iSub+5+p%NAddDOF(i),jSub:jSub+5), Rj   )
+               end if
+               ! Generalized to rigid-body modes
+               if ( p%NAddDOF(j) > 0_IntKi ) then
+                  M(iSub:iSub+5,jSub+6:jSub+5+p%NAddDOF(j)) = matmul( transpose(Ri), M(iSub:iSub+5,jSub+6:jSub+5+p%NAddDOF(j))       )
+               end if
+               ! No transformation needed for generalized to generalized modes
+
             end if
+
          end do
 
       end do
+
    end subroutine TransformWAMITMatrices
-   
    
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
@@ -141,6 +163,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       COMPLEX(SiKi), ALLOCATABLE             :: WaveExctnC(:,:,:)                    ! Discrete Fourier transform of the instantaneous value of the total excitation force on the support platfrom from incident waves (N, N-m)
       COMPLEX(SiKi), ALLOCATABLE             :: WaveExctnCGrid(:,:,:,:)              ! Discrete Fourier transform of the instantaneous value of the total excitation force on the grid points from incident waves (N, N-m)
       REAL(ReKi)                             :: DffrctDim (6)                        ! Matrix used to redimensionalize WAMIT hydrodynamic wave excitation force  output (kg/s^2, kg-m/s^2            )
+      REAL(ReKi)                             :: DffrctDimAdd                         ! Redimensionalization factor for WAMIT hydrodynamic wave excitation force  output for generalized DOF
       REAL(SiKi), ALLOCATABLE                :: HdroAddMs (:,:,:)                    ! The frequency-dependent hydrodynamic added mass matrix from the radiation problem (kg  , kg-m  , kg-m^2  )
       REAL(SiKi), ALLOCATABLE                :: HdroDmpng (:,:,:)                    ! The frequency-dependent hydrodynamic damping    matrix from the radiation problem (kg/s, kg-m/s, kg-m^2/s)
       REAL(SiKi), ALLOCATABLE                :: HdroFreq  (:)                        ! Frequency components inherent in the hydrodynamic added mass matrix, hydrodynamic daming matrix, and complex wave excitation force per unit wave amplitude vector (rad/s)
@@ -151,7 +174,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(ReKi)                             :: PrvDir                               ! The value of TmpDir from the previous line (degrees)
       REAL(ReKi)                             :: PrvPer                               ! The value of TmpPer from the previous line (sec    )
       REAL(ReKi)                             :: SttcDim   (6,6)                      ! Matrix used to redimensionalize WAMIT hydrostatic  restoring              output (kg/s^2, kg-m/s^2, kg-m^2/s^2)
+      REAL(ReKi)                             :: SttcDimAdd                           ! Redimensionalization factor for WAMIT hydrostatic  restoring              output for generalized DOF
       REAL(ReKi)                             :: RdtnDim   (6,6)                      ! Matrix used to redimensionalize WAMIT hydrodynamic added mass and damping output (kg    , kg-m    , kg-m^2    )
+      REAL(ReKi)                             :: RdtnDimAdd                           ! Redimensionalization factor for WAMIT hydrodynamic added mass and damping output for generalized DOF
       REAL(ReKi)                             :: TmpData1                             ! A temporary           value  read in from a WAMIT file (-      )
       REAL(ReKi)                             :: TmpData2                             ! A temporary           value  read in from a WAMIT file (-      )
       REAL(ReKi)                             :: TmpDir                               ! A temporary direction        read in from a WAMIT file (degrees)
@@ -164,7 +189,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(ReKi), ALLOCATABLE                :: WAMITPer  (:)                        ! Period         components as ordered in the WAMIT output files (sec    )
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
 
-      INTEGER                                :: I,iGrid,iX,iY,iHdg,iBdy,iStp         ! Generic index
+      INTEGER                                :: I,iGrid,iX,iY,iHdg,iBdy,iStp,iDOF    ! Generic index
       INTEGER                                :: InsertInd                            ! The lowest sorted index whose associated frequency component is higher than the current frequency component -- this is to sort the frequency components from lowest to highest
       INTEGER                                :: J                                    ! Generic index
       INTEGER                                :: K                                    ! Generic index
@@ -263,17 +288,34 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          CALL SetErrStat( ErrID_Fatal, "DEVELOPER ERROR: If NBodyMod = 2 or 3, then NBody for the a WAMIT object must be equal to 1", ErrStat, ErrMsg, RoutineName) 
          return
       end if     
+
+      call AllocAry( p%NAddDOF , p%NBody, 'p%NAddDOF' , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( p%BDOFStrt, p%NBody, 'p%BDOFStrt', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      p%NAddDOF   = InitInp%NAddDOF
+      p%NDOF      = 0_IntKi
+      do iBody = 1, p%NBody
+         p%BDOFStrt(iBody) = p%NDOF + 1_IntKi
+         p%NDOF = p%NDOF + 6_IntKi + p%NAddDOF(iBody)
+      end do
+      p%HasAddDOF = ( p%NDOF > 6*p%NBody )
       
          ! Allocate misc var and parameter vectors/matrices
       call AllocAry( p%F_HS_Moment_Offset,  6, p%NBody, 'p%F_HS_Moment_Offset', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( m%F_HS              ,  6*p%NBody, 'm%F_HS'              , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( m%F_Waves1          ,  6*p%NBody, 'm%F_Waves1'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( m%F_Rdtn            ,  6*p%NBody, 'm%F_Rdtn'            , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( m%F_PtfmAM          ,  6*p%NBody, 'm%F_PtfmAM'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( p%HdroAdMsI, 6*p%NBody,6*p%NBody, 'p%HdroAdMsI'         , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      call AllocAry( p%HdroSttc , 6*p%NBody,6*p%NBody, 'p%HdroSttc'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( m%F_HS              ,  p%NDOF, 'm%F_HS'              , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( m%F_Waves1          ,  p%NDOF, 'm%F_Waves1'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( m%F_Rdtn            ,  p%NDOF, 'm%F_Rdtn'            , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( m%F_PtfmAM          ,  p%NDOF, 'm%F_PtfmAM'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( p%HdroAdMsI,    p%NDOF,p%NDOF, 'p%HdroAdMsI'         , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry( p%HdroSttc ,    p%NDOF,p%NDOF, 'p%HdroSttc'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      
+         ! Allocate input/output arrays
+      if ( p%HasAddDOF ) then
+         call AllocAry( u%qAddDOF,       p%NDOF-6*p%NBody, 'u%qAddDOF'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( u%qAddDOFDot,    p%NDOF-6*p%NBody, 'u%qAddDOFDot'    , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( u%qAddDOFDotDot, p%NDOF-6*p%NBody, 'u%qAddDOFDotDot' , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call AllocAry( y%FAddDOF,       p%NDOF-6*p%NBody, 'y%FAddDOF'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
       do iBody = 1, p%NBody     
          p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
          p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
@@ -282,7 +324,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          p%F_HS_Moment_Offset(5,iBody) = -p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
          p%F_HS_Moment_Offset(6,iBody) = 0.0_ReKi
       end do 
-
          
          ! Tell our nice users what is about to happen that may take a while:
 
@@ -346,8 +387,10 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
       END DO          ! I - All moment-rotation elements (rows)
 
-
-
+      ! For additional generalized DOF - requires WAMITULEN = 1.0
+      SttcDimAdd   = p%WaveField%RhoXg
+      RdtnDimAdd   = p%WaveField%WtrDens
+      DffrctDimAdd = p%WaveField%RhoXg
 
          ! Let's read in and redimensionalize the hydrodynamic data from the WAMIT
          !   output files:
@@ -356,16 +399,11 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          ! Linear restoring from the hydrostatics problem:
 
-      CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 )  ! Open file.
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-         IF ( ErrStat >= AbortErrLev )  THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN  ! Open file.
       p%HdroSttc (:,:) = 0.0 ! Initialize to zero
 
-      DO    ! Loop through all rows in the file
 
+      DO    ! Loop through all rows in the file
 
          READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
 
@@ -373,11 +411,25 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          ! In case NBodyMod = 1, we now have WAMIT matrices which are potentially larger than 6x6, so we need to determine how the SttcDim multiplier matrix (a 6x6)
          !   should be applied to the larger WAMIT matrix.  
-            
-            iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
-            jSub = mod(J-1,6)+1  
 
-            p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
+            IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+               CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+               CALL Cleanup()
+               RETURN
+            END IF
+            
+            IF ( p%HasAddDOF ) THEN
+
+               p%HdroSttc (I,J) = TmpData1*SttcDimAdd      ! Redimensionalize the data and place it at the appropriate location within the array
+
+            ELSE
+
+               iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+               jSub = mod(J-1,6)+1
+
+               p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
+
+            END IF
 
          ELSE                                           ! We must have reached the end of the file, so stop reading in data
 
@@ -385,13 +437,14 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          END IF
 
-
       END DO ! End loop through all rows in the file
 
       CLOSE ( UnWh ) ! Close file.
 
          ! need to transform p%HdroSttc when PtfmRefztRot is nonzero per plan
-      call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, p%HdroSttc )
+      call TransformWAMITMatrices( p, InitInp%PtfmRefztRot, p%HdroSttc )
+
+
 
          ! Linear, frequency-dependent hydrodynamic added mass and damping from the
          !   radiation problem:
@@ -446,8 +499,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       CALL AllocAry( WAMITPer,     NInpFreq,    'WAMITPer',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       CALL AllocAry( SortFreqInd,  NInpFreq,    'SortFreqInd',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       CALL AllocAry( HdroFreq,     NInpFreq,    'HdroFreq',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      CALL AllocAry( HdroAddMs,    NInpFreq, 6*p%NBody, 6*p%NBody, 'HdroAddMs',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      CALL AllocAry( HdroDmpng,    NInpFreq, 6*p%NBody, 6*p%NBody, 'HdroDmpng',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL AllocAry( HdroAddMs,    NInpFreq, p%NDOF, p%NDOF, 'HdroAddMs', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL AllocAry( HdroDmpng,    NInpFreq, p%NDOF, p%NDOF, 'HdroDmpng', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          IF ( ErrStat >= AbortErrLev )  THEN
             CALL Cleanup()
@@ -562,17 +615,25 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   CALL SetErrStat( ErrID_Fatal, "Error reading line from WAMIT file", ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
                   RETURN
-               END IF              
-!bjj: verify that I and J are valid indices for RdtnDim                  
+               END IF
+               IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.1'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
                   
-                  
-              !  IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
-              !    Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                       ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
-                  iSub = mod(I-1,6)+1                                                              ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+              IF ( p%HasAddDOF )  THEN
+
+                  HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDimAdd                             ! Redimensionalize the data and place it at the appropriate location within the array
+
+              ELSE
+
+                  iSub = mod(I-1,6)+1                                                              ! Finds the 6x6 sub-matrix indexing for the RdtnDim multiplier matrix
                   jSub = mod(J-1,6)+1  
 
                   HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                     ! Redimensionalize the data and place it at the appropriate location within the array
-              ! END IF
+
+              END IF
 
             ELSE                                ! We must have a positive, non-infinite frequency.
 
@@ -582,15 +643,25 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   CALL Cleanup()
                   RETURN
                END IF              
-                  
+               IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.1'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
 
-               !IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
-                !  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                             ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
-                  iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
-                  jSub = mod(J-1,6)+1  
+               IF ( p%HasAddDOF )  THEN
+
+                  HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDimAdd                           ! Redimensionalize the data and place it at the appropriate location within the array
+                  HdroDmpng(SortFreqInd(K),I,J) = TmpData2*RdtnDimAdd*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
+
+               ELSE
+
+                  iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the RdtnDim multiplier matrix
+                  jSub = mod(J-1,6)+1
                   HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                           ! Redimensionalize the data and place it at the appropriate location within the array
                   HdroDmpng(SortFreqInd(K),I,J) = TmpData2*RdtnDim(iSub,jSub)*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
-              ! END IF
+
+               END IF
 
             END IF
 
@@ -611,8 +682,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
          ! need to transform HdroAddMs and HdroDmpng when PtfmRefztRot is nonzero per plan
       do I = 1, NInpFreq
-         call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, HdroAddMs(I,:,:) )
-         call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, HdroDmpng(I,:,:) )
+         call TransformWAMITMatrices( p, InitInp%PtfmRefztRot, HdroAddMs(I,:,:) )
+         call TransformWAMITMatrices( p, InitInp%PtfmRefztRot, HdroDmpng(I,:,:) )
       end do
       
       
@@ -683,15 +754,11 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       !   to store the directions and frequency- and direction-dependent complex wave
       !   excitation force per unit wave amplitude vector:
 
-      CALL AllocAry(  WAMITWvDir,    NInpWvDir, 'WAMITWvDir',   ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      CALL AllocAry(  SortWvDirInd,  NInpWvDir, 'SortWvDirInd', ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      CALL AllocAry(  HdroWvDir,     NInpWvDir, 'HdroWvDir',    ErrStat2, ErrMsg2 );  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-         IF ( ErrStat >= AbortErrLev )  THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      CALL AllocAry(  WAMITWvDir,    NInpWvDir, 'WAMITWvDir',   ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
+      CALL AllocAry(  SortWvDirInd,  NInpWvDir, 'SortWvDirInd', ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
+      CALL AllocAry(  HdroWvDir,     NInpWvDir, 'HdroWvDir',    ErrStat2, ErrMsg2 );  IF(Failed()) RETURN
             
-      ALLOCATE ( HdroExctn   (NInpFreq,NInpWvDir,6*p%NBody) , STAT=ErrStat2 ) ! complex so we don't have a built in subroutine
+      ALLOCATE ( HdroExctn   (NInpFreq,NInpWvDir,p%NDOF) , STAT=ErrStat2 ) ! complex so we don't have a built in subroutine
       IF ( ErrStat2 /= 0 )  THEN
          CALL SetErrStat( ErrID_Fatal, 'Error allocating space for HdroExctn array', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
@@ -821,6 +888,11 @@ if (p%ExctnMod == 1 ) then
                   CALL Cleanup()
                   RETURN
                END IF
+               IF ( I > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.3'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
 
 
             IF ( FirstPass .OR. ( TmpPer /= PrvPer ) )  THEN   ! .TRUE. if we are on the first pass or if the period    currently read in is different than the previous period    read in; thus we found a new period    in the WAMIT file!
@@ -851,9 +923,16 @@ if (p%ExctnMod == 1 ) then
 
             END IF
 
-            iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix 
-            HdroExctn(SortFreqInd(K),SortWvDirInd(J),I) = CMPLX( TmpRe, TmpIm )*DffrctDim(iSub) ! Redimensionalize the data and place it at the appropriate location within the array
+            IF ( p%HasAddDOF ) THEN
 
+               HdroExctn(SortFreqInd(K),SortWvDirInd(J),I) = CMPLX( TmpRe, TmpIm )*DffrctDimAdd    ! Redimensionalize the data and place it at the appropriate location within the array
+
+            ELSE
+
+               iSub = mod(I-1,6)+1                                                                 ! Finds the 6x6 sub-matrix indexing for the DffrctDim multiplier matrix
+               HdroExctn(SortFreqInd(K),SortWvDirInd(J),I) = CMPLX( TmpRe, TmpIm )*DffrctDim(iSub) ! Redimensionalize the data and place it at the appropriate location within the array
+
+            END IF
 
          ELSE                    ! We must have reached the end of the file, so stop reading in data
 
@@ -911,22 +990,9 @@ end if
          RETURN         
       END IF
 
-
-
          ! Set the infinite-frequency limit of the frequency-dependent hydrodynamic
          !   added mass matrix, HdroAdMsI, based on the highest frequency available:
-!TODO: Is this index order correct for computational speed? GJH 9/5/19
-      !Indx = 0
-      DO J = 1,6*p%NBody        ! Loop through all rows    of HdroAdMsI
-         DO K = 1,6*p%NBody     ! Loop through all columns of HdroAdMsI above and including the diagonal
-           ! Indx = Indx + 1
-            p%HdroAdMsI(J,K) = HdroAddMs(NInpFreq,J,K)
-         END DO          ! K - All columns of HdroAdMsI above and including the diagonal
-      !   DO K = J+1,6   ! Loop through all rows    of HdroAdMsI below the diagonal
-      !      p%HdroAdMsI(K,J) = p%HdroAdMsI(J,K)
-      !   END DO          ! K - All rows    of HdroAdMsI below the diagonal
-      END DO             ! J - All rows    of HdroAdMsI
-
+      p%HdroAdMsI = HdroAddMs(NInpFreq,:,:)
 
       if ( ( p%ExctnMod == 0 ) ) then
          
@@ -941,7 +1007,7 @@ end if
             if ( p%ExctnMod == 1 ) then
 
                   ! Initialize everything to zero:
-               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),p%NDOF) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnGrid array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
@@ -962,12 +1028,7 @@ end if
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
-            
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  if ( ErrStat >= AbortErrLev ) then
-                     call Cleanup()
-                     return
-                  end if   
+               if(Failed()) return
             end if
             
          CASE ( WaveMod_ExtFull )              ! User wave data.
@@ -1036,7 +1097,7 @@ end if
                
                   ! ALLOCATE the arrays:
 
-               ALLOCATE ( WaveExctnC(0:p%WaveField%NStepWave2,p%NExctnHdg+1,6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( WaveExctnC(0:p%WaveField%NStepWave2,p%NExctnHdg+1,p%NDOF) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
@@ -1044,7 +1105,7 @@ end if
                END IF
 
                if (p%ExctnDisp > 0 ) then
-                  ALLOCATE (  WaveExctnCGrid (0:p%WaveField%NStepWave2,p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE (  WaveExctnCGrid (0:p%WaveField%NStepWave2,p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),p%NDOF) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnCGrid array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
@@ -1052,7 +1113,7 @@ end if
                   END IF
                end if
                
-               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave, p%ExctnGridParams%n(2),p%ExctnGridParams%n(3),p%ExctnGridParams%n(4),p%NDOF) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnGrid array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
@@ -1091,6 +1152,7 @@ end if
 
                         HdroExctn(I,J,3) = Fxy*( HdroExctn(I,J,3) )
                         HdroExctn(I,J,6) = Fxy*( HdroExctn(I,J,6) )
+                        HdroExctn(I,J,7:p%NDOF) = Fxy*HdroExctn(I,J,7:p%NDOF)
 
                      end do
                   end do  
@@ -1101,7 +1163,7 @@ end if
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
                         do iBody = 1, p%NBody
-                           K = 6*(iBody-1)
+                           K = p%BDOFStrt(iBody) - 1_IntKi
                            Ctmp1 = ( HdroExctn(I,J,K+1)*cos(InitInp%PtfmRefztRot(iBody)) ) - ( HdroExctn(I,J,K+2)*sin(InitInp%PtfmRefztRot(iBody)) )
                            Ctmp2 = ( HdroExctn(I,J,K+1)*sin(InitInp%PtfmRefztRot(iBody)) ) + ( HdroExctn(I,J,K+2)*cos(InitInp%PtfmRefztRot(iBody)) )
                            Ctmp4 = ( HdroExctn(I,J,K+4)*cos(InitInp%PtfmRefztRot(iBody)) ) - ( HdroExctn(I,J,K+5)*sin(InitInp%PtfmRefztRot(iBody)) )
@@ -1136,19 +1198,14 @@ end if
 
                      ! Compute the discrete Fourier transform of the instantaneous value of the
                      !   total excitation force on the support platfrom from incident waves:
-                     DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
+                     DO J = 1,p%NDOF           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
                         TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
                         dirInRange = GetAngleInRange(TmpCoord(2),HdroWvDir(1),HdroWvDir(NInpWvDir),tmpDir2); TmpCoord(2) = tmpDir2
                         IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
                            CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
                         END IF
-                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                        IF ( ErrStat >= AbortErrLev ) THEN
-                           CALL Cleanup()
-                           RETURN
-                        END IF
+                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 ); IF (Failed()) RETURN
                         WaveExctnC(I,iHdg,J) = WaveExctnC(I,iHdg,J) * CMPLX(p%WaveField%WaveElevC0(1,I), p%WaveField%WaveElevC0(2,I))
                      END DO                ! J - All wave excitation forces and moments
                   END DO                ! iHdg - All PRP heading
@@ -1162,7 +1219,7 @@ end if
                      RETURN
                   END IF
                DO iHdg = 1,p%NExctnHdg+1
-                  DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
+                  DO J = 1,p%NDOF           ! Loop through all wave excitation forces and moments
                      CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,1_IntKi,1_IntKi,iHdg,J), WaveExctnC(:,iHdg,J), FFT_Data, ErrStat2 )
                      CALL SetErrStat( ErrStat2, ' An error occurred while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                      IF ( ErrStat >= AbortErrLev) THEN
@@ -1214,19 +1271,14 @@ end if
 
                      ! Compute the discrete Fourier transform of the instantaneous value of the
                      !   total excitation force on the support platfrom from incident waves:
-                     DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
+                     DO J = 1,p%NDOF           ! Loop through all wave excitation forces and moments
                         TmpCoord(1) = Omega
                         TmpCoord(2) = p%WaveField%WaveDirArr(I) - PRPHdg*R2D
                         dirInRange = GetAngleInRange(TmpCoord(2),HdroWvDir(1),HdroWvDir(NInpWvDir),tmpDir2); TmpCoord(2) = tmpDir2
                         IF (.NOT. dirInRange) THEN ! Somewhat redundant check. Can be removed in the future.
                            CALL SetErrStat(ErrID_Fatal,' Wave heading out of range.', ErrStat, ErrMsg, RoutineName)
                         END IF
-                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                        IF ( ErrStat >= AbortErrLev ) THEN
-                           CALL Cleanup()
-                           RETURN
-                        END IF
+                        CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,iHdg,J), ErrStat2, ErrMsg2 ); IF(FAILED()) RETURN
                         do iGrid = 1, p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3)
                            WaveExctnCGrid(I,iGrid,iHdg,J) = WaveExctnC(I,iHdg,J) * CMPLX(p%WaveField%WaveElevC(1,I,iGrid), p%WaveField%WaveElevC(2,I,iGrid))
                         end do
@@ -1248,7 +1300,7 @@ end if
                   DO iGrid = 1, p%ExctnGridParams%n(2)*p%ExctnGridParams%n(3)
                      iX = mod(iGrid-1, p%ExctnGridParams%n(2)) + 1  ! 1st n index is time
                      iY = (iGrid-1) / p%ExctnGridParams%n(2) + 1
-                     DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments   
+                     DO J = 1,p%NDOF           ! Loop through all wave excitation forces and moments
                         CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,iX,iY,iHdg,J), WaveExctnCGrid(:,iGrid,iHdg,J), FFT_Data, ErrStat2 )
                         CALL SetErrStat( ErrStat2, ' An error occurred while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev) THEN
@@ -1280,10 +1332,11 @@ end if
                      iY = (iGrid-1) / p%ExctnGridParams%n(2) + 1
                      DO J = 0,p%WaveField%NStepWave
                         DO iBdy = 1,p%NBody
-                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                           p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)) = tmpVec3
-                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                           p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)) = tmpVec3
+                           iDOF = p%BDOFStrt(iBdy)-1_IntKi
+                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(iDOF+1):(iDOF+3)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                           p%WaveExctnGrid(J,iX,iY,iHdg,(iDOF+1):(iDOF+3)) = tmpVec3
+                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(iDOF+4):(iDOF+6)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                           p%WaveExctnGrid(J,iX,iY,iHdg,(iDOF+4):(iDOF+6)) = tmpVec3
                         END DO
                      END DO
                   END DO
@@ -1365,12 +1418,7 @@ end if
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
-            
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  if ( ErrStat >= AbortErrLev ) then
-                     call Cleanup()
-                     return
-                  end if   
+                  if (Failed()) return
             end if
             
             IF ( (p%ExctnMod>0) .AND. (p%ExctnDisp==2) ) THEN ! Allocate and initialize array for filtered potential-flow body positions
@@ -1418,50 +1466,28 @@ end if
             CALL MOVE_ALLOC( HdroAddMs, Conv_Rdtn_InitInp%HdroAddMs )
             CALL MOVE_ALLOC( HdroDmpng, Conv_Rdtn_InitInp%HdroDmpng )
             Conv_Rdtn_InitInp%NBody               = InitInp%NBody
+            conv_rdtn_InitInp%NDOF                = p%NDOF
             Conv_Rdtn_InitInp%RdtnTMax            = InitInp%RdtnTMax
             Conv_Rdtn_InitInp%RdtnDT              = InitInp%Conv_Rdtn%RdtnDT
             Conv_Rdtn_InitInp%HighFreq            = HighFreq
             Conv_Rdtn_InitInp%WAMITFile           = InitInp%WAMITFile
             Conv_Rdtn_InitInp%NInpFreq            = NInpFreq
-    
-         
-            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
-                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
-            
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
-               
 
+            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
+                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2); IF (Failed()) RETURN
             
          ELSE IF ( InitInp%RdtnMod == 2 ) THEN
             
             SS_Rdtn_InitInp%InputFile    = InitInp%WAMITFile    
 
-            call AllocAry(SS_Rdtn_InitInp%enabledDOFs, 6*p%NBody, 'SS_Rdtn_InitInp%enabledDOFs', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
+            call AllocAry(SS_Rdtn_InitInp%enabledDOFs, 6*p%NBody, 'SS_Rdtn_InitInp%enabledDOFs', ErrStat2, ErrMsg2); if (Failed()) return
             SS_Rdtn_InitInp%enabledDOFs  = 1                        !  Set to 1 (True) for all DOFs, meaning each DOF is to be used in the analysis.   
             Interval_Sub                 = InitInp%Conv_Rdtn%RdtnDT
             SS_Rdtn_InitInp%NBody        = InitInp%NBody
-            call AllocAry(SS_Rdtn_InitInp%PtfmRefztRot, p%NBody, 'SS_Rdtn_InitInp%PtfmRefztRot', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF
+            call AllocAry(SS_Rdtn_InitInp%PtfmRefztRot, p%NBody, 'SS_Rdtn_InitInp%PtfmRefztRot', ErrStat2, ErrMsg2); if (Failed()) return
             SS_Rdtn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
             CALL SS_Rad_Init(SS_Rdtn_InitInp, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, &
-                                   m%SS_Rdtn_y, m%SS_Rdtn, Interval_Sub, SS_Rdtn_InitOut, ErrStat2, ErrMsg2)
-            
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL Cleanup()
-                  RETURN
-               END IF            
+                                   m%SS_Rdtn_y, m%SS_Rdtn, Interval_Sub, SS_Rdtn_InitOut, ErrStat2, ErrMsg2); IF (Failed()) RETURN
             
          END IF
          
@@ -1503,13 +1529,7 @@ end if
                         ,TranslationVel    = .TRUE.            &
                         ,RotationVel       = .TRUE.            &
                         ,TranslationAcc    = .TRUE.            &
-                        ,RotationAcc       = .TRUE.)
-         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+                        ,RotationAcc       = .TRUE.); if (Failed()) return
          
       do iBody = 1, p%NBody
 
@@ -1518,16 +1538,12 @@ end if
          
          
             ! Create the node on the mesh
-  
          CALL MeshPositionNode (u%Mesh                                &
                                  , iBody                              &
                                  , (/InitInp%PtfmRefxt(iBody), InitInp%PtfmRefyt(iBody), InitInp%PtfmRefzt(iBody)/)   &  
                                  , ErrStat2                           &
                                  , ErrMsg2                            &
-                                 , orientation )
-      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
+                                 , orientation ); if (Failed()) return
       
             ! Create the mesh element
          CALL MeshConstructElement (  u%Mesh              &
@@ -1535,19 +1551,13 @@ end if
                                      , ErrStat2           &
                                      , ErrMsg2            &
                                      , iBody              &
-                                                 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                                                 ); if (Failed()) return
             
       end do
 
       CALL MeshCommit ( u%Mesh              &
-                        , ErrStat2            &
-                        , ErrMsg2             )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF      
+                      , ErrStat2            &
+                      , ErrMsg2             ); if (Failed()) return
 
         call MeshCopy ( SrcMesh   = u%Mesh           &
                        ,DestMesh  = y%Mesh           &
@@ -1556,30 +1566,27 @@ end if
                        ,ErrStat   = ErrStat2         &
                        ,ErrMess   = ErrMsg2          &
                        ,Force     = .TRUE.           &
-                       ,Moment    = .TRUE.           )
-        
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF    
+                       ,Moment    = .TRUE.           ); if (Failed()) return
+
       u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
-
       
          ! Define initialization-routine output here:
-         
-      
-     
-                                               
 
       ! initialize misc vars:      
-   m%LastIndWave = 1
+      m%LastIndWave = 1
        
        CALL Cleanup()
        
 CONTAINS
 
+   LOGICAL FUNCTION Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      IF (Failed) THEN
+         CALL Cleanup()
+      END IF
+   END FUNCTION Failed
 
    SUBROUTINE Cleanup()
    
@@ -1700,6 +1707,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       INTEGER                                           :: I               ! Generic loop counter
       INTEGER                                           :: nTime           ! Number of inputs
       integer(IntKi)                                    :: iBody           ! WAMIT body index
+      integer(IntKi)                                    :: AddDOFCntr      ! Counter for additional DOF
 
       integer(IntKi)                                    :: indxStart, indxEnd                   ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
 
@@ -1741,20 +1749,27 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                ErrMsg = ' Failed to allocate array Conv_Rdtn_u(I)%Velocity.'
                RETURN
             END IF
+            AddDOFCntr = 0_IntKi
             do iBody=1,p%NBody
-               indxStart = (iBody-1)*6+1
-               indxEnd   = indxStart+5 
+               indxStart = p%BDOFStrt(iBody)
+               indxEnd   = indxStart+5
                call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
                call hiFrameTransform( i2h, Inputs(I)%PtfmRefY, Inputs(I)%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
                Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = tmpVec6
+               if ( p%NAddDOF(iBody) > 0_IntKi ) then
+                  indxStart = p%BDOFStrt(iBody)+6
+                  indxEnd   = indxStart-1+p%NAddDOF(iBody)
+                  Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = Inputs(I)%qAddDOFDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+                  AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
+               end if
             end do
          END DO
-                 
+
          CALL Conv_Rdtn_UpdateStates( t, n, Conv_Rdtn_u, InputTimes, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, &
                                       z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
-         
+
          DEALLOCATE(Conv_Rdtn_u)
-         
+
       ELSE IF ( p%RdtnMod == 2 )  THEN       ! Update the state-space radiation memory effect sub-module's state      
           
            ! Allocate array of SS_Rdtn inputs
@@ -1877,14 +1892,12 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       
             
          ! Local Variables:
-      !REAL(ReKi)                           :: F_HS     (6)                            ! Total load contribution from hydrostatics, including the effects of waterplane area and the center of buoyancy (N, N-m)
-      !REAL(ReKi)                           :: F_Waves  (6)                            ! Total load contribution from incident waves (i.e., the diffraction problem) (N, N-m)   
-      !REAL(ReKi)                           :: F_Rdtn   (6)                            ! Total load contribution from wave radiation damping (i.e., the diffraction problem) (N, N-m)
-      INTEGER(IntKi)                       :: I,iStart                                ! Generic index
-      REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotdot(6*p%NBody)  ! kinematics for all WAMIT bodies
+      INTEGER(IntKi)                       :: I                                       ! Generic index
+      REAL(ReKi)                           :: q(p%NDOF), qdot(p%NDOF), qdotdot(p%NDOF)! kinematics for all WAMIT bodies
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       INTEGER(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
       INTEGER(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
+      INTEGER(IntKi)                       :: AddDOFCntr                              ! Aggregated counter for additional DOF forcing outputs
       REAL(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
       REAL(ReKi)                           :: refBodyPosition(3)
       REAL(ReKi)                           :: tmpVec3(3),tmpVec6(6)
@@ -1903,12 +1916,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      
-      
-         ! Compute outputs here:
-         
-      
-      
+
          ! Compute the load contribution from incident waves (i.e., the diffraction problem):
       if ( p%ExctnMod == 0 ) then
          
@@ -1916,31 +1924,28 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       else if ( p%ExctnMod == 1 ) then
 
+         ! Abort if the wave excitation loads have not been computed yet:
+         IF ( .NOT. ALLOCATED ( p%WaveExctnGrid ) )  THEN
+            ErrMsg  = ' Routine WAMIT_Init() must be called before routine WAMIT_CalcOutput().'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+
          if ( p%ExctnDisp == 0 ) then         
-               ! Abort if the wave excitation loads have not been computed yet:
-            IF ( .NOT. ALLOCATED ( p%WaveExctnGrid ) )  THEN
-               ErrMsg  = ' Routine WAMIT_Init() must be called before routine WAMIT_CalcOutput().'
-               ErrStat = ErrID_Fatal
-               RETURN
-            END IF
 
             DO iBody  = 1,p%NBody
                bodyPosition(1) = 0.0
                bodyPosition(2) = 0.0
                bodyPosition(3) = WrapToPi(u%PtfmRefY)
-               iStart = (iBody-1)*6+1
+
+               indxStart = p%BDOFStrt(iBody)
+               indxEnd   = indxStart+5+p%NAddDOF(iBody)
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
-               m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,iStart:iStart+5), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
+               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( 6+p%NAddDOF(iBody), Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
 
-         else ! p%ExctnDisp > 0
-            IF ( .NOT. allocated ( p%WaveExctnGrid ) )  THEN
-               ErrMsg  = ' Routine WAMIT_Init() must be called before routine WAMIT_CalcOutput().'
-               ErrStat = ErrID_Fatal
-               RETURN
-            END IF
-            ! We are using the displaced x,y location of the WAMIT bodies to determine the Wave Exication force
+         else ! p%ExctnDisp > 0; we are using the displaced x,y location of the WAMIT bodies to determine the wave exication force
 
             DO iBody  = 1,p%NBody
                IF ( p%ExctnDisp == 1 ) THEN
@@ -1959,11 +1964,13 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                bodyPosition(1) = bodyPosition(1) - (refBodyPosition(1) - u%Mesh%Position(1,iBody))
                bodyPosition(2) = bodyPosition(2) - (refBodyPosition(2) - u%Mesh%Position(2,iBody))
 
-               iStart = (iBody-1)*6+1
+               indxStart = p%BDOFStrt(iBody)
+               indxEnd   = indxStart+5+p%NAddDOF(iBody)
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
-               m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,iStart:iStart+5), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
+               m%F_Waves1(indxStart:indxEnd) = WAMIT_ForceWaves_Interp( 6+p%NAddDOF(iBody), Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,indxStart:indxEnd), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             END DO
+
          end if
 
       else if ( p%ExctnMod == 2 ) then
@@ -1975,7 +1982,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       end if
       
-      
+      AddDOFCntr = 0_IntKi
       do iBody = 1, p%NBody
          
          ! Determine the rotational angles from the direction-cosine matrix
@@ -2001,10 +2008,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
             FrstWarn_LrgY = .FALSE.
          END IF
 
-         indxStart = (iBody-1)*6+1
+         indxStart = p%BDOFStrt(iBody)
          indxEnd   = indxStart+5
 
-         ! Displacement with Tait-Bryan angles following the Z-Y-X convention
+         ! Displacement with Tait-Bryan angles following the intrinsic Z-Y-X convention
          q(indxStart:indxEnd) = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
 
          ! Get velocity and acceleration in the heading frame
@@ -2014,6 +2021,15 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationAcc(:,iBody), tmpVec6(1:3), ErrStat2, ErrMsg2)
          call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationAcc(:,iBody),    tmpVec6(4:6), ErrStat2, ErrMsg2)
          qdotdot(indxStart:indxEnd)   = tmpVec6
+
+         if ( p%NAddDOF(iBody) > 0_IntKi ) then
+            indxStart = p%BDOFStrt(iBody) + 6
+            indxEnd   = indxStart - 1 + p%NAddDOF(iBody)
+            q      (indxStart:indxEnd) = u%qAddDOF      (AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            qdot   (indxStart:indxEnd) = u%qAddDOFDot   (AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            qdotdot(indxStart:indxEnd) = u%qAddDOFDotDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+            AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
+         end if
          
       end do
       
@@ -2022,24 +2038,31 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       ! m%F_HS = -matmul(p%HdroSttc,q)
       m%F_HS = 0.
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6+1
-         indxEnd   = indxStart+5
+         indxStart = p%BDOFStrt(iBody)
+         indxEnd   = p%BDOFStrt(iBody)+5
          m%F_HS((indxStart+2):(indxEnd-1)) = -matmul(p%HdroSttc((indxStart+2):(indxEnd-1),(indxStart+2):(indxEnd-1)),&
                                                               q((indxStart+2):(indxEnd-1)))
+         if ( p%NAddDOF(iBody) > 0_IntKi ) then
+            m%F_HS((indxEnd+1):(indxEnd+p%NAddDOF(iBody))) = -matmul(p%HdroSttc((indxEnd+1):(indxEnd+p%NAddDOF(iBody)),(indxStart+2):(indxEnd-1)),          &
+                                                              q((indxStart+2):(indxEnd-1)))
+            m%F_HS(indxStart:indxEnd+p%NAddDOF(iBody))     =  m%F_HS(indxStart:indxEnd+p%NAddDOF(iBody))                                                    &
+                                                             -matmul(p%HdroSttc(indxStart:indxEnd+p%NAddDOF(iBody),(indxEnd+1):(indxEnd+p%NAddDOF(iBody))), &
+                                                              q((indxEnd+1):(indxEnd+p%NAddDOF(iBody))))
+         end if
          m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)
       end do 
 
       ! Transform hydrostatic loads back to the inertial frame
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6+1
+         indxStart = p%BDOFStrt(iBody)
          indxEnd   = indxStart+2
          ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
-         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
+         call hiFrameTransform( h2i, q(p%BDOFStrt(iBody)+5), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_HS(indxStart:indxEnd) = tmpVec3
          indxStart = indxEnd+1
          indxEnd   = indxStart+2
          ! call hiFrameTransform( h2i, u%PtfmRefY, m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
-         call hiFrameTransform( h2i, q(iBody*6), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
+         call hiFrameTransform( h2i, q(p%BDOFStrt(iBody)+5), m%F_HS(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_HS(indxStart:indxEnd) = tmpVec3
       end do   
       
@@ -2052,7 +2075,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          CALL Conv_Rdtn_CalcOutput( Time, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn,  &
                                 z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn_y, m%Conv_Rdtn, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         m%F_Rdtn  (:) = m%Conv_Rdtn_y%F_Rdtn       
+         m%F_Rdtn  (:) = m%Conv_Rdtn_y%F_Rdtn
 
       ELSE IF ( p%RdtnMod == 2 )  THEN 
          m%SS_Rdtn_u%dq = qdot
@@ -2069,7 +2092,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       END IF       
       
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6+1
+         indxStart = p%BDOFStrt(iBody)
          indxEnd   = indxStart+2
          call hiFrameTransform( h2i, u%PtfmRefY, m%F_Rdtn(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_Rdtn(indxStart:indxEnd) = tmpVec3
@@ -2090,7 +2113,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
 
       m%F_PtfmAM     =   -matmul(p%HdroAdMsI, qdotdot) ! In h-frame
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6+1
+         indxStart = p%BDOFStrt(iBody)
          indxEnd   = indxStart+2
          call hiFrameTransform( h2i, u%PtfmRefY, m%F_PtfmAM(indxStart:indxEnd), tmpVec3, ErrStat2, ErrMsg2 )
          m%F_PtfmAM(indxStart:indxEnd) = tmpVec3
@@ -2102,15 +2125,21 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       end do
       
          ! Compute outputs here:
+      AddDOFCntr = 0_IntKi
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6
-         
+         indxStart = p%BDOFStrt(iBody) - 1_IntKi
          DO I=1,3
             y%Mesh%Force(I,iBody)    = m%F_PtfmAM(indxStart+I)   + m%F_Rdtn(indxStart+I)   + m%F_Waves1(indxStart+I)   + m%F_HS(indxStart+I) 
          END DO
          DO I=1,3
             y%Mesh%Moment(I,iBody)   = m%F_PtfmAM(indxStart+I+3) + m%F_Rdtn(indxStart+I+3) + m%F_Waves1(indxStart+I+3) + m%F_HS(indxStart+I+3)
          END DO
+         IF (p%NAddDOF(iBody) > 0_IntKi) THEN
+            indxStart   = p%BDOFStrt(iBody) + 6_IntKi
+            indxEnd     = p%BDOFStrt(iBody) + 5_IntKi + p%NAddDOF(iBody)
+            y%FAddDOF(AddDOFCntr+1_IntKi:AddDOFCntr+p%NAddDOF(iBody)) = m%F_PtfmAM(indxStart:indxEnd) + m%F_Rdtn(indxStart:indxEnd) + m%F_Waves1(indxStart:indxEnd) + m%F_HS(indxStart:indxEnd)
+            AddDOFCntr  = AddDOFCntr + p%NAddDOF(iBody)
+         END IF
       end do
       
       
@@ -2188,7 +2217,7 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       
       integer(IntKi)                                     :: iBody               ! WAMIT body index
       integer(IntKi)                                     :: indxStart, indxEnd  ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
-
+      integer(IntKi)                                     :: AddDOFCntr          ! Counter for additional DOF
       REAL(ReKi)                                         :: tmpVec6(6)
 
          ! Initialize ErrStat
@@ -2198,13 +2227,20 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       
       
          ! Update discrete states here:
-      IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.   
+      IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.
+         AddDOFCntr = 0_IntKi
          do iBody=1,p%NBody
-               indxStart = (iBody-1)*6+1
+               indxStart = p%BDOFStrt(iBody)
                indxEnd   = indxStart+5
                call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%TranslationVel(:,iBody), tmpVec6(1:3), ErrStat, ErrMsg)
                call hiFrameTransform( i2h, u%PtfmRefY, u%Mesh%RotationVel(:,iBody),    tmpVec6(4:6), ErrStat, ErrMsg)
                m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = tmpVec6
+               if ( p%NAddDOF(iBody) > 0_IntKi ) then
+                  indxStart = p%BDOFStrt(iBody)+6
+                  indxEnd   = indxStart-1+p%NAddDOF(iBody)
+                  m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = u%qAddDOFDot(AddDOFCntr+1:AddDOFCntr+p%NAddDOF(iBody))
+                  AddDOFCntr = AddDOFCntr + p%NAddDOF(iBody)
+               end if
          end do
          CALL Conv_Rdtn_UpdateDiscState( Time, n, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, &
                                          OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )

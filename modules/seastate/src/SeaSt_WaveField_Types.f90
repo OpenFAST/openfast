@@ -33,22 +33,26 @@ MODULE SeaSt_WaveField_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE Current_Types
 USE GridInterp_Types
+USE IfW_FlowField_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_None = 0      ! ConstWaveMod = 0 [Constrained wave model: No constrained waves] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_CrestElev = 1      ! ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_Peak2Trough = 2      ! ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None                  = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S                 = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None                     = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular                  = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh             = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP                  = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise               = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm               = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev                  = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull                  = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq                 = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_None                = 0      ! ConstWaveMod = 0 [Constrained wave model: No constrained waves] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_CrestElev           = 1      ! ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_Peak2Trough         = 2      ! ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Superpose              = 0      ! WvCrntMod = 0 [Simpler superposition] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Doppler                = 1      ! WvCrntMod = 1 [Doppler effect] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WvCrntMod_Full                   = 2      ! WvCrntMod = 2 [Doppler effect and amplitude/spectrum scaling] [-]
 ! =========  SeaSt_WaveField_MiscVarType  =======
   TYPE, PUBLIC :: SeaSt_WaveField_MiscVarType
     REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the weighting function for 3-d velocity field [-]
@@ -80,6 +84,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevC0      !< Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction array. Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
+    LOGICAL  :: hasCurrField = .false.      !< True if CurrField is populated for MHK simulations [(-)]
+    TYPE(FlowFieldType) , POINTER :: CurrField => NULL()      !< Pointer to FlowField type from InflowWind containing the dynamic current information [(-)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default) [(m)]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
@@ -96,6 +102,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters. [-]
+    INTEGER(IntKi)  :: WvCrntMod = 0_IntKi      !< Wave-current modeling option. [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(SiKi)  :: GridDepth = 0.0_R4Ki      !< Depth (>0) of wave grid below SWL [m]
@@ -103,7 +110,8 @@ IMPLICIT NONE
     TYPE(Current_InitInputType)  :: Current_InitInput      !< InitInputs in the Current Module. For coupling with MD. [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine SeaSt_WaveField_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_WaveField_MiscVarType), intent(in) :: SrcMiscData
@@ -356,6 +364,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       end if
       DstSeaSt_WaveFieldTypeData%WaveDirArr = SrcSeaSt_WaveFieldTypeData%WaveDirArr
    end if
+   DstSeaSt_WaveFieldTypeData%hasCurrField = SrcSeaSt_WaveFieldTypeData%hasCurrField
+   DstSeaSt_WaveFieldTypeData%CurrField => SrcSeaSt_WaveFieldTypeData%CurrField
    DstSeaSt_WaveFieldTypeData%WtrDpth = SrcSeaSt_WaveFieldTypeData%WtrDpth
    DstSeaSt_WaveFieldTypeData%WtrDens = SrcSeaSt_WaveFieldTypeData%WtrDens
    DstSeaSt_WaveFieldTypeData%RhoXg = SrcSeaSt_WaveFieldTypeData%RhoXg
@@ -372,6 +382,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WvHiCOffS = SrcSeaSt_WaveFieldTypeData%WvHiCOffS
    DstSeaSt_WaveFieldTypeData%WaveDOmega = SrcSeaSt_WaveFieldTypeData%WaveDOmega
    DstSeaSt_WaveFieldTypeData%WaveMod = SrcSeaSt_WaveFieldTypeData%WaveMod
+   DstSeaSt_WaveFieldTypeData%WvCrntMod = SrcSeaSt_WaveFieldTypeData%WvCrntMod
    DstSeaSt_WaveFieldTypeData%NStepWave = SrcSeaSt_WaveFieldTypeData%NStepWave
    DstSeaSt_WaveFieldTypeData%NStepWave2 = SrcSeaSt_WaveFieldTypeData%NStepWave2
    DstSeaSt_WaveFieldTypeData%GridDepth = SrcSeaSt_WaveFieldTypeData%GridDepth
@@ -439,6 +450,7 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, E
    if (allocated(SeaSt_WaveFieldTypeData%WaveDirArr)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveDirArr)
    end if
+   nullify(SeaSt_WaveFieldTypeData%CurrField)
    call Current_DestroyInitInput(SeaSt_WaveFieldTypeData%Current_InitInput, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -447,6 +459,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SeaSt_WaveFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackSeaSt_WaveFieldType'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WaveTime)
    call RegPackAlloc(RF, InData%WaveDynP)
@@ -468,6 +481,14 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPackAlloc(RF, InData%WaveElevC)
    call RegPackAlloc(RF, InData%WaveElevC0)
    call RegPackAlloc(RF, InData%WaveDirArr)
+   call RegPack(RF, InData%hasCurrField)
+   call RegPack(RF, associated(InData%CurrField))
+   if (associated(InData%CurrField)) then
+      call RegPackPointer(RF, c_loc(InData%CurrField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call IfW_FlowField_PackFlowFieldType(RF, InData%CurrField) 
+      end if
+   end if
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%WtrDens)
    call RegPack(RF, InData%RhoXg)
@@ -484,6 +505,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPack(RF, InData%WvHiCOffS)
    call RegPack(RF, InData%WaveDOmega)
    call RegPack(RF, InData%WaveMod)
+   call RegPack(RF, InData%WvCrntMod)
    call RegPack(RF, InData%NStepWave)
    call RegPack(RF, InData%NStepWave2)
    call RegPack(RF, InData%GridDepth)
@@ -499,6 +521,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WaveTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveDynP); if (RegCheckErr(RF, RoutineName)) return
@@ -520,6 +544,25 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WaveElevC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveElevC0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveDirArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%hasCurrField); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%CurrField)) deallocate(OutData%CurrField)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%CurrField)
+      else
+         allocate(OutData%CurrField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrField.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%CurrField)
+         call IfW_FlowField_UnpackFlowFieldType(RF, OutData%CurrField) ! CurrField 
+      end if
+   else
+      OutData%CurrField => null()
+   end if
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RhoXg); if (RegCheckErr(RF, RoutineName)) return
@@ -536,11 +579,14 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%WvHiCOffS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDOmega); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvCrntMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GridDepth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTimeShift); if (RegCheckErr(RF, RoutineName)) return
    call Current_UnpackInitInput(RF, OutData%Current_InitInput) ! Current_InitInput 
 end subroutine
+
 END MODULE SeaSt_WaveField_Types
+
 !ENDOFREGISTRYGENERATEDFILE

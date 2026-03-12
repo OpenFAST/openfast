@@ -948,16 +948,79 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find steady state (becasue of waves)
+      ! Initialize outputs to zero
+      U  = 0.0_DbKi
+      Ud = 0.0_DbKi
+      zeta = 0.0_DbKi
+      PDyn = 0.0_DbKi
+
+      select case (p%WaterKin)
+      ! no wave kinematics, do nothing (already initialized to zero above)
+      case (0)  
+
+      ! old or hybrid approach. SeaState contributions handeled in setupWaterKin, just proceed using old method
+      case (1,2)
+
+         ! If wave kinematics enabled, get interpolated values from grid
+         if (p%WaveKin > 0) then      
+
+            ! find time interpolation indices and coefficients
+            it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
+            ft = (t - (it-1)*p%dtWave)/p%dtWave
+            m%WaveTi = it                  
          
+            ! find x-y interpolation indices and coefficients
+            CALL getInterpNumsSiKi(p%pxWave, REAL(x, SiKi), 1, ix, fx) ! wave grid
+            CALL getInterpNumsSiKi(p%pyWave, REAL(y, SiKi), 1, iy, fy) ! wave grid
+            
+            ! interpolate wave elevation
+            CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)   
+            
+            ! compute modified z coordinate to be used for interpolating velocities and accelerations with Wheeler stretching
+            zp = (z - zeta) * p%WtrDpth/(p%WtrDpth + zeta)
+            
+            CALL getInterpNumsSiKi(p%pzWave, REAL(zp, SiKi), 1, iz, fz) ! wave grid
+
+            ! interpolate everything else
+            CALL calculate4Dinterpolation(p%PDyn  , ix, iy, iz, it, fx, fy, fz, ft, PDyn)         
+            CALL calculate4Dinterpolation(p%uxWave, ix, iy, iz, it, fx, fy, fz, ft, U(1))
+            CALL calculate4Dinterpolation(p%uyWave, ix, iy, iz, it, fx, fy, fz, ft, U(2))
+            CALL calculate4Dinterpolation(p%uzWave, ix, iy, iz, it, fx, fy, fz, ft, U(3))      
+            CALL calculate4Dinterpolation(p%axWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(1))
+            CALL calculate4Dinterpolation(p%ayWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(2))
+            CALL calculate4Dinterpolation(p%azWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(3))
+         end if
+
+         ! If current kinematics enabled, add interpolated current values from profile
+         if (p%Current > 0) then 
+         
+            CALL getInterpNumsSiKi(p%pzCurrent, REAL(z, SiKi), 1, iz0, fz)
+                     
+            if (fz == 0) then  ! handle end case conditions
+               iz1 = iz0
+            else
+               iz1 = min(iz0+1, size(p%pzCurrent))  ! don't overstep bounds
+            end if
+            
+            ! Add the current velocities to the wave velocities (if any)
+            U(1) = U(1) + (1.0-fz)*p%uxCurrent(iz0) + fz*p%uxCurrent(iz1)
+            U(2) = U(2) + (1.0-fz)*p%uyCurrent(iz0) + fz*p%uyCurrent(iz1)
+         end if
+
+      ! SeaState wave kinematics
+      case (3)
+
+         ! disable wavekin 3 during IC_gen, otherwise will never find steady state (because of waves)
+         if (m%IC_gen) return
+
          ! SeaState throws warning when queried location is out of bounds from the SeaState grid, so no need to handle here
 
          ! Pack all MD inputs to WaveGrid input data types (double to single)
-         !   (only pos needed becasue time is double in wave field, all other are outputs that will be set by WaveField_GetNodeWaveKin)
-         xyz_sp = REAL((/ x, y, z /),SiKi)
+         !   (only pos needed because time is double in wave field, all other are outputs that will be set by WaveField_GetNodeWaveKin)
+         xyz_sp = REAL([x, y, z], SiKi)
 
-         ! for now we will force the node to be in the water (forceNodeInWater = True). Rods handle partial submergence seperately so they need to get information from SeaState 
-         CALL WaveField_GetNodeWaveKin(p%WaveField, m%WaveField_m, t, xyz_sp, .TRUE., nodeInWater, WaveElev1, WaveElev2, zeta_sp, PDyn_sp, U_sp, Ud_sp, FAMCF, ErrStat2, ErrMsg2 ) ! outputs: nodeInWater, WaveElev1, WaveElev2, FAMCF all unused
+         ! for now we will force the node to be in the water (forceNodeInWater = True). Rods handle partial submergence separately so they need to get information from SeaState 
+         CALL WaveField_GetNodeWaveKin(p%WaveField, m%WaveField_m, t, xyz_sp, .true., .true., nodeInWater, WaveElev1, WaveElev2, zeta_sp, PDyn_sp, U_sp, Ud_sp, FAMCF, ErrStat2, ErrMsg2 ) ! outputs: nodeInWater, WaveElev1, WaveElev2, FAMCF all unused
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Unpack all WaveGrid outputs to MD output data types (single to double)
@@ -966,70 +1029,9 @@ CONTAINS
          zeta = REAL(zeta_sp,DbKi)
          PDyn = REAL(PDyn_sp,DbKi)
 
-      ELSEIF (p%WaterKin == 1 .OR. p%WaterKin == 2) THEN ! old or hybrid approach. SeaState contributions handeled in setupWaterKin, just proceed using old method
-
-         ! If wave kinematics enabled, get interpolated values from grid
-         IF (p%WaveKin > 0) THEN      
-
-            ! find time interpolation indices and coefficients
-            it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
-            ft = (t - (it-1)*p%dtWave)/p%dtWave
-            m%WaveTi = it                  
-         
-            ! find x-y interpolation indices and coefficients
-            CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx) ! wave grid
-            CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy) ! wave grid
-            
-            ! interpolate wave elevation
-            CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)   
-            
-            ! compute modified z coordinate to be used for interpolating velocities and accelerations with Wheeler stretching
-            zp = ( z - zeta ) * p%WtrDpth/( p%WtrDpth + zeta )
-            
-            CALL getInterpNumsSiKi(p%pzWave   , REAL(zp,SiKi),  1, iz, fz) ! wave grid
-
-            ! interpolate everything else
-            CALL calculate4Dinterpolation(p%PDyn  , ix, iy, iz, it, fx, fy, fz, ft, PDyn)         
-            CALL calculate4Dinterpolation(p%uxWave, ix, iy, iz, it, fx, fy, fz, ft, U(1)  )
-            CALL calculate4Dinterpolation(p%uyWave, ix, iy, iz, it, fx, fy, fz, ft, U(2)  )
-            CALL calculate4Dinterpolation(p%uzWave, ix, iy, iz, it, fx, fy, fz, ft, U(3)  )      
-            CALL calculate4Dinterpolation(p%axWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(1) )
-            CALL calculate4Dinterpolation(p%ayWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(2) )
-            CALL calculate4Dinterpolation(p%azWave, ix, iy, iz, it, fx, fy, fz, ft, Ud(3) )
-         
-         ELSE ! set things to zero if wave kinematics not enabled
-            U  = 0.0_DbKi
-            Ud = 0.0_DbKi
-            zeta = 0.0_DbKi
-            PDyn = 0.0_DbKi
-
-         ENDIF
-
-         ! If current kinematics enabled, add interpolated current values from profile
-         IF (p%Current > 0) THEN 
-         
-            CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
-                     
-            IF (fz == 0) THEN  ! handle end case conditions
-               iz1 = iz0
-            ELSE
-               iz1 = min(iz0+1,size(p%pzCurrent))  ! don't overstep bounds
-            END IF
-            
-            ! Add the current velocities to the wave velocities (if any)
-            U(1) = U(1) + (1.0-fz)*p%uxCurrent(iz0) + fz*p%uxCurrent(iz1)
-            U(2) = U(2) + (1.0-fz)*p%uyCurrent(iz0) + fz*p%uyCurrent(iz1)
-         END IF
-
-      ELSEIF (p%WaterKin > 3) THEN 
-         CALL SetErrStat(ErrID_Fatal, "Invalid p%WaterKin value found in getWaterKin", ErrStat, ErrMsg, RoutineName)
-      
-      ELSE ! set things to zero if Water Kinematics not enabled
-         U  = 0.0_DbKi
-         Ud = 0.0_DbKi
-         zeta = 0.0_DbKi
-         PDyn = 0.0_DbKi
-      ENDIF
+      case default
+         call SetErrStat(ErrID_Fatal, "Invalid value of p%WaterKin", ErrStat, ErrMsg, RoutineName)
+      end select
 
    END SUBROUTINE getWaterKin
 

@@ -9618,14 +9618,20 @@ MODULE FAST_Farm_IO_Params
       contains
 
 ! --- Functions not automatically generated
-logical function PointInAABB(x, y, z, x0, y0, z0, x1, y1, z1)
-   real(ReKi), intent(in) :: x,y,z,x0,y0,z0,x1,y1,z1
+logical function PointInAABB(x, y, z, minXYZ, sizeXYZ)
+   real(ReKi), intent(in) :: x,y,z
+   real(ReKi), intent(in) :: minXYZ(3), sizeXYZ(3)
+ 
+   ! Default to false
+   PointInAABB = .false.
 
-      ! default to return false
-   PointInAABB = .false.;
-      !Check if the point is less than max and greater than min
-    if (x >= x0 .and. x <= x1 .and. y >= y0 .and. y <= y1 .and. z >= z0 .and. z <= z1)  PointInAABB = .true.;
+   ! If point is outside box, return false
+   if (x < minXYZ(1) .or. x > minXYZ(1) + sizeXYZ(1)) return
+   if (y < minXYZ(2) .or. y > minXYZ(2) + sizeXYZ(2)) return
+   if (z < minXYZ(3) .or. z > minXYZ(3) + sizeXYZ(3)) return
 
+   ! If we reach here, the point is inside the AABB
+   PointInAABB = .true.
 
 end function PointInAABB
    
@@ -15504,7 +15510,8 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
 
       ! Add checks for the WindVel locations based on knowledge of the wind grids and NWindVel
    do i = 1, farm%p%NWindVel
-      if (.not. PointInAABB(farm%p%WindVelX(i), farm%p%WindVelY(i), farm%p%WindVelZ(i), farm%AWAE%p%X0_low, farm%AWAE%p%Y0_low,farm%AWAE%p%Z0_low, farm%AWAE%p%X0_low+(farm%AWAE%p%nX_low-1)*farm%AWAE%p%dX_low, farm%AWAE%p%Y0_low+(farm%AWAE%p%nY_low-1)*farm%AWAE%p%dY_low, farm%AWAE%p%Z0_low+(farm%AWAE%p%nZ_low-1)*farm%AWAE%p%dZ_low) ) then
+      if (.not. PointInAABB(farm%p%WindVelX(i), farm%p%WindVelY(i), farm%p%WindVelZ(i), &
+                            farm%AWAE%p%LowRes%oXYZ, farm%AWAE%p%LowRes%Size)) then
          InvalidOutput( WVAmbX  (i) ) = .true.
          InvalidOutput( WVAmbY  (i) ) = .true.
          InvalidOutput( WVAmbZ  (i) ) = .true.

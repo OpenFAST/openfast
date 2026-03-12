@@ -9,23 +9,25 @@
 ###################################################################################################################################
 include	Registry_NWTC_Library.txt
 
+typedef	StrucCtrl/StC	StC_PrescrFrcTseries	ReKi			data	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+
 # ..... Input File data .......................................................................................................
 typedef StrucCtrl/StC StC_InputFile CHARACTER(1024) StCFileName - - - "Name of the input file; remove if there is no file" -
 typedef	^		^				LOGICAL			Echo	-	-	-	"Echo input file to echo file"	-
-typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
+typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface} "	-
 typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
-typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
+typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL}"	-
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				ReKi			StC_X_DSP	-	-	-	"StC_X initial displacement"	m
 typedef	^		^				ReKi			StC_Y_DSP	-	-	-	"StC_Y initial displacement"	m
 typedef	^		^				ReKi			StC_Z_DSP	-	-	-	"StC_Z initial displacement"	m
-typedef	^		^				Character(10)			StC_Z_PreLdC	-	-	-	"StC_Z spring preload"	N
+typedef	^		^				Character(10)		StC_Z_PreLdC	-	-	-	"StC_Z spring preload"	N
 typedef	^		^				ReKi			StC_X_M		-	-	-	"StC X mass"	kg
 typedef	^		^				ReKi			StC_Y_M		-	-	-	"StC Y mass"	kg
 typedef	^		^				ReKi			StC_Z_M		-	-	-	"StC Z mass"	kg
-typedef	^		^				ReKi			StC_XY_M		-	-	-	"StC XY mass"	kg
+typedef	^		^				ReKi			StC_Omni_M	-	-	-	"StC omni mass"	kg
 typedef	^		^				ReKi			StC_X_K		-	-	-	"StC X stiffness"	"N/m"
 typedef	^		^				ReKi			StC_Y_K		-	-	-	"StC Y stiffness"	"N/m"
 typedef	^		^				ReKi			StC_Z_K		-	-	-	"StC Y stiffness"	"N/m"
@@ -73,8 +75,8 @@ typedef	^		^				IntKi			NKInpSt	-	-	-	"Number of input spring force rows in tabl
 typedef	^		^				CHARACTER(1024)			StC_F_TBL_FILE	-	-	-	"user-defined spring table filename"	-
 typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
-typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	-	-	-	"Prescribed force time-series filename"	-
-typedef	^		^				ReKi			StC_PrescribedForce	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	:	-	-	"Prescribed force time-series filename"	-
+typedef	^		^				StC_PrescrFrcTseries			StC_PrescribedForce	{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
 typedef	^		^				IntKi			StC_CChan	{:}	-	-	"StC control chan to use -- one per instance"	-
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -149,7 +151,7 @@ typedef	^		MiscVarType  IntKi		PrescribedInterpIdx	-	-	-	"Index for interpolatio
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef ^ ParameterType DbKi DT - - - "Time step for cont. state integration & disc. state update" seconds
 typedef  ^     ^           CHARACTER(1024) RootName   -   -   -   "RootName for writing output files"	-
-typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series}"	-
+typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF; 2: StC_XY_DOF; 3: StC_XYZ_DOF; 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL}"	-
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
@@ -157,7 +159,7 @@ typedef	^		^				ReKi			StC_Z_PreLd	-	-	-	"StC_Z spring preload"	N
 typedef	^		^				ReKi			M_X		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Y		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Z		-	-	-	"StC mass"	kg
-typedef	^		^				ReKi			M_XY		-	-	-	"StCXY mass"	kg
+typedef	^		^				ReKi			M_Omni		-	-	-	"StC omni mass"	kg
 typedef	^		^				ReKi			K_X		-	-	-	"StC stiffness"	"N/m"
 typedef	^		^				ReKi			K_Y		-	-	-	"StC stiffness"	"N/m"
 typedef	^		^				ReKi			K_Z		-	-	-	"StC stiffness"	"N/m"
@@ -169,7 +171,7 @@ typedef	^		^				ReKi			C_S	{3}	-	-	"StC stop damping" "N/(m/s)"
 typedef	^		^				ReKi			P_SP	{3}	-	-	"Positive stop position (maximum mass displacement)"	m
 typedef	^		^				ReKi			N_SP	{3}	-	-	"Negative stop position (minimum X mass displacement)" m
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
-typedef	^		^				IntKi			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface} "	-
+typedef	^		^				IntKi			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface} "	-
 typedef	^		^				IntKi			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				ReKi			StC_X_C_HIGH	-	-	-	"StC X high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_LOW		-	-	-	"StC X low damping for ground hook control"	"N/(m/s)"
@@ -196,7 +198,7 @@ typedef	^		^				LOGICAL			Use_F_TBL	-	-	-	"use spring force from user-defined ta
 typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
 typedef	^	ParameterType	IntKi	NumMeshPts	-	-	-	"Number of mesh points"	-
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
-typedef	^		^				ReKi			StC_PrescribedForce	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+typedef	^		^				StC_PrescrFrcTseries			StC_PrescribedForce	{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
 typedef	^		^				IntKi			StC_CChan	{:}	-	-	"StC control chan to use"	-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

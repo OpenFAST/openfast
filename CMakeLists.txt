@@ -41,7 +41,7 @@ option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
-option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
+option(WIN_DLL_LOAD "Enable loading of Windows only DLL's (OrcaFlex, SoilDyn)" on)  # This is mostly for testing purposes
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ CFD API" off)
@@ -167,6 +167,35 @@ else()
 endif()
 
 #-------------------------------------------------------------------------------
+# AMReX reader inclusion in FAST.Farm
+#-------------------------------------------------------------------------------
+# Included as an external project, cloned to `dependencies` directory
+
+option(AMREX_READER "Include AMReX reader in FAST.Farm" off)
+if (AMREX_READER)
+  if (WIN32)
+    message(FATAL_ERROR "AMREX_READER option not available on Windows (AMReX incompatible)")
+  endif()
+  include(FetchContent)
+  FetchContent_Declare(
+    AMReX
+    GIT_REPOSITORY https://github.com/AMReX-Codes/amrex.git
+    GIT_TAG        26.02
+  )
+  set(AMReX_AMRLEVEL Off CACHE BOOL "" FORCE)
+  set(AMReX_EXPORT_DYNAMIC Off CACHE BOOL "" FORCE)
+  set(AMReX_LINEAR_SOLVERS Off CACHE BOOL "" FORCE)
+  set(AMReX_LINEAR_SOLVERS_EM Off CACHE BOOL "" FORCE)
+  set(AMReX_LINEAR_SOLVERS_INCLFO Off CACHE BOOL "" FORCE)
+  set(AMReX_MPI Off CACHE BOOL "" FORCE)
+  set(AMReX_PARTICLES Off CACHE BOOL "" FORCE)
+  set(AMReX_FORTRAN On CACHE BOOL "" FORCE)
+  set(AMReX_FORTRAN_INTERFACES On CACHE BOOL "" FORCE)
+  set(AMReX_PRECISION DOUBLE CACHE STRING "" FORCE)
+  FetchContent_MakeAvailable(AMReX)
+endif ()
+
+#-------------------------------------------------------------------------------
 # Simulink
 #-------------------------------------------------------------------------------
 
@@ -197,6 +226,7 @@ set(OPENFAST_MODULES
   aerodyn
   aerodisk
   servodyn
+  soildyn
   elastodyn
   beamdyn
   subdyn
@@ -289,9 +319,7 @@ if(BUILD_TESTING)
 
   # unit tests
   if(BUILD_UNIT_TESTING)
-    if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
-      add_subdirectory(unit_tests)
-    endif()
+    add_subdirectory(unit_tests)
   endif()
 endif()
 
@@ -303,4 +331,3 @@ option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
   add_subdirectory(docs)
 endif()
-

@@ -123,7 +123,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  User_InitInputType  =======
   TYPE, PUBLIC :: User_InitInputType
-    REAL(SiKi)  :: Dummy = 0.0_R4Ki      !< User field initialization input dummy value [-]
+    CHARACTER(1024)  :: WindFileName      !< name of file containing user-defined wind data (if applicable) [-]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< reference height for user wind field [meters]
+    INTEGER(IntKi)  :: NumDataColumns = 0      !< number of data columns in user wind file (if applicable) [-]
   END TYPE User_InitInputType
 ! =======================
 ! =========  Grid4D_InitInputType  =======
@@ -139,7 +141,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of points where wind components will be provided [-]
   END TYPE Points_InitInputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine InflowWind_IO_CopyWindFileDat(SrcWindFileDatData, DstWindFileDatData, CtrlCode, ErrStat, ErrMsg)
    type(WindFileDat), intent(in) :: SrcWindFileDatData
@@ -603,7 +606,9 @@ subroutine InflowWind_IO_CopyUser_InitInputType(SrcUser_InitInputTypeData, DstUs
    character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyUser_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstUser_InitInputTypeData%Dummy = SrcUser_InitInputTypeData%Dummy
+   DstUser_InitInputTypeData%WindFileName = SrcUser_InitInputTypeData%WindFileName
+   DstUser_InitInputTypeData%RefHt = SrcUser_InitInputTypeData%RefHt
+   DstUser_InitInputTypeData%NumDataColumns = SrcUser_InitInputTypeData%NumDataColumns
 end subroutine
 
 subroutine InflowWind_IO_DestroyUser_InitInputType(User_InitInputTypeData, ErrStat, ErrMsg)
@@ -620,7 +625,9 @@ subroutine InflowWind_IO_PackUser_InitInputType(RF, Indata)
    type(User_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUser_InitInputType'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%Dummy)
+   call RegPack(RF, InData%WindFileName)
+   call RegPack(RF, InData%RefHt)
+   call RegPack(RF, InData%NumDataColumns)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -629,7 +636,9 @@ subroutine InflowWind_IO_UnPackUser_InitInputType(RF, OutData)
    type(User_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUser_InitInputType'
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%Dummy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WindFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumDataColumns); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyGrid4D_InitInputType(SrcGrid4D_InitInputTypeData, DstGrid4D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -725,5 +734,7 @@ subroutine InflowWind_IO_UnPackPoints_InitInputType(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NumWindPoints); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE InflowWind_IO_Types
+
 !ENDOFREGISTRYGENERATEDFILE

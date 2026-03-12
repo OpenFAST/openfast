@@ -47,22 +47,15 @@ set_property(TARGET moordyn_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 
 if(APPLE OR UNIX)
    target_compile_definitions(moordyn_c_binding_object PRIVATE IMPLICIT_DLLEXPORT)
 endif()
-#   shared
+
+# Shared
 add_library(moordyn_c_binding SHARED $<TARGET_OBJECTS:moordyn_c_binding_object>)
 target_link_libraries(moordyn_c_binding moordynlib seastlib nwtclibs versioninfolib)
-if(APPLE OR UNIX)
-   target_compile_definitions(moordyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
-endif()
 
 # C-bindings non-shared interface
 # This is a workaround for building wavetank into a single DLL (also allows setting CU globaly for sending screen to file for labview integration)
 add_library(moordyn_c_bind_static SHARED $<TARGET_OBJECTS:moordyn_c_binding_object>)
 target_link_libraries(moordyn_c_bind_static moordynlib seastlib nwtclibs versioninfolib)
-if(APPLE OR UNIX)
-   target_compile_definitions(moordyn_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
-endif()
-
-
 
 install(TARGETS moordynlib moordyn_driver moordyn_c_binding moordyn_c_bind_static
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

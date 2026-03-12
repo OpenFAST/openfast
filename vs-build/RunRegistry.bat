@@ -43,6 +43,7 @@ SET ExtPtfm_Loc=%Modules_Loc%\extptfm\src
 SET AD_Loc=%Modules_Loc%\aerodyn\src
 SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
+SET SlD_Loc=%Modules_Loc%\soildyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
 SET ADsk_Loc=%Modules_Loc%\aerodisk\src
 
@@ -53,7 +54,7 @@ SET WD_Loc=%Modules_Loc%\wakedynamics\src
 SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SED_Loc%" -I^
- "%SrvD_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
+ "%SrvD_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SlD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%SEAST_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
  "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I "%ExtLoads_Loc%" 
 
@@ -68,7 +69,7 @@ REM ----------------------------------------------------------------------------
 :NWTC_Lib
 SET CURR_LOC=%NWTC_Lib_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :GridInterp
@@ -80,14 +81,13 @@ GOTO checkError
 :MAP
 SET CURR_LOC=%MAP_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt"  -ccode -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-:: %REGISTRY% "%CURR_LOC%\MAP_Fortran_Registry.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt"  -ccode %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :MAP_Fortran
 SET CURR_LOC=%MAP_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap 
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap 
 GOTO checkError
 
 :FAST
@@ -96,10 +96,22 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\FAST_Registry.txt" %ALL_FAST_Includes% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
+:Glue
+SET CURR_LOC=%FAST_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\Glue_Registry.txt" %ALL_FAST_Includes% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
 :BeamDyn
 SET CURR_LOC=%BD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\Registry_BeamDyn.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:SoilDyn
+SET CURR_LOC=%SlD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\SoilDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
 :SuperController
@@ -131,45 +143,45 @@ GOTO checkError
 :ServoDyn
 SET CURR_LOC=%SrvD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :Lidar
 :InflowWind
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :IfW_FlowField
 :InflowWind_IO
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" %ALL_FAST_Includes% -noextrap  -O "%Output_Loc%"
 GOTO checkError
 
 :InflowWind_Driver
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -noextrap  -O "%Output_Loc%"
 GOTO checkError
 
 :ExternalInflow
 SET CURR_LOC=%ExtInfw_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -ccode -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -ccode -O "%Output_Loc%"
 GOTO checkError
 
 :ExtLoads
 SET CURR_LOC=%ExtLoads_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :ExtLoadsDX
 SET CURR_LOC=%ExtLoads_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -ccode -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -ccode -O "%Output_Loc%"
 GOTO checkError
 
 :AeroDyn
@@ -177,19 +189,19 @@ GOTO checkError
 :DBEMT
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :AeroDyn_Driver
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :ADI
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDyn_Inflow_Registry.txt" -I "%NWTC_Lib_Loc%" -I %IfW_Loc% -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\AeroDyn_Inflow_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :ADI_cbind
@@ -202,31 +214,31 @@ GOTO checkError
 :AFI
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AirfoilInfo_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap 
+%REGISTRY% "%CURR_LOC%\AirfoilInfo_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%" -noextrap 
 GOTO checkError
 
 :UA
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
-:LD
+:LinDyn
 SET CURR_LOC=%LD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\LinDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\LinDyn_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :FVW
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\FVW_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\FVW_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :AA
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"  -noextrap
+%REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"  -noextrap
 GOTO checkError
 
 :HydroDyn
@@ -238,7 +250,7 @@ GOTO checkError
 :Morison
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -I "%SEAST_Loc%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :SeaState
@@ -249,7 +261,7 @@ GOTO checkError
 
 SET CURR_LOC=%SEAST_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -noextrap -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" %ALL_FAST_Includes% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
 :SubDyn
@@ -267,7 +279,7 @@ GOTO checkError
 :MoorDyn
 SET CURR_LOC=%MD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -I "%SEAST_Loc%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" %ALL_FAST_Includes% -O "%Output_Loc%"
 GOTO checkError
 
 :IceFloe

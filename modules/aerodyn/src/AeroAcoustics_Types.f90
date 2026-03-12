@@ -227,7 +227,17 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutputNodes      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE AA_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: AA_u_RotGtoL                     =   1 ! AA%RotGtoL
+   integer(IntKi), public, parameter :: AA_u_AeroCent_G                  =   2 ! AA%AeroCent_G
+   integer(IntKi), public, parameter :: AA_u_Vrel                        =   3 ! AA%Vrel
+   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   4 ! AA%AoANoise
+   integer(IntKi), public, parameter :: AA_u_Inflow                      =   5 ! AA%Inflow
+   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =   6 ! AA%WriteOutputForPE
+   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =   7 ! AA%WriteOutput
+   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =   8 ! AA%WriteOutputSep
+   integer(IntKi), public, parameter :: AA_y_WriteOutputNodes            =   9 ! AA%WriteOutputNodes
+
+contains
 
 subroutine AA_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, CtrlCode, ErrStat, ErrMsg)
    type(AA_BladePropsType), intent(in) :: SrcBladePropsTypeData
@@ -2241,5 +2251,181 @@ subroutine AA_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputSep); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputNodes); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function AA_InputMeshPointer(u, DL) result(Mesh)
+   type(AA_InputType), target, intent(in)  :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function AA_OutputMeshPointer(y, DL) result(Mesh)
+   type(AA_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine AA_VarsPackInput(Vars, u, ValAry)
+   type(AA_InputType), intent(in)          :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AA_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine AA_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AA_InputType), intent(in)          :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AA_u_RotGtoL)
+         VarVals = u%RotGtoL(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AA_u_AeroCent_G)
+         VarVals = u%AeroCent_G(V%iLB:V%iUB, V%j, V%k)                        ! Rank 3 Array
+      case (AA_u_Vrel)
+         VarVals = u%Vrel(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case (AA_u_AoANoise)
+         VarVals = u%AoANoise(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (AA_u_Inflow)
+         VarVals = u%Inflow(V%iLB:V%iUB, V%j, V%k)                            ! Rank 3 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AA_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AA_InputType), intent(inout)       :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AA_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine AA_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AA_InputType), intent(inout)       :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AA_u_RotGtoL)
+         u%RotGtoL(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AA_u_AeroCent_G)
+         u%AeroCent_G(V%iLB:V%iUB, V%j, V%k) = VarVals                        ! Rank 3 Array
+      case (AA_u_Vrel)
+         u%Vrel(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      case (AA_u_AoANoise)
+         u%AoANoise(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (AA_u_Inflow)
+         u%Inflow(V%iLB:V%iUB, V%j, V%k) = VarVals                            ! Rank 3 Array
+      end select
+   end associate
+end subroutine
+
+function AA_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AA_u_RotGtoL)
+       Name = "u%RotGtoL"
+   case (AA_u_AeroCent_G)
+       Name = "u%AeroCent_G"
+   case (AA_u_Vrel)
+       Name = "u%Vrel"
+   case (AA_u_AoANoise)
+       Name = "u%AoANoise"
+   case (AA_u_Inflow)
+       Name = "u%Inflow"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine AA_VarsPackOutput(Vars, y, ValAry)
+   type(AA_OutputType), intent(in)         :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AA_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine AA_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AA_OutputType), intent(in)         :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AA_y_WriteOutputForPE)
+         VarVals = y%WriteOutputForPE(V%iLB:V%iUB)                            ! Rank 1 Array
+      case (AA_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (AA_y_WriteOutputSep)
+         VarVals = y%WriteOutputSep(V%iLB:V%iUB)                              ! Rank 1 Array
+      case (AA_y_WriteOutputNodes)
+         VarVals = y%WriteOutputNodes(V%iLB:V%iUB)                            ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AA_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AA_OutputType), intent(inout)      :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AA_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine AA_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AA_OutputType), intent(inout)      :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AA_y_WriteOutputForPE)
+         y%WriteOutputForPE(V%iLB:V%iUB) = VarVals                            ! Rank 1 Array
+      case (AA_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (AA_y_WriteOutputSep)
+         y%WriteOutputSep(V%iLB:V%iUB) = VarVals                              ! Rank 1 Array
+      case (AA_y_WriteOutputNodes)
+         y%WriteOutputNodes(V%iLB:V%iUB) = VarVals                            ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function AA_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AA_y_WriteOutputForPE)
+       Name = "y%WriteOutputForPE"
+   case (AA_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (AA_y_WriteOutputSep)
+       Name = "y%WriteOutputSep"
+   case (AA_y_WriteOutputNodes)
+       Name = "y%WriteOutputNodes"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE AeroAcoustics_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -33,18 +33,19 @@ MODULE WakeDynamics_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_RotDiam = 1      ! Wake diameter calculation model: rotor diameter [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_Velocity = 2      ! Wake diameter calculation model: velocity-based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MassFlux = 3      ! Wake diameter calculation model: mass-flux based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MtmFlux = 4      ! Wake diameter calculation model: momentum-flux based [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar = 1      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl = 2      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian = 3      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_RotDiam              = 1      ! Wake diameter calculation model: rotor diameter [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_Velocity             = 2      ! Wake diameter calculation model: velocity-based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MassFlux             = 3      ! Wake diameter calculation model: mass-flux based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MtmFlux              = 4      ! Wake diameter calculation model: momentum-flux based [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar                   = 1      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl                    = 2      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian               = 3      ! Wake model [-]
 ! =========  WD_InputFileType  =======
   TYPE, PUBLIC :: WD_InputFileType
     REAL(ReKi)  :: dr = 0.0_ReKi      !< Radial increment of radial finite-difference grid [>0.0] [m]
     INTEGER(IntKi)  :: NumRadii = 0_IntKi      !< Number of radii in the radial finite-difference grid [>=2] [-]
-    INTEGER(IntKi)  :: NumPlanes = 0_IntKi      !< Number of wake planes [>=2] [-]
+    INTEGER(IntKi)  :: NumDFull = 0_IntKi      !< Distance of full wake propagation as a multiple of RotorDiamRef [-]
+    INTEGER(IntKi)  :: NumDBuff = 0_IntKi      !< Length of wake propagation buffer region as a multiple of RotorDiamRef [-]
     INTEGER(IntKi)  :: Mod_Wake = 0_IntKi      !< Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl [-]
     REAL(ReKi)  :: f_c = 0.0_ReKi      !< Cut-off frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [>0.0] [Hz]
     REAL(ReKi)  :: C_HWkDfl_O = 0.0_ReKi      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor [m]
@@ -82,6 +83,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WAT_k_Grad_DMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the minimum and exponential regions [>=0.0] or DEFAULT [DEFAULT=0.0] [-]
     REAL(ReKi)  :: WAT_k_Grad_DMax = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the transitional diameter fraction between the exponential and maximum regions [> WAT_k_Grad_DMin] or DEFAULT [DEFAULT=12.0] [-]
     REAL(ReKi)  :: WAT_k_Grad_Exp = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT radial velocity gradient of the wake deficit defining the exponent in the exponential region [> 0.0] or DEFAULT [DEFAULT=0.65] [-]
+    REAL(ReKi)  :: RotorDiamRef = 0.0_ReKi      !< Reference rotor diameter [m]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -89,6 +91,7 @@ IMPLICIT NONE
     TYPE(WD_InputFileType)  :: InputFileData      !< FAST.Farm input-file data for wake dynamics [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    INTEGER(IntKi)  :: MaxNumPlanes = 0_IntKi      !< Maximum number of wake planes allowed [-]
   END TYPE WD_InitInputType
 ! =======================
 ! =========  WD_InitOutputType  =======
@@ -105,6 +108,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  WD_DiscreteStateType  =======
   TYPE, PUBLIC :: WD_DiscreteStateType
+    REAL(ReKi)  :: NumPlanes = 0.0_ReKi      !< Number of active wake planes (>=2) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: YawErr_filt      !< Time-filtered nacelle-yaw error at the wake planes [rad]
     REAL(ReKi)  :: psi_skew_filt = 0.0_ReKi      !< Time-filtered azimuth angle from skew vertical axis [rad]
@@ -165,8 +169,11 @@ IMPLICIT NONE
 ! =========  WD_ParameterType  =======
   TYPE, PUBLIC :: WD_ParameterType
     REAL(DbKi)  :: dt_low = 0.0_R8Ki      !< Time interval for wake dynamics calculations {or default} [s]
-    INTEGER(IntKi)  :: NumPlanes = 0_IntKi      !< Number of wake planes [-]
+    INTEGER(IntKi)  :: MaxNumPlanes = 0_IntKi      !< Maximum number of wake planes [-]
     INTEGER(IntKi)  :: NumRadii = 0_IntKi      !< Number of radii in the radial finite-difference grid [-]
+    REAL(ReKi)  :: x_Full = 0.0_ReKi      !< Distance of full wake propagation [m]
+    REAL(ReKi)  :: x_Buff = 0.0_ReKi      !< Distance of full wake propagation plus buffer region [m]
+    REAL(ReKi)  :: d_Buff = 0.0_ReKi      !< Length of buffer region [m]
     REAL(ReKi)  :: dr = 0.0_ReKi      !< Radial increment of radial finite-difference grid [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r      !< Discretization of radial finite-difference grid [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: y      !< Horizontal discretization of each wake plane (size ny=2nr-1) [m]
@@ -232,6 +239,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  WD_OutputType  =======
   TYPE, PUBLIC :: WD_OutputType
+    REAL(ReKi)  :: NumPlanes = 0.0_ReKi      !< Number of active wake planes (>=2) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: p_plane      !< Center positions of wake planes [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx_wake      !< Axial wake velocity deficit at wake planes, distributed radially [m/s]
@@ -244,7 +252,32 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
   END TYPE WD_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: WD_x_DummyContState              =   1 ! WD%DummyContState
+   integer(IntKi), public, parameter :: WD_u_xhat_disk                   =   2 ! WD%xhat_disk
+   integer(IntKi), public, parameter :: WD_u_YawErr                      =   3 ! WD%YawErr
+   integer(IntKi), public, parameter :: WD_u_psi_skew                    =   4 ! WD%psi_skew
+   integer(IntKi), public, parameter :: WD_u_chi_skew                    =   5 ! WD%chi_skew
+   integer(IntKi), public, parameter :: WD_u_p_hub                       =   6 ! WD%p_hub
+   integer(IntKi), public, parameter :: WD_u_V_plane                     =   7 ! WD%V_plane
+   integer(IntKi), public, parameter :: WD_u_Vx_wind_disk                =   8 ! WD%Vx_wind_disk
+   integer(IntKi), public, parameter :: WD_u_TI_amb                      =   9 ! WD%TI_amb
+   integer(IntKi), public, parameter :: WD_u_D_rotor                     =  10 ! WD%D_rotor
+   integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  11 ! WD%Vx_rel_disk
+   integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  12 ! WD%Ct_azavg
+   integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  13 ! WD%Cq_azavg
+   integer(IntKi), public, parameter :: WD_y_NumPlanes                   =  14 ! WD%NumPlanes
+   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  15 ! WD%xhat_plane
+   integer(IntKi), public, parameter :: WD_y_p_plane                     =  16 ! WD%p_plane
+   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  17 ! WD%Vx_wake
+   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  18 ! WD%Vr_wake
+   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  19 ! WD%Vx_wake2
+   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  20 ! WD%Vy_wake2
+   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  21 ! WD%Vz_wake2
+   integer(IntKi), public, parameter :: WD_y_D_wake                      =  22 ! WD%D_wake
+   integer(IntKi), public, parameter :: WD_y_x_plane                     =  23 ! WD%x_plane
+   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  24 ! WD%WAT_k
+
+contains
 
 subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg)
    type(WD_InputFileType), intent(in) :: SrcInputFileTypeData
@@ -257,7 +290,8 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    ErrMsg  = ''
    DstInputFileTypeData%dr = SrcInputFileTypeData%dr
    DstInputFileTypeData%NumRadii = SrcInputFileTypeData%NumRadii
-   DstInputFileTypeData%NumPlanes = SrcInputFileTypeData%NumPlanes
+   DstInputFileTypeData%NumDFull = SrcInputFileTypeData%NumDFull
+   DstInputFileTypeData%NumDBuff = SrcInputFileTypeData%NumDBuff
    DstInputFileTypeData%Mod_Wake = SrcInputFileTypeData%Mod_Wake
    DstInputFileTypeData%f_c = SrcInputFileTypeData%f_c
    DstInputFileTypeData%C_HWkDfl_O = SrcInputFileTypeData%C_HWkDfl_O
@@ -295,6 +329,7 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%WAT_k_Grad_DMin = SrcInputFileTypeData%WAT_k_Grad_DMin
    DstInputFileTypeData%WAT_k_Grad_DMax = SrcInputFileTypeData%WAT_k_Grad_DMax
    DstInputFileTypeData%WAT_k_Grad_Exp = SrcInputFileTypeData%WAT_k_Grad_Exp
+   DstInputFileTypeData%RotorDiamRef = SrcInputFileTypeData%RotorDiamRef
 end subroutine
 
 subroutine WD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
@@ -313,7 +348,8 @@ subroutine WD_PackInputFileType(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%dr)
    call RegPack(RF, InData%NumRadii)
-   call RegPack(RF, InData%NumPlanes)
+   call RegPack(RF, InData%NumDFull)
+   call RegPack(RF, InData%NumDBuff)
    call RegPack(RF, InData%Mod_Wake)
    call RegPack(RF, InData%f_c)
    call RegPack(RF, InData%C_HWkDfl_O)
@@ -351,6 +387,7 @@ subroutine WD_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%WAT_k_Grad_DMin)
    call RegPack(RF, InData%WAT_k_Grad_DMax)
    call RegPack(RF, InData%WAT_k_Grad_Exp)
+   call RegPack(RF, InData%RotorDiamRef)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -361,7 +398,8 @@ subroutine WD_UnPackInputFileType(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%dr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumRadii); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumDFull); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumDBuff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_Wake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%f_c); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_HWkDfl_O); if (RegCheckErr(RF, RoutineName)) return
@@ -399,6 +437,7 @@ subroutine WD_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%WAT_k_Grad_DMin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Grad_DMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Grad_Exp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotorDiamRef); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -417,6 +456,7 @@ subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%TurbNum = SrcInitInputData%TurbNum
    DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
+   DstInitInputData%MaxNumPlanes = SrcInitInputData%MaxNumPlanes
 end subroutine
 
 subroutine WD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -440,6 +480,7 @@ subroutine WD_PackInitInput(RF, Indata)
    call WD_PackInputFileType(RF, InData%InputFileData) 
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%OutFileRoot)
+   call RegPack(RF, InData%MaxNumPlanes)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -451,6 +492,7 @@ subroutine WD_UnPackInitInput(RF, OutData)
    call WD_UnpackInputFileType(RF, OutData%InputFileData) ! InputFileData 
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MaxNumPlanes); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -586,6 +628,7 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    character(*), parameter        :: RoutineName = 'WD_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstDiscStateData%NumPlanes = SrcDiscStateData%NumPlanes
    if (allocated(SrcDiscStateData%xhat_plane)) then
       LB(1:2) = lbound(SrcDiscStateData%xhat_plane)
       UB(1:2) = ubound(SrcDiscStateData%xhat_plane)
@@ -830,6 +873,7 @@ subroutine WD_PackDiscState(RF, Indata)
    type(WD_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WD_PackDiscState'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NumPlanes)
    call RegPackAlloc(RF, InData%xhat_plane)
    call RegPackAlloc(RF, InData%YawErr_filt)
    call RegPack(RF, InData%psi_skew_filt)
@@ -859,6 +903,7 @@ subroutine WD_UnPackDiscState(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%xhat_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%YawErr_filt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%psi_skew_filt); if (RegCheckErr(RF, RoutineName)) return
@@ -1370,8 +1415,11 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%dt_low = SrcParamData%dt_low
-   DstParamData%NumPlanes = SrcParamData%NumPlanes
+   DstParamData%MaxNumPlanes = SrcParamData%MaxNumPlanes
    DstParamData%NumRadii = SrcParamData%NumRadii
+   DstParamData%x_Full = SrcParamData%x_Full
+   DstParamData%x_Buff = SrcParamData%x_Buff
+   DstParamData%d_Buff = SrcParamData%d_Buff
    DstParamData%dr = SrcParamData%dr
    if (allocated(SrcParamData%r)) then
       LB(1:1) = lbound(SrcParamData%r)
@@ -1476,8 +1524,11 @@ subroutine WD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'WD_PackParam'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%dt_low)
-   call RegPack(RF, InData%NumPlanes)
+   call RegPack(RF, InData%MaxNumPlanes)
    call RegPack(RF, InData%NumRadii)
+   call RegPack(RF, InData%x_Full)
+   call RegPack(RF, InData%x_Buff)
+   call RegPack(RF, InData%d_Buff)
    call RegPack(RF, InData%dr)
    call RegPackAlloc(RF, InData%r)
    call RegPackAlloc(RF, InData%y)
@@ -1535,8 +1586,11 @@ subroutine WD_UnPackParam(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%dt_low); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MaxNumPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumRadii); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%x_Full); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%x_Buff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%d_Buff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%r); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
@@ -1713,6 +1767,7 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'WD_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstOutputData%NumPlanes = SrcOutputData%NumPlanes
    if (allocated(SrcOutputData%xhat_plane)) then
       LB(1:2) = lbound(SrcOutputData%xhat_plane)
       UB(1:2) = ubound(SrcOutputData%xhat_plane)
@@ -1879,6 +1934,7 @@ subroutine WD_PackOutput(RF, Indata)
    type(WD_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WD_PackOutput'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NumPlanes)
    call RegPackAlloc(RF, InData%xhat_plane)
    call RegPackAlloc(RF, InData%p_plane)
    call RegPackAlloc(RF, InData%Vx_wake)
@@ -1900,6 +1956,7 @@ subroutine WD_UnPackOutput(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NumPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%xhat_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%p_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Vx_wake); if (RegCheckErr(RF, RoutineName)) return
@@ -1911,5 +1968,346 @@ subroutine WD_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%x_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WAT_k); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function WD_InputMeshPointer(u, DL) result(Mesh)
+   type(WD_InputType), target, intent(in)  :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function WD_OutputMeshPointer(y, DL) result(Mesh)
+   type(WD_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine WD_VarsPackContState(Vars, x, ValAry)
+   type(WD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call WD_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine WD_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(WD_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(WD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call WD_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine WD_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(WD_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_x_DummyContState)
+         x%DummyContState = VarVals(1)                                        ! Scalar
+      end select
+   end associate
+end subroutine
+
+function WD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine WD_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(WD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call WD_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine WD_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(WD_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_VarsPackInput(Vars, u, ValAry)
+   type(WD_InputType), intent(in)          :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call WD_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine WD_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(WD_InputType), intent(in)          :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_u_xhat_disk)
+         VarVals = u%xhat_disk(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (WD_u_YawErr)
+         VarVals(1) = u%YawErr                                                ! Scalar
+      case (WD_u_psi_skew)
+         VarVals(1) = u%psi_skew                                              ! Scalar
+      case (WD_u_chi_skew)
+         VarVals(1) = u%chi_skew                                              ! Scalar
+      case (WD_u_p_hub)
+         VarVals = u%p_hub(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (WD_u_V_plane)
+         VarVals = u%V_plane(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (WD_u_Vx_wind_disk)
+         VarVals(1) = u%Vx_wind_disk                                          ! Scalar
+      case (WD_u_TI_amb)
+         VarVals(1) = u%TI_amb                                                ! Scalar
+      case (WD_u_D_rotor)
+         VarVals(1) = u%D_rotor                                               ! Scalar
+      case (WD_u_Vx_rel_disk)
+         VarVals(1) = u%Vx_rel_disk                                           ! Scalar
+      case (WD_u_Ct_azavg)
+         VarVals = u%Ct_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
+      case (WD_u_Cq_azavg)
+         VarVals = u%Cq_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(WD_InputType), intent(inout)       :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call WD_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine WD_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(WD_InputType), intent(inout)       :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_u_xhat_disk)
+         u%xhat_disk(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (WD_u_YawErr)
+         u%YawErr = VarVals(1)                                                ! Scalar
+      case (WD_u_psi_skew)
+         u%psi_skew = VarVals(1)                                              ! Scalar
+      case (WD_u_chi_skew)
+         u%chi_skew = VarVals(1)                                              ! Scalar
+      case (WD_u_p_hub)
+         u%p_hub(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (WD_u_V_plane)
+         u%V_plane(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (WD_u_Vx_wind_disk)
+         u%Vx_wind_disk = VarVals(1)                                          ! Scalar
+      case (WD_u_TI_amb)
+         u%TI_amb = VarVals(1)                                                ! Scalar
+      case (WD_u_D_rotor)
+         u%D_rotor = VarVals(1)                                               ! Scalar
+      case (WD_u_Vx_rel_disk)
+         u%Vx_rel_disk = VarVals(1)                                           ! Scalar
+      case (WD_u_Ct_azavg)
+         u%Ct_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
+      case (WD_u_Cq_azavg)
+         u%Cq_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function WD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_u_xhat_disk)
+       Name = "u%xhat_disk"
+   case (WD_u_YawErr)
+       Name = "u%YawErr"
+   case (WD_u_psi_skew)
+       Name = "u%psi_skew"
+   case (WD_u_chi_skew)
+       Name = "u%chi_skew"
+   case (WD_u_p_hub)
+       Name = "u%p_hub"
+   case (WD_u_V_plane)
+       Name = "u%V_plane"
+   case (WD_u_Vx_wind_disk)
+       Name = "u%Vx_wind_disk"
+   case (WD_u_TI_amb)
+       Name = "u%TI_amb"
+   case (WD_u_D_rotor)
+       Name = "u%D_rotor"
+   case (WD_u_Vx_rel_disk)
+       Name = "u%Vx_rel_disk"
+   case (WD_u_Ct_azavg)
+       Name = "u%Ct_azavg"
+   case (WD_u_Cq_azavg)
+       Name = "u%Cq_azavg"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine WD_VarsPackOutput(Vars, y, ValAry)
+   type(WD_OutputType), intent(in)         :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call WD_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine WD_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(WD_OutputType), intent(in)         :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_y_NumPlanes)
+         VarVals(1) = y%NumPlanes                                             ! Scalar
+      case (WD_y_xhat_plane)
+         VarVals = y%xhat_plane(V%iLB:V%iUB,V%j)                              ! Rank 2 Array
+      case (WD_y_p_plane)
+         VarVals = y%p_plane(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (WD_y_Vx_wake)
+         VarVals = y%Vx_wake(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (WD_y_Vr_wake)
+         VarVals = y%Vr_wake(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (WD_y_Vx_wake2)
+         VarVals = y%Vx_wake2(V%iLB:V%iUB, V%j, V%k)                          ! Rank 3 Array
+      case (WD_y_Vy_wake2)
+         VarVals = y%Vy_wake2(V%iLB:V%iUB, V%j, V%k)                          ! Rank 3 Array
+      case (WD_y_Vz_wake2)
+         VarVals = y%Vz_wake2(V%iLB:V%iUB, V%j, V%k)                          ! Rank 3 Array
+      case (WD_y_D_wake)
+         VarVals = y%D_wake(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (WD_y_x_plane)
+         VarVals = y%x_plane(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (WD_y_WAT_k)
+         VarVals = y%WAT_k(V%iLB:V%iUB, V%j, V%k)                             ! Rank 3 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WD_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(WD_OutputType), intent(inout)      :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call WD_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine WD_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(WD_OutputType), intent(inout)      :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WD_y_NumPlanes)
+         y%NumPlanes = VarVals(1)                                             ! Scalar
+      case (WD_y_xhat_plane)
+         y%xhat_plane(V%iLB:V%iUB, V%j) = VarVals                             ! Rank 2 Array
+      case (WD_y_p_plane)
+         y%p_plane(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (WD_y_Vx_wake)
+         y%Vx_wake(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (WD_y_Vr_wake)
+         y%Vr_wake(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (WD_y_Vx_wake2)
+         y%Vx_wake2(V%iLB:V%iUB, V%j, V%k) = VarVals                          ! Rank 3 Array
+      case (WD_y_Vy_wake2)
+         y%Vy_wake2(V%iLB:V%iUB, V%j, V%k) = VarVals                          ! Rank 3 Array
+      case (WD_y_Vz_wake2)
+         y%Vz_wake2(V%iLB:V%iUB, V%j, V%k) = VarVals                          ! Rank 3 Array
+      case (WD_y_D_wake)
+         y%D_wake(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (WD_y_x_plane)
+         y%x_plane(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (WD_y_WAT_k)
+         y%WAT_k(V%iLB:V%iUB, V%j, V%k) = VarVals                             ! Rank 3 Array
+      end select
+   end associate
+end subroutine
+
+function WD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (WD_y_NumPlanes)
+       Name = "y%NumPlanes"
+   case (WD_y_xhat_plane)
+       Name = "y%xhat_plane"
+   case (WD_y_p_plane)
+       Name = "y%p_plane"
+   case (WD_y_Vx_wake)
+       Name = "y%Vx_wake"
+   case (WD_y_Vr_wake)
+       Name = "y%Vr_wake"
+   case (WD_y_Vx_wake2)
+       Name = "y%Vx_wake2"
+   case (WD_y_Vy_wake2)
+       Name = "y%Vy_wake2"
+   case (WD_y_Vz_wake2)
+       Name = "y%Vz_wake2"
+   case (WD_y_D_wake)
+       Name = "y%D_wake"
+   case (WD_y_x_plane)
+       Name = "y%x_plane"
+   case (WD_y_WAT_k)
+       Name = "y%WAT_k"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE WakeDynamics_Types
+
 !ENDOFREGISTRYGENERATEDFILE

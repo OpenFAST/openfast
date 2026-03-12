@@ -9,6 +9,129 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v4.2.x to OpenFAST  v5.0.0
+-----------------------------------
+
+Added mass and fluid inertia loads were added to the rotor blades and tower in AeroDyn. 
+This results in new columns in the AeroDyn blade input file and new columns in the 
+"Tower Influence and Aerodynamics" section of the AeroDyn primary input file. Given the
+addition of these loads, the Buoyancy flag was also removed, and the buoyancy, added mass,
+and inertia loads can all be turned off by setting the appropriate coefficients to zero
+rather than via a separate flag for each.
+
+Superposition of wave and current velocities between InflowWind and SeaState was enabled,
+which requires a "SeaState Data" section in the AeroDyn driver input file.
+
+Changes to the OpenFAST input file support multiple rotors in one turbine. Line 16, NRotors,
+is required to specify the number of rotors in the turbine. Lines 50-56 specify the 
+ElastoDyn, BeamDyn, and ServoDyn input files for the second rotor; all other modules use 
+the input files specified in the first section. The `MirrorRotor` line sets a flag to 
+reverse the direction the rotor is spinning. The first rotor always spins in the typical direction. 
+These lines are specified only if NRotors is greater than 1 and are repeated for subsequent rotors.
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Added in OpenFAST `5.0.0`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+OpenFAST                                      8        ModCoupling          3    ModCoupling  - Module coupling method (switch) {1=loose; 2=tight with fixed Jacobian updates (DT_UJac); 3=tight with automatic Jacobian updates}
+OpenFAST                                      11       RhoInf               1.0  RhoInf       - Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]
+OpenFAST                                      12       ConvTol              1e-4 ConvTol      - Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)
+OpenFAST                                      13       MaxConvIter          6    MaxConvIter  - Maximum number of convergence iterations for tight coupling generalized alpha integrator (-)
+OpenFAST                                      17       NRotors              2   NRotors      - Number of rotors in turbine (-)
+OpenFAST                                      20       CompSoil             0   CompSoil     - Compute soil-structural dynamics (switch) {0=None; 1=SoilDyn}
+OpenFAST                                      29       MirrorRotor          F   MirrorRotor  - Flag to reverse rotor rotation direction [1 to NRotors] {F=Normal, T=Mirror}
+OpenFAST                                      53       SoilFile             "SoilDyn.dat"     SoilFile        - Name of the file containing the SoilDyn input parameters (quoted string)
+OpenFAST                                      54                            ---------------------- INPUT FILES Rotor 2 -------------------------------------
+OpenFAST                                      55       EDFile               "ElastoDyn.dat"   EDFile          - Name of file containing ElastoDyn input parameters (quoted string)
+OpenFAST                                      56       BDBldFile(1)         "BeamDyn.dat"     BDBldFile(1)    - Name of file containing BeamDyn input parameters for blade 1 (quoted string)
+OpenFAST                                      57       BDBldFile(2)         "BeamDyn.dat"     BDBldFile(2)    - Name of file containing BeamDyn input parameters for blade 2 (quoted string)
+OpenFAST                                      58       BDBldFile(3)         "BeamDyn.dat"     BDBldFile(3)    - Name of file containing BeamDyn input parameters for blade 3 (quoted string)
+OpenFAST                                      59       ServoFile            "ServoDyn_R2.dat" ServoFile       - Name of file containing control and electrical-drive input parameters (quoted string)
+AeroDyn blade file                                     t_c                  0.8651      [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCpn                1.0         [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCpt                1.0         [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCan                6.8459E+00  [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCat                5.4605E-01  [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCam                5.5180E-02  [additional column in *Blade Properties* table]
+AeroDyn driver                                23                            ----- SeaState Data [used only when MHK = 1 or 2] ---------------------------------------
+AeroDyn driver                                24       CompSeaSt            1     CompSeaSt     - Compute wave velocities (switch) {0=No Waves; 1=SeaState}
+AeroDyn driver                                25       SeaStFile            "MHK_RM1_Fixed_SeaState.dat"     SeaStFile     - Name of the SeaState input file [used only when CompSeaSt=1]
+AeroDyn                                       \*       TwrCp                1.0         [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn                                       \*       TwrCa                1.0         [additional column in *Tower Influence and Aerodynamics* table]
+SeaState                                      18       WvCrntMod            0     WvCrntMod     - Combined wave-current modeling option {0: simple superposition, 1: include Doppler effect, 2: include both Doppler effect and wave amplitude/spectrum scaling} (switch)
+ElastoDyn                                     11       PitchDOF             False         PitchDOF    - Blade pitch DOF (flag)
+ElastoDyn                                     70       PtfmRefxt            0             PtfmRefxt   - Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)
+ElastoDyn                                     71       PtfmRefyt            0             PtfmRefyt   - Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)
+ElastoDyn                                     77       PBrIner(1)           200           PBrIner(1)  - Pitch bearing/actuator inertia, blade 1 (kg m^2)
+ElastoDyn                                     78       PBrIner(2)           200           PBrIner(2)  - Pitch bearing/actuator inertia, blade 2 (kg m^2)
+ElastoDyn                                     79       PBrIner(3)           200           PBrIner(3)  - Pitch bearing/actuator inertia, blade 3 (kg m^2) [unused for 2 blades]
+ElastoDyn                                     80       BlPIner(1)           28578         BlPIner(1)  - Pitch inertia of an undeflected blade, blade 1 (kg m^2)
+ElastoDyn                                     81       BlPIner(2)           28578         BlPIner(2)  - Pitch inertia of an undeflected blade, blade 2 (kg m^2)
+ElastoDyn                                     82       BlPIner(3)           28578         BlPIner(3)  - Pitch inertia of an undeflected blade, blade 3 (kg m^2) [unused for 2 blades]
+BeamDyn blade file                            10                            ------ Modal Damping [used only if damp_type=2] --------------------------------
+BeamDyn blade file                            11       n_modes              3             n_modes     - Number of modal damping coefficients (-)
+BeamDyn blade file                            12       zeta                 0.1, 0.2, 0.3 zeta        - Damping coefficients for mode 1 through n_modes
+ServoDyn                                      9        PitNeut(1)           0             PitNeut(1)  - Blade 1 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
+ServoDyn                                      10       PitNeut(2)           0             PitNeut(2)  - Blade 2 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]*
+ServoDyn                                      11       PitNeut(3)           0             PitNeut(3)  - Blade 3 neutral pitch position--pitch spring moment is zero at this position *[unused when* **PCMode>0** and **t>=TPCOn** *]* *[unused for 2 blades]*
+ServoDyn                                      12       PitSpr(1)            3.6E7         PitSpr(1)   - Blade 1 pitch spring constant
+ServoDyn                                      13       PitSpr(2)            3.6E7         PitSpr(2)   - Blade 2 pitch spring constant
+ServoDyn                                      14       PitSpr(3)            3.6E7         PitSpr(3)   - Blade 3 pitch spring constant *[unused for 2 blades]*
+ServoDyn                                      15       PitDamp(1)           1.4E6         PitDamp(1)  - Blade 1 pitch damping constant
+ServoDyn                                      16       PitDamp(2)           1.4E6         PitDamp(2)  - Blade 2 pitch damping constant
+ServoDyn                                      17       PitDamp(3)           1.4E6         PitDamp(3)  - Blade 3 pitch damping constant *[unused for 2 blades]*
+HydroDyn                                      \*       HstMod               1             HstMod      - Method of computing hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) *[overwrite to 0 when WaveStMod = 0 in SeaState]*
+FAST.Farm                                     35                            --- AMBIENT WIND: AMReX MODULE --- [used only for Mod_AmbWind=4]
+FAST.Farm                                     36       WindDirPrefix        "inflow/ffboxes"   WindDirPrefix - Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)
+FAST.Farm                                     37       DirStartIndex        00110              DirStartIndex - AMReX sub-volume directory suffix to consider as time=0 (quoted string)
+FAST.Farm                                     38       DT_Low-AMReX         2.0                DT_Low-AMReX  - Time step for low-resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
+FAST.Farm                                     39       DT_High-AMReX        1.0                DT_High-AMReX - Time step for high-resolution wind data interpolation (s) [>0.0]
+FAST.Farm                                     50       NumDFull             DEFAULT            NumDFull      - Distance of full wake propagation, expressed as a multiple of RotorDiamRef [>0.0] or DEFAULT [DEFAULT=15]
+FAST.Farm                                     51       NumDBuff             DEFAULT            NumDBuff      - Length of wake propagation buffer region, expressed as a multiple of RotorDiamRef [>=0.0] or DEFAULT [DEFAULT=5]
+SoilDyn                                       all                           New module
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `5.0.0`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+AeroDyn blade file                            5                             BlSpn      BlCrvAC    BlSwpAC    BlCrvAng    BlTwist    BlChord    BlAFID    t_c      BlCb     BlCenBn     BlCenBt    BlCpn    BlCpt    BlCan    BlCat    BlCam
+AeroDyn blade file                            6                             (m)        (m)        (m)        (deg)       (deg)      (m)        (-)       (-)      (-)      (m)         (m)        (-)      (-)      (-)      (-)      (-)
+AeroDyn                                       \*                            ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
+AeroDyn                                       \*                            ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
+AeroDyn                                       \*                            ======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+AeroDyn                                       \*       NumTwrNds            5     NumTwrNds     - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+AeroDyn                                       \*                            TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2
+AeroDyn                                       \*                            (m)            (m)            (-)            (-)            (-)            (-)            (-)
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Removed in OpenFAST `5.0.0`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+AeroDyn                                       11       Buoyancy             False         Buoyancy           - Include buoyancy effects? (flag)
+BeamDyn                                       \*                            ---------------------- PITCH ACTUATOR PARAMETERS -------------------------------
+BeamDyn                                       \*       UsePitchAct          False         UsePitchAct - Whether a pitch actuator should be used (flag)
+BeamDyn                                       \*       PitchJ               200           PitchJ      - Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]
+BeamDyn                                       \*       PitchK               20000000      PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]
+BeamDyn                                       \*       PitchC               500000        PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
+ElastoDyn Blade Input File                    \*                            The PitchAxis column has been removed from the DISTRIBUTED BLADE PROPERTIES table. The table should now only have 5 columns: BlFract, StrcTwst, BMassDen, FlpStff, and EdgStff
+FAST.Farm                                     50       NumPlanes            140           NumPlanes   - Number of wake planes (-) [>=2]
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+New Modules in v5.0.0
+~~~~~~~~~~~~~~~~~~~~~
+
+- SoilDyn -- a soil interaction module specifically designed to work with the RedWin DLL from NGI for soil interaction. Documentation for this module is limited.
+
+
 
 OpenFAST v4.2.0 to OpenFAST v4.2.1
 ----------------------------------

@@ -21,8 +21,7 @@
 !**********************************************************************************************************************************
 MODULE FAST_ModTypes
 
-   USE NWTC_Library
-   USE FAST_Types
+   USE NWTC_Library_Types
 
    TYPE(ProgDesc) :: FAST_Ver  = ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
          
@@ -39,6 +38,11 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: STATE_PRED              = 2          !< index for "predicted" (t_global_next) states
    INTEGER(IntKi), PARAMETER :: STATE_SAVED_CURR        = 3
    INTEGER(IntKi), PARAMETER :: STATE_SAVED_PRED        = 4
+   
+   ! input array indices
+   INTEGER(IntKi), PARAMETER :: INPUT_TEMP              = 0
+   INTEGER(IntKi), PARAMETER :: INPUT_CURR              = 1
+   INTEGER(IntKi), PARAMETER :: INPUT_PREV              = 2
    
    ! VTK visualization
    INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1         !< unknown option (will produce error)
@@ -69,7 +73,6 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
 
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
-
 
 END MODULE FAST_ModTypes
 !=======================================================================

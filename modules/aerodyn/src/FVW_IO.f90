@@ -24,6 +24,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
+   Inp%SrcPnlFile = '' ! TODO registry init for empty strings
    ! Open file
    CALL GetNewUnit( UnIn )   
    CALL OpenFInpfile(UnIn, TRIM(FileName), ErrStat2, ErrMsg2)
@@ -117,37 +118,50 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if(ErrStat2==ErrID_None) then
       call WrScr(' - Reading advanced options for OLAF:')
       do while(ErrStat2==ErrID_None)
-         read(UnIn, '(A)', iostat=ErrStat2) sDummy
+         read(UnIn, '(A)', iostat=ErrStat2) sLine
          if (ErrStat2/=ErrID_None) exit
+         sDummy = sLine
          call Conv2UC(sDummy)  ! to uppercase
          if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
             ! pass comment lines
          elseif (index(sDummy, 'INDUCTIONATCP')>1) then
-            read(sDummy, '(L1)') p%InductionAtCP
+            read(sLine, '(L1)') p%InductionAtCP
             print*,'   >>> InductionAtCP      ',p%InductionAtCP
          elseif (index(sDummy, 'WAKEATTE')>1) then
-            read(sDummy, '(L1)') p%WakeAtTE
+            read(sLine, '(L1)') p%WakeAtTE
             print*,'   >>> WakeAtTE           ',p%WakeAtTE
          elseif (index(sDummy, 'DSTALLONWAKE')>1) then
-            read(sDummy, '(L1)') p%DStallOnWake
+            read(sLine, '(L1)') p%DStallOnWake
             print*,'   >>> DStallOnWake       ',p%DStallOnWake
          elseif (index(sDummy, 'INDUCTION')>1) then
-            read(sDummy, '(L1)') p%Induction
+            read(sLine, '(L1)') p%Induction
             print*,'   >>> Induction          ',p%Induction
          elseif (index(sDummy, 'KFROZENNWEND')>1) then
-            read(sDummy, *) p%kFrozenNWEnd
+            read(sLine, *) p%kFrozenNWEnd
             print*,'   >>> kFrozenNWEnd       ',p%kFrozenNWEnd
          elseif (index(sDummy, 'KFROZENNWSTART')>1) then
-            read(sDummy, *) p%kFrozenNWStart
+            read(sLine, *) p%kFrozenNWStart
             print*,'   >>> kFrozenNWStart     ',p%kFrozenNWStart
          elseif (index(sDummy, 'VELOCITYMETHODLL')>1) then
-            read(sDummy, *) Inp%VelocityMethod(2)
+            read(sLine, *) Inp%VelocityMethod(2)
             print*,'   >>> VelocityMethod     ',Inp%VelocityMethod
          elseif (index(sDummy, 'TREEBRANCHFACTORLL')>1) then
-            read(sDummy, *) Inp%TreeBranchFactor(2)
+            read(sLine, *) Inp%TreeBranchFactor(2)
             print*,'   >>> TreeBranchFactor   ',Inp%TreeBranchFactor
+         elseif (index(sDummy, 'SRCPNLFILE')>1) then
+            read(sLine, *) Inp%SrcPnlFile
+            print*,'   >>> SrcPnlFile         ',trim(Inp%SrcPnlFile)
+         elseif (index(sDummy, 'ZGROUNDPUSH')>1) then
+            read(sLine, *) p%zGroundPush
+            print*,'   >>> zGroundPush        ',p%zGroundPush
+         elseif (index(sDummy, 'ZGROUND')>1) then
+            read(sLine, *) p%zGround
+            print*,'   >>> zGround            ',p%zGround
+         elseif (index(sDummy, 'NSRCPNLUPDATE')>1) then
+            read(sLine, *) p%nSrcPnlUpdate
+            print*,'   >>> nSrcPnlUpdate      ',p%nSrcPnlUpdate
          else
-            print*,'[WARN] Line ignored: '//trim(sDummy)
+            print*,'[WARN] Line ignored: '//trim(sLine)
          endif
       enddo
    endif
@@ -453,8 +467,15 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       nSeg  = 2*nSeg
       nSegP = 2*nSegP
    endif
-   Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
-   CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame) 
+   if (nSeg>0) then
+      Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
+      CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame) 
+   endif
+
+   if (p%SrcPnl%n>0) then
+      Filename = TRIM(FileRootName)//'.SrcPnl.'//Tstr//'.vtk'
+      CALL WrVTK_Panels(Filename, mvtk, p%SrcPnl, m%SrcPnl, z%SrcPnl)
+   endif
 
    if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
 end subroutine WrVTK_FVW
@@ -510,6 +531,42 @@ subroutine WrVTK_FVW_Grid(p, m, iGrid, FileRootName, VTKcount, Twidth, HubOrient
    if(.false.) print*,p%nNWMax ! unused var for now
 end subroutine WrVTK_FVW_Grid
 
+
+subroutine WrVTK_Panels(filename, mvtk, p, m, z)
+   use VTK
+   character(len=*),     intent(in)    :: filename
+   type(VTK_Misc),       intent(inout) :: mvtk     !< miscvars for VTK output
+   type(T_SrcPanlParam), intent(in)    :: p
+   type(T_SrcPanlMisc) , intent(in)    :: m
+   type(T_SrcPanlVar)  , intent(in)    :: z
+   if ( vtk_new_ascii_file(trim(filename), 'SourcePanels '//trim(p%Comment), mvtk) ) then
+      call vtk_dataset_polydata(p%P, mvtk, bladeFrame=.false.)
+      call vtk_quad(p%IDs-1, mvtk)
+      call vtk_cell_data_init(mvtk)
+      if (.not. allocated(z%Sigma)) then ! First time step
+         call vtk_cell_data_scalar(m%RHS   ,'Intensities', mvtk)
+      else
+         call vtk_cell_data_scalar(z%Sigma ,'Intensities', mvtk)
+      endif
+      call vtk_cell_data_scalar(p%BodyIDs,'BodyID'     , mvtk)
+      call vtk_cell_data_scalar(m%Cp     ,'Cp'         , mvtk)
+      call vtk_cell_data_scalar(m%p      ,'p'          , mvtk)
+      call vtk_cell_data_scalar(p%Area   ,'Area'       , mvtk)
+      call vtk_cell_data_vector(m%F      ,'F'          , mvtk)
+      call vtk_cell_data_vector(m%FpA    ,'F/A'        , mvtk)
+      call vtk_cell_data_vector(p%Pmid   ,'Pmid'       , mvtk)
+      call vtk_cell_data_vector(p%Pcent  ,'Pcent'      , mvtk)
+      call vtk_cell_data_vector(m%Uwnd   ,'Uwnd'       , mvtk)
+      call vtk_cell_data_vector(m%Uext   ,'Uext'       , mvtk)
+      call vtk_cell_data_vector(m%Uind   ,'Uind'       , mvtk)
+      call vtk_cell_data_vector(m%Utot   ,'Utot'       , mvtk)
+      call vtk_cell_data_vector(p%Normal ,'Normal'     , mvtk)
+      !call vtk_cell_data_vector(p%Ts     ,'Ts',mvtk)
+      !call vtk_cell_data_vector(p%Tc     ,'Tc',mvtk)
+      !call vtk_cell_data_vector(p%To     ,'To',mvtk)
+      call vtk_close_file(mvtk)
+   endif
+endsubroutine WrVTK_Panels
 
 
 subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 

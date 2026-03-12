@@ -81,6 +81,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    INTEGER                                      :: UnEc                 ! The local unit number for this module's echo file
    CHARACTER(1024)                              :: EchoFile             ! Name of HydroDyn echo file
    CHARACTER(MaxFileInfoLineLen)                :: Line                 ! String to temporarially hold value of read line
+   INTEGER                                      :: NDOF                 ! Number of DOF in each WAMIT module
    real(ReKi), ALLOCATABLE                      :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
    integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
    INTEGER, ALLOCATABLE                         :: tmpArray(:)          ! Temporary array storage of the joint output list
@@ -206,7 +207,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    CALL AllocAry( InputFileData%PtfmVol0     , InputFileData%NBody,     'PtfmVol0'     , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%PtfmCOBxt    , InputFileData%NBody,     'PtfmCOBxt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%PtfmCOByt    , InputFileData%NBody,     'PtfmCOByt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
-
+   CALL AllocAry( InputFileData%NAddDOF      , InputFileData%NBody,     'NAddDOF'      , ErrStat2, ErrMsg2);   if (Failed())  return;
 
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
    call ParseAry( FileInfo_In, CurLine, 'PotFile', InputFileData%PotFile, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
@@ -245,6 +246,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseAry( FileInfo_In, CurLine, 'PtfmCOByt', InputFileData%PtfmCOByt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    
+   call ParseAry( FileInfo_In, CurLine, 'NAddDOF', InputFileData%NAddDOF, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd order WAMIT forces
@@ -277,67 +280,66 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
 
    ! If NBodyMod = 1 then vecMultiplier = NBody and nWAMITObj = 1
    ! Else                 vecMultiplier = 1     and nWAMITObj = NBody
-   CALL AllocAry( InputFileData%AddF0,     InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddF0'    , ErrStat2, ErrMsg2);                                   if (Failed())  return; 
-   CALL AllocAry( InputFileData%AddCLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddCLin'  , ErrStat2, ErrMsg2);    if (Failed())  return; 
-   CALL AllocAry( InputFileData%AddBLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBLin'  , ErrStat2, ErrMsg2);    if (Failed())  return;
-   CALL AllocAry( InputFileData%AddBQuad,  InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBQuad' , ErrStat2, ErrMsg2);    if (Failed())  return;
-   CALL AllocAry( tmpVec1, InputFileData%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2);  if (Failed())  return;
-   CALL AllocAry( tmpVec2, 6*InputFileData%NBody,   'tmpVec2', ErrStat2, ErrMsg2);  if (Failed())  return;
+   if ( InputFileData%NBody == 1_IntKi ) then
+      ! To avoid each WAMITObj having different NDOF, generalized DOF is currently only allowed with NBody = 1
+      NDOF = 6+InputFileData%NAddDOF(1)
+   else
+      NDOF = 6*InputFileData%vecMultiplier
+   end if
+   call AllocAry( InputFileData%AddF0,    NDOF,       InputFileData%nWAMITObj, 'InputFileData%AddF0'    , ErrStat2, ErrMsg2);    if (Failed())  return;
+   call AllocAry( InputFileData%AddCLin,  NDOF, NDOF, InputFileData%nWAMITObj, 'InputFileData%AddCLin'  , ErrStat2, ErrMsg2);    if (Failed())  return;
+   call AllocAry( InputFileData%AddBLin,  NDOF, NDOF, InputFileData%nWAMITObj, 'InputFileData%AddBLin'  , ErrStat2, ErrMsg2);    if (Failed())  return;
+   call AllocAry( InputFileData%AddBQuad, NDOF, NDOF, InputFileData%nWAMITObj, 'InputFileData%AddBQuad' , ErrStat2, ErrMsg2);    if (Failed())  return;
+   call AllocAry( tmpVec1, InputFileData%nWAMITObj     , 'tmpVec1', ErrStat2, ErrMsg2);  if (Failed())  return;
+   call AllocAry( tmpVec2, InputFileData%nWAMITObj*NDOF, 'tmpVec2', ErrStat2, ErrMsg2);  if (Failed())  return;
 
-      ! AddF0 - Additional preload
-   do i = 1,6*InputFileData%vecMultiplier   
+   ! AddF0 - Additional preload
+   do i = 1,NDOF
       call ParseAry( FileInfo_In, CurLine, 'AddF0', tmpVec1, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
-
       do j = 1, InputFileData%nWAMITObj
          InputFileData%AddF0(i,j) = tmpVec1(j)
       end do
    end do
-   
-      ! AddCLin
-   do i=1,6*InputFileData%vecMultiplier
 
-      write(strI,'(I1)') i
+   ! AddCLin
+   do i = 1, NDOF
+      write(strI,'(I2)') i
       call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional linear stiffness matrix', &
-                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+                     tmpVec2, InputFileData%nWAMITObj*NDOF, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
-
       do j = 1, InputFileData%nWAMITObj
-         startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
-         endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
+         startIndx = NDOF*(j-1) + 1
+         endIndx   = startIndx + NDOF - 1
          InputFileData%AddCLin(i,:,j) = tmpVec2(startIndx:endIndx)
       end do
    end do
 
-
-       ! AddBLin
-   DO I=1,6*InputFileData%vecMultiplier
-
+   ! AddBLin
+   do i = 1, NDOF
+      write(strI,'(I2)') i
       call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional linear damping matrix', &
-                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+                     tmpVec2, InputFileData%nWAMITObj*NDOF, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
-
       do j = 1, InputFileData%nWAMITObj
-         startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
-         endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
-         InputFileData%AddBLin(I,:,j) = tmpVec2(startIndx:endIndx)
+         startIndx = NDOF*(j-1) + 1
+         endIndx   = startIndx + NDOF - 1
+         InputFileData%AddBLin(i,:,j) = tmpVec2(startIndx:endIndx)
       end do
-   END DO
+   end do
 
-
-       ! AddBQuad
-   DO I=1,6*InputFileData%vecMultiplier
-
+   ! AddBQuad
+   do i = 1, NDOF
+      write(strI,'(I2)') i
       call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional quadratic damping matrix', &
-                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+                     tmpVec2, InputFileData%nWAMITObj*NDOF, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
-
       do j = 1, InputFileData%nWAMITObj
-         startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
-         endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
-         InputFileData%AddBQuad(I,:,j) = tmpVec2(startIndx:endIndx)
+         startIndx = NDOF*(j-1) + 1
+         endIndx   = startIndx + NDOF - 1
+         InputFileData%AddBQuad(i,:,j) = tmpVec2(startIndx:endIndx)
       end do
-   END DO
+   end do
 
    !-------------------------------------------------------------------------------------------------
    !  Strip Theory Section
@@ -351,6 +353,10 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       
    ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 1: Up to the free surface} (switch)
    call ParseVar( FileInfo_In, CurLine, 'AMMod', InputFileData%Morison%AMMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+   ! HstMod - Method of computing strip-theory hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch)
+   call ParseVar( FileInfo_In, CurLine, 'HstMod', InputFileData%Morison%HstMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1524,6 +1530,29 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       end do
    END IF
 
+   IF ( InputFileData%PotMod == 1 ) THEN
+      do i = 1,InputFileData%NBody
+         IF ( InputFileData%NAddDOF(i) < 0 )THEN
+            CALL SetErrStat( ErrID_Fatal,'NAddDOF must be non-negative for all WAMIT bodies.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
+   END IF
+
+   InputFileData%hasAddDOF = any( InputFileData%NAddDOF > 0_IntKi )
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%NBody > 1 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF is currently only allowed with NBody=1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%ExctnMod == 2 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave exctiation model (ExctnMod=2). Need ExctnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%RdtnMod == 2 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave radiation model (RdtnMod=2). Need RdtnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
 
@@ -1809,7 +1838,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
-  
+   IF ( InputFileData%Morison%HstMod /= 0 .AND. InputFileData%Morison%HstMod /= 1) THEN
+      CALL SetErrStat( ErrID_Fatal,'HstMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF  
 
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section

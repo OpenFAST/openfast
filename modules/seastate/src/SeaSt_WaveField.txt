@@ -4,6 +4,8 @@ usefrom GridInterp.txt
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 # Data structures for representing wave fields.
 #
+usefrom IfW_FlowField.txt
+
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_None          -        0   -   "WaveDirMod = 0 [Directional spreading function is NONE]" -
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_COS2S         -        1   -   "WaveDirMod = 1 [Directional spreading function is COS2S]" -
 
@@ -20,6 +22,11 @@ param     SeaSt_WaveField      -                INTEGER             WaveMod_User
 param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_None        -        0   -   "ConstWaveMod = 0 [Constrained wave model: No constrained waves]" -
 param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_CrestElev   -        1   -   "ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha]" -
 param     SeaSt_WaveField      -                INTEGER             ConstWaveMod_Peak2Trough -        2   -   "ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest]" -
+
+param     SeaSt_WaveField      -                INTEGER             WvCrntMod_Superpose      -        0   -   "WvCrntMod = 0 [Simpler superposition]" -
+param     SeaSt_WaveField      -                INTEGER             WvCrntMod_Doppler        -        1   -   "WvCrntMod = 1 [Doppler effect]" -
+param     SeaSt_WaveField      -                INTEGER             WvCrntMod_Full           -        2   -   "WvCrntMod = 2 [Doppler effect and amplitude/spectrum scaling]" -
+
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
@@ -51,6 +58,8 @@ typedef     ^                 ^                 ReKi                 MSL2SWL    
 typedef     ^                 ^                 SiKi                 WaveElevC       {:}{:}{:}        -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part" (m)
 typedef     ^                 ^                 SiKi                 WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
 typedef     ^                 ^                 SiKi                 WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
+typedef     ^                 ^                 LOGICAL              hasCurrField    -                -        -        "True if CurrField is populated for MHK simulations"	(-)
+typedef     ^                 ^                 FlowFieldType        *CurrField      -                -        -        "Pointer to FlowField type from InflowWind containing the dynamic current information" (-)
 
 typedef     ^                 ^                 ReKi                 WtrDpth          -               -        -        "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef     ^                 ^                 ReKi                 WtrDens          -               -        -        "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
@@ -68,6 +77,7 @@ typedef     ^                 ^                 SiKi                 WvLowCOffS 
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -              -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WaveDOmega        -              -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 INTEGER              WaveMod           -              -        -        "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
+typedef     ^                 ^                 INTEGER              WvCrntMod         -              -        -        "Wave-current modeling option." -
 
 typedef     ^                 ^                 INTEGER              NStepWave         -              -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -              -        -        "NStepWave / 2" -

@@ -33,12 +33,12 @@ MODULE BeamDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_STATIC_ANALYSIS = 1      ! Constant for static analysis. InputType%Dynamic = FALSE. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYNAMIC_ANALYSIS = 2      ! Constant for dynamic analysis. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = FALSE [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYN_SSS_ANALYSIS = 3      ! Constant for dynamic analysis with Steady State Startup solve. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = TRUE [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_FE = 1      ! Constant for creating y%BldMotion at the FE (GLL) nodes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_QP = 2      ! Constant for creating y%BldMotion at the quadrature nodes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_STATIC_ANALYSIS               = 1      ! Constant for static analysis. InputType%Dynamic = FALSE. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYNAMIC_ANALYSIS              = 2      ! Constant for dynamic analysis. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = FALSE [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_DYN_SSS_ANALYSIS              = 3      ! Constant for dynamic analysis with Steady State Startup solve. InputType%Dynamic = TRUE .AND. BD_InputFile%QuasiStaticSolve = TRUE [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_FE                       = 1      ! Constant for creating y%BldMotion at the FE (GLL) nodes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_QP                       = 2      ! Constant for creating y%BldMotion at the quadrature nodes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS                 = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
 ! =========  BD_InitInputType  =======
   TYPE, PUBLIC :: BD_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
@@ -49,8 +49,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: RootDisp = 0.0_R8Ki      !< Initial root displacement [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: RootOri = 0.0_R8Ki      !< Initial root orientation [-]
     REAL(ReKi) , DIMENSION(1:6)  :: RootVel = 0.0_ReKi      !< Initial root velocities and angular veolcities [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: HubPos = 0.0_ReKi      !< Initial Hub position vector [-]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubRot = 0.0_R8Ki      !< Initial Hub direction cosine matrix [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: DynamicSolve = .TRUE.      !< Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code). [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
@@ -61,14 +59,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE BD_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -79,7 +70,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: stiff0      !< C/S stiffness matrix arrays [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: mass0      !< C/S mass matrix arrays [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
-    INTEGER(IntKi)  :: damp_flag = 0_IntKi      !< Damping Flag: 0-No Damping, 1-Damped [-]
+    INTEGER(IntKi)  :: n_modes = 0_IntKi      !< Number of modal damping coefficients [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: zeta      !< Modal damping coefficient array [-]
+    INTEGER(IntKi)  :: damp_flag = 0_IntKi      !< Damping Flag: 0-No Damping, 1-Stiffness Prop. Damped, 2-Modal Damping [-]
   END TYPE BladeInputData
 ! =======================
 ! =========  BD_InputFile  =======
@@ -97,18 +90,13 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTBeam = 0.0_R8Ki      !< Time interval for BeamDyn  calculations {or default} (s) [-]
     TYPE(BladeInputData)  :: InpBl      !< Input data for individual blades [see BladeInputData Type]
     CHARACTER(1024)  :: BldFile      !< Name of blade input file [-]
-    LOGICAL  :: UsePitchAct = .false.      !< Whether to use a pitch actuator inside BeamDyn [(flag)]
     LOGICAL  :: QuasiStaticInit = .false.      !< Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve and enFAST only] [-]
     REAL(R8Ki)  :: stop_tol = 0.0_R8Ki      !< Tolerance for stopping criterion [-]
     REAL(R8Ki)  :: tngt_stf_pert = 0.0_R8Ki      !< Perturbation size for computing finite differenced tangent stiffness [-]
     REAL(R8Ki)  :: tngt_stf_difftol = 0.0_R8Ki      !< When comparing tangent stiffness matrix, stop simulation if error greater than this [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      !< Key point coordinates array [-]
-    REAL(R8Ki)  :: pitchJ = 0.0_R8Ki      !< Pitch actuator inertia [(kg-m^2)]
-    REAL(R8Ki)  :: pitchK = 0.0_R8Ki      !< Pitch actuator stiffness [(kg-m^2/s^2)]
-    REAL(R8Ki)  :: pitchC = 0.0_R8Ki      !< Pitch actuator damping [-]
     LOGICAL  :: Echo = .false.      !< Echo [-]
     LOGICAL  :: RotStates = .TRUE.      !< Orient states in rotating frame during linearization? (flag) [-]
-    LOGICAL  :: RelStates = .FALSE.      !< Define states relative to root motion during linearization? (flag) [-]
     LOGICAL  :: tngt_stf_fd = .false.      !< Flag to compute tangent stifness matrix via finite difference [-]
     LOGICAL  :: tngt_stf_comp = .false.      !< Flag to compare finite differenced and analytical tangent stifness [-]
     INTEGER(IntKi)  :: NNodeOuts = 0_IntKi      !< Number of node outputs [0 - 9] [-]
@@ -131,8 +119,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_DiscreteStateType  =======
   TYPE, PUBLIC :: BD_DiscreteStateType
-    REAL(ReKi)  :: thetaP = 0.0_ReKi      !< Pitch angle state [-]
-    REAL(ReKi)  :: thetaPD = 0.0_ReKi      !< Pitch rate state [-]
+    REAL(ReKi)  :: DummyDiscState = 0.0_ReKi      !< A variable, Replace if you have discrete states [-]
   END TYPE BD_DiscreteStateType
 ! =======================
 ! =========  BD_ConstraintStateType  =======
@@ -173,6 +160,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: blade_CG = 0.0_R8Ki      !< Blade center of gravity [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN = 0.0_R8Ki      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: zeta      !< Modal Damping Coefficients [-]
     REAL(R8Ki)  :: tol = 0.0_R8Ki      !< Tolerance used in stopping criterion [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
@@ -207,11 +195,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NdIndxInverse      !< Index from BldMotion mesh to unique nodes (to number the nodes for output without using collocated nodes) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutNd2NdElem      !< To go from an output node number to a node/elem pair [-]
     CHARACTER(20)  :: OutFmt      !< Format specifier [-]
-    LOGICAL  :: UsePitchAct = .false.      !< Whether to use a pitch actuator inside BeamDyn [(flag)]
-    REAL(ReKi)  :: pitchJ = 0.0_ReKi      !< Pitch actuator inertia [(kg-m^2)]
-    REAL(ReKi)  :: pitchK = 0.0_ReKi      !< Pitch actuator stiffness [(kg-m^2/s^2)]
-    REAL(ReKi)  :: pitchC = 0.0_ReKi      !< Pitch actuator damping [-]
-    REAL(ReKi) , DIMENSION(1:2,1:2)  :: torqM = 0.0_ReKi      !< Pitch actuator matrix: (I-hA)^-1 [-]
     TYPE(qpParam)  :: qp      !< Quadrature point info that does not change during simulation [-]
     INTEGER(IntKi)  :: qp_indx_offset = 0_IntKi      !< Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node) [-]
     INTEGER(IntKi)  :: BldMotionNodeLoc = 0_IntKi      !< switch to determine where the nodes on the blade motion mesh should be located 1=FE (GLL) nodes; 2=quadrature nodes; 3=blade input stations [-]
@@ -229,15 +212,10 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: QPtw_Shp_Jac      !< optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: QPtw_ShpDer      !< optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: FEweight      !< weighting factors for integrating local sectional loads [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: dx = 0.0_R8Ki      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< half the number of continuous states in jacobian matrix [-]
     LOGICAL  :: RotStates = .false.      !< Orient states in rotating frame during linearization? (flag) [-]
-    LOGICAL  :: RelStates = .false.      !< Define states relative to root motion during linearization? (flag) [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: CompAppliedLdAtRoot = .FALSE.      !< flag to determine if BeamDyn should compute the applied loads at root [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ModalDampingMat      !< Modal damping matrix in the rotating frame [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -245,7 +223,6 @@ IMPLICIT NONE
     TYPE(MeshType)  :: RootMotion      !< contains motion [-]
     TYPE(MeshType)  :: PointLoad      !< Applied point forces along beam axis [-]
     TYPE(MeshType)  :: DistrLoad      !< Applied distributed forces along beam axis [-]
-    TYPE(MeshType)  :: HubMotion      !< motion (orientation) at the hub [-]
   END TYPE BD_InputType
 ! =======================
 ! =========  BD_OutputType  =======
@@ -267,6 +244,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: RR0      !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$ [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: kappa      !< Curvature vector \f$ \underline{k} \f$ at current QP (note this is not \kappa, but a term in \kappa) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E1      !< \vec{e_1} = x_0^\prime + u^\prime (3) at current QP [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: strain      !< strain vector [-]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Stif      !< C/S stiffness matrix resolved in inertial frame at current QP. 6x6 [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Fb      !< Gyroscopic forces at current QP. 6 [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Fc      !< Elastic force \f$ \underline{F}^c \f$ at current QP. 6 [-]
@@ -331,12 +309,30 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LP_RHS      !< Right-hand-side vector [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: LP_StifK_LU      !< Stiffness Matrix for LU [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LP_RHS_LU      !< Right-hand-side vector for LU [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: DampedVelocities      !< Velocity vector for applying modal damping [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: ModalDampingF      !< Modal damping force in the modal damping matrix coordinates [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RotatedDamping      !< Rotated damping matrix for linearization at time step in GA2 [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LP_indx      !< Index vector for LU [-]
     TYPE(BD_InputType)  :: u      !< Inputs converted to the internal BD coordinate system [-]
-    TYPE(BD_InputType)  :: u2      !< Inputs in the FAST coordinate system, possibly modified by pitch actuator [-]
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
+    TYPE(BD_ContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(BD_ContinuousStateType)  :: dxdt_lin      !<  [-]
+    TYPE(BD_InputType)  :: u_perturb      !<  [-]
+    TYPE(BD_OutputType)  :: y_lin      !<  [-]
   END TYPE BD_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: BD_x_q                           =   1 ! BD%q
+   integer(IntKi), public, parameter :: BD_x_dqdt                        =   2 ! BD%dqdt
+   integer(IntKi), public, parameter :: BD_u_RootMotion                  =   3 ! BD%RootMotion
+   integer(IntKi), public, parameter :: BD_u_PointLoad                   =   4 ! BD%PointLoad
+   integer(IntKi), public, parameter :: BD_u_DistrLoad                   =   5 ! BD%DistrLoad
+   integer(IntKi), public, parameter :: BD_y_ReactionForce               =   6 ! BD%ReactionForce
+   integer(IntKi), public, parameter :: BD_y_BldMotion                   =   7 ! BD%BldMotion
+   integer(IntKi), public, parameter :: BD_y_RootMxr                     =   8 ! BD%RootMxr
+   integer(IntKi), public, parameter :: BD_y_RootMyr                     =   9 ! BD%RootMyr
+   integer(IntKi), public, parameter :: BD_y_WriteOutput                 =  10 ! BD%WriteOutput
+
+contains
 
 subroutine BD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(BD_InitInputType), intent(in) :: SrcInitInputData
@@ -355,8 +351,6 @@ subroutine BD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%RootDisp = SrcInitInputData%RootDisp
    DstInitInputData%RootOri = SrcInitInputData%RootOri
    DstInitInputData%RootVel = SrcInitInputData%RootVel
-   DstInitInputData%HubPos = SrcInitInputData%HubPos
-   DstInitInputData%HubRot = SrcInitInputData%HubRot
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%DynamicSolve = SrcInitInputData%DynamicSolve
    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
@@ -384,8 +378,6 @@ subroutine BD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%RootDisp)
    call RegPack(RF, InData%RootOri)
    call RegPack(RF, InData%RootVel)
-   call RegPack(RF, InData%HubPos)
-   call RegPack(RF, InData%HubRot)
    call RegPack(RF, InData%Linearize)
    call RegPack(RF, InData%DynamicSolve)
    call RegPack(RF, InData%CompAeroMaps)
@@ -405,8 +397,6 @@ subroutine BD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%RootDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootOri); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootVel); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%HubPos); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%HubRot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DynamicSolve); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
@@ -451,102 +441,9 @@ subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
-      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
-         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -566,30 +463,8 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_x)) then
-      deallocate(InitOutputData%RotFrame_x)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackInitOutput(RF, Indata)
@@ -600,14 +475,7 @@ subroutine BD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -622,14 +490,7 @@ subroutine BD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine BD_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg)
@@ -682,6 +543,19 @@ subroutine BD_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, C
       DstBladeInputDataData%mass0 = SrcBladeInputDataData%mass0
    end if
    DstBladeInputDataData%beta = SrcBladeInputDataData%beta
+   DstBladeInputDataData%n_modes = SrcBladeInputDataData%n_modes
+   if (allocated(SrcBladeInputDataData%zeta)) then
+      LB(1:1) = lbound(SrcBladeInputDataData%zeta)
+      UB(1:1) = ubound(SrcBladeInputDataData%zeta)
+      if (.not. allocated(DstBladeInputDataData%zeta)) then
+         allocate(DstBladeInputDataData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladeInputDataData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladeInputDataData%zeta = SrcBladeInputDataData%zeta
+   end if
    DstBladeInputDataData%damp_flag = SrcBladeInputDataData%damp_flag
 end subroutine
 
@@ -701,6 +575,9 @@ subroutine BD_DestroyBladeInputData(BladeInputDataData, ErrStat, ErrMsg)
    if (allocated(BladeInputDataData%mass0)) then
       deallocate(BladeInputDataData%mass0)
    end if
+   if (allocated(BladeInputDataData%zeta)) then
+      deallocate(BladeInputDataData%zeta)
+   end if
 end subroutine
 
 subroutine BD_PackBladeInputData(RF, Indata)
@@ -714,6 +591,8 @@ subroutine BD_PackBladeInputData(RF, Indata)
    call RegPackAlloc(RF, InData%stiff0)
    call RegPackAlloc(RF, InData%mass0)
    call RegPack(RF, InData%beta)
+   call RegPack(RF, InData%n_modes)
+   call RegPackAlloc(RF, InData%zeta)
    call RegPack(RF, InData%damp_flag)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -732,6 +611,8 @@ subroutine BD_UnPackBladeInputData(RF, OutData)
    call RegUnpackAlloc(RF, OutData%stiff0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%mass0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%beta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_modes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%damp_flag); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -773,7 +654,6 @@ subroutine BD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInputFileData%BldFile = SrcInputFileData%BldFile
-   DstInputFileData%UsePitchAct = SrcInputFileData%UsePitchAct
    DstInputFileData%QuasiStaticInit = SrcInputFileData%QuasiStaticInit
    DstInputFileData%stop_tol = SrcInputFileData%stop_tol
    DstInputFileData%tngt_stf_pert = SrcInputFileData%tngt_stf_pert
@@ -790,12 +670,8 @@ subroutine BD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       end if
       DstInputFileData%kp_coordinate = SrcInputFileData%kp_coordinate
    end if
-   DstInputFileData%pitchJ = SrcInputFileData%pitchJ
-   DstInputFileData%pitchK = SrcInputFileData%pitchK
-   DstInputFileData%pitchC = SrcInputFileData%pitchC
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%RotStates = SrcInputFileData%RotStates
-   DstInputFileData%RelStates = SrcInputFileData%RelStates
    DstInputFileData%tngt_stf_fd = SrcInputFileData%tngt_stf_fd
    DstInputFileData%tngt_stf_comp = SrcInputFileData%tngt_stf_comp
    DstInputFileData%NNodeOuts = SrcInputFileData%NNodeOuts
@@ -889,18 +765,13 @@ subroutine BD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%DTBeam)
    call BD_PackBladeInputData(RF, InData%InpBl) 
    call RegPack(RF, InData%BldFile)
-   call RegPack(RF, InData%UsePitchAct)
    call RegPack(RF, InData%QuasiStaticInit)
    call RegPack(RF, InData%stop_tol)
    call RegPack(RF, InData%tngt_stf_pert)
    call RegPack(RF, InData%tngt_stf_difftol)
    call RegPackAlloc(RF, InData%kp_coordinate)
-   call RegPack(RF, InData%pitchJ)
-   call RegPack(RF, InData%pitchK)
-   call RegPack(RF, InData%pitchC)
    call RegPack(RF, InData%Echo)
    call RegPack(RF, InData%RotStates)
-   call RegPack(RF, InData%RelStates)
    call RegPack(RF, InData%tngt_stf_fd)
    call RegPack(RF, InData%tngt_stf_comp)
    call RegPack(RF, InData%NNodeOuts)
@@ -937,18 +808,13 @@ subroutine BD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%DTBeam); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackBladeInputData(RF, OutData%InpBl) ! InpBl 
    call RegUnpack(RF, OutData%BldFile); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UsePitchAct); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%QuasiStaticInit); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stop_tol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_pert); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_difftol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%kp_coordinate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchJ); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchK); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Echo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RelStates); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_fd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tngt_stf_comp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NNodeOuts); if (RegCheckErr(RF, RoutineName)) return
@@ -1046,8 +912,7 @@ subroutine BD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
    character(*), parameter        :: RoutineName = 'BD_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstDiscStateData%thetaP = SrcDiscStateData%thetaP
-   DstDiscStateData%thetaPD = SrcDiscStateData%thetaPD
+   DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
 end subroutine
 
 subroutine BD_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
@@ -1064,8 +929,7 @@ subroutine BD_PackDiscState(RF, Indata)
    type(BD_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'BD_PackDiscState'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%thetaP)
-   call RegPack(RF, InData%thetaPD)
+   call RegPack(RF, InData%DummyDiscState)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1074,8 +938,7 @@ subroutine BD_UnPackDiscState(RF, OutData)
    type(BD_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'BD_UnPackDiscState'
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%thetaP); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%thetaPD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DummyDiscState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine BD_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1361,6 +1224,18 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%blade_CG = SrcParamData%blade_CG
    DstParamData%blade_IN = SrcParamData%blade_IN
    DstParamData%beta = SrcParamData%beta
+   if (allocated(SrcParamData%zeta)) then
+      LB(1:1) = lbound(SrcParamData%zeta)
+      UB(1:1) = ubound(SrcParamData%zeta)
+      if (.not. allocated(DstParamData%zeta)) then
+         allocate(DstParamData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%zeta = SrcParamData%zeta
+   end if
    DstParamData%tol = SrcParamData%tol
    if (allocated(SrcParamData%QPtN)) then
       LB(1:1) = lbound(SrcParamData%QPtN)
@@ -1542,11 +1417,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%OutNd2NdElem = SrcParamData%OutNd2NdElem
    end if
    DstParamData%OutFmt = SrcParamData%OutFmt
-   DstParamData%UsePitchAct = SrcParamData%UsePitchAct
-   DstParamData%pitchJ = SrcParamData%pitchJ
-   DstParamData%pitchK = SrcParamData%pitchK
-   DstParamData%pitchC = SrcParamData%pitchC
-   DstParamData%torqM = SrcParamData%torqM
    call BD_CopyqpParam(SrcParamData%qp, DstParamData%qp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1658,37 +1528,21 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%FEweight = SrcParamData%FEweight
    end if
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   DstParamData%dx = SrcParamData%dx
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%Jac_nx = SrcParamData%Jac_nx
    DstParamData%RotStates = SrcParamData%RotStates
-   DstParamData%RelStates = SrcParamData%RelStates
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%CompAppliedLdAtRoot = SrcParamData%CompAppliedLdAtRoot
+   if (allocated(SrcParamData%ModalDampingMat)) then
+      LB(1:2) = lbound(SrcParamData%ModalDampingMat)
+      UB(1:2) = ubound(SrcParamData%ModalDampingMat)
+      if (.not. allocated(DstParamData%ModalDampingMat)) then
+         allocate(DstParamData%ModalDampingMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ModalDampingMat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ModalDampingMat = SrcParamData%ModalDampingMat
+   end if
 end subroutine
 
 subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1716,6 +1570,9 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%member_eta)) then
       deallocate(ParamData%member_eta)
+   end if
+   if (allocated(ParamData%zeta)) then
+      deallocate(ParamData%zeta)
    end if
    if (allocated(ParamData%QPtN)) then
       deallocate(ParamData%QPtN)
@@ -1794,11 +1651,8 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%FEweight)) then
       deallocate(ParamData%FEweight)
    end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
+   if (allocated(ParamData%ModalDampingMat)) then
+      deallocate(ParamData%ModalDampingMat)
    end if
 end subroutine
 
@@ -1823,6 +1677,7 @@ subroutine BD_PackParam(RF, Indata)
    call RegPack(RF, InData%blade_CG)
    call RegPack(RF, InData%blade_IN)
    call RegPack(RF, InData%beta)
+   call RegPackAlloc(RF, InData%zeta)
    call RegPack(RF, InData%tol)
    call RegPackAlloc(RF, InData%QPtN)
    call RegPackAlloc(RF, InData%QPtWeight)
@@ -1865,11 +1720,6 @@ subroutine BD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%NdIndxInverse)
    call RegPackAlloc(RF, InData%OutNd2NdElem)
    call RegPack(RF, InData%OutFmt)
-   call RegPack(RF, InData%UsePitchAct)
-   call RegPack(RF, InData%pitchJ)
-   call RegPack(RF, InData%pitchK)
-   call RegPack(RF, InData%pitchC)
-   call RegPack(RF, InData%torqM)
    call BD_PackqpParam(RF, InData%qp) 
    call RegPack(RF, InData%qp_indx_offset)
    call RegPack(RF, InData%BldMotionNodeLoc)
@@ -1895,15 +1745,10 @@ subroutine BD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%QPtw_Shp_Jac)
    call RegPackAlloc(RF, InData%QPtw_ShpDer)
    call RegPackAlloc(RF, InData%FEweight)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPack(RF, InData%dx)
-   call RegPack(RF, InData%Jac_ny)
-   call RegPack(RF, InData%Jac_nx)
    call RegPack(RF, InData%RotStates)
-   call RegPack(RF, InData%RelStates)
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%CompAppliedLdAtRoot)
+   call RegPackAlloc(RF, InData%ModalDampingMat)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1930,6 +1775,7 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%blade_CG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%blade_IN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%beta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QPtN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QPtWeight); if (RegCheckErr(RF, RoutineName)) return
@@ -1976,11 +1822,6 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%NdIndxInverse); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutNd2NdElem); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFmt); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UsePitchAct); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchJ); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchK); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%pitchC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%torqM); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackqpParam(RF, OutData%qp) ! qp 
    call RegUnpack(RF, OutData%qp_indx_offset); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldMotionNodeLoc); if (RegCheckErr(RF, RoutineName)) return
@@ -2010,15 +1851,10 @@ subroutine BD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%QPtw_Shp_Jac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%QPtw_ShpDer); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%FEweight); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotStates); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RelStates); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAppliedLdAtRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ModalDampingMat); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine BD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -2041,9 +1877,6 @@ subroutine BD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    call MeshCopy(SrcInputData%DistrLoad, DstInputData%DistrLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcInputData%HubMotion, DstInputData%HubMotion, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine BD_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -2061,8 +1894,6 @@ subroutine BD_DestroyInput(InputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( InputData%DistrLoad, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( InputData%HubMotion, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackInput(RF, Indata)
@@ -2073,7 +1904,6 @@ subroutine BD_PackInput(RF, Indata)
    call MeshPack(RF, InData%RootMotion) 
    call MeshPack(RF, InData%PointLoad) 
    call MeshPack(RF, InData%DistrLoad) 
-   call MeshPack(RF, InData%HubMotion) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2085,7 +1915,6 @@ subroutine BD_UnPackInput(RF, OutData)
    call MeshUnpack(RF, OutData%RootMotion) ! RootMotion 
    call MeshUnpack(RF, OutData%PointLoad) ! PointLoad 
    call MeshUnpack(RF, OutData%DistrLoad) ! DistrLoad 
-   call MeshUnpack(RF, OutData%HubMotion) ! HubMotion 
 end subroutine
 
 subroutine BD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2274,6 +2103,18 @@ subroutine BD_CopyEqMotionQP(SrcEqMotionQPData, DstEqMotionQPData, CtrlCode, Err
          end if
       end if
       DstEqMotionQPData%E1 = SrcEqMotionQPData%E1
+   end if
+   if (allocated(SrcEqMotionQPData%strain)) then
+      LB(1:3) = lbound(SrcEqMotionQPData%strain)
+      UB(1:3) = ubound(SrcEqMotionQPData%strain)
+      if (.not. allocated(DstEqMotionQPData%strain)) then
+         allocate(DstEqMotionQPData%strain(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstEqMotionQPData%strain.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstEqMotionQPData%strain = SrcEqMotionQPData%strain
    end if
    if (allocated(SrcEqMotionQPData%Stif)) then
       LB(1:4) = lbound(SrcEqMotionQPData%Stif)
@@ -2584,6 +2425,9 @@ subroutine BD_DestroyEqMotionQP(EqMotionQPData, ErrStat, ErrMsg)
    if (allocated(EqMotionQPData%E1)) then
       deallocate(EqMotionQPData%E1)
    end if
+   if (allocated(EqMotionQPData%strain)) then
+      deallocate(EqMotionQPData%strain)
+   end if
    if (allocated(EqMotionQPData%Stif)) then
       deallocate(EqMotionQPData%Stif)
    end if
@@ -2668,6 +2512,7 @@ subroutine BD_PackEqMotionQP(RF, Indata)
    call RegPackAlloc(RF, InData%RR0)
    call RegPackAlloc(RF, InData%kappa)
    call RegPackAlloc(RF, InData%E1)
+   call RegPackAlloc(RF, InData%strain)
    call RegPackAlloc(RF, InData%Stif)
    call RegPackAlloc(RF, InData%Fb)
    call RegPackAlloc(RF, InData%Fc)
@@ -2710,6 +2555,7 @@ subroutine BD_UnPackEqMotionQP(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RR0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%kappa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%E1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%strain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Stif); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fc); if (RegCheckErr(RF, RoutineName)) return
@@ -3117,6 +2963,42 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%LP_RHS_LU = SrcMiscData%LP_RHS_LU
    end if
+   if (allocated(SrcMiscData%DampedVelocities)) then
+      LB(1:1) = lbound(SrcMiscData%DampedVelocities)
+      UB(1:1) = ubound(SrcMiscData%DampedVelocities)
+      if (.not. allocated(DstMiscData%DampedVelocities)) then
+         allocate(DstMiscData%DampedVelocities(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DampedVelocities.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%DampedVelocities = SrcMiscData%DampedVelocities
+   end if
+   if (allocated(SrcMiscData%ModalDampingF)) then
+      LB(1:1) = lbound(SrcMiscData%ModalDampingF)
+      UB(1:1) = ubound(SrcMiscData%ModalDampingF)
+      if (.not. allocated(DstMiscData%ModalDampingF)) then
+         allocate(DstMiscData%ModalDampingF(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModalDampingF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%ModalDampingF = SrcMiscData%ModalDampingF
+   end if
+   if (allocated(SrcMiscData%RotatedDamping)) then
+      LB(1:2) = lbound(SrcMiscData%RotatedDamping)
+      UB(1:2) = ubound(SrcMiscData%RotatedDamping)
+      if (.not. allocated(DstMiscData%RotatedDamping)) then
+         allocate(DstMiscData%RotatedDamping(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RotatedDamping.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RotatedDamping = SrcMiscData%RotatedDamping
+   end if
    if (allocated(SrcMiscData%LP_indx)) then
       LB(1:1) = lbound(SrcMiscData%LP_indx)
       UB(1:1) = ubound(SrcMiscData%LP_indx)
@@ -3132,7 +3014,19 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call BD_CopyInput(SrcMiscData%u, DstMiscData%u, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call BD_CopyInput(SrcMiscData%u2, DstMiscData%u2, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call BD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
@@ -3247,12 +3141,29 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%LP_RHS_LU)) then
       deallocate(MiscData%LP_RHS_LU)
    end if
+   if (allocated(MiscData%DampedVelocities)) then
+      deallocate(MiscData%DampedVelocities)
+   end if
+   if (allocated(MiscData%ModalDampingF)) then
+      deallocate(MiscData%ModalDampingF)
+   end if
+   if (allocated(MiscData%RotatedDamping)) then
+      deallocate(MiscData%RotatedDamping)
+   end if
    if (allocated(MiscData%LP_indx)) then
       deallocate(MiscData%LP_indx)
    end if
    call BD_DestroyInput(MiscData%u, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call BD_DestroyInput(MiscData%u2, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -3298,9 +3209,16 @@ subroutine BD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%LP_RHS)
    call RegPackAlloc(RF, InData%LP_StifK_LU)
    call RegPackAlloc(RF, InData%LP_RHS_LU)
+   call RegPackAlloc(RF, InData%DampedVelocities)
+   call RegPackAlloc(RF, InData%ModalDampingF)
+   call RegPackAlloc(RF, InData%RotatedDamping)
    call RegPackAlloc(RF, InData%LP_indx)
    call BD_PackInput(RF, InData%u) 
-   call BD_PackInput(RF, InData%u2) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call BD_PackContState(RF, InData%x_perturb) 
+   call BD_PackContState(RF, InData%dxdt_lin) 
+   call BD_PackInput(RF, InData%u_perturb) 
+   call BD_PackOutput(RF, InData%y_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3349,9 +3267,16 @@ subroutine BD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%LP_RHS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_StifK_LU); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_RHS_LU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DampedVelocities); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ModalDampingF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotatedDamping); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LP_indx); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackInput(RF, OutData%u) ! u 
-   call BD_UnpackInput(RF, OutData%u2) ! u2 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call BD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call BD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call BD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call BD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine BD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -3455,8 +3380,6 @@ SUBROUTINE BD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(u1%DistrLoad, u2%DistrLoad, tin, u_out%DistrLoad, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp1(u1%HubMotion, u2%HubMotion, tin, u_out%HubMotion, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
 
 SUBROUTINE BD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -3517,8 +3440,6 @@ SUBROUTINE BD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrM
    CALL MeshExtrapInterp2(u1%PointLoad, u2%PointLoad, u3%PointLoad, tin, u_out%PointLoad, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(u1%DistrLoad, u2%DistrLoad, u3%DistrLoad, tin, u_out%DistrLoad, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp2(u1%HubMotion, u2%HubMotion, u3%HubMotion, tin, u_out%HubMotion, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
 
@@ -3695,5 +3616,282 @@ SUBROUTINE BD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function BD_InputMeshPointer(u, DL) result(Mesh)
+   type(BD_InputType), target, intent(in)  :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (BD_u_RootMotion)
+       Mesh => u%RootMotion
+   case (BD_u_PointLoad)
+       Mesh => u%PointLoad
+   case (BD_u_DistrLoad)
+       Mesh => u%DistrLoad
+   end select
+end function
+
+function BD_OutputMeshPointer(y, DL) result(Mesh)
+   type(BD_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (BD_y_ReactionForce)
+       Mesh => y%ReactionForce
+   case (BD_y_BldMotion)
+       Mesh => y%BldMotion
+   end select
+end function
+
+subroutine BD_VarsPackContState(Vars, x, ValAry)
+   type(BD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BD_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine BD_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BD_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_x_q)
+         if (V%Field == FieldOrientation) then
+            VarVals = wm_to_quat(wm_inv(x%q(4:6, V%j)))  ! Convert WM parameters to quaternions
+         else
+            VarVals = x%q(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+         end if
+      case (BD_x_dqdt)
+         VarVals = x%dqdt(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BD_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BD_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BD_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine BD_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BD_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_x_q)
+         if (V%Field == FieldOrientation) then
+            x%q(4:6, V%j) = wm_inv(quat_to_wm(VarVals))  ! Convert quaternion to WM parameters
+         else
+            x%q(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+         end if
+      case (BD_x_dqdt)
+         x%dqdt(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function BD_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_x_q)
+       Name = "x%q"
+   case (BD_x_dqdt)
+       Name = "x%dqdt"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine BD_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(BD_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BD_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine BD_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BD_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_x_q)
+         VarVals = x%q(V%iLB:V%iUB,V%j)                                       ! Rank 2 Array
+      case (BD_x_dqdt)
+         VarVals = x%dqdt(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BD_VarsPackInput(Vars, u, ValAry)
+   type(BD_InputType), intent(in)          :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call BD_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine BD_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BD_InputType), intent(in)          :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_u_RootMotion)
+         call MV_PackMesh(V, u%RootMotion, ValAry)                            ! Mesh
+      case (BD_u_PointLoad)
+         call MV_PackMesh(V, u%PointLoad, ValAry)                             ! Mesh
+      case (BD_u_DistrLoad)
+         call MV_PackMesh(V, u%DistrLoad, ValAry)                             ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BD_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BD_InputType), intent(inout)       :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call BD_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine BD_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BD_InputType), intent(inout)       :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_u_RootMotion)
+         call MV_UnpackMesh(V, ValAry, u%RootMotion)                          ! Mesh
+      case (BD_u_PointLoad)
+         call MV_UnpackMesh(V, ValAry, u%PointLoad)                           ! Mesh
+      case (BD_u_DistrLoad)
+         call MV_UnpackMesh(V, ValAry, u%DistrLoad)                           ! Mesh
+      end select
+   end associate
+end subroutine
+
+function BD_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_u_RootMotion)
+       Name = "u%RootMotion"
+   case (BD_u_PointLoad)
+       Name = "u%PointLoad"
+   case (BD_u_DistrLoad)
+       Name = "u%DistrLoad"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine BD_VarsPackOutput(Vars, y, ValAry)
+   type(BD_OutputType), intent(in)         :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call BD_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine BD_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BD_OutputType), intent(in)         :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_y_ReactionForce)
+         call MV_PackMesh(V, y%ReactionForce, ValAry)                         ! Mesh
+      case (BD_y_BldMotion)
+         call MV_PackMesh(V, y%BldMotion, ValAry)                             ! Mesh
+      case (BD_y_RootMxr)
+         VarVals(1) = y%RootMxr                                               ! Scalar
+      case (BD_y_RootMyr)
+         VarVals(1) = y%RootMyr                                               ! Scalar
+      case (BD_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BD_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BD_OutputType), intent(inout)      :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call BD_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine BD_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BD_OutputType), intent(inout)      :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BD_y_ReactionForce)
+         call MV_UnpackMesh(V, ValAry, y%ReactionForce)                       ! Mesh
+      case (BD_y_BldMotion)
+         call MV_UnpackMesh(V, ValAry, y%BldMotion)                           ! Mesh
+      case (BD_y_RootMxr)
+         y%RootMxr = VarVals(1)                                               ! Scalar
+      case (BD_y_RootMyr)
+         y%RootMyr = VarVals(1)                                               ! Scalar
+      case (BD_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function BD_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BD_y_ReactionForce)
+       Name = "y%ReactionForce"
+   case (BD_y_BldMotion)
+       Name = "y%BldMotion"
+   case (BD_y_RootMxr)
+       Name = "y%RootMxr"
+   case (BD_y_RootMyr)
+       Name = "y%RootMyr"
+   case (BD_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE BeamDyn_Types
+
 !ENDOFREGISTRYGENERATEDFILE

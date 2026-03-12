@@ -36,15 +36,15 @@ USE WakeDynamics_Types
 USE AWAE_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules = 5      ! The number of modules available in FAST.Farm [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_None = 0      ! No module selected [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_FWrap = 2      ! FAST Wrapper [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD = 3      ! Wake Dynamics [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD = 5      ! Farm-level MoorDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None = 0      ! WAT: off [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 1      ! WAT: predefined turbulence boxes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 2      ! WAT: user defined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules                     = 5      ! The number of modules available in FAST.Farm [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_None                    = 0      ! No module selected [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_FWrap                   = 2      ! FAST Wrapper [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD                      = 3      ! Wake Dynamics [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE                    = 4      ! Ambient Wind and Array Effects [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD                      = 5      ! Farm-level MoorDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None                     = 0      ! WAT: off [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef                   = 1      ! WAT: predefined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef                  = 2      ! WAT: user defined turbulence boxes [-]
 ! =========  Farm_ParameterType  =======
   TYPE, PUBLIC :: Farm_ParameterType
     REAL(DbKi)  :: DT_low = 0.0_R8Ki      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]
@@ -52,6 +52,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Total run time [seconds]
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low-resolution time step [-]
     INTEGER(IntKi)  :: NumTurbines = 0_IntKi      !< Number of turbines in the simulation [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: MaxNumPlanes      !< Maximum number of wake planes for each rotor [-]
     CHARACTER(1024)  :: WindFilePath      !< Path name of wind data files from ABLSolver precursor [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin} [-]
@@ -197,7 +198,8 @@ IMPLICIT NONE
     TYPE(WAT_IfW_data)  :: WAT_IfW      !< IfW data for WAT (temporary location until pointers are enabled) [-]
   END TYPE All_FastFarm_Data
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(Farm_ParameterType), intent(in) :: SrcParamData
@@ -217,6 +219,18 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%TMax = SrcParamData%TMax
    DstParamData%n_high_low = SrcParamData%n_high_low
    DstParamData%NumTurbines = SrcParamData%NumTurbines
+   if (allocated(SrcParamData%MaxNumPlanes)) then
+      LB(1:1) = lbound(SrcParamData%MaxNumPlanes)
+      UB(1:1) = ubound(SrcParamData%MaxNumPlanes)
+      if (.not. allocated(DstParamData%MaxNumPlanes)) then
+         allocate(DstParamData%MaxNumPlanes(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%MaxNumPlanes.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%MaxNumPlanes = SrcParamData%MaxNumPlanes
+   end if
    DstParamData%WindFilePath = SrcParamData%WindFilePath
    if (allocated(SrcParamData%WT_Position)) then
       LB(1:2) = lbound(SrcParamData%WT_Position)
@@ -380,6 +394,9 @@ subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%MaxNumPlanes)) then
+      deallocate(ParamData%MaxNumPlanes)
+   end if
    if (allocated(ParamData%WT_Position)) then
       deallocate(ParamData%WT_Position)
    end if
@@ -430,6 +447,7 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPack(RF, InData%TMax)
    call RegPack(RF, InData%n_high_low)
    call RegPack(RF, InData%NumTurbines)
+   call RegPackAlloc(RF, InData%MaxNumPlanes)
    call RegPack(RF, InData%WindFilePath)
    call RegPackAlloc(RF, InData%WT_Position)
    call RegPack(RF, InData%WaveFieldMod)
@@ -511,6 +529,7 @@ subroutine Farm_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_high_low); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumTurbines); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MaxNumPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WindFilePath); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WT_Position); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
@@ -1528,5 +1547,7 @@ subroutine Farm_UnPackAll_FastFarm_Data(RF, OutData)
    call Farm_UnpackMD_Data(RF, OutData%MD) ! MD 
    call Farm_UnpackWAT_IfW_data(RF, OutData%WAT_IfW) ! WAT_IfW 
 end subroutine
+
 END MODULE FAST_Farm_Types
+
 !ENDOFREGISTRYGENERATEDFILE

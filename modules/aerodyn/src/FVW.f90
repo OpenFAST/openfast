@@ -106,6 +106,12 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
       p%iNWStart=1
    endif
 
+   ! Source panels (parameters, misc and constraints)
+   ! NOTE: needs to be before FVW_InitMiscVars otherwise number of panels not accounted for
+   if (len_trim(InputFileData%SrcPnlFile)>0) then
+      call srcPnl_init(p%SrcPnl, m%SrcPnl, z%SrcPnl, ErrStat2, ErrMsg2, filename=InputFileData%SrcPnlFile); if(Failed()) return
+   endif
+
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
@@ -148,8 +154,19 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    interval = InitInp%DTAero ! important, gluecode and UA, needs proper interval
    call UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if (Failed()) return
 
+   ! --- Other States
+   OtherState%Initialized = .true.
+   OtherState%ShedScale = 1.0_ReKi ! Will be overriden 
+   ! TODO: should be otherstate
+   !m%FirstCall = .True.
+   !m%nNW       = p%iNWStart-1  ! Number of active nearwake panels
+   !m%nFW       = 0             ! Number of active farwake  panels
+   !m%iStep     = 0             ! Current step number
+   !m%VTKstep   = -1            ! Counter of VTK outputs
+   !m%VTKlastTime = -HUGE(1.0_DbKi)
+   !m%OldWakeTime = -HUGE(1.0_DbKi)
+
    ! Framework types unused
-   OtherState%Dummy = 0
    xd%Dummy         = 0
    InitOut%Dummy    = 0
 CONTAINS
@@ -267,6 +284,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       endif
       m%GridOutputs(iGrid)%tLastOutput = -HUGE(1.0_DbKi)
    enddo
+   ! Panels
+   nMax = nMax + p%SrcPnl%n
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
 
@@ -362,6 +381,7 @@ subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    ! 
    p%nWings       = size(InitInp%WingsMesh)
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
+   p%AirDens      = InitInp%AirDens         ! Air Density
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
    p%MHK          = InitInp%MHK             ! MHK flag
    p%WtrDpth      = InitInp%WtrDpth         ! Water depth
@@ -421,6 +441,8 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, ErrStat, ErrMsg )
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
+   errStat2 = ErrID_None
+   errMsg2  = ""
 
    ! Set parameters from input file
    p%IntMethod            = InputFileData%IntMethod
@@ -451,26 +473,32 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, ErrStat, ErrMsg )
    do iW=1,p%nWings
       if (allocated(p%W(iW)%PrescribedCirculation)) deallocate(p%W(iW)%PrescribedCirculation)
       if (InputFileData%CircSolvMethod==idCircPrescribed) then 
-         call AllocAry(p%W(iW)%PrescribedCirculation,  p%W(iW)%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters');
+         call AllocAry(p%W(iW)%PrescribedCirculation,  p%W(iW)%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); if(Failed()) return
          p%W(iW)%PrescribedCirculation = -999999_ReKi;
          if (.not. allocated(p%W(iW)%s_CP)) then
-            ErrMsg  = 'Spanwise coordinate not allocated.'
-            ErrStat = ErrID_Fatal
-            return
+            ErrMsg2  = 'Spanwise coordinate not allocated.'
+            ErrStat2 = ErrID_Fatal
+            if (Failed()) return
          endif
-         call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%W(iW)%s_CP(1:p%W(iW)%nSpan), p%W(iW)%s_LL(p%W(iW)%nSpan+1), p%W(iW)%PrescribedCirculation, ErrStat2, ErrMsg2)
-         call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
+         call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%W(iW)%s_CP(1:p%W(iW)%nSpan), p%W(iW)%s_LL(p%W(iW)%nSpan+1), p%W(iW)%PrescribedCirculation, ErrStat2, ErrMsg2); if(Failed()) return
       endif
    enddo
-
+   if(Failed()) return
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_SetParametersFromInputFile') 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 end subroutine FVW_SetParametersFromInputFile
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
-subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
+!> This routine is called at the end of the simulation. 
+!! NOTE: we don't want to call this if OLAF is not fully initialized as some variables might be unallocated
+subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    type(FVW_InputType),             intent(in   )  :: u           !< System inputs
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states
    type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states
+   type(FVW_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+DTaero
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -479,7 +507,7 @@ subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
-   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
+   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
       call WrScr('OLAF: writing final VTK outputs')
       t=-1.0_ReKi
       if (p%WrVTK==1) then
@@ -510,7 +538,7 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Final trigger
-   call FVW_FinalWrite(u(1), p, x, z, m, ErrStat, ErrMsg)
+   call FVW_FinalWrite(u(1), p, x, z, OtherState, m, ErrStat, ErrMsg)
    
    ! Destroy the input data:
    if (allocated(u)) then
@@ -559,7 +587,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: nP, nFWEff, nNWEff, iW
-   real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
    logical :: bOverCycling
    if (OLAF_PROFILING) call tic('FVW_UpdateStates')
@@ -649,7 +676,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          ! - the positions and intensities for the LL and 1st NW panels are NaN for x1 and x2,
          !   so we need to remap them
          call PropagateWake(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
-         !call Map_LL_NW(p, m, z, m%x1, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_LL_NW(p, m, z, m%x1, OtherState%ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
          !call Map_NW_FW(p, m, z, m%x1, ErrStat2, ErrMsg2); if(Failed()) return
 
          ! States x2
@@ -671,7 +698,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          !   call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTfvw/), p, m%x2, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
          !end if
          !! Updating circulation of near wake panel (and position but irrelevant)
-         !call Map_LL_NW(p, m, z, m%x2, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         !call Map_LL_NW(p, m, z, m%x2, OtherState%ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
          !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
       endif
    endif
@@ -688,8 +715,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
    ! Changes: x only
-   ShedScale = (t+p%DTaero - m%OldWakeTime)/p%DTfvw
-   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+   OtherState%ShedScale = (t+p%DTaero - m%OldWakeTime)/p%DTfvw
+   call Map_LL_NW(p, m, z, x, OtherState%ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    !call print_x_NW_FW(p, m, x,'Map2')
 
@@ -704,7 +731,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (OLAF_PROFILING) call toc()
    ! Updating circulation of near wake panel (need to be set for UA, Uind on LL) (and position but irrelevant)
    ! Changes: x only
-   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_LL_NW(p, m, z, x, OtherState%ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
    if (m%UA_Flag) then
@@ -715,7 +742,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          call UA_SetGammaDyn(t, uInterp, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
          ! Updating circulation of near wake panel again (and position but irrelevant)
          ! Changes: x only
-         call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         call Map_LL_NW(p, m, z, x, OtherState%ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
          call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
       end if
    end if
@@ -982,7 +1009,6 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       dxdt%W(iW)%Eps_NW(1:3,:,1:p%iNWStart) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
    enddo
 
-   if(.false.) print*,OtherState%Dummy  ! unused var
    if(.false.) print*,u%W(1)%omega_z(1) ! unused var
    if(.false.) print*,xd%Dummy
    if(.false.) print*,z%W(1)%Gamma_LL(1)
@@ -1321,12 +1347,17 @@ END SUBROUTINE FVW_RK4
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This is a tight coupling routine for solving for the residual of the constraint state functions.
+!> Solves for the residual of the constraint state functions.
+!! Constraints are:
+!!  - Lifting line circulation 
+!!  - Intensity of the source panels
+!! In theory, we should solve for both at the same time, or iterate between the two
+!! Here, we do it sequentially, and only once.
 subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, AFInfo, ErrStat, ErrMsg, iLabel)
    real(DbKi),                    intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),           intent(in   )  :: u           !< Inputs at t
    type(FVW_ParameterType),       intent(in   )  :: p           !< Parameters
-   type(FVW_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
+   type(FVW_ContinuousStateType), intent(inout)  :: x           !< Continuous states at t. NOTE: inout because of LL mapping for panels
    type(FVW_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
    type(FVW_ConstraintStateType), intent(in   )  :: z_guess     !< Constraint states at t (possibly a guess)
    type(FVW_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
@@ -1336,7 +1367,9 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    integer(IntKi),                intent(in   )  :: iLabel
    integer(IntKi),                intent(  OUT)  :: ErrStat     !< Error status of the operation
    character(*),                  intent(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   integer :: iW
+   integer              :: iW
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -1350,16 +1383,45 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    ! Solve for the residual of the constraint state functions here:
    !z%residual = 0.0_ReKi
    !z%W(iW)%Gamma_LL = 0.0_ReKi
+   !if (.not.allocated(z_out%W)) allocate(z_out%W(p%nWings))
    allocate(z_out%W(p%nWings))
    do iW= 1,p%nWings
-      call AllocAry( z_out%W(iW)%Gamma_LL,  p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat, ErrMsg );
+      call AllocAry( z_out%W(iW)%Gamma_LL,  p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat2, ErrMsg2);
       z_out%W(iW)%Gamma_LL = -999999_ReKi;
    enddo
 
-   CALL Wings_ComputeCirculation(t, z_out, z_guess, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+   CALL Wings_ComputeCirculation(t, z_out, z_guess, p, x, m, AFInfo, ErrStat2, ErrMsg2, iLabel); if(Failed()) return
 
-   if(.false.) print*,OtherState%Dummy !unused var
+   ! ---- Source panels
+   if (p%SrcPnl%n>0) then
+      if (mod(m%iStep, p%nSrcPnlUpdate)==0 .or. m%iStep<3) then
+         ! NOTE: panels don't move for now, so no need to recompute influence matrix
+         ! call srcPnl_build_mat(p%SrcPnl, m%SrcPnl%AI) 
+
+         ! Map LL circulation to states
+         call Map_LL_NW(p, m, z_out, x, OtherState%ShedScale, errStat2, errMsg2); if(Failed()) return
+
+         ! Compute Wind (Uwnd) and induced velocity (Uext) from elements different than panels
+         ! NOTE: Both are summed and stored into Uext
+         call srcPnl_ExtVelocities_OnPanels(u, p, x, m, errStat2, errMsg2); if(Failed()) return
+         !m%SrcPnl%Uext = 0.0_ReKi ! HACK
+         !m%SrcPnl%Uwnd = (/1.0, 0., 0./)
+
+         ! Compute the value of the source panel (sigma) ! assumes that Uext and AI were computed before
+         if (.not.allocated(z_out%SrcPnl%Sigma)) allocate(z_out%SrcPnl%Sigma(p%SrcPnl%n))
+         z_out%SrcPnl%Sigma = 0.0_ReKi
+         call srcPnl_solve(p%SrcPnl, m%SrcPnl, z_out%SrcPnl, errStat2, errMsg2); if(Failed()) return
+      else
+         z_out%SrcPnl%Sigma = m%SrcPnl%RHS ! Use previous intensities
+      endif
+   endif
+
    if(.false.) print*,xd%Dummy
+contains
+  logical function Failed()
+     call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcConstrStateResidual') 
+     Failed =  ErrStat >= AbortErrLev
+  end function Failed
 end subroutine FVW_CalcConstrStateResidual
 
 
@@ -1445,6 +1507,11 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    ! Compute induced velocity at AD nodes
    call CalcOutputForAD(u,p,x,y,m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+ 
+   ! --- Source Panels: Compute velocity, pressure, loads on the source panels
+   if (p%SrcPnl%n>0) then
+      call srcPnl_calcOutput(p%SrcPnl, m%SrcPnl, z%SrcPnl, p%AirDens)
+   endif
 
    ! Write some info to screen when major milestone achieved
    if (m%iStep == p%nNWFree .and. p%nNWFree<p%nNWMax) then
@@ -1464,7 +1531,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
       call WrScr(NewLine//'[INFO] OLAF wake is at full extent - '//trim(num2lstr(t))//'s, '//trim(num2lstr(nP))//' points.')
    endif
    
-   ! Export to VTK
+   ! --- Export to VTK
    if (m%VTKstep==-1) then 
        ! Has never been called, special handling for init
       call WriteVTKOutputs(t, .False., 0        , u, p, x, z, m, ErrStat2, ErrMsg2)
@@ -1474,7 +1541,6 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    if (OLAF_PROFILING) call toc()
-   if(.false.) print*,OtherState%Dummy !unused var
    if(.false.) print*,xd%Dummy
 end subroutine FVW_CalcOutput
 
@@ -1496,11 +1562,12 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
    logical                 :: bWithinTime
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'FVW_CalcOutput'
+   character(*), parameter :: RoutineName = 'WriteVTKOutputs'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (OLAF_PROFILING) call tic('WriteVTKOutputs')
 
    ! --- Write VTK of wake/blade filaments/panels
    if (p%WrVTK>0) then
@@ -1553,6 +1620,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
          endif
       enddo
    endif
+   if (OLAF_PROFILING) call toc()
 end subroutine WriteVTKOutputs
 
 !----------------------------------------------------------------------------------------------------------------------------------   

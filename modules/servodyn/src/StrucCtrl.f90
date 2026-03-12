@@ -6,6 +6,7 @@ MODULE StrucCtrl
 
    USE StrucCtrl_Types
    USE NWTC_Library
+   USE UserSubs, ONLY: UserStC
 
    IMPLICIT NONE
 
@@ -26,7 +27,7 @@ MODULE StrucCtrl
                                                     !   continuous states, and updating discrete states
    PUBLIC :: StC_CalcOutput                     ! Routine for computing outputs
 
-  ! PUBLIC :: StC_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   !PUBLIC :: StC_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: StC_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
 
    !PUBLIC :: StC_UpdateDiscState                ! Tight coupling routine for updating discrete states
@@ -47,14 +48,17 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: ControlMode_NONE      = 0          !< The (StC-universal) control code for not using a particular type of control
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          !< independent DOFs
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_ForceDLL      = 5          !< prescribed force series
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< 2DOF omni-directional
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni3         = 3          !< 3DOF omni-directional
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 5          !< tuned liquid column dampers !MEG & SP
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 6          !< prescribed force series
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_ForceDLL      = 7          !< dll force series
+
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveUsrSub    = 3          !< active control based on user subroutine
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveEXTERN    = 4          !< active control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control based on DLL
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          !< 1: velocity-based ground hook control;
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          !< 2: Inverse velocity-based ground hook control
@@ -102,7 +106,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       REAL(ReKi), allocatable, dimension(:,:)       :: RefPosGlobal
 
       type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
-      type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
+      type(FileInfoType), allocatable               :: FileInfo_In_PrescribeFrc(:)  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
       character(1024)                               :: PriPath       !< Primary path
       integer(IntKi)                                :: UnEcho
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
@@ -152,21 +156,40 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       ! read in the prescribed forces file
    if ( InputFileData%StC_DOF_MODE == DOFMode_Prescribed ) then
+      allocate(FileInfo_In_PrescribeFrc(InitInp%NumMeshPts), STAT=ErrStat2 )    ! Blade TMD may have individual prescribed force input files for each blade instance
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating FileInfo_In_PrescribeFrc(NumMeshPts)"
+      if (Failed()) return;
       if (InitInp%UseInputFile_PrescribeFrc) then
          ! Read the entire input file, minus any comment lines, into the FileInfo_In
          ! data structure in memory for further processing.
-         call ProcessComFile( InputFileData%PrescribedForcesFile, FileInfo_In_PrescribeFrc, ErrStat2, ErrMsg2 )
+         do i=1,InitInp%NumMeshPts
+            call ProcessComFile( InputFileData%PrescribedForcesFile(i), FileInfo_In_PrescribeFrc(i), ErrStat2, ErrMsg2 )
+            if (Failed())  return;
+         enddo
       else
+         ! Can't pass multipl prescribed forces files yet
+         if (InitInp%NumMeshPts > 1) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = "Cannot use multiple passed prescribed forces input files with blade StCs yet"
+            if (Failed()) return;
+         else
             ! put passed string info into the FileInfo_In -- FileInfo structure
-         call NWTC_Library_CopyFileInfoType( InitInp%PassedPrescribeFrcData, FileInfo_In_PrescribeFrc, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call NWTC_Library_CopyFileInfoType( InitInp%PassedPrescribeFrcData, FileInfo_In_PrescribeFrc(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         endif
       endif
-      if (Failed())  return;
       ! For diagnostic purposes, the following can be used to display the contents
       ! of the FileInfo_In data structure.
-      !call Print_FileInfo_Struct( CU, FileInfo_In_PrescribeFrc ) ! CU is the screen -- different number on different systems.
+      !do i=1,InitInp%NumMeshPts
+      !   call Print_FileInfo_Struct( CU, FileInfo_In_PrescribeFrc ) ! CU is the screen -- different number on different systems.
+      !enddo
       !  Parse the FileInfo_In_PrescribeFrc structure of data from the inputfile into the InitInp%InputFile structure
-      CALL StC_ParseTimeSeriesFileInfo( InputFileData%PrescribedForcesFile, FileInfo_In_PrescribeFrc, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
-      if (Failed())  return;
+      allocate(InputFileData%StC_PrescribedForce(InitInp%NumMeshPts), STAT=ErrStat2 )    ! Blade TMD may have individual prescribed force input files for each blade instance
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating FileInfo_In_PrescribeFrc(NumMeshPts)"
+      if (Failed()) return;
+      do i=1,InitInp%NumMeshPts
+         CALL StC_ParseTimeSeriesFileInfo( InputFileData%PrescribedForcesFile(i), FileInfo_In_PrescribeFrc(i), InputFileData%StC_PrescribedForce(i), UnEcho, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      enddo
    endif
 
       !............................................................................................
@@ -198,7 +221,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       x%StC_x(2,i_pt) = 0
       x%StC_x(3,i_pt) = InputFileData%StC_Y_DSP
       x%StC_x(4,i_pt) = 0
-      if ((p%StC_DOF_MODE == DOFMode_Indept) .and. p%StC_Z_DOF) then    ! Should be zero for omni and TLCD
+      if (((p%StC_DOF_MODE == DOFMode_Indept) .and. p%StC_Z_DOF) .or. (p%StC_DOF_MODE == DOFMode_Omni3)) then    ! Should be zero for omni and TLCD
          x%StC_x(5,i_pt) = InputFileData%StC_Z_DSP
       else
          x%StC_x(5,i_pt) = 0.0_ReKi
@@ -421,6 +444,7 @@ CONTAINS
       if (UnEcho > 0)                     close(UnEcho)                    ! Close echo file
       if (allocated(RefPosGlobal    ))    deallocate(RefPosGlobal    )
       CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
+      if (allocated(FileInfo_In_PrescribeFrc)) deallocate(FileInfo_In_PrescribeFrc)
    END SUBROUTINE cleanup
 !.........................................
 END SUBROUTINE StC_Init
@@ -822,7 +846,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             m%M_P(3,i_pt) =  - F_X_P(2)  * x%StC_x(1,i_pt)  +  F_Y_P(1) * x%StC_x(3,i_pt)    ! NOTE signs match document, but are changed from prior value
 
             ! forces and moments in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
             y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
          enddo
 
@@ -832,9 +856,9 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! StrucCtrl external forces of dependent degrees:
          do i_pt=1,p%NumMeshPts
-            F_XY_P(1) = 0
-            F_XY_P(2) = 0
-            F_XY_P(3) = - p%M_XY * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                       &
+            F_XY_P(1) = 0.0_ReKi
+            F_XY_P(2) = 0.0_ReKi
+            F_XY_P(3) = - p%M_Omni * (  m%a_G(3,i_pt) - m%rddot_P(3,i_pt)                                                       &
                                                 - (m%alpha_P(1,i_pt) + m%omega_P(2,i_pt)*m%omega_P(3,i_pt))*x%StC_x(3,i_pt)   &
                                                 + (m%alpha_P(2,i_pt) - m%omega_P(1,i_pt)*m%omega_P(3,i_pt))*x%StC_x(1,i_pt)   &
                                                 - 2*m%omega_P(1,i_pt)*x%StC_x(4,i_pt)                                         &
@@ -846,12 +870,29 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
             m%F_P(3,i_pt) = - F_XY_P(3)
 
-            m%M_P(1,i_pt) = - F_XY_P(3) * x%StC_x(3,i_pt)
-            m%M_P(2,i_pt) =   F_XY_P(3) * x%StC_x(1,i_pt)
-            m%M_P(3,i_pt) = - F_XY_P(1) * x%StC_x(3,i_pt) + F_XY_P(2) * x%StC_x(1,i_pt)
+            ! Compute M_P using F_P insteand in case the other load components can generate moments about P
+            m%M_P(1:3,i_pt) = cross_product( x%StC_x([1,3,5],i_pt), m%F_P(1:3,i_pt) )
 
             ! forces and moments in global coordinates
-            y%Mesh(i_pt)%Force(:,1) =  real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
+            y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+
+         !note: m%F_k is computed earlier in StC_CalcContStateDeriv
+
+         ! StrucCtrl external forces of dependent degrees:
+         do i_pt=1,p%NumMeshPts
+
+            ! forces and moments in local coordinates
+            m%F_P(1:3,i_pt) = m%K(1:3,i_pt) * x%StC_x([1,3,5],i_pt) + (m%C_ctrl(1:3,i_pt) + m%C_Brake(1:3,i_pt)) * x%StC_x([2,4,6],i_pt) &
+                            - m%F_stop(1:3,i_pt) - m%F_ext(1:3,i_pt) - m%F_fr(1:3,i_pt) + m%F_table(1:3,i_pt)*(m%F_k(1:3,i_pt))
+            m%F_P(  3,i_pt) = m%F_P(  3,i_pt) - p%StC_Z_PreLd
+            m%M_P(1:3,i_pt) = cross_product( x%StC_x([1,3,5],i_pt), m%F_P(1:3,i_pt) )
+
+            ! forces and moments in global coordinates
+            y%Mesh(i_pt)%Force(:,1)  = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%F_P(1:3,i_pt)),ReKi)
             y%Mesh(i_pt)%Moment(:,1) = real(matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)),m%M_P(1:3,i_pt)),ReKi)
          enddo
 
@@ -958,10 +999,12 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          !  Note that the prescribed force is applied the same to all Mesh pts
          !  that are passed into this instance of the StC
          do i=1,3
-            ! Get interpolated force   -- this is not in any particular coordinate system yet
-            m%F_P(i,:)    = InterpStp( real(Time,ReKi), p%StC_PrescribedForce(1,:),p%StC_PrescribedForce(i+1,:),m%PrescribedInterpIdx, size(p%StC_PrescribedForce,2))
-            ! Get interpolated moment  -- this is not in any particular coordinate system yet
-            m%M_P(i,:)    = InterpStp( real(Time,ReKi), p%StC_PrescribedForce(1,:),p%StC_PrescribedForce(i+4,:),m%PrescribedInterpIdx, size(p%StC_PrescribedForce,2))
+            do i_pt=1,p%NumMeshPts
+               ! Get interpolated force   -- this is not in any particular coordinate system yet
+               m%F_P(i,i_pt)  = InterpStp( real(Time,ReKi), p%StC_PrescribedForce(i_pt)%data(1,:),p%StC_PrescribedForce(i_pt)%data(i+1,:),m%PrescribedInterpIdx, size(p%StC_PrescribedForce(i_pt)%data,2))
+               ! Get interpolated moment  -- this is not in any particular coordinate system yet
+               m%M_P(i,i_pt)  = InterpStp( real(Time,ReKi), p%StC_PrescribedForce(i_pt)%data(1,:),p%StC_PrescribedForce(i_pt)%data(i+4,:),m%PrescribedInterpIdx, size(p%StC_PrescribedForce(i_pt)%data,2))
+            enddo
          enddo
          if (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_GLOBAL) then
             ! Global coords
@@ -1085,9 +1128,9 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
          do i_pt=1,p%NumMeshPts
             ! Aggregate acceleration terms
-            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
-            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
-            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1 / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) + p%StC_Z_PreLd )
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1.0_ReKi / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1.0_ReKi / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
+            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1.0_ReKi / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) + p%StC_Z_PreLd )
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
@@ -1095,18 +1138,31 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          do i_pt=1,p%NumMeshPts
             denom = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2)
             IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
-                m%F_k(1,i_pt) = 0.0
-                m%F_k(2,i_pt) = 0.0
+                m%F_k(1:2,i_pt) = 0.0_ReKi
             ELSE
-                  m%F_k(1,i_pt) = x%StC_x(1,i_pt)/denom
-                  m%F_k(2,i_pt) = x%StC_x(3,i_pt)/denom
+                m%F_k(1:2,i_pt) = x%StC_x([1,3],i_pt)/denom
             END IF
-            m%F_k(3,i_pt) = 0.0
+            m%F_k(3,i_pt) = 0.0_ReKi
 
             ! Aggregate acceleration terms
-            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_XY * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
-            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_XY * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
+            m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt)*(m%F_k(1,i_pt)) )
+            m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt)*(m%F_k(2,i_pt)) )
             m%Acc(3,i_pt) = 0.0_ReKi
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+
+         do i_pt=1,p%NumMeshPts
+            denom = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2+x%StC_x(5,i_pt)**2)
+            IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
+                m%F_k(1:3,i_pt) = 0.0_ReKi
+            ELSE
+                m%F_k(1:3,i_pt) = x%StC_x([1,3,5],i_pt)/denom
+            END IF
+
+            ! Aggregate acceleration terms (this is the difference between the absolute accelerations of the TMD and P in N frame)
+            m%Acc(1:3,i_pt) = - m%rddot_P(1:3,i_pt) + m%a_G(1:3,i_pt) + 1.0_ReKi / p%M_Omni * ( m%F_ext(1:3,i_pt) + m%F_stop(1:3,i_pt) - m%F_table(1:3,i_pt)*(m%F_k(1:3,i_pt)) )
+            m%Acc(  3,i_pt) = m%Acc(  3,i_pt) + p%StC_Z_PreLd / p%M_Omni
          enddo
 
       ENDIF
@@ -1150,7 +1206,8 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             enddo
          END IF
 
-         if ( .not. (p%StC_DOF_MODE == DOFMode_Indept .AND. p%StC_Z_DOF)) then      ! z not used in any other configuration
+         if ( .not. ( (p%StC_DOF_MODE == DOFMode_Indept .AND. p%StC_Z_DOF) .or. (p%StC_DOF_MODE == DOFMode_Omni3) )) then
+            ! z not used in any other configuration
             do i_pt=1,p%NumMeshPts
                dxdt%StC_x(5,i_pt) = 0.0_ReKi
             enddo
@@ -1169,7 +1226,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
       ELSE IF (p%StC_CMODE == CMODE_ActiveDLL) THEN   ! Active control from DLL
-         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
+         call StC_ActiveCtrl_StiffDamp(u,x,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
          m%F_fr    = 0.0_ReKi
          if (.not. p%Use_F_TBL) then
             K(1:3,:) = m%K(1:3,:)
@@ -1182,6 +1239,12 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          !   do i_pt=1,p%NumMeshPts
          !      K(1:3,i_pt) = m%F_table(1:3,i_pt) - m%K(1:3,i_pt)
          !   enddo
+         endif
+      ELSE IF (p%StC_CMODE == CMODE_ActiveUsrSub) THEN   ! Active control from user subroutine
+         call StC_ActiveCtrl_UsrSub(u,x,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext,m%M_ext)
+         m%F_fr    = 0.0_ReKi
+         if (.not. p%Use_F_TBL) then
+            K(1:3,:) = m%K(1:3,:)
          endif
       END IF
 
@@ -1229,19 +1292,34 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_XY) * x%StC_x(1,i_pt)   &
-                                - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
-                                - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
-                                +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
+            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_Omni) * x%StC_x(1,i_pt)   &
+                                - ( m%C_ctrl( 1,i_pt)/p%M_Omni ) * x%StC_x(2,i_pt)                                     &
+                                - ( m%C_Brake(1,i_pt)/p%M_Omni ) * x%StC_x(2,i_pt)                                     &
+                                +  m%Acc(1,i_pt) + 1/p%M_Omni * ( m%F_fr(1,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%StC_x(3,i_pt)      &
                                +2 * m%omega_P(3,i_pt) * x%StC_x(4,i_pt)
-            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_XY) * x%StC_x(3,i_pt)   &
-                                - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
-                                - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
-                                +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
+            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Omni) * x%StC_x(3,i_pt)   &
+                                - ( m%C_ctrl( 2,i_pt)/p%M_Omni ) * x%StC_x(4,i_pt)                                     &
+                                - ( m%C_Brake(2,i_pt)/p%M_Omni ) * x%StC_x(4,i_pt)                                     &
+                                +  m%Acc(2,i_pt) + 1/p%M_Omni * ( m%F_fr(2,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) + m%alpha_P(3,i_pt) ) * x%StC_x(1,i_pt)      &
                                -2 * m%omega_P(3,i_pt) * x%StC_x(2,i_pt)
             dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
+         enddo
+
+      ELSE IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN
+               ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
+         do i_pt=1,p%NumMeshPts
+
+            dxdt%StC_x([2,4,6],i_pt) =  1.0_ReKi/p%M_Omni *                                                        &
+                                        ( -          K(1:3,i_pt)                         * x%StC_x([1,3,5],i_pt) & ! Stiffness
+                                          - ( m%C_ctrl(1:3,i_pt) + m%C_Brake(1:3,i_pt) ) * x%StC_x([2,4,6],i_pt) & ! Damping
+                                          +     m%F_fr(1:3,i_pt)                                                 ) ! Friction
+            dxdt%StC_x([2,4,6],i_pt) = dxdt%StC_x([2,4,6],i_pt) + m%Acc(1:3,i_pt)                                                 &
+                                     - cross_product( m%omega_P(:,i_pt), cross_product(m%omega_P(:,i_pt),x%StC_x([1,3,5],i_pt)) ) &
+                                     - cross_product( m%alpha_P(:,i_pt),                                 x%StC_x([1,3,5],i_pt)  ) &
+                          - 2.0_ReKi * cross_product( m%omega_P(:,i_pt),                                 x%StC_x([2,4,6],i_pt)  )
+
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_TLCD) THEN !MEG & SP
@@ -1649,8 +1727,9 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    enddo
 END SUBROUTINE StC_GroundHookDamp
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
+SUBROUTINE StC_ActiveCtrl_StiffDamp(u,x,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
    TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ContinuousStateType),         INTENT(IN   )  :: x              !< State at Time
    TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
    real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
    real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
@@ -1665,16 +1744,40 @@ SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
          C_Brake(1:3,i_pt) = u%CmdBrake(1:3,p%StC_CChan(i_pt))
          F_ctrl(1:3,i_pt)  = u%CmdForce(1:3,p%StC_CChan(i_pt))
          M_ctrl(1:3,i_pt)  = u%CmdMoment(1:3,p%StC_CChan(i_pt))
-      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior
-         C_ctrl(1,:) = p%C_X
-         C_ctrl(2,:) = p%C_Y
-         C_ctrl(3,:) = p%C_Z
-         C_Brake     = 0.0_ReKi
-         F_ctrl      = 0.0_ReKi
-         M_ctrl      = 0.0_ReKi
+      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior; yes, but K_ctrl is not used if table is used
+         K_ctrl(1:3,i_pt)  = [p%K_X,p%K_Y,p%K_Z]
+         C_ctrl(1:3,i_pt)  = [p%C_X,p%C_Y,p%C_Z]
+         C_Brake(1:3,i_pt) = 0.0_ReKi
+         F_ctrl(1:3,i_pt)  = 0.0_ReKi
+         M_ctrl(1:3,i_pt)  = 0.0_ReKi
       endif
    enddo
 END SUBROUTINE StC_ActiveCtrl_StiffDamp
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Example user subroutine for active structure control
+SUBROUTINE StC_ActiveCtrl_UsrSub(u,x,p,K_ctrl,C_ctrl,C_Brake,F_ctrl,M_ctrl)
+   TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ContinuousStateType),         INTENT(IN   )  :: x              !< State at Time
+   TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
+   real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
+   real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
+   real(ReKi),                            intent(inout)  :: C_Brake(:,:)   !< brake     commanded by dll
+   real(ReKi),                            intent(inout)  :: F_ctrl(:,:)    !< force     commanded by dll
+   real(ReKi),                            intent(inout)  :: M_ctrl(:,:)    !< moment    commanded by dll
+   integer(IntKi)                                        :: i_pt           ! counter for mesh points
+   do i_pt=1,p%NumMeshPts
+      call UserStC(x%StC_x([1,3,5],i_pt),& ! Apparent relative displacement
+                   x%StC_x([2,4,6],i_pt),& ! Apparent relative velocity
+                   K_ctrl (1:3,i_pt),&
+                   C_ctrl (1:3,i_pt),&
+                   C_Brake(1:3,i_pt),&
+                   F_ctrl (1:3,i_pt),&
+                   M_ctrl (1:3,i_pt))
+   enddo
+
+END SUBROUTINE StC_ActiveCtrl_UsrSub
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Extrapolate or interpolate stiffness value based on stiffness table.
 SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
@@ -1709,15 +1812,17 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
    do i_pt=1,p%NumMeshPts
 
-      IF (p%StC_DOF_MODE == DOFMode_Indept .OR. p%StC_DOF_MODE == DOFMode_Omni) THEN
+      IF (p%StC_DOF_MODE == DOFMode_Indept .OR. p%StC_DOF_MODE == DOFMode_Omni .OR. p%StC_DOF_MODE == DOFMode_Omni3) THEN
 
          IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
             DO I = 1,3
                Disp(I) = x%StC_x(J(I),i_pt)
             END DO
-         ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
+         ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
             Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2) ! constant assignment to vector
             Disp(3) = 0.0_ReKi
+         ELSE ! IF (p%StC_DOF_MODE == DOFMode_Omni3) THEN  ! X, Y, and Z
+            Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2+x%StC_x(5,i_pt)**2)
          END IF
 
          
@@ -1812,9 +1917,11 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
 
       !  DOF mode (switch) {  0: No StC or TLCD DOF; 
       !                       1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs);
-      !                       2: StC_XY_DOF (Omni-Directional StC);
-      !                       3: TLCD;
-      !                       4: Prescribed force/moment time series}
+      !                       2: StC_XY_DOF (2DOF Omni-Directional StC);
+      !                       3: StC_XYZ_DOF (3DOF Omni-Directional StC);
+      !                       5: TLCD;
+      !                       6: Prescribed force/moment time series}
+      !                       7: Force determined by external DLL
    call ParseVar( FileInfo_In, Curline, 'StC_DOF_MODE', InputFileData%StC_DOF_MODE, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
@@ -1911,8 +2018,8 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
       !  StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
    call ParseVar( FileInfo_In, Curline, 'StC_Z_M', InputFileData%StC_Z_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
-      !  StC Z mass (kg) [used only when StC_DOF_MODE=2]
-   call ParseVar( FileInfo_In, Curline, 'StC_XY_M', InputFileData%StC_XY_M, ErrStat2, ErrMsg2, UnEcho )
+      !  StC Omni mass (kg) [used only when StC_DOF_MODE=2 or 3]
+   call ParseVar( FileInfo_In, Curline, 'StC_Omni_M', InputFileData%StC_Omni_M, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
       !  StC X stiffness (N/m)
    call ParseVar( FileInfo_In, Curline, 'StC_X_K', InputFileData%StC_X_K, ErrStat2, ErrMsg2, UnEcho )
@@ -2012,6 +2119,9 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
    allocate( InputFileData%StC_CChan(NumMeshPts), STAT=ErrStat2 )    ! Blade TMD will possibly have independent TMD's for each instance
       if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating InputFileData%StC_CChan(NumMeshPts)"
       If (Failed()) return;
+   allocate( InputFileData%PrescribedForcesFile(NumMeshPts), STAT=ErrStat2 )    ! Blade TMD may have individual prescribed force input files for each blade instance 
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating InputFileData%PrescribedForcesFile(NumMeshPts)"
+      if (Failed()) return;
    call ParseAry( FileInfo_In, CurLine, 'StC_CChan', InputFileData%StC_CChan, NumMeshPts, ErrStat2, ErrMsg2 )
    if ( ErrStat2 /= ErrID_None) then      ! If we didn't read a full array, then try reading just one input
       ! If there was an error, CurLine didn't advance, so no resetting of it needed
@@ -2113,10 +2223,23 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
    call ParseVar( FileInfo_In, Curline, 'PrescribedForcesCoordSys', InputFileData%PrescribedForcesCoordSys, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       ! Prescribed input time series
-   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2, IsPath=.true. )
+   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile(1), ErrStat2, ErrMsg2, IsPath=.true. )
       if (Failed()) return;
-      if ( PathIsRelative( InputFileData%PrescribedForcesFile ) ) InputFileData%PrescribedForcesFile = TRIM(PriPath)//TRIM(InputFileData%PrescribedForcesFile)
-
+      if ( PathIsRelative( InputFileData%PrescribedForcesFile(1) ) ) InputFileData%PrescribedForcesFile(1) = TRIM(PriPath)//TRIM(InputFileData%PrescribedForcesFile(1))
+   if (NumMeshPts > 1) then      ! if we have multiple mesh points for blade StC, attempt to read multiple files.  If fails, copy same name over.
+      do i=2,NumMeshPts
+         call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile(i), ErrStat2, ErrMsg2, IsPath=.true. )
+         if (ErrStat2 == ErrID_None) then
+            if ( PathIsRelative( InputFileData%PrescribedForcesFile(i) ) ) InputFileData%PrescribedForcesFile(i) = TRIM(PriPath)//TRIM(InputFileData%PrescribedForcesFile(i))
+         else
+            InputFileData%PrescribedForcesFile(i) = InputFileData%PrescribedForcesFile(1)
+            ErrStat2 = ErrID_Info
+            ErrMsg2  = "Using StC blade 1 time series force data for blade "//trim(Num2LStr(i))
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StC_ParseInputFileInfo' )
+         endif
+      enddo
+      ErrStat2 = ErrID_None   ! clear tmp errstat
+   endif
 
 CONTAINS
    !-------------------------------------------------------------------------------------------------
@@ -2154,29 +2277,48 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    IF (  InputFileData%StC_DOF_MODE /= ControlMode_None     .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Indept       .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Omni         .and. &
+         InputFileData%StC_DOF_MODE /= DOFMode_Omni3        .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_TLCD         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Prescribed   .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), '// &
-               'or 2 (omni-directional), or 3 (TLCD), 4 (prescribed force time-series), or 5 (force from external DLL).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be '                   //&
+               trim(Num2LStr(ControlMode_None))  //' (no DOF), '                         //&
+               trim(Num2LStr(DOFMode_Indept))    //' (two/three independent DOFs), '     //&
+               trim(Num2LStr(DOFMode_Omni))      //' (2DOF omni-directional), '          //&
+               trim(Num2LStr(DOFMode_Omni3))     //' (3DOF omni-directional), '          //&
+               trim(Num2LStr(DOFMode_TLCD))      //' (TLCD), '                           //&
+               trim(Num2LStr(DOFMode_Prescribed))//' (prescribed force time-series), or '//&
+               trim(Num2LStr(DOFMode_ForceDLL))  //' (force from external DLL).',          &
+           ErrStat, ErrMsg, RoutineName )
 
       ! Check control modes
    IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
          InputFileData%StC_CMODE /= CMODE_Semi           .and. &
+         InputFileData%StC_CMODE /= CMODE_ActiveUsrSub   .and. &
          InputFileData%StC_CMODE /= CMODE_ActiveDLL ) &
          !InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &    ! Not an option at the moment --> 4 (active with Simulink control),
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active),'// &
-            ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be '                                   //&
+            trim(Num2LStr(ControlMode_None))  //' (none), '                                               //&
+            trim(Num2LStr(CMODE_Semi))        //' (semi-active), '                                        //&
+            trim(Num2LStr(CMODE_ActiveUsrSub))//' (active with user subroutine), or '                     //&
+            trim(Num2LStr(CMODE_ActiveDLL))   //' (active with DLL control) in this version of StrucCtrl.', &
+      ErrStat, ErrMsg, RoutineName )
 
       ! Check control channel
-   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
+   if ( InputFileData%StC_CMode == CMODE_ActiveUsrSub .or. InputFileData%StC_CMode == CMODE_ActiveDLL ) then
       if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and. &
            InputFileData%StC_DOF_MODE /= DOFMode_Omni   .and. &
+           InputFileData%StC_DOF_MODE /= DOFMode_Omni3  .and. &
            InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) then
-         call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
-               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) or force from external DLL '// &
-               '(StC_DOF_Mode = 5) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, &
+               'Control mode '//trim(Num2LStr(CMODE_ActiveUsrSub))//' (active with user subroutine) or '//&
+                                trim(Num2LStr(CMODE_ActiveDLL))   //' (active with DLL control) '       //&
+               'can only be used with independent or omni DOF (StC_DOF_Mode='//trim(Num2LStr(DOFMode_Indept))//', '//&
+               trim(Num2LStr(DOFMode_Omni))//', or '//trim(Num2LStr(DOFMode_Omni3))//') or external force (StC_DOF_Mode = '//&
+               trim(Num2LStr(DOFMode_ForceDLL))//') in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
       endif
+   endif
+   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
       if (InitInp%NumMeshPts > 1) then
          do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
             if ( InputFileData%StC_CChan(i) == InputFileData%StC_CChan(1) ) then
@@ -2188,10 +2330,10 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       endif
       do i=1,InitInp%NumMeshPts     ! Check we are in range of number of control channel groups
          if ( InputFileData%StC_CChan(i) < 0 .or. InputFileData%StC_CChan(i) > 10 ) then
-            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
+            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode='//trim(Num2LStr(CMODE_ActiveDLL))//'.', ErrStat, ErrMsg, RoutineName )
          endif
          if ( InputFileData%StC_CChan(i) == 0 ) then
-            call SetErrStat( ErrID_Warn, 'Control mode 5 (active with DLL control) requested, but no control channel specified.  No external force will be applied.', ErrStat, ErrMsg, RoutineName )
+            call SetErrStat( ErrID_Warn, 'Control mode '//trim(Num2LStr(CMODE_ActiveDLL))//' (active with DLL control) requested, but no control channel specified.  No external force will be applied.', ErrStat, ErrMsg, RoutineName )
          endif
       enddo
    endif
@@ -2201,9 +2343,13 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
         InputFileData%StC_SA_MODE /= SA_CMODE_GH_disp   .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_Ph_FF     .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_Ph_DF     ) then
-      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be 1 (velocity-based ground hook control), '// &
-                   '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
-                   '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be '                          //&
+                   trim(Num2LStr(SA_CMODE_GH_vel))   //' (velocity-based ground hook control), '               //&
+                   trim(Num2LStr(SA_CMODE_GH_invVel))//' (inverse velocity-based ground hook control), '       //&
+                   trim(Num2LStr(SA_CMODE_GH_disp))  //' (displacement-based ground hook control), '           //&
+                   trim(Num2LStr(SA_CMODE_Ph_FF))    //' (phase difference algorithm with friction force), or '//&
+                   trim(Num2LStr(SA_CMODE_Ph_DF))    //' (phase difference algorithm with damping force).',      &
+           ErrStat, ErrMsg, RoutineName )
    END IF
 
       ! Prescribed forces
@@ -2224,8 +2370,8 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       endif
 
       ! Need active DLL control
-      if (InputFileData%StC_CMODE /= CMODE_ActiveDLL) THEN
-         call SetErrStat( ErrID_Fatal, 'StC_CMODE must be '//trim(Num2LStr(CMODE_ActiveDLL))//   &
+      if (InputFileData%StC_CMODE /= CMODE_ActiveDLL .and. InputFileData%StC_CMODE /= CMODE_ActiveUsrSub) THEN
+         call SetErrStat( ErrID_Fatal, 'StC_CMODE must be '//trim(Num2LStr(CMODE_ActiveUsrSub))//' or '//trim(Num2LStr(CMODE_ActiveDLL))//   &
                                  ' when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
       endif
    endif
@@ -2246,12 +2392,21 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
 
-   if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_XY_M <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_XY_M must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Omni_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Omni_M must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_X_K <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
-      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni))//' (2DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Omni_M <= 0.0_ReKi) )   &
+      call SetErrStat(ErrID_Fatal,'StC_Omni_M must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_X_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_X_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Omni3 .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    &
+      call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when DOF mode '//trim(Num2LStr(DOFMode_Omni3))//' (3DOF omni-directional) is used', ErrStat,ErrMsg,RoutineName)
 
       ! Check spring preload in ZDof
    TmpCh = trim(InputFileData%StC_Z_PreLdC)
@@ -2283,6 +2438,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 
       ! Local variables
    character(10)                             :: TmpCh          ! Temporary string for figuring out what to do with preload on Z spring
+   integer(IntKi)                            :: i              ! generic counter
    INTEGER(IntKi)                            :: ErrStat2       ! Temporary error ID
    CHARACTER(ErrMsgLen)                      :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                   :: RoutineName = 'StC_SetParameters'
@@ -2331,7 +2487,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%C_Z = InputFileData%StC_Z_C
 
    ! StC Omni parameters
-   p%M_XY = InputFileData%StC_XY_M
+   p%M_Omni = InputFileData%StC_Omni_M
 
    ! Fore-Aft TLCD Parameters ! MEG & SP
    p%L_X = InputFileData%L_X
@@ -2383,7 +2539,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%Use_F_TBL = InputFileData%Use_F_TBL
    if (allocated(InputFileData%F_TBL)) then
       call AllocAry(p%F_TBL,SIZE(InputFiledata%F_TBL,1),SIZE(InputFiledata%F_TBL,2),'F_TBL', ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
+      if (Failed()) return;
       p%F_TBL = InputFileData%F_TBL
    endif
 
@@ -2391,10 +2547,14 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    p%StC_Z_PreLd = 0.0_ReKi
    TmpCh = trim(InputFileData%StC_Z_PreLdC)
    call Conv2UC(TmpCh)
-   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. &
-         (INDEX(TmpCh, "NONE") /= 1) ) then
+   if ( ((InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF) .or. (InputFileData%StC_DOF_MODE == DOFMode_Omni3)) &
+         .and. (INDEX(TmpCh, "NONE") /= 1) ) then
       if (INDEX(TmpCh, "GRAVITY") == 1 ) then  ! if gravity, then calculate
-         p%StC_Z_PreLd = -p%Gravity(3)*p%M_Z
+         if ( InputFileData%StC_DOF_MODE == DOFMode_Indept ) then
+            p%StC_Z_PreLd = -p%Gravity(3)*p%M_Z
+         else
+            p%StC_Z_PreLd = -p%Gravity(3)*p%M_Omni
+         end if
       else
          READ (InputFileData%StC_Z_PreLdC,*,IOSTAT=ErrStat2)   p%StC_Z_PreLd     ! Read a real number and store
          if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'StC_Z_PreLd must be "gravity", "none" or a real number', ErrStat,ErrMsg,RoutineName)
@@ -2402,12 +2562,16 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
       endif
    endif
 
-   ! Prescribed forces
+   ! Prescribed forces - copy data over
    p%PrescribedForcesCoordSys =  InputFileData%PrescribedForcesCoordSys
    if (allocated(InputFileData%StC_PrescribedForce)) then
-      call AllocAry( p%StC_PrescribedForce, size(InputFileData%StC_PrescribedForce,1), size(InputFileData%StC_PrescribedForce,2),"Array of force data", ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
-      p%StC_PrescribedForce = InputFileData%StC_PrescribedForce
+      allocate(p%StC_PrescribedForce(size(InputFileData%StC_PrescribedForce)), STAT=ErrStat2 )    ! Blade TMD may have individual prescribed force input files for each blade instance 
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating p%PrescribedForcesFile(NumMeshPts)"
+      if (Failed()) return;
+      do i=1,p%NumMeshPts
+         call StC_CopyPrescrFrcTseries(InputFileData%StC_PrescribedForce(i), p%StC_PrescribedForce(i), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         if (Failed()) return;
+      enddo
    endif
 
    ! StC Control channels
@@ -2418,28 +2582,28 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
       p%StC_CChan = 0   ! turn off regardless of input file request.
    endif
 
+contains
+   !-------------------------------------------------------------------------------------------------
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
 END SUBROUTINE StC_SetParameters
 
 
-subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
-
-   implicit    none
-
-      ! Passed variables
-   CHARACTER(*),           intent(in   )  :: InputFile         !< Name of the file containing the primary input data
-   type(StC_InputFile),    intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
-   type(FileInfoType),     intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
-   integer(IntKi),         intent(inout)  :: UnEcho            !< The local unit number for this module's echo file
-   integer(IntKi),         intent(  out)  :: ErrStat           !< Error status
-   CHARACTER(ErrMsgLen),   intent(  out)  :: ErrMsg            !< Error message
-
-      ! Local variables:
-   integer(IntKi)                         :: i                 !< generic counter
-   integer(IntKi)                         :: ErrStat2          !< Temporary Error status
-   character(ErrMsgLen)                   :: ErrMsg2           !< Temporary Error message
-   integer(IntKi)                         :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                             :: TmpRe7(7)         !< temporary 7 number array for reading values in
-   character(*), parameter                :: RoutineName='StC_ParseTimeSeriesFileInfo'
+subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, StC_PrescribedForce, UnEcho, ErrStat, ErrMsg )
+   CHARACTER(*),                 intent(in   )  :: InputFile            !< Name of the file containing the primary input data
+   type(StC_PrescrFrcTseries),   intent(inout)  :: StC_PrescribedForce  !< Parsed timeseries data
+   type(FileInfoType),           intent(in   )  :: FileInfo_In          !< The derived type for holding the file information.
+   integer(IntKi),               intent(inout)  :: UnEcho               !< The local unit number for this module's echo file
+   integer(IntKi),               intent(  out)  :: ErrStat              !< Error status
+   CHARACTER(ErrMsgLen),         intent(  out)  :: ErrMsg               !< Error message
+   integer(IntKi)                               :: i                    !< generic counter
+   integer(IntKi)                               :: ErrStat2             !< Temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2              !< Temporary Error message
+   integer(IntKi)                               :: CurLine              !< current entry in FileInfo_In%Lines array
+   real(ReKi)                                   :: TmpRe7(7)            !< temporary 7 number array for reading values in
+   character(*), parameter                      :: RoutineName='StC_ParseTimeSeriesFileInfo'
 
       ! Initialization of subroutine
    ErrMsg      =  ''
@@ -2449,7 +2613,8 @@ subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, InputFileData, U
 
    !  This file should only contain a table.  Header lines etc should be commented out. Any blank lines at the
    !  end get removed by the ProcessCom
-   call AllocAry( InputFileData%StC_PrescribedForce, 7, FileInfo_In%NumLines, "Array of force data", ErrStat2, ErrMsg2 )
+!FIXME: need to make this an array of arrays.
+   call AllocAry( StC_PrescribedForce%data, 7, FileInfo_In%NumLines, "Array of force data", ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
    ! Loop over all table lines.  Expecting 7 colunns
@@ -2457,7 +2622,7 @@ subroutine StC_ParseTimeSeriesFileInfo( InputFile, FileInfo_In, InputFileData, U
    do i=1,FileInfo_In%NumLines
       call ParseAry ( FileInfo_In, CurLine, 'Coordinates', TmpRe7, 7, ErrStat2, ErrMsg2, UnEcho )
          if (Failed())  return;
-      InputFileData%StC_PrescribedForce(1:7,i) = TmpRe7
+      StC_PrescribedForce%data(1:7,i) = TmpRe7
    enddo
 
 contains

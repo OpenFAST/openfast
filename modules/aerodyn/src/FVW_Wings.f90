@@ -281,23 +281,25 @@ contains
          GammaScale=1.0_ReKi
       endif
 
-      if (p%CircSolvMethod==idCircPrescribed) then 
+      select case (p%CircSolvMethod)
+      ! Prescribed circulation
+      case (idCircPrescribed)
          do iW = 1, p%nWings !Loop over lifting lines
             z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
             m%W(iW)%Vind_CP=-9999._ReKi !< Safety 
             m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
          enddo
 
-      else if (p%CircSolvMethod==idCircPolarData) then 
-         ! ---  Solve for circulation using polar data
+      ! Solve for circulation using polar data
+      case (idCircPolarData)
          CALL Wings_ComputeCirculationPolarData(z, z_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
 
-      else if (p%CircSolvMethod==idCircNoFlowThrough) then 
+      case (idCircNoFlowThrough)
          ! ---  Solve for circulation using the no-flow through condition
          ErrMsg='Circulation method nor implemented'; ErrStat=ErrID_Fatal; return ! should never happen
-      else
+      case default
          ErrMsg='Circulation method nor implemented'; ErrStat=ErrID_Fatal; return ! should never happen
-      endif
+      end select
 
       ! Scale circulation (for initial transient)
       do iW = 1, p%nWings !Loop over lifting lines
@@ -428,9 +430,9 @@ contains
                 do iDepth=1,p%iNWStart ! Two first panels
                    ! --- Defining a ring
                    P1=x%W(iW)%r_NW(1:3,iSpan  ,iDepth  )
+                   P4=x%W(iW)%r_NW(1:3,iSpan  ,iDepth+1)
                    P2=x%W(iW)%r_NW(1:3,iSpan+1,iDepth  )
                    P3=x%W(iW)%r_NW(1:3,iSpan+1,iDepth+1)
-                   P4=x%W(iW)%r_NW(1:3,iSpan  ,iDepth+1)
                    ! --- Induced velocity from ring, on all other control points (have to loop on rotors and wings and span again)
                    kCP2=1
                    do iWCP=1,p%nWings

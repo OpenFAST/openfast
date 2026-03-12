@@ -47,6 +47,45 @@ Pitch Control
 
    Time to enable active pitch control *[unused when* **PCMode==0** *]*
 
+**PitNeut(1)** [deg]
+
+   Blade 1 neutral pitch position--pitch spring moment is zero at this position
+   *[unused when* **PCMode>0** and **t>=TPCOn** *]*
+
+**PitNeut(2)** [deg]
+
+   Blade 2 neutral pitch position--pitch spring moment is zero at this position
+   *[unused when* **PCMode>0** and **t>=TPCOn** *]*
+
+**PitNeut(3)** [deg]
+
+   Blade 3 neutral pitch position--pitch spring moment is zero at this position
+   *[unused when* **PCMode>0** and **t>=TPCOn** *]* *[unused for 2 blades]*
+
+**PitSpr(1)** [N-m/rad]
+
+   Blade 1 pitch spring constant
+
+**PitSpr(2)** [N-m/rad]
+
+   Blade 2 pitch spring constant
+
+**PitSpr(3)** [N-m/rad]
+
+   Blade 3 pitch spring constant *[unused for 2 blades]*
+
+**PitDamp(1)** [N-m/(rad/s)]
+
+   Blade 1 pitch damping constant
+
+**PitDamp(2)** [N-m/(rad/s)]
+
+   Blade 2 pitch damping constant
+
+**PitDamp(3)** [N-m/(rad/s)]
+
+   Blade 3 pitch damping constant *[unused for 2 blades]*
+
 **TPitManS(1)** [sec]
 
    Time to start override pitch maneuver for blade 1 and end standard pitch

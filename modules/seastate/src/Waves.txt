@@ -40,6 +40,8 @@ typedef     ^                 ^                 SiKi                 WaveKinGrid
 typedef     ^                 ^                 SiKi                 WaveKinGridzi     {:}      -        -        "zi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level"  (meters)
 typedef     ^                 ^                 SiKi                 CurrVxi           {:}      -        -        "xi-component of the current velocity at elevation i" (m/s)
 typedef     ^                 ^                 SiKi                 CurrVyi           {:}      -        -        "yi-component of the current velocity at elevation i" (m/s)
+typedef     ^                 ^                 SiKi                 CurrVxi0          -        -        -        "xi-component of the current velocity at MSL" (m/s)
+typedef     ^                 ^                 SiKi                 CurrVyi0          -        -        -        "yi-component of the current velocity at MSL" (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVxiPz0       -        -        -        "xi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVyiPz0       -        -        -        "yi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 typedef     ^                 ^   NWTC_RandomNumber_ParameterType    RNG               -        -        -        "Parameters for the pseudo random number generator"  -

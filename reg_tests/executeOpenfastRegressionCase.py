@@ -37,7 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -96,31 +96,14 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["AOC", "AWT27", "_DummyTurbineData", "SWRT", "UAE_VI", "WP_Baseline"]:
+for data in ["5MW_Baseline", "AOC", "AWT27", "_DummyTurbineData", "SWRT", "UAE_VI", "WP_Baseline"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         rtl.copyTree(os.path.join(moduleDirectory, data), dataDir, excludeExt=excludeExt)
 
-# Special copy for the 5MW_Baseline folder because the Windows python-only workflow may have already created data in the subfolder ServoData
-dst = os.path.join(buildDirectory, "5MW_Baseline")
-src = os.path.join(moduleDirectory, "5MW_Baseline")
-if not os.path.isdir(dst):
-    rtl.copyTree(src, dst, excludeExt=excludeExt)
-else:
-    names = os.listdir(src)
-    for name in names:
-        if name == "ServoData":
-            continue
-        srcname = os.path.join(src, name)
-        dstname = os.path.join(dst, name)
-        if os.path.isdir(srcname):
-            if not os.path.isdir(dstname):
-                rtl.copyTree(srcname, dstname, excludeExt=excludeExt)
-        else:
-            shutil.copy2(srcname, dstname)
-
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.out': '.ref.out', '.outb': '.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:

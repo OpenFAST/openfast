@@ -275,7 +275,9 @@ END SUBROUTINE BldNdOuts_InitOut
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine populates the headers with the blade node outputs.  The iteration cycle is blade:node:channel (channel iterated
 !! fastest).  If this iteration order is changed, it should be changed in the Calc_WriteBldNdOutput routine as well.
-SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteBldNdOutput( u, p, OtherState, m, y, ErrStat, ErrMsg )
+
+   TYPE(BD_InputType),           INTENT(IN   )  :: u                                ! Module inputs
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                                ! The module parameters
    TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState                       ! Other states at time t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                                ! misc variables
@@ -323,7 +325,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
 
       ! Set the root rotation DCM relative to the reference.
       ! NOTE: the orientations used in this routine are DCM's.  These are directly from the mesh.
-   call LAPACK_GEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM('T', 'N', 1.0_BDKi, u%RootMotion%Orientation(:,:,1), u%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
 
 
       ! Loop over the channel sets
@@ -363,14 +365,14 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
             CASE (BldNd_TDxr,BldNd_TDyr,BldNd_TDzr,BldNd_AbsXr,BldNd_AbsYr,BldNd_AbsZr)
                DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
-                  d     = y%BldMotion%TranslationDisp(:, idx_node) - m%u2%RootMotion%TranslationDisp(:,1)
-                  d_ref = y%BldMotion%Position(       :, idx_node) - m%u2%RootMotion%Position(       :,1)
+                  d     = y%BldMotion%TranslationDisp(:, idx_node) - u%RootMotion%TranslationDisp(:,1)
+                  d_ref = y%BldMotion%Position(       :, idx_node) - u%RootMotion%Position(       :,1)
                      ! For relative change in location
                   temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref )
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec2)
                      ! For actual location relative to root
                   temp_vec2 = d + d_ref
-                  temp_vec3 = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
+                  temp_vec3 = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec2)
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_TDxr)
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -410,7 +412,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   call LAPACK_GEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,idx_node), RootRelOrient,   0.0_BDKi, Tmp33b, ErrStat2, ErrMsg2 )
                   call LAPACK_GEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,idx_node), Tmp33b,          0.0_BDKi, Tmp33a,   ErrStat2, ErrMsg2 )
                   call BD_CrvExtractCrv(Tmp33a,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
-                  WM_ParamRD = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)    ! Rotate the parameters to the correct coordinate system for output
+                  WM_ParamRD = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec2)    ! Rotate the parameters to the correct coordinate system for output
 
                   y%WriteOutput( IdxOutList ) = WM_ParamRD(compIndx)
                END DO
@@ -500,7 +502,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                END SELECT
                DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes   ! Index to current output
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%BldMotion%TranslationVel(:,idx_node))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%BldMotion%TranslationVel(:,idx_node))
                   y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                ENDDO
             !----------------------------------------
@@ -516,7 +518,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                END SELECT
                DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes   ! Index to current output
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%BldMotion%RotationVel(:,idx_node))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%BldMotion%RotationVel(:,idx_node))
                   y%WriteOutput( IdxOutList ) = temp_vec(compIndx)*R2D
                ENDDO
 
@@ -568,7 +570,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                END SELECT
                DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes   ! Index to current output
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%BldMotion%TranslationAcc(:,idx_node))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%BldMotion%TranslationAcc(:,idx_node))
                   y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                ENDDO
             !----------------------------------------
@@ -584,7 +586,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                END SELECT
                DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes   ! Index to current output
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%BldMotion%RotationAcc(:,idx_node))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%BldMotion%RotationAcc(:,idx_node))
                   y%WriteOutput( IdxOutList ) = temp_vec(compIndx)*R2D
                ENDDO
 
@@ -602,7 +604,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_FE) THEN
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), m%u2%PointLoad%Force( :,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), u%PointLoad%Force( :,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else ! we need to do a mesh mapping first
@@ -631,7 +633,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_FE) THEN
                   DO idx_node=1,y%BldMotion%NNodes
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), m%u2%PointLoad%Moment( :,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), u%PointLoad%Moment( :,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else ! we need to do a mesh mapping first
@@ -656,13 +658,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), m%u2%DistrLoad%Force( :,idx_node))
+                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), u%DistrLoad%Force( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Force( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Force( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -680,13 +682,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), m%u2%DistrLoad%Moment( :,idx_node))
+                     temp_vec = MATMUL(y%BldMotion%Orientation(:,:,idx_node), u%DistrLoad%Moment( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Moment( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Moment( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -705,13 +707,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u2%DistrLoad%Force( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), u%DistrLoad%Force( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Force( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Force( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -729,13 +731,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u2%DistrLoad%Moment( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), u%DistrLoad%Moment( :,idx_node))
                         y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Moment( :,idx_node))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%u_DistrLoad_at_y%Moment( :,idx_node))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -806,13 +808,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) then
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%BldInternalForceQP(1:3,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%BldInternalForceQP(1:3,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%BldInternalForceFE(1:3,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%BldInternalForceFE(1:3,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -832,13 +834,13 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                if (p%BldMotionNodeLoc == BD_MESH_QP) then
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%BldInternalForceQP(4:6,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%BldInternalForceQP(4:6,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                else
                   DO idx_node=1,y%BldMotion%NNodes    ! Note p%node_total is total number of nodes including all elements
                      IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
-                     temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%BldInternalForceFE(4:6,p%NdIndxInverse(idx_node)))
+                     temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%BldInternalForceFE(4:6,p%NdIndxInverse(idx_node)))
                      y%WriteOutput( IdxOutList ) = temp_vec(compIndx)
                   ENDDO
                end if
@@ -980,7 +982,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fb(1:3,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fb(1:3,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_FFbxr)   ! Gyroscopic force Fc x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -995,7 +997,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fb(4:6,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fb(4:6,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_MFbxr)   ! Gyroscopic moment Fc about x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1011,7 +1013,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fc(1:3,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fc(1:3,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_FFcxr)   ! Gyroscopic force Fc x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1026,7 +1028,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fc(4:6,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fc(4:6,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_MFcxr)   ! Gyroscopic moment Fc about x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1042,7 +1044,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fd(1:3,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fd(1:3,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_FFdxr)   ! Gyroscopic force Fc x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1057,7 +1059,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fd(4:6,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fd(4:6,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_MFdxr)   ! Gyroscopic moment Fc about x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1073,7 +1075,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fg(1:3,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fg(1:3,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_FFgxr)   ! Gyroscopic force Fc x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1088,7 +1090,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), m%qp%Fg(4:6,idx_node_in_elem,nelem))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), m%qp%Fg(4:6,idx_node_in_elem,nelem))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_MFgxr)   ! Gyroscopic moment Fc about x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1140,7 +1142,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fi(1:3,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fi(1:3,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_FFixr)   ! Gyroscopic force Fc x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)
@@ -1155,7 +1157,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   IdxOutList = p%NumOuts + idx_node + (IdxChan-1)*y%BldMotion%NNodes      ! Index to current output
                   nelem = p%OutNd2NdElem(2,idx_node)
                   idx_node_in_elem = p%OutNd2NdElem(1,idx_node)
-                  temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fi(4:6,idx_node_in_elem,nelem)))
+                  temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1), MATMUL(OtherState%GlbRot,m%qp%Fi(4:6,idx_node_in_elem,nelem)))
                   SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
                      CASE (BldNd_MFixr)   ! Gyroscopic moment Fc about x, root frame
                         y%WriteOutput( IdxOutList ) = temp_vec(1)

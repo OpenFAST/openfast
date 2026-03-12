@@ -39,5 +39,7 @@ typedef   ^                   InitOutputType                SiKi              Cu
 typedef   ^                   ^                             SiKi              CurrVyi               {:}         -        -         ""  -
 typedef   ^                   ^                             SiKi              PCurrVxiPz0            -          -        -         ""  -
 typedef   ^                   ^                             SiKi              PCurrVyiPz0            -          -        -         ""  -
+typedef   ^                   ^                             SiKi              CurrVxi0               -          -        -         ""  -
+typedef   ^                   ^                             SiKi              CurrVyi0               -          -        -         ""  -
 #
 

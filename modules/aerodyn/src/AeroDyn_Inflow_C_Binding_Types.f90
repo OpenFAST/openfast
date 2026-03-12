@@ -33,7 +33,7 @@ MODULE AeroDyn_Inflow_C_Binding_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumPtsDiskAvg = 144      ! Number of points for disk average velocity calculations [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumPtsDiskAvg                    = 144      ! Number of points for disk average velocity calculations [-]
 ! =========  DiskAvgVelData  =======
   TYPE, PUBLIC :: DiskAvgVelData
     REAL(ReKi) , DIMENSION(1:3,1:NumPtsDiskAvg)  :: DiskWindPosRel = 0.0_ReKi      !< Position points for disk average sampling, relative to hub [-]
@@ -70,7 +70,8 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BldMesh      !< Mesh for motions/loads of external nodes at each blade (sized by number of blades on the rotor) [-]
   END TYPE MeshByBladeType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine ADI_cbind_CopyDiskAvgVelData(SrcDiskAvgVelDataData, DstDiskAvgVelDataData, CtrlCode, ErrStat, ErrMsg)
    type(DiskAvgVelData), intent(in) :: SrcDiskAvgVelDataData
@@ -576,5 +577,7 @@ subroutine ADI_cbind_UnPackMeshByBladeType(RF, OutData)
       end do
    end if
 end subroutine
+
 END MODULE AeroDyn_Inflow_C_Binding_Types
+
 !ENDOFREGISTRYGENERATEDFILE

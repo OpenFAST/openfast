@@ -1,3 +1,4 @@
+from numbers import Number
 import os, re, copy
 import numpy as np
 from functools import reduce
@@ -121,7 +122,8 @@ def bool_read(text):
     if 'default' in text.lower():
         return str(text)
     else:
-        if text.lower() == 'true':
+        text = text.lower()
+        if text == 'true' or text == 't':
             return True
         else:
             return False
@@ -334,13 +336,18 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['AbortLevel'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['TMax'] = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['DT']  = float_read(f.readline().split()[0])
+        self.fst_vt['Fst']['ModCoupling'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['InterpOrder']  = int(f.readline().split()[0])
         self.fst_vt['Fst']['NumCrctn']  = int(f.readline().split()[0])
+        self.fst_vt['Fst']['RhoInf']  = float_read(f.readline().split()[0])
+        self.fst_vt['Fst']['ConvTol']  = float_read(f.readline().split()[0])
+        self.fst_vt['Fst']['MaxConvIter']  = int(f.readline().split()[0])
         self.fst_vt['Fst']['DT_UJac']  = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['UJacSclFact']  = float_read(f.readline().split()[0])
 
         # Feature Switches and Flags (ftr_swtchs_flgs)
         f.readline()
+        self.fst_vt['Fst']['NRotors'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompElast'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompInflow'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompAero'] = int(f.readline().split()[0])
@@ -350,7 +357,13 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['CompSub'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompMooring'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompIce'] = int(f.readline().split()[0])
+        self.fst_vt['Fst']['CompSoil'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['MHK'] = int(f.readline().split()[0])
+        self.fst_vt['Fst']['MirrorRotor'] = read_array(f, self.fst_vt['Fst']['NRotors'], array_type=bool)
+
+        if self.fst_vt['Fst']['NRotors'] > 1:
+            raise ValueError('openfast_io does not currently support multi-rotor turbines (NRotors > 1),' + 
+                             'this feature will be added in a future release')
 
         # Environmental conditions
         f.readline()
@@ -378,6 +391,19 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['SubFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['MooringFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['IceFile'] = quoted_read(f.readline().split()[0])
+        self.fst_vt['Fst']['SoilFile'] = quoted_read(f.readline().split()[0])
+        # self.fst_vt['Fst']['EDFiles'] = [self.fst_vt['Fst']['EDFile']]
+        # self.fst_vt['Fst']['BDBldFiles(1)'] = [self.fst_vt['Fst']['BDBldFile(1)']]
+        # self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
+        # self.fst_vt['Fst']['BDBldFiles(3)'] = [self.fst_vt['Fst']['BDBldFile(3)']]
+        # self.fst_vt['Fst']['ServoFiles'] = [self.fst_vt['Fst']['ServoFile']]
+        # for i in range(1, self.fst_vt['Fst']['NRotors']):
+        #     f.readline()
+        #     self.fst_vt['Fst']['EDFiles'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(1)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(2)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(3)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['ServoFiles'].append(quoted_read(f.readline().split()[0]))
 
         # FAST Output Parameters (fst_output_params)
         f.readline()
@@ -448,6 +474,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDyn']['FlapDOF1'] = bool_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['FlapDOF2'] = bool_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['EdgeDOF'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PitchDOF'] = bool_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['TeetDOF'] = bool_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['DrTrDOF'] = bool_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['GenDOF'] = bool_read(f.readline().split()[0])
@@ -511,6 +538,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDyn']['PtfmCMxt']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmCMyt']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmCMzt']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PtfmRefxt']  = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PtfmRefyt']  = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmRefzt']  = float_read(f.readline().split()[0])
 
         # Mass and Inertia (mass_inertia)
@@ -518,6 +547,12 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDyn']['TipMass(1)']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['TipMass(2)']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['TipMass(3)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PBrIner(1)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PBrIner(2)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PBrIner(3)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['BlPIner(1)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['BlPIner(2)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['BlPIner(3)']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['HubMass']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['HubIner']    = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['HubIner_Teeter']    = float_read(f.readline().split()[0])
@@ -698,12 +733,11 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDynBlade'][BladeNumber]['AdjFlSt'] = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDynBlade'][BladeNumber]['AdjEdSt'] = float_read(f.readline().split()[0])
         
-        # Distrilbuted Blade Properties
+        # Distributed Blade Properties
         f.readline()
         f.readline()
         f.readline()
         self.fst_vt['ElastoDynBlade'][BladeNumber]['BlFract'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
-        self.fst_vt['ElastoDynBlade'][BladeNumber]['PitchAxis'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
         self.fst_vt['ElastoDynBlade'][BladeNumber]['StrcTwst'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
         self.fst_vt['ElastoDynBlade'][BladeNumber]['BMassDen'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
         self.fst_vt['ElastoDynBlade'][BladeNumber]['FlpStff'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
@@ -712,11 +746,10 @@ class InputReader_OpenFAST(object):
         for i in range(self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']):
             data = f.readline().split()          
             self.fst_vt['ElastoDynBlade'][BladeNumber]['BlFract'][i]  = float_read(data[0])
-            self.fst_vt['ElastoDynBlade'][BladeNumber]['PitchAxis'][i]  = float_read(data[1])
-            self.fst_vt['ElastoDynBlade'][BladeNumber]['StrcTwst'][i]  = float_read(data[2])
-            self.fst_vt['ElastoDynBlade'][BladeNumber]['BMassDen'][i]  = float_read(data[3])
-            self.fst_vt['ElastoDynBlade'][BladeNumber]['FlpStff'][i]  = float_read(data[4])
-            self.fst_vt['ElastoDynBlade'][BladeNumber]['EdgStff'][i]  = float_read(data[5])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['StrcTwst'][i]  = float_read(data[1])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BMassDen'][i]  = float_read(data[2])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['FlpStff'][i]  = float_read(data[3])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['EdgStff'][i]  = float_read(data[4])
 
         f.readline()
         self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFl1Sh'] = [None] * 5
@@ -846,12 +879,6 @@ class InputReader_OpenFAST(object):
         #---------------------- MATERIAL PARAMETER --------------------------------------
         f.readline()
         self.fst_vt['BeamDyn'][BladeNumber]['BldFile']     = f.readline().split()[0].replace('"','').replace("'",'')
-        #---------------------- PITCH ACTUATOR PARAMETERS -------------------------------
-        f.readline()
-        self.fst_vt['BeamDyn'][BladeNumber]['UsePitchAct'] = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn'][BladeNumber]['PitchJ']      = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn'][BladeNumber]['PitchK']      = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn'][BladeNumber]['PitchC']      = float_read(f.readline().split()[0])
         #---------------------- OUTPUTS -------------------------------------------------
         f.readline()
         self.fst_vt['BeamDyn'][BladeNumber]['SumPrint']    = bool_read(f.readline().split()[0])
@@ -896,7 +923,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         f.readline()
-        #---------------------- DAMPING COEFFICIENT------------------------------------
+        #------ Stiffness-Proportional Damping [used only if damp_type=1] ---------------
         ln = f.readline().split()
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu1']           = float(ln[0])
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu2']           = float(ln[1])
@@ -905,7 +932,12 @@ class InputReader_OpenFAST(object):
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu5']           = float(ln[4])
         self.fst_vt['BeamDynBlade'][BladeNumber]['mu6']           = float(ln[5])
         f.readline()
-        #---------------------- DISTRIBUTED PROPERTIES---------------------------------
+        # ------ Modal Damping [used only if damp_type=2] --------------------------------
+        n_modes = int(f.readline().split()[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['n_modes']       = n_modes
+        self.fst_vt['BeamDynBlade'][BladeNumber]['zeta']          = np.array(f.readline().strip().replace(',', ' ').split()[:n_modes], dtype=float).tolist()
+        f.readline()
+        #------ Distributed Properties --------------------------------------------------
         
         self.fst_vt['BeamDynBlade'][BladeNumber]['radial_stations'] = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total']))
         self.fst_vt['BeamDynBlade'][BladeNumber]['beam_stiff']      = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total'], 6, 6))
@@ -1037,7 +1069,6 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrShadow']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrAero']       = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CavitCheck']    = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn']['Buoyancy']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['NacelleDrag']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CompAA']        = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['AA_InputFile']  = f.readline().split()[0]
@@ -1156,6 +1187,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrCd'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         self.fst_vt['AeroDyn']['TwrTI'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         self.fst_vt['AeroDyn']['TwrCb'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCp'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCa'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         for i in range(self.fst_vt['AeroDyn']['NumTwrNds']):
             data = [float(val) for val in f.readline().split()]
             self.fst_vt['AeroDyn']['TwrElev'][i] = data[0] 
@@ -1163,6 +1196,8 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn']['TwrCd'][i]   = data[2]
             self.fst_vt['AeroDyn']['TwrTI'][i]   = data[3]
             self.fst_vt['AeroDyn']['TwrCb'][i]   = data[4]
+            self.fst_vt['AeroDyn']['TwrCp'][i]   = data[5]
+            self.fst_vt['AeroDyn']['TwrCa'][i]   = data[6]
 
         # Outputs
         f.readline()
@@ -1237,6 +1272,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlSpn']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['t_c']            = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAC']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlSwpAC']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAng']       = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
@@ -1246,6 +1282,11 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb']           = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpn']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpt']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCan']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCat']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCam']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
         for i in range(self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']):
             data = [float(val) for val in f.readline().split()]
             self.fst_vt['AeroDynBlade'][BladeNumber]['BlSpn'][i]   = data[0] 
@@ -1255,14 +1296,26 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDynBlade'][BladeNumber]['BlTwist'][i] = data[4]
             self.fst_vt['AeroDynBlade'][BladeNumber]['BlChord'][i] = data[5]
             self.fst_vt['AeroDynBlade'][BladeNumber]['BlAFID'][i]  = data[6]
-            if len(data) == 9:
-                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb'][i]    = data[7]
-                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn'][i] = data[8]
-                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt'][i] = data[9]
+            if len(data) == 16:
+                self.fst_vt['AeroDynBlade'][BladeNumber]['t_c'][i]     = data[7]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb'][i]    = data[8]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn'][i] = data[9]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt'][i] = data[10]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpn'][i]   = data[11]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpt'][i]   = data[12]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCan'][i]   = data[13]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCat'][i]   = data[14]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCam'][i]   = data[15]
             else:
+                self.fst_vt['AeroDynBlade'][BladeNumber]['t_c'][i]     = 0.0
                 self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb'][i]    = 0.0
                 self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn'][i] = 0.0
                 self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt'][i] = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpn'][i]   = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCpt'][i]   = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCan'][i]   = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCat'][i]   = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCam'][i]   = 0.0
         
         f.close()
 
@@ -1513,9 +1566,18 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['ServoDyn']['PCMode']       = int(f.readline().split()[0])
         self.fst_vt['ServoDyn']['TPCOn']        = float_read(f.readline().split()[0])
-        self.fst_vt['ServoDyn']['TPitManS1']    = float_read(f.readline().split()[0])
-        self.fst_vt['ServoDyn']['TPitManS2']    = float_read(f.readline().split()[0])
-        self.fst_vt['ServoDyn']['TPitManS3']    = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitNeut(1)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitNeut(2)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitNeut(3)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitSpr(1)']    = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitSpr(2)']    = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitSpr(3)']    = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitDamp(1)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitDamp(2)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['PitDamp(3)']   = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['TPitManS(1)']  = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['TPitManS(2)']  = float_read(f.readline().split()[0])
+        self.fst_vt['ServoDyn']['TPitManS(3)']  = float_read(f.readline().split()[0])
         self.fst_vt['ServoDyn']['PitManRat(1)'] = float_read(f.readline().split()[0])
         self.fst_vt['ServoDyn']['PitManRat(2)'] = float_read(f.readline().split()[0])
         self.fst_vt['ServoDyn']['PitManRat(3)'] = float_read(f.readline().split()[0])
@@ -1678,7 +1740,7 @@ class InputReader_OpenFAST(object):
             f.readline()
             StC_vt['Echo'] = bool_read(f.readline().split()[0])      #  Echo         - Echo input data to <RootName>.ech (flag)
             f.readline()  # StC DEGREES OF FREEDOM
-            StC_vt['StC_DOF_MODE'] = int_read(f.readline().split()[0]) #        4   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series}
+            StC_vt['StC_DOF_MODE'] = int_read(f.readline().split()[0]) #        4   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: StC_XYZ_DOF (Omni-Directional StC); 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL}
             StC_vt['StC_X_DOF'] = bool_read(f.readline().split()[0])  # false         StC_X_DOF    - DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
             StC_vt['StC_Y_DOF'] = bool_read(f.readline().split()[0])  # false         StC_Y_DOF    - DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
             StC_vt['StC_Z_DOF'] = bool_read(f.readline().split()[0])  # false         StC_Z_DOF    - DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]
@@ -1702,7 +1764,7 @@ class InputReader_OpenFAST(object):
             StC_vt['StC_X_M'] = float_read(f.readline().split()[0])   #        0   StC_X_M      - StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]
             StC_vt['StC_Y_M'] = float_read(f.readline().split()[0])   #        50   StC_Y_M      - StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]
             StC_vt['StC_Z_M'] = float_read(f.readline().split()[0])   #        0   StC_Z_M      - StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
-            StC_vt['StC_XY_M'] = float_read(f.readline().split()[0])   #        0   StC_XY_M     - StC XY mass (kg) [used only when StC_DOF_MODE=2]
+            StC_vt['StC_Omni_M'] = float_read(f.readline().split()[0])   #        0   StC_Omni_M     - StC omni mass (kg) [used only when StC_DOF_MODE=2 or 3]
             StC_vt['StC_X_K'] = float_read(f.readline().split()[0])   #    2300   StC_X_K      - StC X stiffness (N/m)
             StC_vt['StC_Y_K'] = float_read(f.readline().split()[0])   #    2300   StC_Y_K      - StC Y stiffness (N/m)
             StC_vt['StC_Z_K'] = float_read(f.readline().split()[0])   #        0   StC_Z_K      - StC Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
@@ -1748,7 +1810,7 @@ class InputReader_OpenFAST(object):
 
             # StructCtrl CONTROL, skip this readline() because it already happened
             f.readline()
-            StC_vt['StC_CMODE'] = int_read(f.readline().split()[0]) #        5   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
+            StC_vt['StC_CMODE'] = int_read(f.readline().split()[0]) #        5   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
             StC_vt['StC_CChan'] = int_read(f.readline().split()[0]) #        0   StC_CChan     - Control channel group (1:10) for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) (specify additional channels for blade instances of StC active control -- one channel per blade) [used only when StC_DOF_MODE=1 or 2, and StC_CMODE=4 or 5]
             StC_vt['StC_SA_MODE'] = int_read(f.readline().split()[0]) #        1   StC_SA_MODE   - Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} (-)
             StC_vt['StC_X_C_LOW'] = float_read(f.readline().split()[0])  #        0   StC_X_C_LOW   - StC X low damping for ground hook control
@@ -1881,6 +1943,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['PtfmVol0']      = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOBxt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOByt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
+        self.fst_vt['HydroDyn']['NAddDOF']       = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=int)
 
         # 2ND-ORDER FLOATING PLATFORM FORCES
         f.readline()
@@ -1908,6 +1971,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['HydroDyn']['WaveDisp']     = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['AMMod']        = int_read(f.readline().split()[0])
+        self.fst_vt['HydroDyn']['HstMod']       = int_read(f.readline().split()[0])
 
         #AXIAL COEFFICIENTS
         f.readline()
@@ -2387,6 +2451,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['SeaState']['WaveMod']       = int_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WaveStMod']     = int_read(f.readline().split()[0])
+        self.fst_vt['SeaState']['WvCrntMod']     = int_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WaveTMax']      = float_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WaveDT']        = float_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WaveHs']        = float_read(f.readline().split()[0])
@@ -2488,7 +2553,20 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SubDyn']['GuyanDampMod'] = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['RayleighDamp'] = read_array(f,2,array_type=float)
         self.fst_vt['SubDyn']['GuyanDampSize'] = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['GuyanDamp'] = np.array([[float(idx) for idx in f.readline().strip().split()[:6]] for i in range(self.fst_vt['SubDyn']['GuyanDampSize'])])
+        self.fst_vt['SubDyn']['GuyanDamp'] = np.array([[float(idx) for idx in f.readline().strip().split()[:self.fst_vt['SubDyn']['GuyanDampSize']]] for i in range(self.fst_vt['SubDyn']['GuyanDampSize'])])
+
+        f.readline()
+        f.readline()
+        f.readline()
+        # INITIAL RIGID-BODY POSITION
+        ln = f.readline().split()
+        self.fst_vt['SubDyn']['RBSurge'] = float(ln[0])
+        self.fst_vt['SubDyn']['RBSway']  = float(ln[1])
+        self.fst_vt['SubDyn']['RBHeave'] = float(ln[2])
+        self.fst_vt['SubDyn']['RBRoll']  = float(ln[3])
+        self.fst_vt['SubDyn']['RBPitch'] = float(ln[4])
+        self.fst_vt['SubDyn']['RBYaw']   = float(ln[5])
+
         f.readline()
         # STRUCTURE JOINTS
         self.fst_vt['SubDyn']['NJoints']   = int_read(f.readline().split()[0])
@@ -2542,8 +2620,9 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['SubDyn']['Rct_SoilFile'][i] = 'None'
         f.readline()
         # INTERFACE JOINTS
-        self.fst_vt['SubDyn']['NInterf']   = int_read(f.readline().split()[0])
+        self.fst_vt['SubDyn']['NInterf']  = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['IJointID'] = [None]*self.fst_vt['SubDyn']['NInterf']
+        self.fst_vt['SubDyn']['TPID']     = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDXss'] = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDYss'] = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDZss'] = [None]*self.fst_vt['SubDyn']['NInterf']
@@ -2555,12 +2634,13 @@ class InputReader_OpenFAST(object):
         for i in range(self.fst_vt['SubDyn']['NInterf']):
             ln = f.readline().split()
             self.fst_vt['SubDyn']['IJointID'][i] = int(ln[0])
-            self.fst_vt['SubDyn']['ItfTDXss'][i] = int(ln[1])
-            self.fst_vt['SubDyn']['ItfTDYss'][i] = int(ln[2])
-            self.fst_vt['SubDyn']['ItfTDZss'][i] = int(ln[3])
-            self.fst_vt['SubDyn']['ItfRDXss'][i] = int(ln[4])
-            self.fst_vt['SubDyn']['ItfRDYss'][i] = int(ln[5])
-            self.fst_vt['SubDyn']['ItfRDZss'][i] = int(ln[6])
+            self.fst_vt['SubDyn']['TPID'][i]     = int(ln[1])
+            self.fst_vt['SubDyn']['ItfTDXss'][i] = int(ln[2])
+            self.fst_vt['SubDyn']['ItfTDYss'][i] = int(ln[3])
+            self.fst_vt['SubDyn']['ItfTDZss'][i] = int(ln[4])
+            self.fst_vt['SubDyn']['ItfRDXss'][i] = int(ln[5])
+            self.fst_vt['SubDyn']['ItfRDYss'][i] = int(ln[6])
+            self.fst_vt['SubDyn']['ItfRDZss'][i] = int(ln[7])
         f.readline()
         # MEMBERS
         self.fst_vt['SubDyn']['NMembers']    = int_read(f.readline().split()[0])
@@ -2595,16 +2675,16 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['SubDyn']['M_COSMID'][i] = -1
         f.readline()
         # MEMBER X-SECTION PROPERTY data 1/3
-        self.fst_vt['SubDyn']['NBCPropSets']  = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['PropSetID1'] = [None]*self.fst_vt['SubDyn']['NBCPropSets']
-        self.fst_vt['SubDyn']['YoungE1']    = [None]*self.fst_vt['SubDyn']['NBCPropSets']
-        self.fst_vt['SubDyn']['ShearG1']    = [None]*self.fst_vt['SubDyn']['NBCPropSets']
-        self.fst_vt['SubDyn']['MatDens1']   = [None]*self.fst_vt['SubDyn']['NBCPropSets']
-        self.fst_vt['SubDyn']['XsecD']      = [None]*self.fst_vt['SubDyn']['NBCPropSets']
-        self.fst_vt['SubDyn']['XsecT']      = [None]*self.fst_vt['SubDyn']['NBCPropSets']
+        self.fst_vt['SubDyn']['NPropSetsCyl']  = int_read(f.readline().split()[0])
+        self.fst_vt['SubDyn']['PropSetID1'] = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
+        self.fst_vt['SubDyn']['YoungE1']    = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
+        self.fst_vt['SubDyn']['ShearG1']    = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
+        self.fst_vt['SubDyn']['MatDens1']   = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
+        self.fst_vt['SubDyn']['XsecD']      = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
+        self.fst_vt['SubDyn']['XsecT']      = [None]*self.fst_vt['SubDyn']['NPropSetsCyl']
         ln = f.readline().split()
         ln = f.readline().split()
-        for i in range(self.fst_vt['SubDyn']['NBCPropSets']):
+        for i in range(self.fst_vt['SubDyn']['NPropSetsCyl']):
             ln = f.readline().split()
             self.fst_vt['SubDyn']['PropSetID1'][i] = int(ln[0])
             self.fst_vt['SubDyn']['YoungE1'][i]    = float(ln[1])
@@ -2614,17 +2694,17 @@ class InputReader_OpenFAST(object):
             self.fst_vt['SubDyn']['XsecT'][i]      = float(ln[5])
         f.readline()
         # MEMBER X-SECTION PROPERTY data 2/3
-        self.fst_vt['SubDyn']['NBRPropSets']  = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['PropSetID2'] = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['YoungE2']    = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['ShearG2']    = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['MatDens2']   = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['XsecSa']     = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['XsecSb']     = [None]*self.fst_vt['SubDyn']['NBRPropSets']
-        self.fst_vt['SubDyn']['XsecT2']     = [None]*self.fst_vt['SubDyn']['NBRPropSets']
+        self.fst_vt['SubDyn']['NPropSetsRec']  = int_read(f.readline().split()[0])
+        self.fst_vt['SubDyn']['PropSetID2'] = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['YoungE2']    = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['ShearG2']    = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['MatDens2']   = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['XsecSa']     = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['XsecSb']     = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
+        self.fst_vt['SubDyn']['XsecT2']     = [None]*self.fst_vt['SubDyn']['NPropSetsRec']
         ln = f.readline().split()
         ln = f.readline().split()
-        for i in range(self.fst_vt['SubDyn']['NBRPropSets']):
+        for i in range(self.fst_vt['SubDyn']['NPropSetsRec']):
             ln = f.readline().split()
             self.fst_vt['SubDyn']['PropSetID2'][i] = int(ln[0])
             self.fst_vt['SubDyn']['YoungE2'][i]    = float(ln[1])
@@ -2823,15 +2903,26 @@ class InputReader_OpenFAST(object):
         f.readline()
 
         # Reduction inputs
-        self.fst_vt['ExtPtfm']['FileFormat'] = int_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['RBMod'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['Red_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
-        self.fst_vt['ExtPtfm']['RedCst_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         self.fst_vt['ExtPtfm']['NActiveDOFList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['ActiveDOFList'] = read_array(f,None,split_val='ActiveDOFList',array_type=int)
         self.fst_vt['ExtPtfm']['NInitPosList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitPosList'] = read_array(f,None,split_val='InitPosList',array_type=float)
         self.fst_vt['ExtPtfm']['NInitVelList'] = int_read(f.readline().split()[0])
         self.fst_vt['ExtPtfm']['InitVelList'] = read_array(f,None,split_val='InitVelList',array_type=float)
+        f.readline()
+
+        # Connection inputs
+        self.fst_vt['ExtPtfm']['HasConnections'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Conn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        f.readline()
+
+        # User forcing inputs
+        self.fst_vt['ExtPtfm']['HasUserForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['Force_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
+        self.fst_vt['ExtPtfm']['HasConnForcing'] = bool_read(f.readline().split()[0])
+        self.fst_vt['ExtPtfm']['FConn_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         f.readline()
 
         # Output
@@ -2862,18 +2953,25 @@ class InputReader_OpenFAST(object):
             self.set_outlist(self.fst_vt['outlist']['ExtPtfm'], channel_list) # TODO: Need to figure this out as we dont have a full outlist for now, similar to MoorDyn
             data = f.readline()
 
-        if self.fst_vt['ExtPtfm']['FileFormat'] == 0:
-            self.fst_vt['ExtPtfm']['Guyan'] = {}
-            # self.read_Guyan(f) # TODO: need to impliment this. An example file not found to test
-        elif self.fst_vt['ExtPtfm']['FileFormat'] == 1:
-            self.fst_vt['ExtPtfm']['FlexASCII'] = {}
-            self.read_Superelement(self.fst_vt['ExtPtfm']['Red_FileName'])
+        self.fst_vt['ExtPtfm']['FlexASCII'] = {}
+        self.read_Superelement(self.fst_vt['ExtPtfm']['Red_FileName'])
+
+        if self.fst_vt['ExtPtfm']['HasConnections']:
+            self.fst_vt['ExtPtfm']['Connections'] = {}
+            self.read_Connections(self.fst_vt['ExtPtfm']['Conn_FileName'], self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+
+        if self.fst_vt['ExtPtfm']['HasUserForcing']:
+            self.fst_vt['ExtPtfm']['UserForcing'] = {}
+            self.read_UserForcing(self.fst_vt['ExtPtfm']['Force_FileName'], self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'])
+
+        if self.fst_vt['ExtPtfm']['HasConnForcing']:
+            self.fst_vt['ExtPtfm']['ConnForcing'] = {}
+            self.read_ConnForcing(self.fst_vt['ExtPtfm']['FConn_FileName'], self.fst_vt['ExtPtfm']['Connections']['nConn'])
 
         f.close()
 
 
     def read_Superelement(self, superelement_file):
-        
 
         def detectAndReadExtPtfmSE(lines):
         # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
@@ -2885,59 +2983,43 @@ class InputReader_OpenFAST(object):
                     i=iStart+j
                     M[j,:]=np.array(lines[i].split()).astype(float)
                 return M
-            
-            if len(lines)<10:
-                return False
-            if not (lines[0][0]=='!' and lines[1][0]=='!'):
-                return False
-            if lines[1].lower().find('flex')<0:
-                return
-            if  lines[2].lower().find('!dimension')<0:
-                return
-            
+
             # --- At this stage we assume it's in the proper format
-            nDOFCommon = -1
-            i=2
+            nDOF = -1
+            i=0
             try:
                 while i<len(lines):
                     l=lines[i].lower()
                     if l.find('!mass')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm stiffness matrix nDOF issue. nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['MassMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif l.find('!stiffness')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm stiffness matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['StiffnessMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif l.find('!damping')==0:
-                        l=lines[i+1]
-                        nDOF=int(l.split(':')[1])
-                        if nDOF<-1 or nDOF!=nDOFCommon:
-                            raise NameError('ExtPtfm damping matrix nDOF issue nDOF common: {}, nDOF provided: {}'.format(nDOFCommon,nDOF))
-                        self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'] = readmat(nDOF,nDOF,lines,i+2)
-                        i=i+1+nDOF
-                    elif l.find('!loading')==0:
-                        try: 
-                            nt=int(self.fst_vt['ExtPtfm']['FlexASCII']['T']/self.fst_vt['ExtPtfm']['FlexASCII']['dt'])+1
-                        except:
-                            raise NameError('Cannot read loading since time step and simulation time not properly set.')
-                        self.fst_vt['ExtPtfm']['FlexASCII']['Loading'] = readmat(nt,nDOFCommon+1,lines,i+2)
-                        i=i+nt+1
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['DampingMatrix'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
+                    elif l.find('!weight constant')==0:
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['WeightConstant'] = readmat(1,nDOF,lines,i+1)
+                        i=i+1
+                    elif l.find('!weight stiffness')==0:
+                        if nDOF < 1:
+                            raise NameError('ExtPtfm system dimension/DOF not properly set.')
+                        self.fst_vt['ExtPtfm']['FlexASCII']['WeightStiffness'] = readmat(nDOF,nDOF,lines,i+1)
+                        i=i+nDOF
                     elif len(l)>0:
                         if l[0]=='!':
                             if l.find('!dimension')==0:
                                 self.fst_vt['ExtPtfm']['FlexASCII']['nDOF'] = int(l.split(':')[1])
-                                nDOFCommon = self.fst_vt['ExtPtfm']['FlexASCII']['nDOF']
-                            elif l.find('!time increment')==0:
-                                self.fst_vt['ExtPtfm']['FlexASCII']['dt'] = float(l.split(':')[1])
-                            elif l.find('!total simulation time')==0:
-                                self.fst_vt['ExtPtfm']['FlexASCII']['T'] = float(l.split(':')[1])
+                                nDOF = self.fst_vt['ExtPtfm']['FlexASCII']['nDOF']
                         elif len(l.strip())==0:
                             pass
                         else:
@@ -2956,6 +3038,159 @@ class InputReader_OpenFAST(object):
         if not detectAndReadExtPtfmSE(lines):
             raise NameError('Could not read Superelement file')
         f.close()
+
+
+    def read_Connections(self, connection_file, nDOF):
+
+        def detectAndReadExtPtfmConnections(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            nConn = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!connection')==0:
+                        if nConn < 0:
+                            raise NameError('ExtPtfm number of connections not properly set.')
+                        self.fst_vt['ExtPtfm']['Connections']['Position'] = readmat(nConn,3,lines,i+1)
+                        i=i+nConn
+                    elif l.find('!displacement')==0:
+                        if nConn < 0:
+                            raise NameError('ExtPtfm number of connections not properly set.')
+                        self.fst_vt['ExtPtfm']['Connections']['Displacement'] = readmat(3*nConn,nDOF,lines,i+1)
+                        i=i+3*nConn
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nconn')==0:
+                                self.fst_vt['ExtPtfm']['Connections']['nConn'] = int(l.split(':')[1])
+                                nConn = self.fst_vt['ExtPtfm']['Connections']['nConn']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(connection_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmConnections(lines):
+            raise NameError('Could not read Connections file')
+        f.close()
+
+
+    def read_UserForcing(self, userforcing_file, nDOF):
+
+        def detectAndReadExtPtfmUserForcing(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            NSteps = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!forcing')==0:
+                        if nSteps < 0:
+                            raise NameError('ExtPtfm user forcing number of time steps not properly set.')
+                        self.fst_vt['ExtPtfm']['UserForcing']['ForceTimeSeries'] = readmat(nSteps,1+nDOF,lines,i+1)
+                        i=i+nSteps
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nsteps')==0:
+                                self.fst_vt['ExtPtfm']['UserForcing']['nSteps'] = int(l.split(':')[1])
+                                nSteps = self.fst_vt['ExtPtfm']['UserForcing']['nSteps']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(userforcing_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmUserForcing(lines):
+            raise NameError('Could not read User Forcing file')
+        f.close()
+
+
+    def read_ConnForcing(self, connforcing_file, nConn):
+
+        def detectAndReadExtPtfmConnForcing(lines):
+        # Function based on https://github.com/OpenFAST/openfast_toolbox/blob/353643ed917d113ec8dfd765813fef7d09752757/openfast_toolbox/io/fast_input_file.py#L1932
+        # Developed by Emmanuel Branlard (https://github.com/ebranlard)
+
+            def readmat(n,m,lines,iStart):
+                M=np.zeros((n,m))
+                for j in np.arange(n):
+                    i=iStart+j
+                    M[j,:]=np.array(lines[i].split()).astype(float)
+                return M
+
+            # --- At this stage we assume it's in the proper format
+            NSteps = -1
+            i=0
+            try:
+                while i<len(lines):
+                    l=lines[i].lower()
+                    if l.find('!forcing')==0:
+                        if nSteps < 0:
+                            raise NameError('ExtPtfm connections forcing number of time steps not properly set.')
+                        self.fst_vt['ExtPtfm']['ConnForcing']['ForceTimeSeries'] = readmat(nSteps,1+3*nConn,lines,i+1)
+                        i=i+nSteps
+                    elif len(l)>0:
+                        if l[0]=='!':
+                            if l.find('!nsteps')==0:
+                                self.fst_vt['ExtPtfm']['ConnForcing']['nSteps'] = int(l.split(':')[1])
+                                nSteps = self.fst_vt['ExtPtfm']['ConnForcing']['nSteps']
+                        elif len(l.strip())==0:
+                            pass
+                        else:
+                            raise NameError('Unexcepted content found on line {}'.format(i))
+                    i+=1
+            except NameError as e:
+                raise e
+            except:
+                raise
+
+            return True
+
+
+        f = open(connforcing_file)
+        lines=f.read().splitlines()
+        if not detectAndReadExtPtfmConnForcing(lines):
+            raise NameError('Could not read Connections Forcing file')
+        f.close()
+
 
     def read_MAP(self, map_file):
         # MAP++

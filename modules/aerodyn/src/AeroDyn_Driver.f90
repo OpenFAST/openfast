@@ -41,12 +41,12 @@ program AeroDyn_Driver
 
    ! -----
    dat%initialized=.false.
-   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
+   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
 
    do iCase= 1,dat%dvr%numCases
 
       ! Initial case
-      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
+      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
       dat%initialized=.true.
    
       ! Init of time estimator
@@ -58,7 +58,7 @@ program AeroDyn_Driver
 
       ! One time loop
       do nt = 1, dat%dvr%numSteps
-         call Dvr_TimeStep(nt, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
+         call Dvr_TimeStep(nt, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
          ! Time update to screen
          t_global=nt*dat%dvr%dt
          !if (dat%dvr%analysisType/=idAnalysisCombi) then

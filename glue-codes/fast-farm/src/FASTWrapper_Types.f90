@@ -117,7 +117,19 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Cq      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE FWrap_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: FWrap_x_dummy                    =   1 ! FWrap%dummy
+   integer(IntKi), public, parameter :: FWrap_u_dummy                    =   2 ! FWrap%dummy
+   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   3 ! FWrap%xHat_Disk
+   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   4 ! FWrap%YawErr
+   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   5 ! FWrap%psi_skew
+   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   6 ! FWrap%chi_skew
+   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =   7 ! FWrap%p_hub
+   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =   8 ! FWrap%D_rotor
+   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =   9 ! FWrap%DiskAvg_Vx_Rel
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  10 ! FWrap%AzimAvg_Ct
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  11 ! FWrap%AzimAvg_Cq
+
+contains
 
 subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(FWrap_InitInputType), intent(in) :: SrcInitInputData
@@ -860,5 +872,268 @@ subroutine FWrap_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%AzimAvg_Ct); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AzimAvg_Cq); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function FWrap_InputMeshPointer(u, DL) result(Mesh)
+   type(FWrap_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function FWrap_OutputMeshPointer(y, DL) result(Mesh)
+   type(FWrap_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine FWrap_VarsPackContState(Vars, x, ValAry)
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         VarVals(1) = x%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         x%dummy = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
+end subroutine
+
+function FWrap_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_x_dummy)
+       Name = "x%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FWrap_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         VarVals(1) = x%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsPackInput(Vars, u, ValAry)
+   type(FWrap_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FWrap_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_u_dummy)
+         VarVals(1) = u%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FWrap_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_u_dummy)
+         u%dummy = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
+end subroutine
+
+function FWrap_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_u_dummy)
+       Name = "u%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FWrap_VarsPackOutput(Vars, y, ValAry)
+   type(FWrap_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FWrap_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_y_xHat_Disk)
+         VarVals = y%xHat_Disk(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (FWrap_y_YawErr)
+         VarVals(1) = y%YawErr                                                ! Scalar
+      case (FWrap_y_psi_skew)
+         VarVals(1) = y%psi_skew                                              ! Scalar
+      case (FWrap_y_chi_skew)
+         VarVals(1) = y%chi_skew                                              ! Scalar
+      case (FWrap_y_p_hub)
+         VarVals = y%p_hub(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (FWrap_y_D_rotor)
+         VarVals(1) = y%D_rotor                                               ! Scalar
+      case (FWrap_y_DiskAvg_Vx_Rel)
+         VarVals(1) = y%DiskAvg_Vx_Rel                                        ! Scalar
+      case (FWrap_y_AzimAvg_Ct)
+         VarVals = y%AzimAvg_Ct(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (FWrap_y_AzimAvg_Cq)
+         VarVals = y%AzimAvg_Cq(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FWrap_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_y_xHat_Disk)
+         y%xHat_Disk(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (FWrap_y_YawErr)
+         y%YawErr = VarVals(1)                                                ! Scalar
+      case (FWrap_y_psi_skew)
+         y%psi_skew = VarVals(1)                                              ! Scalar
+      case (FWrap_y_chi_skew)
+         y%chi_skew = VarVals(1)                                              ! Scalar
+      case (FWrap_y_p_hub)
+         y%p_hub(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (FWrap_y_D_rotor)
+         y%D_rotor = VarVals(1)                                               ! Scalar
+      case (FWrap_y_DiskAvg_Vx_Rel)
+         y%DiskAvg_Vx_Rel = VarVals(1)                                        ! Scalar
+      case (FWrap_y_AzimAvg_Ct)
+         y%AzimAvg_Ct(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (FWrap_y_AzimAvg_Cq)
+         y%AzimAvg_Cq(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function FWrap_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_y_xHat_Disk)
+       Name = "y%xHat_Disk"
+   case (FWrap_y_YawErr)
+       Name = "y%YawErr"
+   case (FWrap_y_psi_skew)
+       Name = "y%psi_skew"
+   case (FWrap_y_chi_skew)
+       Name = "y%chi_skew"
+   case (FWrap_y_p_hub)
+       Name = "y%p_hub"
+   case (FWrap_y_D_rotor)
+       Name = "y%D_rotor"
+   case (FWrap_y_DiskAvg_Vx_Rel)
+       Name = "y%DiskAvg_Vx_Rel"
+   case (FWrap_y_AzimAvg_Ct)
+       Name = "y%AzimAvg_Ct"
+   case (FWrap_y_AzimAvg_Cq)
+       Name = "y%AzimAvg_Cq"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE FASTWrapper_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -215,7 +215,6 @@ SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
       END DO     
      
    END IF   
-      
 
       ! Compute the partial derivative for wave stretching
    CALL    Calc_Current( InitInp,  0.0_SiKi, InitInp%EffWtrDpth, InitInp%DirRoot, CurrVxi0, CurrVyi0 )
@@ -224,6 +223,9 @@ SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%PCurrVxiPz0 = ( CurrVxi0 - CurrVxiS )/SmllNmbr                    ! xi-direction
    InitOut%PCurrVyiPz0 = ( CurrVyi0 - CurrVyiS )/SmllNmbr                    ! yi-direction
    
+      ! Save the current velocity at the surface for wave-current modeling
+   InitOut%CurrVxi0 = CurrVxi0
+   InitOut%CurrVyi0 = CurrVyi0
    
 END SUBROUTINE Current_Init
 

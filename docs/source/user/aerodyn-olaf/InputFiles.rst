@@ -312,6 +312,118 @@ of a box of shape 5x20x30 and dimension 1200x300x295.  The grid contains both th
 The two other grids are vertical and horizontal planes containing only the velocity.
 
 
+Advanced Options
+~~~~~~~~~~~~~~~~
+
+
+Advanced options (typically used for developers or beta features) can be placed at the end of the OLAF input file:
+
+
+- These options use the regular format:  `Value Key - Comment`.
+- They can be placed in arbitrary order.
+- They can be commented out with a `!` character at the beginning of the line.
+- Blank lines or unsupported options are ignored (display to screen).
+- If not provided, a default value will be used, but the "DEFAULT" keyword is not supported for the advanced options.
+- These are **beta features** and should mostly be used by developers.
+
+
+The end of the OLAF input file would look as follows:
+
+.. code::
+
+   [...]
+   GridName  GridType  TStart  TEnd     DTGrid    XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
+   (-)         (-)      (s)     (s)      (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
+   ===============================================================================================
+   --------------------------- ADVANCED OPTIONS --------------------------------------------------
+   ===============================================================================================
+   ! Advanced options may be placed here in arbitrary order, with the regular format:
+   ! Value1   Key1            - Comment1
+   ! Value2   Key2            - Comment2
+   ! Lines starting with `!` are ignored, empty lines are ignored
+   [...] etc
+
+Currently, the advanced options supported are as follows:
+
+.. code::
+
+   ===============================================================================================
+   --------------------------- ADVANCED OPTIONS --------------------------------------------------
+   ===============================================================================================
+   "Panels.vtk"  SrcPnlFile     - Name of VTK file containing source panels {default: ""}
+   1             nSrcPnlUpdate  - How often do src panel updates (in time steps of OLAF), {default: 1}
+   True          Induction      - Compute induced velocities from wake to blade and wake to wake, {default: True} 
+   True          InductionAtCP  - Compute induced velocities at nodes or CP, {default: True} 
+   True          WakeAtTE       - Start the wake at the trailing edge, or at the LL, {default: True} 
+   False         DStallOnWake   - Dynamic stall has influence on wake, {default: False} 
+   0.75          kFrozenNWStart - Fraction of wake induced velocity at start of frozen wake, {default: 0.75} 
+   0.5           kFrozenNWEnd   - Fraction of wake induced velocity at end of frozen wake, {default: 0.5} 
+   0.0           zGround        - Ground height, used to enforce that no vortices go into the ground {default: 0.0}
+   0.1           zGroundPush    - Ground push back, vortices that are lower than zGround are placed back at zGroundPush {default: 0.1}
+
+
+
+**SrcPanlFile** [string] specifies the name of the VTK file used for the source panel method.
+The VTK file should be a legacy ASCII VTK file, with DATASET POLYDATA POINTS and POLYGONS.
+A sample VTK file is provided below for two panels forming a regular grid in the XY plane. 
+The connectivity of the polygons needs to be such that the normal points away from the body and
+into the fluid. 
+In the example below, the polygons are defined clockwise when viewed from above, which results in the normals internally defined by OLAF pointing in the `+z` direction. This configuration is typical of a bottom wall with fluid above it: the OLAF normals point from the wall toward the fluid. However, when applying the right-hand-rule convention, the resulting normals point from the fluid toward the interior of the body.
+When using **WrVTK**, OLAF will write separate VTK files containing various information related to the source panels, such as the pressure coefficient, area, force per area, normals. Looking at the orientation of the normals is extremely important (In Paraview, select 3D Glyph, Arrows, and select the `Normals` output, scaled by the `Normals`). 
+The BodyID CELL_DATA can be used to separate different patches, which can help the post processing. This is optional, OLAF doesn't use it currently, but it is written back in the output files of OLAF.
+
+Curious readers may look at the unittest `Test_SrcPnl_Sphere` of OLAF that test the pressure coefficient
+about a sphere.
+
+.. code::
+
+   # vtk DataFile Version 2.0
+   Comment
+   ASCII
+   DATASET POLYDATA
+   POINTS 6 double
+   0.0 0.0 0.0
+   0.0 25.0 0.0
+   0.0 50.0 0.0
+   10.0 0.0 0.0
+   10.0 25.0 0.0
+   10.0 50.0 0.0
+
+   POLYGONS 2 10
+   4 0 1 4 3
+   4 1 2 5 4
+
+   CELL_DATA 2
+   SCALARS BodyID int
+   LOOKUP_TABLE default
+   0
+   0
+
+
+
+**nSrcPnlUpdate** [int] Define how often the source panel updates (in time steps of OLAF), the default is `1`, at each time step.
+
+**Induction**  [switch] Compute induced velocities, otherwise all induced velocity are 0 (no wake, no panels, etc) ! Default is `True`.
+
+**InductionAtCP** [switch] When performing the lifting line calculations, compute induced velocities at nodes (False) or at control points (CP, True). Default is `True`.
+
+**WakeAtTE** [switch] Start the wake at the trailing edge (True), or directly at the LL (False, no chordwise panel). Default is `True`.
+
+**DStallOnWake** [switch] Include the influence of the dynamic stall on the wake (True), i.e. use the dynamic Cl to update the circulation of the lifting line and wake panel. Default is `False`.
+
+**kFrozenNWStart** [float] Fraction of wake induced velocity at start of frozen wake, default is `0.75`. See OLAF theory related to Frozen NW, :numref:`sec:vortconvfrozen`.
+
+**kFrozenNWEnd** [float] Fraction of wake induced velocity at end of frozen wake, default is `0.5`. See OLAF theory related to Frozen NW, :numref:`sec:vortconvfrozen`.
+
+**zGround** [float] Height in meters below which vortex points are not allowed to be and if any are present they will be pushed back above the ground at the height defined by **zGroundPush** (in meters). Default is `0.0`.
+For MHK, the sea bed location, based on the water depth is added to **zGround**.
+
+**zGroundPush** [float] Ground push back, see **zGround**. Default is `0.1`.
+
+
+
+
+
 AeroDyn Input File
 --------------------
 Input file modifications

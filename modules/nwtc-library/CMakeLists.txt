@@ -69,6 +69,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_Base.f90
   src/SingPrec.f90
   src/ModReg.f90
+  src/ModVar.f90
 
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
@@ -85,6 +86,7 @@ set(NWTCLIBS_SOURCES
   src/VTK.f90
   src/YAML.f90
   src/JSON.f90
+  src/KdTree.f90
 
   src/GridInterp.f90
   src/GridInterp_Types.f90
@@ -165,6 +167,9 @@ add_dependencies(nwtclibs nwtc_library_inc_subs)
 target_link_libraries(nwtclibs PUBLIC
   ${LAPACK_LIBRARIES} 
   ${CMAKE_DL_LIBS} 
+)
+target_include_directories(nwtclibs PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
 )
 if (USE_DLL_INTERFACE)
   target_compile_definitions(nwtclibs PRIVATE USE_DLL_INTERFACE)

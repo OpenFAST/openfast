@@ -194,7 +194,7 @@ High-Fidelity Precursor Ambient Inflow
 There are many different methods by which high-fidelity precursor
 ambient inflow can be generated. This section focuses on generating such
 inflow using
-`SOWFA <https://github.com/NREL/SOWFA-6/blob/ee5b13875ea8f1088f4ca79ba41ff8be34870761/SOWFA_Training.NAWEA.2017_web.pdf>`__.
+`SOWFA <https://github.com/NatLabRockies/SOWFA-6/blob/ee5b13875ea8f1088f4ca79ba41ff8be34870761/SOWFA_Training.NAWEA.2017_web.pdf>`__.
 
 When using SOWFA to generate FAST.Farm precursor inflow, the *ABLSolver*
 preprocessor is used. It is important to note the baseline high-fidelity
@@ -931,15 +931,6 @@ simulations for the NREL 5MW turbine
 ( :cite:`ff-Doubrawa18_1`), but these can be overwritten by the
 user.
 
-.. _FF:sec:SupCon:
-
-Farm Level Control
-------------------
-
-FAST.Farm does not include a module for farm level control.
-Users are advised to utilize the wind farm control capability of 
-the `Reference Open Source Controller` (`ROSCO <https://github.com/NREL/ROSCO>`_)
-to implement farm level controller.
 
 Commonly Encountered Errors
 ---------------------------

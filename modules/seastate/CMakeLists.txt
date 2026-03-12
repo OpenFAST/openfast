@@ -37,7 +37,7 @@ add_library(seastlib STATIC
   src/SeaSt_WaveField_Types.f90
   src/SeaState_Types.f90
 )
-target_link_libraries(seastlib nwtclibs versioninfolib)
+target_link_libraries(seastlib ifwlib nwtclibs versioninfolib)
 
 
 # C-bindings interface library
@@ -48,13 +48,14 @@ target_link_libraries(seastlib nwtclibs versioninfolib)
 add_library(seastate_c_binding_object OBJECT src/SeaState_C_Binding.f90)
 target_link_libraries(seastate_c_binding_object seastlib nwtclibs versioninfolib)
 set_property(TARGET seastate_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 1) # required for shared libs
+if(APPLE OR UNIX)
+  target_compile_definitions(seastate_c_binding_object PRIVATE IMPLICIT_DLLEXPORT)
+endif()
 
 #   shared
 add_library(seastate_c_binding SHARED $<TARGET_OBJECTS:seastate_c_binding_object>)
 target_link_libraries(seastate_c_binding seastlib nwtclibs versioninfolib)
-if(APPLE OR UNIX)
-  target_compile_definitions(seastate_c_binding PRIVATE IMPLICIT_DLLEXPORT)
-endif()
+
 
 # C-bindings static interface
 # This is a workaround for building wavetank into a single DLL (also allows setting CU globaly for sending screen to file for labview integration)

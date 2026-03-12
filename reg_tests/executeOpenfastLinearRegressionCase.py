@@ -39,7 +39,7 @@ from fast_linearization_file import FASTLinearizationFile
 # from weio.fast_linearization_file import FASTLinearizationFile
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log','.md']
+excludeExt=['.ech','.yaml','.sum','.log','.md']
 
 def file_line_count(filename):
     file_handle = open(filename, 'r')
@@ -139,7 +139,7 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["Ideal_Beam", "WP_Baseline"]:
+for data in ["Ideal_Beam", "WP_Baseline", "Damped_Beam"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         rtl.copyTree(os.path.join(moduleDirectory, data), dataDir, excludeExt=excludeExt)
@@ -161,10 +161,11 @@ else:
                 rtl.copyTree(srcname, dstname, excludeExt=excludeExt)
         else:
             shutil.copy2(srcname, dstname)
-# 
-# Copying the actual test directory
+ 
+# Copy the actual test directory
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, renameExtDict={'.lin':'.ref_lin'})
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.lin':'.ref_lin', '.out': '.ref.out', '.outb': '.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:
@@ -432,13 +433,21 @@ for i, f in enumerate(localOutFiles):
     ErrorsLoc, ElemErrorsLoc = compareLin(f,ff1,ff2)
     Errors += ErrorsLoc
     if len(ElemErrorsLoc)>0:
-        Errors += ElemErrorsLoc[:3] # Just a couple of them
+        Errors += ElemErrorsLoc[:5] # Just a couple of them
 
 freqFileClose(ff1,ff2)
 
 
 if len(Errors)>0:
     exitWithError('See errors below: \n'+'\n'.join(Errors))
+
+# If able to import openfast_toolbox, generate input file for visualization
+# try:
+#     import openfast_toolbox.linearization as lin
+#     CDDOP, MBCOP = lin.getCampbellDataOP(caseInputFile, writeModes=True, verbose=True)
+#     vizfile = lin.writeVizFile(caseInputFile, verbose=True, VTKLinModes=1, VTKLinScale=10, VTKModes="1", VTKLinTim=2)
+# except ImportError as e:
+#     pass
 
 # passing case
 sys.exit(0)

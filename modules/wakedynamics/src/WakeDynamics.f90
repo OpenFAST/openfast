@@ -352,6 +352,7 @@ subroutine ThomasAlgorithm(nr, a, b, c, d, x, errStat, errMsg)
    do i = 1,nr-2
       if ( abs(b(i)) <= ( abs(a(i))+abs(c(i)) ) ) then
          ! TEST: E17
+          print *,'Found error:',i,a(i),b(i),c(i)
           call SetErrStat( ErrID_Fatal, 'Tridiagonal matrix is not diagonally dominant, i.e., abs(b(i)) <= ( abs(a(i))+abs(c(i)) ). Try reducing the FAST.Farm timestep.', errStat, errMsg, RoutineName )
           return
       end if
@@ -427,8 +428,11 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%DT_low      = interval
    ! Parameters from input file
    p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
-   p%NumPlanes     = InitInp%InputFileData%NumPlanes   
+   p%MaxNumPlanes  = InitInp%MaxNumPlanes
    p%NumRadii      = InitInp%InputFileData%NumRadii    
+   p%x_Full        = InitInp%InputFileData%NumDFull * InitInp%InputFileData%RotorDiamRef
+   p%d_Buff        = InitInp%InputFileData%NumDBuff * InitInp%InputFileData%RotorDiamRef
+   p%x_Buff        = p%x_Full + p%d_Buff
    p%dr            = InitInp%InputFileData%dr  
    p%C_HWkDfl_O    = InitInp%InputFileData%C_HWkDfl_O 
    p%C_HWkDfl_OY   = InitInp%InputFileData%C_HWkDfl_OY
@@ -492,7 +496,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Define and initialize inputs here 
       !............................................................................................
    
-   allocate( u%V_plane       (3,0:p%NumPlanes-1),stat=errStat2);  if (Failed0('u%V_plane.' )) return;
+   allocate( u%V_plane       (3,0:p%MaxNumPlanes-1),stat=errStat2);  if (Failed0('u%V_plane.' )) return;
    allocate( u%Ct_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Ct_azavg.')) return;
    allocate( u%Cq_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Cq_azavg.')) return;
    if (errStat /= ErrID_None) return
@@ -515,28 +519,29 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    x%DummyContState   = 0.0_ReKi
    z%DummyConstrState = 0.0_ReKi
       
-   allocate ( xd%xhat_plane       (3, 0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%xhat_plane.'       )) return;
-   allocate ( xd%p_plane          (3, 0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%p_plane.'          )) return;
-   allocate ( xd%V_plane_filt     (3, 0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%V_plane_filt.'     )) return;
-   allocate ( xd%Vx_wind_disk_filt(   0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wind_disk_filt.')) return;
-   allocate ( xd%x_plane          (   0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%x_plane.'          )) return;
-   allocate ( xd%YawErr_filt      (   0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%YawErr_filt.'      )) return;
-   allocate ( xd%TI_amb_filt      (   0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%TI_amb_filt.'      )) return;
-   allocate ( xd%D_rotor_filt     (   0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%D_rotor_filt.'     )) return;
+   allocate ( xd%xhat_plane       (3, 0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%xhat_plane.'       )) return;
+   allocate ( xd%p_plane          (3, 0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%p_plane.'          )) return;
+   allocate ( xd%V_plane_filt     (3, 0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%V_plane_filt.'     )) return;
+   allocate ( xd%Vx_wind_disk_filt(   0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wind_disk_filt.')) return;
+   allocate ( xd%x_plane          (   0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%x_plane.'          )) return;
+   allocate ( xd%YawErr_filt      (   0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%YawErr_filt.'      )) return;
+   allocate ( xd%TI_amb_filt      (   0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%TI_amb_filt.'      )) return;
+   allocate ( xd%D_rotor_filt     (   0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%D_rotor_filt.'     )) return;
    allocate ( xd%Ct_azavg_filt    (   0:p%NumRadii-1 ), STAT=ErrStat2 );  if (Failed0('xd%Ct_azavg_filt.'    )) return;
    allocate ( xd%Cq_azavg_filt    (   0:p%NumRadii-1 ), STAT=ErrStat2 );  if (Failed0('xd%Cq_azavg_filt.'    )) return;
-   allocate ( xd%Vx_wake     (0:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wake.'   )) return;
-   allocate ( xd%Vr_wake     (0:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vr_wake.'   )) return;
-   allocate ( xd%Vx_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wake.')) return;
+   allocate ( xd%Vx_wake     (0:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wake.'   )) return;
+   allocate ( xd%Vr_wake     (0:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vr_wake.'   )) return;
+   allocate ( xd%Vx_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vx_wake.')) return;
 
    ! Curl
-   allocate ( xd%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vy_wake.')) return;
-   allocate ( xd%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vz_wake.')) return;
+   allocate ( xd%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vy_wake.')) return;
+   allocate ( xd%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('xd%Vz_wake.')) return;
 
    xd%YawErr_filt         = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
    xd%psi_skew_filt       = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
    xd%chi_skew_filt       = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
 
+   xd%NumPlanes           = 2.0_ReKi
    xd%xhat_plane          = 0.0_ReKi
    xd%p_plane             = 0.0_ReKi
    xd%x_plane             = 0.0_ReKi
@@ -554,11 +559,11 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       ! miscvars to avoid the allocation per timestep
       ! Cartesian eddy viscosity (allocated even for polar if plane outputs are requested)
-   allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_tot2.')) return;
-   allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_amb2.')) return;
-   allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_shr2.')) return;
-   allocate (   m%dvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dy.')) return;
-   allocate (   m%dvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dz.')) return;
+   allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_tot2.')) return;
+   allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_amb2.')) return;
+   allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_shr2.')) return;
+   allocate (   m%dvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dy.')) return;
+   allocate (   m%dvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dz.')) return;
    m%vt_tot2   = 0.0_ReKi
    m%vt_amb2   = 0.0_ReKi
    m%vt_shr2   = 0.0_ReKi
@@ -566,9 +571,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    m%dvx_dz    = 0.0_ReKi
    if (p%Mod_Wake == Mod_Wake_Polar) then
       allocate (   m%dvtdr  (0:p%NumRadii-1 ) , STAT=ErrStat2 );  if (Failed0('m%dvtdr.')) return;
-      allocate (   m%vt_tot (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_tot.')) return;
-      allocate (   m%vt_amb (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_amb.')) return;
-      allocate (   m%vt_shr (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_shr.')) return;
+      allocate (   m%vt_tot (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_tot.')) return;
+      allocate (   m%vt_amb (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_amb.')) return;
+      allocate (   m%vt_shr (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_shr.')) return;
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       allocate (   m%nu_dvx_dy(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dy.')) return;
       allocate (   m%nu_dvx_dz(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dz.')) return;
@@ -600,18 +605,18 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
    InitOut%Ver = WD_Ver
    
-   allocate ( y%xhat_plane(3,0:p%NumPlanes-1), STAT=ErrStat2 );               if (Failed0('y%xhat_plane.')) return;
-   allocate ( y%p_plane   (3,0:p%NumPlanes-1), STAT=ErrStat2 );               if (Failed0('y%p_plane.'   )) return;
-   allocate ( y%Vx_wake   (0:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vx_wake.'   )) return;
-   allocate ( y%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vr_wake.'   )) return;
+   allocate ( y%xhat_plane(3,0:p%MaxNumPlanes-1), STAT=ErrStat2 );               if (Failed0('y%xhat_plane.')) return;
+   allocate ( y%p_plane   (3,0:p%MaxNumPlanes-1), STAT=ErrStat2 );               if (Failed0('y%p_plane.'   )) return;
+   allocate ( y%Vx_wake   (0:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vx_wake.'   )) return;
+   allocate ( y%Vr_wake   (0:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vr_wake.'   )) return;
 
-   allocate ( y%Vx_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vx_wake.')) return;
-   allocate ( y%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vy_wake.')) return;
-   allocate ( y%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vz_wake.')) return;
+   allocate ( y%Vx_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vx_wake.')) return;
+   allocate ( y%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vy_wake.')) return;
+   allocate ( y%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%Vz_wake.')) return;
 
-   allocate ( y%D_wake    (0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%D_wake.' )) return;
-   allocate ( y%x_plane   (0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%x_plane.')) return;
-   allocate ( y%WAT_k    (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%WAT_k.')) return;
+   allocate ( y%D_wake    (0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%D_wake.' )) return;
+   allocate ( y%x_plane   (0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%x_plane.')) return;
+   allocate ( y%WAT_k    (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%MaxNumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%WAT_k.')) return;
    
    y%xhat_plane = 0.0_Reki
    y%p_plane    = 0.0_Reki
@@ -722,7 +727,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
-      call InitStatesWithInputs(p%NumPlanes, p%NumRadii, u, p, xd, m, errStat2, errMsg2)
+      call InitStatesWithInputs(p%MaxNumPlanes, p%NumRadii, u, p, xd, m, errStat2, errMsg2)
          call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
       OtherState%firstPass = .false.        
       if (errStat >= AbortErrLev) then
@@ -737,15 +742,15 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! --- Update states for all planes except disk plane
    ! --------------------------------------------------------------------------------
    ! --- Update V_plane_filt to [n+1]:
-   maxPln = min(n,p%NumPlanes-2)
+   maxPln = NINT(xd%NumPlanes)-2
    do i = 0,maxPln 
       xd%V_plane_filt(:,i       ) = xd%V_plane_filt(:,i)*p%filtParam + u%V_plane(:,i       )*p%oneMinusFiltParam
    end do
    xd%V_plane_filt   (:,maxPln+1) =                                    u%V_plane(:,maxPln+1)
-   
-   maxPln = min(n+2,p%NumPlanes-1)
 
-   
+   maxPln = min( NINT(xd%NumPlanes) , p%MaxNumPlanes-1 )
+
+
    ! --- Compute eddy viscosity terms
    ! compute eddy-viscosity terms for all planes, NOTE: starting from maxPln+1 here
    do i = maxPln+1, 1, -1  
@@ -830,8 +835,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       dx = dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1))*p%DT_low
 
       ! Update these states to [n+1]
-      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
-      xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
+      xd%x_plane     (i) = xd%x_plane     (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here
+      xd%YawErr_filt (i) = xd%YawErr_filt (i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
       ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
@@ -852,8 +857,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
 
-   end do ! loop on planes i = maxPln+1, 1, -1
-      
+   end do ! loop on planes i = maxPln, 1, -1
+
    ! --------------------------------------------------------------------------------
    ! --- Update states at disk-plane (0) to time [n+1] 
    ! --------------------------------------------------------------------------------
@@ -946,7 +951,65 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    endif
 
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
-   
+
+   xd%NumPlanes = xd%NumPlanes + 1.0
+   if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
+      xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
+      call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+      if (errStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if
+   end if
+   if ( NINT(xd%NumPlanes) < 2 ) then
+      ! Check just in case following implementation plan; however, this should never happen. Consider removing in the future.
+      call SetErrStat(ErrID_Fatal, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' has dropped below 2. ', errStat, errMsg, RoutineName)
+   end if
+
+   maxPln = NINT(xd%NumPlanes) - 1
+
+   do i=maxPln,0,-1
+
+      if ( xd%x_plane(i) > p%x_Buff ) then
+
+         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )
+
+      else if ( i+1 < NINT(xd%NumPlanes) .and. xd%x_plane(i) >= xd%x_plane(i+1) ) then
+
+         call SetErrStat(ErrID_Warn, ' Turbine '//trim(num2lstr(p%TurbNum))//' wake plane '//trim(num2lstr(i))//' (x_plane='//trim(num2lstr(xd%x_plane(i)))//') has overtaken wake plane '//trim(num2lstr(i+1))//' (x_plane='//trim(num2lstr(xd%x_plane(i+1)))//'). Offending wake plane removed. Reduce f_c to prevent planes from passing each other. ', errStat, errMsg, RoutineName)
+         if (errStat >= AbortErrLev) then
+            call Cleanup()
+            return
+         end if
+
+         ! Remove offending plane and shift everything behind up
+
+         xd%NumPlanes = xd%NumPlanes - 1.0
+
+         ! Didn't check xd%NumPlanes >= 2 here. The first wake plane is unlikely to move upwind of the rotor.
+
+         do j = i+1,NINT(xd%NumPlanes)-1
+
+             xd%Vx_wind_disk_filt(j-1) = xd%Vx_wind_disk_filt(j)
+             xd%x_plane      (    j-1) = xd%x_plane      (    j)
+             xd%TI_amb_filt  (    j-1) = xd%TI_amb_filt  (    j)
+             xd%D_rotor_filt (    j-1) = xd%D_rotor_filt (    j)
+             xd%YawErr_filt  (    j-1) = xd%YawErr_filt  (    j)
+             xd%p_plane      (  :,j-1) = xd%p_plane      (  :,j)
+             xd%xhat_plane   (  :,j-1) = xd%xhat_plane   (  :,j)
+             xd%V_plane_filt (  :,j-1) = xd%V_plane_filt (  :,j)
+             xd%Vx_wake      (  :,j-1) = xd%Vx_wake      (  :,j)
+             xd%Vr_wake      (  :,j-1) = xd%Vr_wake      (  :,j)
+             xd%Vx_wake2     (:,:,j-1) = xd%Vx_wake2     (:,:,j)
+             xd%Vy_wake2     (:,:,j-1) = xd%Vy_wake2     (:,:,j)
+             xd%Vz_wake2     (:,:,j-1) = xd%Vz_wake2     (:,:,j)
+
+         end do
+
+      end if
+
+   end do
+
    call Cleanup()
    
 contains
@@ -1012,7 +1075,7 @@ contains
                                - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * absdx )
             end do  
          end if
-      end do ! i = 1,min(n+2,p%NumPlanes-1) 
+      end do ! i = maxPln, 1, -1
    end subroutine updateVelocityPolar
 
    !> 
@@ -1274,8 +1337,8 @@ subroutine filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar)
    DCM1 = EulerConstruct( (/ psi_filt, 0.0_ReKi, chi_filt /) )
    DCM2 = EulerConstruct( (/ psi, 0.0_ReKi, chi /) )
    ! Compute the logarithmic map of the DCMs:
-   CALL DCM_logMap( DCM1, lambda(:,1), errStat, errMsg)
-   CALL DCM_logMap( DCM2, lambda(:,2), errStat, errMsg)
+   CALL DCM_logMap(DCM1, lambda(:,1))
+   CALL DCM_logMap(DCM2, lambda(:,2))
    !Make sure we don't cross a 2pi boundary:
    CALL DCM_SetLogMapForInterp( lambda )
    !Interpolate the logarithmic map:
@@ -1484,12 +1547,12 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
-   real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp
+   real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp, ScBuff
    errStat = ErrID_None
    errMsg  = ""
    
    n = nint(t/p%DT_low)
-   maxPln = min(n+1,p%NumPlanes-1)
+   maxPln = NINT(xd%NumPlanes) - 1
    
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
@@ -1510,6 +1573,8 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)
+
+         y%NumPlanes = 2.0
       end do
      
          ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
@@ -1538,12 +1603,23 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       y%xhat_plane = xd%xhat_plane
       y%Vx_wake    = xd%Vx_wake
       y%Vr_wake    = xd%Vr_wake
-      do i = 0, min(n+1,p%NumPlanes-1)
+      do i = 0, maxPln
          
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), xd%Vx_wind_disk_filt(i), xd%D_rotor_filt(i), p%C_WakeDiam)
 
       end do
+      y%NumPlanes  = xd%NumPlanes
    end if
+
+   ! --- Linearly decay wake deficits in the buffer region based on distance
+   do i = 0,maxPln
+      if ( xd%x_plane(i) > p%x_full ) then
+          ! Note: Clamp to zero just in case, but all wake planes that propagated past x_buff should have been removed.
+          ScBuff = max( ( p%x_buff - xd%x_plane(i) ) / p%d_buff , 0.0 )
+          y%Vx_wake(:,i) = y%Vx_wake(:,i) * ScBuff
+          y%Vr_wake(:,i) = y%Vr_wake(:,i) * ScBuff
+      end if
+   end do
 
    ! --- Velocity deficits on Cartesian grid
    if (p%Mod_Wake == Mod_Wake_Polar) then
@@ -1642,7 +1718,7 @@ subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, e
    type(WD_MiscVarType),         intent(IN   )  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: errStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-   integer(intKi)                               :: n, i
+   integer(intKi)                               :: n, i, maxPln
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_WritePlaneOutputs'
@@ -1655,11 +1731,12 @@ subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, e
    errMsg  = ""
    
    n = nint(t/p%DT_low)
+   maxPln = NINT(xd%NumPlanes)-1
    ! --- VTK outputs per plane
    if (p%OutAllPlanes) then 
       call vtk_misc_init(mvtk)
       call set_vtk_binary_format(.false., mvtk)
-      do i = 0, min(n-1,p%NumPlanes-1), 1
+      do i = 0, maxPln, 1
 !             if (EqualRealNos(t,0.0_DbKi) ) then
 !                write(Filename,'(A,I4.4,A)') trim(p%OutFileVTKDir)//'/PlaneOutputsAtPlane_',i,'_Init.vtk'
 !             else
@@ -1815,7 +1892,6 @@ SUBROUTINE ValidateInitInputData( DT_low, InitInp, InputFileData, errStat, errMs
    ! TEST: E13,
    !if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, errMsg, RoutineName )
    if (  DT_low                    <=  0.0)  call SetErrStat ( ErrID_Fatal, 'DT_low must be greater than zero.', errStat, errMsg, RoutineName )  
-   if (  InputFileData%NumPlanes   <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of wake planes must be greater than one.', ErrSTat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', ErrSTat, errMsg, RoutineName )
    if (  InputFileData%dr          <=  0.0)  call SetErrStat ( ErrID_Fatal, 'dr must be greater than zero.', errStat, errMsg, RoutineName ) 
    if (  InputFileData%f_c         <=  0.0)  call SetErrStat ( ErrID_Fatal, 'f_c must be greater than or equal to zero.', errStat, errMsg, RoutineName ) 

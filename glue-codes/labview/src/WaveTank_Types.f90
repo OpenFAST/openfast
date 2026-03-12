@@ -215,7 +215,8 @@ IMPLICIT NONE
     REAL(c_float) , DIMENSION(:), ALLOCATABLE  :: BldAcc_c      !< Temp blade acceleration -- sequential by blade [(m/s^2,]
   END TYPE StructTmpType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine WT_CopySimType(SrcSimTypeData, DstSimTypeData, CtrlCode, ErrStat, ErrMsg)
    type(SimType), intent(in) :: SrcSimTypeData
@@ -1667,5 +1668,7 @@ subroutine WT_UnPackStructTmpType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BldVel_c); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BldAcc_c); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE WaveTank_Types
+
 !ENDOFREGISTRYGENERATEDFILE

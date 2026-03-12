@@ -33,7 +33,7 @@ MODULE SED_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SED_NMX = 4      ! Used in updating predictor-corrector values (size of state history) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SED_NMX                          = 4      ! Used in updating predictor-corrector values (size of state history) [-]
 ! =========  SED_InputFile  =======
   TYPE, PUBLIC :: SED_InputFile
     LOGICAL  :: Echo = .false.      !< Echo the input file [-]
@@ -85,6 +85,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubRad = 0.0_ReKi      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Initial or fixed rotor speed [rad/s]
     LOGICAL  :: GenDOF = .false.      !< whether the generator DOF is on (true) or off (false) [-]
+    TYPE(ModVarsType)  :: Vars      !< Module variables [-]
   END TYPE SED_InitOutputType
 ! =======================
 ! =========  SED_InputType  =======
@@ -178,9 +179,37 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: mapHub2Root      !< Mesh mapping from Hub to BladeRootMotion (blade pitch overwritten in calc) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom [-]
     REAL(ReKi) , DIMENSION(1:3)  :: HubPt_X = 0.0_ReKi      !< X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates [-]
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
+    TYPE(SED_ContinuousStateType)  :: x_perturb      !< Continuous state type for linearization perturbation [-]
+    TYPE(SED_ContinuousStateType)  :: dxdt_lin      !< Continuous state type for linearization output [-]
+    TYPE(SED_InputType)  :: u_perturb      !< Input type for linearization perturbation [-]
+    TYPE(SED_OutputType)  :: y_lin      !< Output type for linearization output [-]
   END TYPE SED_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SED_x_QT                         =   1 ! SED%QT
+   integer(IntKi), public, parameter :: SED_x_QDT                        =   2 ! SED%QDT
+   integer(IntKi), public, parameter :: SED_u_HubPtLoad                  =   3 ! SED%HubPtLoad
+   integer(IntKi), public, parameter :: SED_u_HSSBrTrqC                  =   4 ! SED%HSSBrTrqC
+   integer(IntKi), public, parameter :: SED_u_GenTrq                     =   5 ! SED%GenTrq
+   integer(IntKi), public, parameter :: SED_u_BlPitchCom                 =   6 ! SED%BlPitchCom
+   integer(IntKi), public, parameter :: SED_u_YawPosCom                  =   7 ! SED%YawPosCom
+   integer(IntKi), public, parameter :: SED_u_YawRateCom                 =   8 ! SED%YawRateCom
+   integer(IntKi), public, parameter :: SED_y_BladeRootMotion            =   9 ! SED%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: SED_y_HubPtMotion                =  10 ! SED%HubPtMotion
+   integer(IntKi), public, parameter :: SED_y_NacelleMotion              =  11 ! SED%NacelleMotion
+   integer(IntKi), public, parameter :: SED_y_TowerLn2Mesh               =  12 ! SED%TowerLn2Mesh
+   integer(IntKi), public, parameter :: SED_y_PlatformPtMesh             =  13 ! SED%PlatformPtMesh
+   integer(IntKi), public, parameter :: SED_y_LSSTipPxa                  =  14 ! SED%LSSTipPxa
+   integer(IntKi), public, parameter :: SED_y_RotSpeed                   =  15 ! SED%RotSpeed
+   integer(IntKi), public, parameter :: SED_y_RotPwr                     =  16 ! SED%RotPwr
+   integer(IntKi), public, parameter :: SED_y_RotTrq                     =  17 ! SED%RotTrq
+   integer(IntKi), public, parameter :: SED_y_HSS_Spd                    =  18 ! SED%HSS_Spd
+   integer(IntKi), public, parameter :: SED_y_Yaw                        =  19 ! SED%Yaw
+   integer(IntKi), public, parameter :: SED_y_YawRate                    =  20 ! SED%YawRate
+   integer(IntKi), public, parameter :: SED_y_BlPitch                    =  21 ! SED%BlPitch
+   integer(IntKi), public, parameter :: SED_y_WriteOutput                =  22 ! SED%WriteOutput
+
+contains
 
 subroutine SED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(SED_InputFile), intent(in) :: SrcInputFileData
@@ -425,6 +454,9 @@ subroutine SED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    DstInitOutputData%HubRad = SrcInitOutputData%HubRad
    DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
    DstInitOutputData%GenDOF = SrcInitOutputData%GenDOF
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine SED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -447,6 +479,8 @@ subroutine SED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%BlPitch)) then
       deallocate(InitOutputData%BlPitch)
    end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SED_PackInitOutput(RF, Indata)
@@ -466,6 +500,7 @@ subroutine SED_PackInitOutput(RF, Indata)
    call RegPack(RF, InData%HubRad)
    call RegPack(RF, InData%RotSpeed)
    call RegPack(RF, InData%GenDOF)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -489,6 +524,7 @@ subroutine SED_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%HubRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GenDOF); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine SED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1212,6 +1248,21 @@ subroutine SED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%QD2T = SrcMiscData%QD2T
    end if
    DstMiscData%HubPt_X = SrcMiscData%HubPt_X
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine SED_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -1242,6 +1293,16 @@ subroutine SED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%QD2T)) then
       deallocate(MiscData%QD2T)
    end if
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SED_PackMisc(RF, Indata)
@@ -1264,6 +1325,11 @@ subroutine SED_PackMisc(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%QD2T)
    call RegPack(RF, InData%HubPt_X)
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call SED_PackContState(RF, InData%x_perturb) 
+   call SED_PackContState(RF, InData%dxdt_lin) 
+   call SED_PackInput(RF, InData%u_perturb) 
+   call SED_PackOutput(RF, InData%y_lin) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1293,6 +1359,11 @@ subroutine SED_UnPackMisc(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%QD2T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubPt_X); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call SED_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call SED_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call SED_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call SED_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine SED_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -1686,5 +1757,348 @@ SUBROUTINE SED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function SED_InputMeshPointer(u, DL) result(Mesh)
+   type(SED_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (SED_u_HubPtLoad)
+       Mesh => u%HubPtLoad
+   end select
+end function
+
+function SED_OutputMeshPointer(y, DL) result(Mesh)
+   type(SED_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (SED_y_BladeRootMotion)
+       Mesh => y%BladeRootMotion(DL%i1)
+   case (SED_y_HubPtMotion)
+       Mesh => y%HubPtMotion
+   case (SED_y_NacelleMotion)
+       Mesh => y%NacelleMotion
+   case (SED_y_TowerLn2Mesh)
+       Mesh => y%TowerLn2Mesh
+   case (SED_y_PlatformPtMesh)
+       Mesh => y%PlatformPtMesh
+   end select
+end function
+
+subroutine SED_VarsPackContState(Vars, x, ValAry)
+   type(SED_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SED_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SED_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SED_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_x_QT)
+         VarVals = x%QT(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (SED_x_QDT)
+         VarVals = x%QDT(V%iLB:V%iUB)                                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SED_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SED_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SED_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine SED_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SED_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_x_QT)
+         x%QT(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (SED_x_QDT)
+         x%QDT(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function SED_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SED_x_QT)
+       Name = "x%QT"
+   case (SED_x_QDT)
+       Name = "x%QDT"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SED_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(SED_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SED_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SED_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SED_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_x_QT)
+         VarVals = x%QT(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (SED_x_QDT)
+         VarVals = x%QDT(V%iLB:V%iUB)                                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SED_VarsPackInput(Vars, u, ValAry)
+   type(SED_InputType), intent(in)         :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SED_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine SED_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SED_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_u_HubPtLoad)
+         call MV_PackMesh(V, u%HubPtLoad, ValAry)                             ! Mesh
+      case (SED_u_HSSBrTrqC)
+         VarVals(1) = u%HSSBrTrqC                                             ! Scalar
+      case (SED_u_GenTrq)
+         VarVals(1) = u%GenTrq                                                ! Scalar
+      case (SED_u_BlPitchCom)
+         VarVals = u%BlPitchCom(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (SED_u_YawPosCom)
+         VarVals(1) = u%YawPosCom                                             ! Scalar
+      case (SED_u_YawRateCom)
+         VarVals(1) = u%YawRateCom                                            ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SED_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SED_InputType), intent(inout)      :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SED_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine SED_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SED_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_u_HubPtLoad)
+         call MV_UnpackMesh(V, ValAry, u%HubPtLoad)                           ! Mesh
+      case (SED_u_HSSBrTrqC)
+         u%HSSBrTrqC = VarVals(1)                                             ! Scalar
+      case (SED_u_GenTrq)
+         u%GenTrq = VarVals(1)                                                ! Scalar
+      case (SED_u_BlPitchCom)
+         u%BlPitchCom(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (SED_u_YawPosCom)
+         u%YawPosCom = VarVals(1)                                             ! Scalar
+      case (SED_u_YawRateCom)
+         u%YawRateCom = VarVals(1)                                            ! Scalar
+      end select
+   end associate
+end subroutine
+
+function SED_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SED_u_HubPtLoad)
+       Name = "u%HubPtLoad"
+   case (SED_u_HSSBrTrqC)
+       Name = "u%HSSBrTrqC"
+   case (SED_u_GenTrq)
+       Name = "u%GenTrq"
+   case (SED_u_BlPitchCom)
+       Name = "u%BlPitchCom"
+   case (SED_u_YawPosCom)
+       Name = "u%YawPosCom"
+   case (SED_u_YawRateCom)
+       Name = "u%YawRateCom"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SED_VarsPackOutput(Vars, y, ValAry)
+   type(SED_OutputType), intent(in)        :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SED_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine SED_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SED_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_y_BladeRootMotion)
+         call MV_PackMesh(V, y%BladeRootMotion(DL%i1), ValAry)                ! Mesh
+      case (SED_y_HubPtMotion)
+         call MV_PackMesh(V, y%HubPtMotion, ValAry)                           ! Mesh
+      case (SED_y_NacelleMotion)
+         call MV_PackMesh(V, y%NacelleMotion, ValAry)                         ! Mesh
+      case (SED_y_TowerLn2Mesh)
+         call MV_PackMesh(V, y%TowerLn2Mesh, ValAry)                          ! Mesh
+      case (SED_y_PlatformPtMesh)
+         call MV_PackMesh(V, y%PlatformPtMesh, ValAry)                        ! Mesh
+      case (SED_y_LSSTipPxa)
+         VarVals(1) = y%LSSTipPxa                                             ! Scalar
+      case (SED_y_RotSpeed)
+         VarVals(1) = y%RotSpeed                                              ! Scalar
+      case (SED_y_RotPwr)
+         VarVals(1) = y%RotPwr                                                ! Scalar
+      case (SED_y_RotTrq)
+         VarVals(1) = y%RotTrq                                                ! Scalar
+      case (SED_y_HSS_Spd)
+         VarVals(1) = y%HSS_Spd                                               ! Scalar
+      case (SED_y_Yaw)
+         VarVals(1) = y%Yaw                                                   ! Scalar
+      case (SED_y_YawRate)
+         VarVals(1) = y%YawRate                                               ! Scalar
+      case (SED_y_BlPitch)
+         VarVals = y%BlPitch(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (SED_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SED_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SED_OutputType), intent(inout)     :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SED_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine SED_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SED_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SED_y_BladeRootMotion)
+         call MV_UnpackMesh(V, ValAry, y%BladeRootMotion(DL%i1))              ! Mesh
+      case (SED_y_HubPtMotion)
+         call MV_UnpackMesh(V, ValAry, y%HubPtMotion)                         ! Mesh
+      case (SED_y_NacelleMotion)
+         call MV_UnpackMesh(V, ValAry, y%NacelleMotion)                       ! Mesh
+      case (SED_y_TowerLn2Mesh)
+         call MV_UnpackMesh(V, ValAry, y%TowerLn2Mesh)                        ! Mesh
+      case (SED_y_PlatformPtMesh)
+         call MV_UnpackMesh(V, ValAry, y%PlatformPtMesh)                      ! Mesh
+      case (SED_y_LSSTipPxa)
+         y%LSSTipPxa = VarVals(1)                                             ! Scalar
+      case (SED_y_RotSpeed)
+         y%RotSpeed = VarVals(1)                                              ! Scalar
+      case (SED_y_RotPwr)
+         y%RotPwr = VarVals(1)                                                ! Scalar
+      case (SED_y_RotTrq)
+         y%RotTrq = VarVals(1)                                                ! Scalar
+      case (SED_y_HSS_Spd)
+         y%HSS_Spd = VarVals(1)                                               ! Scalar
+      case (SED_y_Yaw)
+         y%Yaw = VarVals(1)                                                   ! Scalar
+      case (SED_y_YawRate)
+         y%YawRate = VarVals(1)                                               ! Scalar
+      case (SED_y_BlPitch)
+         y%BlPitch(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (SED_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function SED_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SED_y_BladeRootMotion)
+       Name = "y%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
+   case (SED_y_HubPtMotion)
+       Name = "y%HubPtMotion"
+   case (SED_y_NacelleMotion)
+       Name = "y%NacelleMotion"
+   case (SED_y_TowerLn2Mesh)
+       Name = "y%TowerLn2Mesh"
+   case (SED_y_PlatformPtMesh)
+       Name = "y%PlatformPtMesh"
+   case (SED_y_LSSTipPxa)
+       Name = "y%LSSTipPxa"
+   case (SED_y_RotSpeed)
+       Name = "y%RotSpeed"
+   case (SED_y_RotPwr)
+       Name = "y%RotPwr"
+   case (SED_y_RotTrq)
+       Name = "y%RotTrq"
+   case (SED_y_HSS_Spd)
+       Name = "y%HSS_Spd"
+   case (SED_y_Yaw)
+       Name = "y%Yaw"
+   case (SED_y_YawRate)
+       Name = "y%YawRate"
+   case (SED_y_BlPitch)
+       Name = "y%BlPitch"
+   case (SED_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE SED_Types
+
 !ENDOFREGISTRYGENERATEDFILE

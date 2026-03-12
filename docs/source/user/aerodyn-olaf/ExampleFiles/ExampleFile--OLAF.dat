@@ -43,4 +43,8 @@ default VTK_fps            - Frame rate for VTK output (frames per second) {"all
 0       nGridOut           - Number of grid outputs
 GridName  GridType  TStart  TEnd     DTGrid    XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
 (-)         (-)      (s)     (s)      (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
-------------------------------------------------------------------------------------------------
+===============================================================================================
+--------------------------- ADVANCED OPTIONS --------------------------------------------------
+===============================================================================================
+! Advanced options may be placed here in arbitrary order, with the regular format:
+! Value   Key             - Comment

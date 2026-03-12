@@ -1333,15 +1333,13 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
             RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
             RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
 
-            CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL DCM_logmap(RotationMatrixD, FieldValue(:,1))
 
                ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
             RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
             RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
          
-            CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg )                  
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL DCM_logmap(RotationMatrixD, FieldValue(:,2))                  
          
             CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
          
@@ -4415,12 +4413,10 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                         ! convert DCMs to tensors: 
 
                         RefOrientationD = Src%RefOrientation(:, :, n1)
-                        CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
-                        IF (ErrStat >= AbortErrLev) RETURN
+                        CALL DCM_logmap(RefOrientationD, FieldValue(:,1))
                   
                         RefOrientationD = Src%RefOrientation(:, :, n2)
-                        CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )
-                        IF (ErrStat >= AbortErrLev) RETURN
+                        CALL DCM_logmap(RefOrientationD, FieldValue(:,2))
          
                         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
                   

@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2026 National Lab of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,14 +17,27 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
+add_library(awaelib_c STATIC
+  src/vtk.cpp
+)
+target_link_libraries(awaelib_c nwtclibs)
+
 add_library(awaelib STATIC
   src/AWAE.f90
   src/AWAE_IO.f90
   src/AWAE_Types.f90
+  src/amrex_utils.F90
 )
-target_link_libraries(awaelib ifwlib nwtclibs)
+target_link_libraries(awaelib awaelib_c ifwlib nwtclibs)
 
-install(TARGETS awaelib
+# If AMReX reader enabled, build library and link amrex_3d
+if (AMREX_READER)
+  target_sources(awaelib_c PRIVATE src/amrex_utils.cpp)
+  target_link_libraries(awaelib_c amrex_3d)
+  target_compile_definitions(awaelib PRIVATE ENABLE_AMREX_LIB)
+endif()
+
+install(TARGETS awaelib awaelib_c
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

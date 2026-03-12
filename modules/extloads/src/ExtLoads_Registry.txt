@@ -15,7 +15,6 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
-include IfW_FlowField.txt
 usefrom ExtLoadsDX_Registry.txt
 
 # ..... Initialization data .......................................................................................................
@@ -47,6 +46,7 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	InitOutputType	ModVarsType      Vars      -   -   -   "Module Variables"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -58,7 +58,7 @@ typedef ^       DiscreteStateType	ReKi	blah    -       -       -       "Somethin
 #Defin misc variables here
 typedef ^       MiscVarType             ReKi    az          - - -  "Current azimuth"     -
 typedef ^       MiscVarType             ReKi    phi_cfd     - - -  "Blending ratio of load from external driver [0-1]"      - 
-typedef ^       MiscVarType    FlowFieldType   &FlowField   - - -  "Flow field data type"   - 
+typedef ^       MiscVarType    ModJacType       Jac         - - -  "Jacobian matrices and arrays corresponding to module variables"
 
 # Define constraint states here:
 typedef ^       ConstraintStateType	ReKi	blah    -       -       -       "Something"     -
@@ -89,11 +89,12 @@ typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	InputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
 typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
+typedef ^   InputType   MeshType    TowerLoadAD 	 -	-	-	"loads on the tower from aerodyn"	-
+typedef ^   InputType   MeshType    BladeLoadAD	{:}	-	-	"loads on each blade from aerodyn"	-
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^ OutputType ExtLdDX_OutputType  DX_y    -       -       -       "Data to get from external driver"
 typedef ^ OutputType MeshType TowerLoad 	 -	-	-	"loads on the tower"	-
 typedef ^ OutputType MeshType BladeLoad	{:}	-	-	"loads on each blade"	-
-typedef ^ OutputType MeshType TowerLoadAD 	 -	-	-	"loads on the tower from aerodyn"	-
-typedef ^ OutputType MeshType BladeLoadAD	{:}	-	-	"loads on each blade from aerodyn"	-
+

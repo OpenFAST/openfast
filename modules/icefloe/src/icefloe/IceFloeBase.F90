@@ -35,7 +35,7 @@ module IceFloeBase
    public
 
 ! This is compared to gravity in FAST, warning if different
-   real(ReKi), parameter :: grav = 9.81
+   real(ReKi), parameter :: grav = 9.80665
 
 !  ice type parameters
    integer(IntKi), parameter :: randomCrush    = 1

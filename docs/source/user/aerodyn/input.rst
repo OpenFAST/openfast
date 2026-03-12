@@ -129,11 +129,6 @@ not function with unsteady airfoil aerodynamics. If ``CavitCheck`` is
 TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver input file must be set
 to 1 or 2 to indicate an MHK turbine is being modeled.
 
-Set the ``Buoyancy`` flag to TRUE to calculate buoyant loads on the blades,
-tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
-If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
-input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
-
 Set the ``NacelleDrag`` flag to TRUE to calculate the drag loads on the nacelle
 or FALSE to disable this calculation. 
 
@@ -431,7 +426,7 @@ pitching-moment coefficient data must be included in the airfoil data
 tables with ``InCol_Cm`` not equal to zero.
 
 The blade nodal discretization, geometry, twist, chord, airfoil
-identifier, and buoyancy properties are set in separate input files for each
+identifier, and buoyancy/added mass/fluid inertia properties are set in separate input files for each
 blade, described in :numref:`blade_data_input_file`. ``ADBlFile(1)`` is the 
 filename for blade 1, ``ADBlFile(2)`` is the filename for blade 2, and 
 ``ADBlFile(3)`` is the filename for blade 3, respectively; the latter is not 
@@ -443,19 +438,19 @@ permits modeling of aerodynamic imbalances.
 Hub Properties
 ~~~~~~~~~~~~~~
 The input parameters in this section pertain to the calculation of buoyant loads
-on the hub and are only used when ``Buoyancy = TRUE``.
+on the hub.
 
 ``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
 center of buoyancy from the hub center in local hub coordinates;
 offsets in the y and z directions are assumed to be zero. To neglect buoyant 
 loads on the hub, set ``VolHub`` to 0.
 
-Since the hub and blades are joined elements, hub buoyancy should be turned on if blade buoyancy is on, and vice versa.
+Since the hub and blades are joined elements, hub buoyancy should be included if blade buoyancy is included, and vice versa.
 
 Nacelle Properties
 ~~~~~~~~~~~~~~~~~~
 The input parameters in this section pertain to the calculation of buoyant and drag loads
-on the nacelle and are only used when ``Buoyancy = TRUE`` or ``NacelleDrag = TRUE``.
+on the nacelle and are only used when ``MHK > 0`` or ``NacelleDrag = TRUE``.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
 position (x,y,z vector) of the nacelle center of buoyancy from
@@ -492,8 +487,8 @@ Tower Influence and Aerodynamics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The input parameters in this section pertain to the tower influence, tower drag,
-and/or tower buoyancy calculations and are only used when ``TwrPotent`` >
-0, ``TwrShadow`` > 0, ``TwrAero = TRUE``, or ``Buoyancy = TRUE``.
+tower buoyancy, tower added mass, and/or tower fluid inertia calculations and are only used when ``TwrPotent`` >
+0, ``TwrShadow`` > 0, ``TwrAero = TRUE``, ``MHK = 1``, or ``MHK = 2``.
 
 ``NumTwrNds`` is the user-specified number of tower analysis nodes and
 determines the number of rows in the subsequent table (after two table
@@ -507,7 +502,9 @@ to MSL for offshore wind and floating MHK turbines or relative to the seabed for
 local tower drag-force coefficient, ``TwrTI`` specifies the
 turbulence intensity used in the Eames tower shadow model
 (``TwrShadow`` = 2) as a fraction (rather than a percentage) of the
-wind fluctuation, and ``TwrCb`` specifies the tower buoyancy coefficient.
+wind fluctuation, ``TwrCb`` specifies the tower buoyancy coefficient, 
+``TwrCp`` specifies the tower dynamic pressure coefficient, and 
+``TwrCa`` specifies the tower added mass coefficient.
 ``TwrElev`` must be entered in monotonically increasing order—from the lowest
 (tower-base) to the highest (tower-top) elevation. For floating MHK turbines with 
 the tower below MSL, tower nodes should be entered as increasingly negative values,
@@ -519,7 +516,9 @@ defined at each node as the cross-sectional area of the tower divided by the
 area of a circle with diameter equal to the characteristic length of the tower 
 cross section (i.e., ``TwrDiam``). For towers with circular cross-sections,
 ``TwrCb`` will likely be 1.0 at each node. To neglect buoyant loads on the 
-tower, set ``TwrCb`` to 0. See :numref:`ad_tower_geom`.
+tower, set ``TwrCb`` to 0. To neglect added mass loads on the 
+tower, set ``TwrCa`` to 0. To neglect fluid inertia loads on the 
+tower, set ``TwrCp`` to 0. See :numref:`ad_tower_geom`.
 
 .. _AD-Outputs:
 
@@ -903,8 +902,9 @@ Blade Data Input File
 ---------------------
 
 The blade data input file contains the nodal discretization, geometry,
-twist, chord, airfoil identifier, and buoyancy properties for a blade. Separate
-files are used for each blade, which permits modeling of aerodynamic imbalances.
+twist, chord, airfoil identifier, and buoyancy/added mass/fluid inertia
+properties for a blade. Separate files are used for each blade, which
+permits modeling of aerodynamic imbalances.
 A sample blade data input file is given in :numref:`ad_appendix`.
 
 The input file begins with two lines of header information which is for
@@ -958,18 +958,37 @@ nodes. For each node:
    table in the AeroDyn primary input file); multiple blade nodes can
    use the same airfoil data;
 
+-  ``t_c`` specifies the blade thickness-to-chord ratio, used to calculate the
+   reference cross-sectional area for added mass and fluid inertia loads, cannot be less than 0;
+
 -  ``BlCb`` specifies the blade buoyancy coefficient, defined as the local
    cross-sectional area of the blade divided by the area of a circle with 
    diameter equal to ``BlChord``; to neglect buoyant loads on the blade,
-   set ``BlCb`` to 0; since the blades and hub are joined elements, blade buoyancy should be turned on if hub buoyancy is on, and vice versa;
+   set ``BlCb`` to 0; since the blades and hub are joined elements, 
+   blade buoyancy should be included if hub buoyancy is included, and vice versa;
 
 -  ``BlCenBn`` specifies the offset of the blade center of buoyancy from the
    aerodynamic center in the direction normal to the chord (positive pointing
-   toward the suction side of the blade); and
+   toward the suction side of the blade);
 
 -  ``BlCenBt`` specifies the offset of the blade center of buoyancy from the
    aerodynamic center in the direction tangential to the chord
-   (positive pointing toward the trailing edge of the blade).
+   (positive pointing toward the trailing edge of the blade);
+
+-  ``BlCpn`` specifies the blade normal-to-chord dynamic pressure coefficient;
+   to neglect normal-to-chord fluid inertia loads on the blade, set ``BlCpn`` to 0;
+
+-  ``BlCpt`` specifies the blade tangential-to-chord dynamic pressure coefficient;
+   to neglect tangential-to-chord fluid inertia loads on the blade, set ``BlCpt`` to 0;
+
+-  ``BlCan`` specifies the blade normal-to-chord added mass coefficient, cannot be less than 0;
+   to neglect normal-to-chord added mass loads on the blade, set ``BlCan`` to 0;
+
+-  ``BlCat`` specifies the blade tangential-to-chord added mass coefficient, cannot be less than 0;
+   to neglect tangential-to-chord added mass loads on the blade, set ``BlCat`` to 0; and
+
+-  ``BlCam`` specifies the blade pitch added mass coefficient, cannot be less than 0;
+   to neglect pitch added mass loads on the blade, set ``BlCam`` to 0.
 
 See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :numref:`ad_appendix`.
 

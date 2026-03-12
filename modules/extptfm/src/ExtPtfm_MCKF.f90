@@ -29,7 +29,7 @@
 MODULE ExtPtfm_MCKF
 
    USE ExtPtfm_MCKF_Types
-   USE ExtPtfm_MCKF_Parameters ! ID_*, N_INPUTS, N_OUTPUTS
+   USE ExtPtfm_MCKF_Parameters ! ID_*
    USE NWTC_Library
    USE NWTC_LAPACK
 
@@ -59,10 +59,6 @@ MODULE ExtPtfm_MCKF
    PUBLIC :: ExtPtfm_JacobianPConstrState           !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
                                                     !    (Xd), and constraint-state (Z) functions all with respect to the constraint
                                                     !    states (z)
-   PUBLIC :: ExtPtfm_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
-
-
-
 
 CONTAINS
    
@@ -127,7 +123,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    p%nTot      = -1
    p%nCB       = -1
 
-   call ReadPrimaryFile(InitInp%InputFile, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
+   call ReadPrimaryFile(InitInp%InputFile, InitInp, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Setting Params from Input file data
    p%IntMethod = InputFileData%IntMethod
@@ -136,6 +132,9 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    else
        p%EP_DeltaT = InputFileData%DT
    endif
+   ! Switch for modeling rigid-body modes
+   p%RBMod     = InputFileData%RBMod
+   p%hasRBMode = InputFileData%hasRBMode
    ! Setting p%OutParam from OutList
    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, ErrStat, ErrMsg); if(Failed()) return
    ! Set the constant state matrices A,B,C,D
@@ -181,19 +180,37 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    !m%EquilStart = InputFileData%EquilStart
    m%EquilStart = .False. ! Feature not yet implemented
 
-   m%Indx = 1 ! used to optimize interpolation of loads in time
-   call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,p%nTot; m%F_at_t(I)=0; end do
+   m%Indx_UsrModeF = 1 ! used to optimize interpolation of loads in time
+   m%Indx_UsrConnF = 1 ! used to optimize interpolation of loads in time
+   call AllocAry( m%F_at_t, p%nTot,'User-defined modal loads at t', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConn_at_t, 3*p%nConn,'User-defined connection loads at t', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%F1, 6,'Interface/rigid-body mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%F2, p%nCB,'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%Weight, p%nTot,'Structure self-weight', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%DConn, 3_IntKi*p%nConn, 'Connection point displacement', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%VConn, 3_IntKi*p%nConn, 'Connection point velocity',     ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%AConn, 3_IntKi*p%nConn, 'Connection point acceleration', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConn, 3_IntKi*p%nConn, 'Connection force vector', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( m%FConnCB, p%nTot, 'Connection force vector', ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,2*p%nCB; m%xFlat(I)=0; end do
-   do I=1,N_INPUTS; m%uFlat(I)=0; end do
+   m%xFlat=0.0_ReKi
+   m%uFlat=0.0_ReKi
    
    ! Define initial guess (set up mesh first) for the system inputs here:
-   call Init_meshes(u, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
+   call Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
+   call AllocAry( u%Fm, p%nCB, 'Internal elastic mode forcing', ErrStat,ErrMsg); if(Failed()) return
+   u%Fm = 0.0_ReKi
 
    ! --- Outputs
-   CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
-   m%AllOuts(1:ID_QStart+3*p%nCBFull-1) = 0.0
+   call AllocAry( y%qm,       p%nCB, 'Internal elastic mode displacement', ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( y%qmdot,    p%nCB, 'Internal elastic mode velocity',     ErrStat,ErrMsg); if(Failed()) return
+   call AllocAry( y%qmdotdot, p%nCB, 'Internal elastic mode acceleration', ErrStat,ErrMsg); if(Failed()) return
+   y%qm       = x%qm
+   y%qmdot    = x%qmdot
+   y%qmdotdot = 0.0_ReKi
+
+   CALL AllocAry( m%AllOuts, ID_QStart+4*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
+   m%AllOuts(1:ID_QStart+4*p%nCBFull-1) = 0.0
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
@@ -201,49 +218,10 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
    InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
    InitOut%Ver = ExtPtfm_Ver
-      
-   if (InitInp%Linearize) then
-      ! TODO The linearization features are in place but waiting for glue-code changes, and testing.
-      CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis is currently not supported by the glue code.', ErrStat, ErrMsg, 'ExtPtfm_Init');
-      if(Failed())return
-      !Appropriate Jacobian row/column names and rotating-frame flags here:   
-      CALL AllocAry(InitOut%LinNames_y, 6+p%NumOuts , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_y, 6+p%NumOuts , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB     , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB     , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%DerivOrder_x, 2*p%nCB   , 'DerivOrd_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_u, N_INPUTS    , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_u, N_INPUTS    , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS    , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
-      InitOut%DerivOrder_x(:)=2
-      ! LinNames_y
-      do I=1,3; 
-          InitOut%LinNames_y(I)   = 'Interface node '//XYZ(I)//' force, N' 
-          InitOut%LinNames_y(I+3) = 'Interface node '//XYZ(I)//' moment, Nm' 
-      enddo
-      do i=1,p%NumOuts
-          InitOut%LinNames_y(N_OUTPUTS+i) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-      end do
-      ! LinNames_u
-      do I=1,3;
-          InitOut%LinNames_u(I+ 0) = 'Interface node '//XYZ(I)//' translation displacement, m'
-          InitOut%LinNames_u(I+ 3) = 'Interface node '//XYZ(I)//' rotation, rad'
-          InitOut%LinNames_u(I+ 6) = 'Interface node '//XYZ(I)//' translation velocity, m/s'
-          InitOut%LinNames_u(I+ 9) = 'Interface node '//XYZ(I)//' rotation velocity, rad/s'
-          InitOut%LinNames_u(I+12) = 'Interface node '//XYZ(I)//' translation acceleration, m/s^2'
-          InitOut%LinNames_u(I+15) = 'Interface node '//XYZ(I)//' rotation acceleration, rad/s^2'
-      enddo
-      ! LinNames_x
-      do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -';
-          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
-      enddo
-      ! 
-      InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%IsLoad_u   = .false. ! the inputs are not loads but kinematics
-   end if
+
+   ! --- Module variables
+   call ExtPtfm_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, InitInp%Linearize, ErrStat, ErrMsg)
+   if (Failed()) return
 
    ! --- Summary file 
    if (InputFileData%SumPrint) then
@@ -257,6 +235,161 @@ CONTAINS
     end function Failed
 END SUBROUTINE ExtPtfm_Init
 
+subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, ErrMsg)
+    type(ExtPtfm_InputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+    type(ExtPtfm_ParameterType),       intent(inout)  :: p              !< Parameters
+    type(ExtPtfm_ContinuousStateType), intent(inout)  :: x              !< Continuous state
+    type(ExtPtfm_OutputType),          intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+    type(ExtPtfm_MiscVarType),         intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+    type(ModVarsType),                 intent(inout)  :: Vars           !< Module variables
+    type(ExtPtfm_InputFile),           intent(in)     :: InputFileData  !< Input file data
+    logical,                           intent(in)     :: Linearize      !< Flag to initialize linearization variables
+    integer(IntKi),                    intent(out)    :: ErrStat        !< Error status of the operation
+    character(*),                      intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+ 
+    character(*), parameter       :: RoutineName = 'ExtPtfm_InitVars'
+    integer(IntKi)                :: ErrStat2
+    character(ErrMsgLen)          :: ErrMsg2
+ 
+    integer(IntKi)                :: i, j, k
+    integer(IntKi), allocatable   :: BladeMeshFields(:)
+    real(R8Ki)                    :: MaxThrust, MaxTorque, ScaleLength
+    integer(IntKi)                :: Flags, Field
+ 
+    ErrStat = ErrID_None
+    ErrMsg = ""
+ 
+   ScaleLength = 100
+   MaxThrust = 490.0_R8Ki * pi_D /  9.0_R8Ki * ScaleLength**2
+   MaxTorque = 122.5_R8Ki * pi_D / 27.0_R8Ki * ScaleLength**3
+
+    ! Clear module variables type
+    call NWTC_Library_DestroyModVarsType(Vars, ErrStat2, ErrMsg2); if (Failed()) return
+
+    !---------------------------------------------------------------------------
+    ! Continuous State Variables
+    !---------------------------------------------------------------------------
+
+    do i = 1, p%nCB
+        call MV_AddVar(Vars%x, "Mode"//trim(Num2LStr(p%ActiveCBDOF(i))), FieldTransDisp, &
+                       DL=DatLoc(ExtPtfm_x_qm), iAry=i, &
+                       DerivOrder=0, &
+                       Perturb=2.0_ReKi*D2R_D, &
+                       Flags=VF_Solve, &
+                       LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' displacement, -'])
+    end do
+
+    do i = 1, p%nCB
+        call MV_AddVar(Vars%x, "Mode"//trim(Num2LStr(p%ActiveCBDOF(i))), FieldTransVel, &
+                       DL=DatLoc(ExtPtfm_x_qmdot), iAry=i, &
+                       DerivOrder=1, &
+                       Perturb=2.0_ReKi*D2R_D, &
+                       Flags=VF_Solve, &
+                       LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' velocity, -/s'])
+    end do
+
+    !---------------------------------------------------------------------------
+    ! Input variables
+    !---------------------------------------------------------------------------
+
+    call MV_AddMeshVar(Vars%u, 'Interface node', MotionFields, &
+                       DatLoc(ExtPtfm_u_PtfmMesh), &
+                       Mesh=u%PtfmMesh, &
+                       Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
+                                 2.0_R8Ki*D2R_D, &  ! Orientation
+                                 2.0_R8Ki*D2R_D, &  ! TranslationVel
+                                 2.0_R8Ki*D2R_D, &  ! RotationVel
+                                 2.0_R8Ki*D2R_D, &  ! TranslationAcc
+                                 2.0_R8Ki*D2R_D])   ! RotationalAcc
+
+    call MV_AddMeshVar(Vars%u, 'Rigid-body load mesh', LoadFields, &
+                       DatLoc(ExtPtfm_u_FBMesh), &
+                       Mesh=u%FBMesh, &
+                       Perturbs=[MaxThrust/100.0_R8Ki, &  ! Force
+                                 MaxTorque/100.0_R8Ki])   ! Moment
+
+    call MV_AddMeshVar(Vars%u, 'Connection load mesh', LoadFields, &
+                       DatLoc(ExtPtfm_u_ConnLDMesh), &
+                       Mesh=u%ConnLdMesh, &
+                       PerTurbs=[MaxThrust/100.0_R8Ki,  & ! Force
+                                 MaxTorque/100.0_R8Ki], & ! Moment
+                       Active=p%nConn > 0_IntKi)
+
+    if ( p%nCB > 0_IntKi ) then
+       call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
+                      DL=DatLoc(ExtPtfm_u_Fm), &
+                      Num=size(u%Fm), &
+                      Flags = ior(VF_Linearize,VF_Solve), &
+                      Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to O(1)
+                      LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
+    end if
+
+    !---------------------------------------------------------------------------
+    ! Output variables
+    !---------------------------------------------------------------------------
+
+    call MV_AddMeshVar(Vars%y, "Interface node", LoadFields, &
+                       DL=DatLoc(ExtPtfm_y_PtfmMesh), &
+                       Mesh=y%PtfmMesh)
+
+    call MV_AddMeshVar(Vars%y, "Rigid-body motion mesh", MotionFields, &
+                       DL=DatLoc(ExtPtfm_y_FBMesh), &
+                       Mesh=y%FBMesh)
+
+    call MV_AddMeshVar(Vars%y, 'Connection point mesh', MotionFields, &
+                       DL=DatLoc(ExtPtfm_y_ConnMesh), &
+                       Mesh=y%ConnMesh, &
+                       Active=p%nConn > 0_IntKi)
+
+    if ( p%nCB>0_IntKi ) then
+       call MV_AddVar(Vars%y, "qm", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qm), &
+                     Num=size(y%qm), &
+                     Flags=VF_Solve, &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' displacement, -', i=1,size(y%qm))])
+
+       call MV_AddVar(Vars%y, "qmdot", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qmdot), &
+                     Num=size(y%qmdot), &
+                     Flags=VF_Solve, &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' velocity, -/s', i=1,size(y%qmdot))])
+
+       call MV_AddVar(Vars%y, "qmdotdot", FieldScalar, &
+                     DL=DatLoc(ExtPtfm_y_qmdotdot), &
+                     Num=size(y%qmdotdot), &
+                     Flags=VF_Solve, &
+                     LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
+    end if
+
+    if ( p%NumOuts > 0_IntKi ) then
+       call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, &
+                      DL=DatLoc(ExtPtfm_y_WriteOutput), &
+                      Num=p%NumOuts, &
+                      Flags=VF_WriteOut, &
+                      LinNames=[(WriteOutLinName(i), i=1, p%NumOuts)])
+    end if
+
+    !---------------------------------------------------------------------------
+    ! Initialization dependent on linearization
+    !---------------------------------------------------------------------------
+
+    call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+    call ExtPtfm_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+    function WriteOutLinName(iParam) result(Name)
+        integer(IntKi), intent(in)    :: iParam
+        character(LinChanLen)         :: Name
+        Name = trim(p%OutParam(iParam)%Name)//', '//p%OutParam(iParam)%Units
+    end function
+    logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+     end function Failed
+end subroutine 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
@@ -266,89 +399,103 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
    INTEGER(IntKi)                          :: I                                         ! loop counter
-   INTEGER(IntKi)                          :: nX                                        ! Number of states
-   INTEGER(IntKi)                          :: nU                                        ! Number of inputs
-   INTEGER(IntKi)                          :: nY                                        ! Number of ouputs
    INTEGER(IntKi)                          :: n1                                        ! Number of interface DOF
    INTEGER(IntKi)                          :: n2                                        ! Number of CB DOF
-   real(ReKi), dimension(:,:), allocatable :: I22
-   ! Init 
-   nX = 2*p%nCB
-   nU = 3*6
-   nY = 6
-   n1 = 6
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   n1 = 6_IntKi
    n2 = p%nCB
-   if (allocated(p%AMat)) deallocate(p%AMat)
-   if (allocated(p%BMat)) deallocate(p%BMat)
-   if (allocated(p%CMat)) deallocate(p%CMat)
-   if (allocated(p%DMat)) deallocate(p%DMat)
-   if (allocated(p%M11))  deallocate(p%M11)
-   if (allocated(p%M12))  deallocate(p%M12)
-   if (allocated(p%M22))  deallocate(p%M22)
-   if (allocated(p%M21))  deallocate(p%M21)
-   if (allocated(p%C11))  deallocate(p%C11)
-   if (allocated(p%C12))  deallocate(p%C12)
-   if (allocated(p%C22))  deallocate(p%C22)
-   if (allocated(p%C21))  deallocate(p%C21)
-   if (allocated(p%K11))  deallocate(p%C11)
-   if (allocated(p%K22))  deallocate(p%C22)
-   ! Allocation
-   call allocAry(p%AMat, nX, nX, 'p%AMat', ErrStat, ErrMsg); if(Failed()) return ; p%AMat(1:nX,1:nX) =0
-   call allocAry(p%BMat, nX, nU, 'p%BMat', ErrStat, ErrMsg); if(Failed()) return ; p%BMat(1:nX,1:nU) =0
-   call allocAry(p%FX  , nX,     'p%FX'  , ErrStat, ErrMsg); if(Failed()) return ; p%Fx  (1:nX)      =0
-   call allocAry(p%CMat, nY, nX, 'p%CMat', ErrStat, ErrMsg); if(Failed()) return ; p%CMat(1:nY,1:nX) =0
-   call allocAry(p%DMat, nY, nU, 'p%DMat', ErrStat, ErrMsg); if(Failed()) return ; p%DMat(1:nY,1:nU) =0
-   call allocAry(p%FY  , nY,     'p%FY'  , ErrStat, ErrMsg); if(Failed()) return ; p%FY  (1:nY)      =0
-   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat, ErrMsg); if(Failed()) return ; p%M11 (1:n1,1:n1) =0
-   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat, ErrMsg); if(Failed()) return ; p%K11 (1:n1,1:n1) =0
-   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat, ErrMsg); if(Failed()) return ; p%C11 (1:n1,1:n1) =0
-   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat, ErrMsg); if(Failed()) return ; p%M22 (1:n2,1:n2) =0
-   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat, ErrMsg); if(Failed()) return ; p%K22 (1:n2,1:n2) =0
-   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat, ErrMsg); if(Failed()) return ; p%C22 (1:n2,1:n2) =0
-   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat, ErrMsg); if(Failed()) return ; p%M12 (1:n1,1:n2) =0
-   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat, ErrMsg); if(Failed()) return ; p%C12 (1:n1,1:n2) =0
-   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat, ErrMsg); if(Failed()) return ; p%M21 (1:n2,1:n1) =0
-   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat, ErrMsg); if(Failed()) return ; p%C21 (1:n2,1:n1) =0
-   call allocAry(  I22 , n2, n2, '  I22' , ErrStat, ErrMsg); if(Failed()) return ;   I22 (1:n2,1:n2) =0
-   do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
+
+   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K12 , n1, n2, 'p%K12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K21 , n2, n1, 'p%K21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%A1Mat, n2, n2, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%A2Mat, n2, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B1Mat, n2, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B2Mat, n2, n1, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B3Mat, n2, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%B4Mat, n2, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+
+   call allocAry(p%C1Mat, n1, n2, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%C2Mat, n1, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D1Mat, n1, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D2Mat, n1, n1, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D3Mat, n1, n1, 'p%A1Mat', ErrStat, ErrMsg); if(Failed()) return
+   call allocAry(p%D4Mat, n1, n2, 'p%A2Mat', ErrStat, ErrMsg); if(Failed()) return
+
    ! Submatrices
-   p%M11(1:n1,1:n1) = p%Mass(1:n1      ,1:n1      )
-   p%C11(1:n1,1:n1) = p%Damp(1:n1      ,1:n1      )
-   p%K11(1:n1,1:n1) = p%Stff(1:n1      ,1:n1      )
-   p%M12(1:n1,1:n2) = p%Mass(1:n1      ,n1+1:n1+n2)
-   p%C12(1:n1,1:n2) = p%Damp(1:n1      ,n1+1:n1+n2)
-   p%M21(1:n2,1:n1) = p%Mass(n1+1:n1+n2,1:n1      )
-   p%C21(1:n2,1:n1) = p%Damp(n1+1:n1+n2,1:n1      )
-   p%M22(1:n2,1:n2) = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
-   p%C22(1:n2,1:n2) = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
-   p%K22(1:n2,1:n2) = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
-   ! A matrix
-   p%AMat(1:n2   ,n2+1:nX) = I22   (1:n2,1:n2)
-   p%AMat(n2+1:nX,1:n2   ) = -p%K22(1:n2,1:n2)
-   p%AMat(n2+1:nX,n2+1:nX) = -p%C22(1:n2,1:n2)
-   ! B matrix
-   p%BMat(n2+1:nX,7 :12  ) = -p%C21(1:n2,1:6)
-   p%BMat(n2+1:nX,13:18  ) = -p%M21(1:n2,1:6)
-   ! C matrix
-   p%CMat(1:nY,1:n2   ) = matmul(p%M12,p%K22)
-   p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22) - p%C12
-   ! D matrix
-   p%DMat(1:nY,1:6   ) = -p%K11
-   p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
-   p%DMat(1:nY,13:18 ) = -p%M11 + matmul(p%M12,p%M21)
-CONTAINS
+   p%M11 = p%Mass(   1:n1   ,   1:n1   )
+   p%M12 = p%Mass(   1:n1   ,n1+1:n1+n2)
+   p%M21 = p%Mass(n1+1:n1+n2,   1:n1   )
+   p%M22 = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
+   if ( n2 > 0_IntKi ) then
+      call PseudoInverse(p%M22, p%M22Inv, ErrStat, ErrMsg); if(Failed()) return
+   else
+      call allocAry(  p%M22Inv , n2, n2, 'p%M22Inv' , ErrStat, ErrMsg); if(Failed()) return ! Empty placeholder array
+   end if
+
+   p%C11 = p%Damp(   1:n1   ,   1:n1   )
+   p%C12 = p%Damp(   1:n1   ,n1+1:n1+n2)
+   p%C21 = p%Damp(n1+1:n1+n2,   1:n1   )
+   p%C22 = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
+
+   p%K11 = p%Stff(   1:n1   ,   1:n1   )
+   p%K12 = p%Stff(   1:n1   ,n1+1:n1+n2)
+   p%K21 = p%Stff(n1+1:n1+n2,   1:n1   )
+   p%K22 = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
+
+   ! A matrices
+   p%A1Mat = - matmul(p%M22Inv, p%K22)
+   p%A2Mat = - matmul(p%M22Inv, p%C22)
+
+   ! B matrices
+   p%B1Mat = - matmul(p%M22Inv, p%K21)
+   p%B2Mat = - matmul(p%M22Inv, p%C21)
+   p%B3Mat = - matmul(p%M22Inv, p%M21)
+   p%B4Mat =          p%M22Inv
+
+   ! C matrices
+   p%C1Mat = p%K12 + matmul( p%M12, p%A1Mat )
+   p%C2Mat = p%C12 + matmul( p%M12, p%A2Mat )
+
+   ! D matrices
+   p%D1Mat = p%K11 + matmul( p%M12, p%B1Mat )
+   p%D2Mat = p%C11 + matmul( p%M12, p%B2Mat )
+   p%D3Mat = p%M11 + matmul( p%M12, p%B3Mat )
+   p%D4Mat =         matmul( p%M12, p%B4Mat )
+
+   CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_SetStateMatrices')
         Failed =  ErrStat >= AbortErrLev
     end function Failed
 END SUBROUTINE SetStateMatrices
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
+SUBROUTINE Init_meshes(u, p, y, InitInp, ErrStat, ErrMsg)
    TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
+   TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< All the parameter matrices stored in this input file
    TYPE(ExtPtfm_OutputType),          INTENT(INOUT)  :: y           !< System outputs
    TYPE(ExtPtfm_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! Local variables:
+   INTEGER(IntKi)                          :: I                                         ! loop counter
+
    ! Create the input and output meshes associated with platform loads
    CALL MeshCreate(  BlankMesh         = u%PtfmMesh       , &
                      IOS               = COMPONENT_INPUT  , &
@@ -362,16 +509,73 @@ SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
                      TranslationAcc    = .TRUE.           , &
                      RotationAcc       = .TRUE.)
    if(Failed()) return
-      
    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return
+   CALL MeshPositionNode (u%PtfmMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return
    ! Create the mesh element
    CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%PtfmMesh, ErrStat, ErrMsg ); if(Failed()) return
+   
    ! the output mesh is a sibling of the input:
    CALL MeshCopy( SrcMesh=u%PtfmMesh, DestMesh=y%PtfmMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
                   ErrStat=ErrStat, ErrMess=ErrMsg, Force=.TRUE., Moment=.TRUE. )
    if(Failed()) return
+
+   ! Create the input and output meshes associated with platform loads
+   CALL MeshCreate(  BlankMesh         = u%FBMesh         , &
+                     IOS               = COMPONENT_INPUT  , &
+                     Nnodes            = 1                , &
+                     ErrStat           = ErrStat          , &
+                     ErrMess           = ErrMsg           , &
+                     Force             = .TRUE.           , &
+                     Moment            = .TRUE.)
+   if(Failed()) return
+   ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
+   CALL MeshPositionNode (u%FBMesh, 1, [InitInp%PtfmRefxt, InitInp%PtfmRefyt, InitInp%PtfmRefzt], ErrStat, ErrMsg ); if(Failed()) return
+   ! Create the mesh element
+   CALL MeshConstructElement (  u%FBMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
+   CALL MeshCommit ( u%FBMesh, ErrStat, ErrMsg ); if(Failed()) return
+
+   ! the output mesh is a sibling of the input:
+   CALL MeshCopy( SrcMesh=u%FBMesh, DestMesh=y%FBMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
+                  ErrStat=ErrStat, ErrMess=ErrMsg      , &
+                  TranslationDisp   = .TRUE.           , &
+                  Orientation       = .TRUE.           , &
+                  TranslationVel    = .TRUE.           , &
+                  RotationVel       = .TRUE.           , &
+                  TranslationAcc    = .TRUE.           , &
+                  RotationAcc       = .TRUE. )
+   if(Failed()) return
+
+   if (p%nConn>0_IntKi) then
+      ! Create the input and output meshes associated with platform loads
+      CALL MeshCreate(  BlankMesh         = u%ConnLdMesh     , &
+                        IOS               = COMPONENT_INPUT  , &
+                        Nnodes            = p%nConn          , &
+                        ErrStat           = ErrStat          , &
+                        ErrMess           = ErrMsg           , &
+                        Force             = .TRUE.           , &
+                        Moment            = .TRUE.)
+      if(Failed()) return
+      do i = 1,p%nConn
+         ! Create the node on the mesh, the node is located at the user-defined connection points
+         CALL MeshPositionNode(u%ConnLdMesh, i, p%PosConn(i,:), ErrStat, ErrMsg ); if(Failed()) return
+         ! Create the mesh element
+         CALL MeshConstructElement(u%ConnLdMesh, ELEMENT_POINT, ErrStat, ErrMsg, i ); if(Failed()) return
+      end do
+      CALL MeshCommit ( u%ConnLdMesh, ErrStat, ErrMsg ); if(Failed()) return
+
+      ! the output mesh is a sibling of the input:
+      CALL MeshCopy( SrcMesh=u%ConnLdMesh, DestMesh=y%ConnMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
+                     ErrStat=ErrStat, ErrMess=ErrMsg      , &
+                     TranslationDisp   = .TRUE.           , &
+                     Orientation       = .TRUE.           , &
+                     TranslationVel    = .TRUE.           , &
+                     RotationVel       = .TRUE.           , &
+                     TranslationAcc    = .TRUE.           , &
+                     RotationAcc       = .TRUE. )
+      if(Failed()) return
+   end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'Init_meshes')
@@ -690,45 +894,195 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi)                                  :: I                 !< Generic counters
-   real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
-   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
+   INTEGER(IntKi)                                  :: I             !< Generic counters
+   real(ReKi), dimension(6)                        :: Fc            !< Output coupling force
+   TYPE(ExtPtfm_ContinuousStateType)               :: xdot          ! time derivatives of continuous states
+   real(R8Ki), dimension(3,3)                      :: Rg2b          ! Rotation matrix from global earth-fixed coordinate system to rigid-body coordinate system
+   real(R8Ki), dimension(3,3)                      :: Rb2g          ! Rotation matrix from rigid-body coordinate system to global earth-fixed coordinate system
+   real(ReKi), dimension(3)                        :: RelPosConn
+   real(ReKi), dimension(3)                        :: RelPosConn0
+   real(ReKi), dimension(3)                        :: RelVelConn
+   real(ReKi), dimension(3)                        :: omega
+   real(ReKi), dimension(3)                        :: omega_dot
+   real(ReKi), dimension(3)                        :: RdU
+   real(ReKi), dimension(3)                        :: RdUdot
+   real(ReKi), dimension(3)                        :: RdUdotdot
 
-   ! --- Flatening vectors and using linear state formulation y=Cx+Du+Fy
-   ! u flat (x1, \dot{x1}, \ddot{x1})
-   m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-   m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcOutput')
-   m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-   m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-   m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-   m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
-   !--- Computing output:  y = Cx + Du + Fy  
-   ! 
-   if (p%nCB>0) then
-       ! x flat
-       m%xFlat(      1:p%nCB  ) = x%qm   (1:p%nCB)
-       m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%UsrModeF%Forces
+   call InterpStpMat(REAL(t,ReKi), p%UsrModeF%times, p%UsrModeF%Forces, m%Indx_UsrModeF, p%UsrModeF%nTimeSteps, m%F_at_t)
+   call InterpStpMat(REAL(t,ReKi), p%UsrConnF%times, p%UsrConnF%Forces, m%Indx_UsrConnF, p%UsrConnF%nTimeSteps, m%FConn_at_t)
 
-       ! >>> MATMUL implementation
-       !Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
-
-       ! >>> LAPACK implementation
-       Fc(1:6) = m%F_at_t(1:6) ! Fc = F1r + ...
-       !           GEMV(TRS, M  , N      , alpha    , A     , LDA, X                    ,INCX, Beta  ,  Y, IncY)
-       CALL LAPACK_GEMV('n', 6  , 2*p%nCB,  1.0_ReKi, p%CMat, 6  , m%xFlat              , 1, 1.0_ReKi, Fc, 1   ) ! = C*x + (F1r)
-       CALL LAPACK_GEMV('n', 6  ,   18   ,  1.0_ReKi, p%DMat, 6  , m%uFlat              , 1, 1.0_ReKi, Fc, 1   ) ! + D*u
-       CALL LAPACK_GEMV('n', 6  , p%nCB  , -1.0_ReKi, p%M12 , 6  , m%F_at_t(6+1:6+p%nCB), 1, 1.0_ReKi, Fc, 1   ) ! - M12*F2r
+   if ( p%hasRBMode ) then
+      Rg2b = u%PtfmMesh%Orientation(:,:,1)
+      Rb2g = transpose(Rg2b)
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in body-fixed coordinate system
+      m%uFlat(1:3)   = 0.0_ReKi ! Translational displacement is zero in body-fixed system - corresponding stiffness terms must be zero
+      m%uFlat(4:6)   = EulerExtractZYX(u%PtfmMesh%Orientation(:,:,1))
+      m%uFlat(7:9  ) = matmul( Rg2b, u%PtfmMesh%TranslationVel(:,1) )
+      m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
+      m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
+      m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3) )
+      end do
    else
-       Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
-   endif
+      call eye(Rg2b,ErrStat,ErrMsg); if (failed()) return
+      call eye(Rb2g,ErrStat,ErrMsg); if (failed()) return
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
+      m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcOutput')
+      m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+      m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
+      m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+      m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3)
+      end do
+   end if
+
+   !--- Compute external loads
+   ! Note: m%F1 is the interface/rigid-body mode forcing kept in earth-fixed system
+   !       m%F2 is the forcing to the internal elastic modes
+   m%F1(1:3) = u%FBMesh%Force (:,1)
+   m%F1(4:6) = u%FBMesh%Moment(:,1)
+   m%F1      = m%F1 + m%F_at_t(1:6)
+   m%F2      = u%Fm + m%F_at_t(6+1:6+p%nCB)
+
+   ! Structure self-weight
+   if ( p%hasRBMode ) then
+      select case (p%RBMod)
+         case (1_IntKi)
+            ! Compute self-weight based on stiffness and convert to earth-fixed frame
+            m%Weight(1:6) = p%W0(1:6) &
+                          - matmul( p%WStff(1:6,4:5) , m%uFlat(4:5) ) &
+                          - matmul( p%WStff(1:6,6+1:6+p%nCB) , x%qm )
+            m%Weight(1:3) = matmul( Rb2g, m%Weight(1:3))
+            m%Weight(4:6) = matmul( Rb2g, m%Weight(4:6))
+         case (2_IntKi)
+            ! Compute exact self-weight in earth-fixed frame
+            m%Weight(1:3) = [0.0_ReKi,0.0_ReKi,p%W0(3)]
+            m%Weight(4:6) = cross_product( matmul( Rb2g , p%RBCoG), m%Weight(1:3) )
+      end select
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB)                                 &
+                            - matmul( p%WStff(6+1:6+p%nCB,4:5) , m%uFlat(4:5) ) &
+                            - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
+   else
+      ! Fully linearized formulation
+      m%Weight = p%W0                                    &
+               - matmul( p%WStff(:,1:6) , m%uFlat(1:6) ) &
+               - matmul( p%WStff(:,6+1:6+p%nCB) , x%qm )
+   end if
+   m%F1 = m%F1 + m%Weight(1:6)
+   m%F2 = m%F2 + m%Weight(6+1:6+p%nCB)
+
+   ! Loads from connection points
+   if (p%nConn>0_IntKi) then
+      m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
+      if ( p%hasRBMode ) then
+         m%F1(1:3) = m%F1(1:3) + matmul( Rb2g, m%FConnCB(1:3) )
+         m%F1(4:6) = m%F1(4:6) + matmul( Rb2g, m%FConnCB(4:6) )
+      else
+         m%F1 = m%F1 + m%FConnCB(1:6)
+      end if
+      m%F2 = m%F2 + m%FConnCB(6+1:6+p%nCB)
+   end if
+
+   !--- Compute reaction load applied to tower base. Output y = Cx + Du + Fy
+   Fc   = matmul( p%D1Mat, m%uFlat(1:6) ) + matmul( p%D2Mat, m%uFlat(7:12) ) + matmul( p%D3Mat, m%uFlat(13:18) )
+   if (p%nCB>0) then
+      Fc = Fc + matmul( p%C1Mat, x%qm ) + matmul( p%C2Mat, x%qmdot ) + matmul( p%D4Mat, m%F2 )
+   end if
+   if ( p%hasRBMode ) then
+      if (p%RBMod==2_IntKi) then
+         Fc(1:3) = Fc(1:3) + p%RBMass*cross_product( m%uFlat(10:12), cross_product( m%uFlat(10:12), p%RBCoG ) )
+         Fc(4:6) = Fc(4:6) + cross_product( m%uFlat(10:12), matmul( p%RBInertia, m%uFlat(10:12)) )
+      end if
+      Fc(1:3) = matmul( Rb2g, Fc(1:3) )
+      Fc(4:6) = matmul( Rb2g, Fc(4:6) )
+   end if
+   Fc = -Fc + m%F1
+
+   ! Update output states
+   if (p%nCB>0) then
+      CALL ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
+      y%qm       = x%qm
+      y%qmdot    = x%qmdot
+      y%qmdotdot = xdot%qmdot
+   end if
 
    ! Update the output mesh
-   do i=1,3
-      y%PtfmMesh%Force(I,1)  = Fc(I)
-      y%PtfmMesh%Moment(I,1) = Fc(I+3)
-   enddo
+   y%PtfmMesh%Force(:,1)  = Fc(1:3)
+   y%PtfmMesh%Moment(:,1) = Fc(4:6)
+   if (.not.p%HasRBMode) then
+      ! Interface moment correction for fixed-bottom structure similar to SubDyn
+      y%PtfmMesh%Moment(:,1) = y%PtfmMesh%Moment(:,1) - cross_product( u%PtfmMesh%TranslationDisp(:,1), Fc(1:3) )
+   end if
+
+   if (p%HasRBMode) then
+      y%FBMesh%TranslationDisp = u%PtfmMesh%TranslationDisp
+      y%FBMesh%Orientation     = u%PtfmMesh%Orientation
+      y%FBMesh%TranslationVel  = u%PtfmMesh%TranslationVel
+      y%FBMesh%RotationVel     = u%PtfmMesh%RotationVel
+      y%FBMesh%TranslationAcc  = u%PtfmMesh%TranslationAcc
+      y%FBMesh%RotationAcc     = u%PtfmMesh%RotationAcc
+   end if
+
+   if (p%nConn > 0_IntKi) then
+      if (p%HasRBMode) then
+         if (p%nCB>0) then
+            ! Elastic mode contributions in rigid-body frame
+            m%DConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qm       )
+            m%VConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qmdot    )
+            m%AConn = matmul( p%PhiConn(:,7:6+p%nCB), y%qmdotdot )
+         else
+            m%DConn = 0.0_ReKi
+            m%VConn = 0.0_ReKi
+            m%AConn = 0.0_ReKi
+         end if
+         do i = 1,p%nConn
+            RdU         = matmul( Rb2g, m%DConn(3*(i-1)+1:3*(i-1)+3) )
+            RdUdot      = matmul( Rb2g, m%VConn(3*(i-1)+1:3*(i-1)+3) )
+            RdUdotdot   = matmul( Rb2g, m%AConn(3*(i-1)+1:3*(i-1)+3) )
+            RelPosConn0 = y%ConnMesh%Position(:,i) - u%PtfmMesh%Position(:,1)
+            RelPosConn  = matmul( Rb2g, RelPosConn0 ) + RdU
+            omega       = u%PtfmMesh%RotationVel(:,1)
+            omega_dot   = u%PtfmMesh%RotationAcc(:,1)
+
+            ! Compute absolute translation displacement, velocity, and acceleration of connection points in earth-fixed frame
+            y%ConnMesh%TranslationDisp(:,i) = u%PtfmMesh%TranslationDisp(:,1) + RelPosConn - RelPosConn0
+            y%ConnMesh%TranslationVel (:,i) = u%PtfmMesh%TranslationVel (:,1) + RdUdot + cross_product( omega, RelPosConn )
+            RelVelConn = y%ConnMesh%TranslationVel(:,i) - u%PtfmMesh%TranslationVel(:,1)
+            y%ConnMesh%TranslationAcc (:,i) = u%PtfmMesh%TranslationAcc (:,1) + RdUdotdot + cross_product( omega_dot, RelPosConn ) + cross_product( omega, RdUdot + RelVelConn )
+
+            ! No contribution from elasticity to rotation for now
+            y%ConnMesh%Orientation(:,:,i)   = Rg2b
+            y%ConnMesh%RotationVel(:,i)     = u%PtfmMesh%RotationVel(:,1)
+            y%ConnMesh%RotationAcc(:,i)     = u%PtfmMesh%RotationAcc(:,1)
+         end do
+      else
+         ! Interface mode contributions
+         m%DConn = matmul( p%PhiConn(:,1:6), m%uFlat( 1: 6) )
+         m%VConn = matmul( p%PhiConn(:,1:6), m%uFlat( 7:12) )
+         m%AConn = matmul( p%PhiConn(:,1:6), m%uFlat(13:18) )
+         if (p%nCB>0) then ! Elastic mode contributions
+            m%DConn = m%DConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qm       )
+            m%VConn = m%VConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qmdot    )
+            m%AConn = m%AConn + matmul( p%PhiConn(:,7:6+p%nCB), y%qmdotdot )
+         end if
+         do i = 1,p%nConn
+            ! No contribution from elasticity to rotation for now
+            y%ConnMesh%TranslationDisp(:,i) = m%DConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%Orientation(:,:,i)   = Rg2b
+            y%ConnMesh%TranslationVel(:,i)  = m%VConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%RotationVel(:,i)     = 0.0_ReKi
+            y%ConnMesh%TranslationAcc(:,i)  = m%AConn(3*(i-1)+1:3*(i-1)+3)
+            y%ConnMesh%RotationAcc(:,i)     = 0.0_ReKi
+         end do
+      end if
+   end if
 
    ! --- All Outputs
    m%AllOuts(ID_PtfFx) = y%PtfmMesh%Force (1,1)
@@ -737,17 +1091,17 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_PtfMx) = y%PtfmMesh%Moment(1,1)
    m%AllOuts(ID_PtfMy) = y%PtfmMesh%Moment(2,1)
    m%AllOuts(ID_PtfMz) = y%PtfmMesh%Moment(3,1)
-   m%AllOuts(ID_InpFx) = m%F_at_t(1)
-   m%AllOuts(ID_InpFy) = m%F_at_t(2)
-   m%AllOuts(ID_InpFz) = m%F_at_t(3)
-   m%AllOuts(ID_InpMx) = m%F_at_t(4)
-   m%AllOuts(ID_InpMy) = m%F_at_t(5)
-   m%AllOuts(ID_InpMz) = m%F_at_t(6)
-   !y%WriteOutput(ID_WaveElev) = .. ! TODO
+   m%AllOuts(ID_InpFx) = m%F1(1)
+   m%AllOuts(ID_InpFy) = m%F1(2)
+   m%AllOuts(ID_InpFz) = m%F1(3)
+   m%AllOuts(ID_InpMx) = m%F1(4)
+   m%AllOuts(ID_InpMy) = m%F1(5)
+   m%AllOuts(ID_InpMz) = m%F1(6)
    do i=1,p%nCB
-      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qm   (I)    ! CBQ  - DOF Positions
-      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
-      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
+      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qm      (I)    ! CBD - DOF Displacements
+      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qmdot   (I)    ! CBV - DOF Velocities
+      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = y%qmdotdot(I)    ! CBA - DOF Accelerations
+      m%AllOuts(ID_QStart + 3*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F2      (I)    ! CBF - DOF External Forces
    enddo
    ! --- Selected output channels only
    do I = 1,p%NumOuts
@@ -756,7 +1110,13 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       else
           y%WriteOutput(I) = -9.9999e20
       endif
-   enddo    
+   enddo
+
+   CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -776,42 +1136,71 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    TYPE(ExtPtfm_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
    ! Local variables
    INTEGER(IntKi)                                    :: I
+   REAL(R8Ki), dimension(3,3)                        :: Rg2b         ! Rotation matrix global 2 body coordinates
+   REAL(R8Ki), dimension(3,3)                        :: Rb2g         ! Rotation matrix body 2 global coordinates
+
    ! Allocation of output dxdt (since intent(out))
    call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    ErrStat, ErrMsg); if(Failed()) return
    call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', ErrStat, ErrMsg); if(Failed()) return
    if ( p%nCB == 0 ) return
-   do I=1,p%nCB; dxdt%qm   (I)=0; enddo
-   do I=1,p%nCB; dxdt%qmdot(I)=0; enddo
+   dxdt%qm   =0.0_ReKi
+   dxdt%qmdot=0.0_ReKi
 
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%F
-   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%UsrModeF%Forces
+   call InterpStpMat(REAL(t,ReKi), p%UsrModeF%times, p%UsrModeF%Forces, m%Indx_UsrModeF, p%UsrModeF%nTimeSteps, m%F_at_t)
+   call InterpStpMat(REAL(t,ReKi), p%UsrConnF%times, p%UsrConnF%Forces, m%Indx_UsrConnF, p%UsrConnF%nTimeSteps, m%FConn_at_t)
 
-   ! u flat (x1, \dot{x1}, \ddot{x1})
-   m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-   m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed()) return
-   m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-   m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-   m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-   m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   if ( p%hasRBMode ) then
+      Rg2b = u%PtfmMesh%Orientation(:,:,1)
+      Rb2g = transpose(Rg2b)
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in body-fixed coordinate system
+      m%uFlat(1:3)   = 0.0_ReKi ! u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = EulerExtractZYX(u%PtfmMesh%Orientation(:,:,1))
+      m%uFlat(7:9  ) = matmul( Rg2b, u%PtfmMesh%TranslationVel(:,1) )
+      m%uFlat(10:12) = matmul( Rg2b, u%PtfmMesh%RotationVel   (:,1) )
+      m%uFlat(13:15) = matmul( Rg2b, u%PtfmMesh%TranslationAcc(:,1) )
+      m%uFlat(16:18) = matmul( Rg2b, u%PtfmMesh%RotationAcc   (:,1) )
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = matmul( Rg2b, u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3) )
+      end do
+   else
+      ! u flat (x1, \dot{x1}, \ddot{x1}) in global coordinate system
+      m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+      m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed()) return
+      m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+      m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
+      m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+      m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+      do i=1,p%nConn
+         m%FConn((i-1)*3+1:(i-1)*3+3) = u%ConnLdMesh%Force(:,i) + m%FConn_at_t((i-1)*3+1:(i-1)*3+3)
+      end do
+   end if
 
-   ! --- Computation of qm and qmdot
-   ! >>> Latex formulae:
-   ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
-   ! >>> MATMUL IMPLEMENTATION 
-   !dxdt%qm= x%qmdot
-   !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-   !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
-   ! >>> BLAS IMPLEMENTATION 
-   !           COPY( N   , X                    , INCX, Y      , INCY)
-   CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
-   CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
-   !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
-   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
-   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
-   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
-   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
+   ! --- Compute modal forcing
+   m%F2 = m%F_at_t(6+1:6+p%nCB) & ! User prescribed forces
+        + u%Fm(1:p%nCB)           ! Modal forcing from HydroDyn generalized DOF
+   ! Structure self-weight
+   if ( p%hasRBMode ) then
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB) &
+                            - matmul( p%WStff(6+1:6+p%nCB,4:5) , m%uFlat(4:5) ) - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
+   else
+      m%Weight(6+1:6+p%nCB) = p%W0(6+1:6+p%nCB) &
+                            - matmul( p%WStff(6+1:6+p%nCB,1:6) , m%uFlat(1:6) ) - matmul( p%WStff(6+1:6+p%nCB,6+1:6+p%nCB) , x%qm )
+   end if
+   m%F2 = m%F2 + m%Weight(6+1:6+p%nCB)
+   ! Loads from connection points
+   if (p%nConn>0_IntKi) then
+      m%FConnCB = matmul( transpose(p%PhiConn) , m%FConn )
+      m%F2      = m%F2 + m%FConnCB(6+1:6+p%nCB)
+   end if
+
+   ! --- Compute qm and qmdot
+   dxdt%qm    = x%qmdot
+   dxdt%qmdot = matmul( p%A1Mat, x%qm ) + matmul( p%A2Mat, x%qmdot ) &
+              + matmul( p%B1Mat, m%uFlat(1:6) ) + matmul( p%B2Mat, m%uFlat(7:12) ) + matmul( p%B3Mat, m%uFlat(13:18) ) + matmul( p%B4Mat, m%F2 )
 
 CONTAINS
     logical function Failed()
@@ -872,16 +1261,16 @@ END SUBROUTINE ExtPtfm_CalcConstrStateResidual
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
 
-SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
-!..................................................................................................................................
+SUBROUTINE ExtPtfm_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   TYPE(ModVarsType),                  INTENT(IN   ) :: Vars       !< Module variables
    REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
-   TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ExtPtfm_InputType),            INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
    TYPE(ExtPtfm_ContinuousStateType),  INTENT(IN   ) :: x          !< Continuous states at operating point
    TYPE(ExtPtfm_DiscreteStateType),    INTENT(IN   ) :: xd         !< Discrete states at operating point
    TYPE(ExtPtfm_ConstraintStateType),  INTENT(IN   ) :: z          !< Constraint states at operating point
    TYPE(ExtPtfm_OtherStateType),       INTENT(IN   ) :: OtherState !< Other states at operating point
-   TYPE(ExtPtfm_OutputType),           INTENT(IN   ) :: y          !< Output (change to inout if a mesh copy is required); 
+   TYPE(ExtPtfm_OutputType),           INTENT(INOUT) :: y          !< Output (change to inout if a mesh copy is required);
                                                                    !!   Output fields are not used by this routine, but type is   
                                                                    !!   available here so that mesh parameter information (i.e.,  
                                                                    !!   connectivity) does not have to be recalculated for dYdu.
@@ -896,43 +1285,96 @@ SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat,
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   INTEGER(IntKi) :: i,j  ! Loop index
-   INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
-   ! Initialize ErrStat
+   character(*), parameter       :: RoutineName = 'ExtPtfm_JacobianPInput'
+   integer(intKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   INTEGER(IntKi) :: i, j, col ! Loop index
+   ! logical        :: CalcOutputs
+
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! Calculate OP values here
+   call ExtPtfm_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+
+   ! Make a copy of the inputs to perturb
+   call ExtPtfm_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call ExtPtfm_VarsPackInput(Vars, u, m%Jac%u)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
-      ! allocate and set dYdu
+
       if (.not. allocated(dYdu)) then
-          call AllocAry(dYdu, N_OUTPUTS+p%NumOuts, N_INPUTS, 'dYdu', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dYdu,1); do j=1,size(dYdu,2); dYdu(i,j)=0.0_ReKi; enddo;enddo
+         call AllocAry(dYdu, m%Jac%Ny, m%Jac%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      dYdu(1:6,1:N_INPUTS) = p%DMat(1:6,1:N_INPUTS)
-      !dYdu is zero except if WriteOutput is the interface loads 
-      do i = 1,p%NumOuts
-          idx  = p%OutParam(i)%Indx
-          if     (idx==ID_PtfFx) then; dYdu(6+i,1:N_INPUTS) = p%DMat(1,1:N_INPUTS)
-          elseif (idx==ID_PtfFy) then; dYdu(6+i,1:N_INPUTS) = p%DMat(2,1:N_INPUTS)
-          elseif (idx==ID_PtfFx) then; dYdu(6+i,1:N_INPUTS) = p%DMat(3,1:N_INPUTS)
-          elseif (idx==ID_PtfMz) then; dYdu(6+i,1:N_INPUTS) = p%DMat(4,1:N_INPUTS)
-          elseif (idx==ID_PtfMy) then; dYdu(6+i,1:N_INPUTS) = p%DMat(5,1:N_INPUTS)
-          elseif (idx==ID_PtfMz) then; dYdu(6+i,1:N_INPUTS) = p%DMat(6,1:N_INPUTS)
-          else                       ; dYdu(6+i,1:N_INPUTS) = 0.0_ReKi
-          endif 
+
+      ! Loop through input variables
+      do i = 1, size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%u(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Calculate column index
+            col = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
+         end do
       end do
-  end if
-   if (present(dXdu)) then
-      ! allocate and set dXdu
-      if (.not. allocated(dXdu)) then
-          call AllocAry(dXdu, 2*p%nCB, N_INPUTS, 'dXdu', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dXdu,1); do j=1,size(dXdu,2); dXdu(i,j)=0.0_ReKi; enddo;enddo
-      end if
-      dXdu(1:2*p%nCB,1:N_INPUTS) = p%BMat(1:2*p%nCB,1:N_INPUTS)
    end if
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu) .and. (m%Jac%Nx > 0)) then
+
+      if (.not. allocated(dXdu)) then
+         call AllocAry(dXdu, m%Jac%Nx, m%Jac%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+      endif
+
+      ! Loop through input variables
+      do i = 1,size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%u(i)%Num
+
+            ! Calculate positive perturbation and resulting continuous state derivatives
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation and resulting continuous state derivatives
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call ExtPtfm_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference
+            dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
+         end do
+      end do
+   end if
+
    if (present(dXddu)) then
    end if
+
    if (present(dZdu)) then
    end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')
@@ -942,8 +1384,9 @@ END SUBROUTINE ExtPtfm_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE ExtPtfm_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
+   TYPE(ModVarsType),                  INTENT(IN   ) :: Vars       !< Module variables
    REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
@@ -970,59 +1413,101 @@ SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                    !!   functions (Z) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-   INTEGER(IntKi) :: i,j    ! Loop index
-   INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
-   INTEGER(IntKi) :: iDOF ! Mode number
+
+   character(*), parameter       :: RoutineName = 'ExtPtfm_JacobianPContState'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   INTEGER(IntKi)                :: i,j,col    ! Loop index
+   ! INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
+   ! INTEGER(IntKi) :: iDOF ! Mode number
+
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! If no state variables, return
+   if (m%Jac%Nx == 0) return
+
+   ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
+   call ExtPtfm_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call ExtPtfm_VarsPackContState(Vars, x, m%Jac%x)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
-      ! allocate and set dYdx
+
+      ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-          call AllocAry(dYdx, N_OUTPUTS+p%NumOuts, 2*p%nCB, 'dYdx', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dYdx,1); do j=1,size(dYdx,2); dYdx(i,j)=0.0_ReKi; enddo;enddo
+         call AllocAry(dYdx, m%Jac%Ny, m%Jac%Nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
-      ! WriteOutputs
-      do i = 1,p%NumOuts
-          idx  = p%OutParam(i)%Indx
-          iDOF = mod(idx-ID_QSTART, p%nCB)+1
-           ! if output is an interface load dYdx is a row of the Cmatrix
-           if     (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(1,1:2*p%nCB)
-           elseif (idx==ID_PtfFy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(2,1:2*p%nCB)
-           elseif (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(3,1:2*p%nCB)
-           elseif (idx==ID_PtfMx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(4,1:2*p%nCB)
-           elseif (idx==ID_PtfMy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(5,1:2*p%nCB)
-           elseif (idx==ID_PtfMz) then; dYdx(6+i,1:2*p%nCB) = p%CMat(6,1:2*p%nCB)
-           ! Below we look at the index, we assumed an order for the outputs
-           ! where after the index ID_Qstart, the AllOutputs are: Q,QDot and Qf
-           ! An alternative coulbe to look at the name of the DOF instead:
-           ! e.g. if (index(p%OutParam,'CBQ_')>0) then ... (see SetOutParam) 
-           else if ((idx-ID_QStart>=  0    ) .and. (idx-ID_QStart<p%nCB) ) then
-               ! Output is a DOF position, dYdx has a 1 at the proper location
-               dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-               dYdx(6+i,        iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-           else if ((idx-ID_QStart>=  p%nCB) .and. (idx-ID_QStart<2*p%nCB) ) then
-               ! Output is a DOF velocity, dYdx has a 1 at the proper location
-               dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-               dYdx(6+i,p%nCB + iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-           else ! e.g. WaveElevation or CB Forces
-               dYdx(6+i,1:2*p%nCB  ) = 0.0_ReKi
-           endif 
+
+      ! Loop through state variables
+      do i = 1,size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1,Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Calculate column index
+            col = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
+         end do
       end do
    end if
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
    if (present(dXdx)) then
-      ! allocate and set dXdx
+
+      ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-          call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', ErrStat, ErrMsg); if(Failed()) return
-          do i=1,size(dXdx,1); do j=1,size(dXdx,2); dXdx(i,j)=0.0_ReKi; enddo;enddo
+         call AllocAry(dXdx, m%Jac%Nx, m%Jac%Nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
+
+      ! Loop through state variables
+      do i = 1,size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call ExtPtfm_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ExtPtfm_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call ExtPtfm_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Calculate column index
+            col = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
+         end do
+      end do
    end if
+
    if (present(dXddx)) then
    end if
+
    if (present(dZdx)) then
    end if
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')
@@ -1113,85 +1598,63 @@ SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, Er
    if (present(dZdz)) then
    end if
 END SUBROUTINE ExtPtfm_JacobianPConstrState
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(ExtPtfm_InputType),              INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(ExtPtfm_ParameterType),          INTENT(IN   )           :: p          !< Parameters
-   TYPE(ExtPtfm_ContinuousStateType),    INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(ExtPtfm_DiscreteStateType),      INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(ExtPtfm_ConstraintStateType),    INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(ExtPtfm_OtherStateType),         INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(ExtPtfm_OutputType),             INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(ExtPtfm_MiscVarType),            INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   INTEGER(IntKi)                    :: I
-   TYPE(ExtPtfm_ContinuousStateType) :: dx          !< derivative of continuous states at operating point
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
 
-   if ( present( u_op ) ) then
-       if (.not. allocated(u_op)) then
-           call AllocAry(u_op, N_INPUTS, 'u_op', ErrStat, ErrMsg); if(Failed())return
-       endif
-       u_op(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-       u_op(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed())return
-       u_op(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-       u_op(10:12) = u%PtfmMesh%RotationVel   (:,1)
-       u_op(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-       u_op(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-   end if
+SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+   use NWTC_LAPACK, only: LAPACK_GESVD, LAPACK_GEMM
+   real(ReKi), dimension(:,:), intent(in)  :: A
+   real(ReKi), dimension(:,:), allocatable :: Ainv
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg        ! < Error message if ErrStat /    = ErrID_None
+   !
+   real(ReKi), dimension(:),   allocatable :: S
+   real(ReKi), dimension(:,:), allocatable :: U
+   real(ReKi), dimension(:,:), allocatable :: Vt
+   real(ReKi), dimension(:),   allocatable :: WORK
+   real(ReKi), dimension(:,:), allocatable :: Acopy
+   integer :: j ! Loop indices
+   integer :: M !< The number of rows of the input matrix A
+   integer :: N !< The number of columns of the input matrix A
+   integer :: K !<
+   integer :: L !<
+   integer :: LWORK !<
+   M = size(A,1)
+   N = size(A,2)
+   K = min(M,N)
+   L = max(M,N)
+   LWORK = MAX(1,3*K +L,5*K)
+   allocate(S(K)); S = 0;
+   !! LWORK >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N)) for the other paths
+   allocate(Work(LWORK)); Work=0
+   allocate(U (M,K) ); U=0;
+   allocate(Vt(K,N) ); Vt=0;
+   allocate(Ainv(N,M)); Ainv=0;
+   allocate(Acopy(M,N)); Acopy=A;
 
-   if ( present( y_op ) ) then
-       if (.not. allocated(y_op)) then
-           call AllocAry(y_op, N_OUTPUTS+p%NumOuts, 'y_op', ErrStat, ErrMsg); if(Failed())return
-       endif
-       ! Update the output mesh
-       y_op(1:3)=y%PtfmMesh%Force(1:3,1)
-       y_op(4:6)=y%PtfmMesh%Moment(1:3,1)
-       do i=1,p%NumOuts         
-           y_op(i+N_OUTPUTS) = y%WriteOutput(i)
-       end do      
-   end if
+   ! --- Compute the SVD of A
+   ! [U,S,V] = svd(A)
+   !call DGESVD       ('S', 'S', M, N, A, M,  S, U, M  , Vt  , K,   WORK, LWORK, INFO)
+   call LAPACK_GESVD('S', 'S', M, N, Acopy, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
 
-   if ( present( x_op ) ) then
-       if (.not. allocated(x_op)) then
-           call AllocAry(x_op, 2*p%nCB, 'x_op', ErrStat, ErrMsg); if (Failed())return
-       endif
-       x_op(1:p%nCB)         = x%qm(1:p%nCB)
-       x_op(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
-   end if
+   !--- Compute PINV = V**T * SIGMA * U**T in two steps
+   !  SIGMA = S^(-1)=1/S(j), S is diagonal
+   do j = 1, K
+      U(:,j) = U(:,j)/S(j)
+   end do
+   ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U'
+   !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
+   call LAPACK_GEMM( 'T', 'T', 1.0_ReKi, Vt, U, 0.0_ReKi, Ainv, ErrStat, ErrMsg)
+   ! --- Compute rank
+   !tol=maxval(shape(A))*epsilon(maxval(S))
+   !rank=0
+   !do i=1,K
+   !   if(S(i) .gt. tol)then
+   !      rank=rank+1
+   !   end if
+   !end do
+   !print*,'Rank',rank
+   !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),Vt(1:r,:)))
+   END SUBROUTINE PseudoInverse
 
-   if ( present( dx_op ) ) then
-       if (.not. allocated(dx_op)) then
-           call AllocAry(dx_op, 2*p%nCB, 'dx_op', ErrStat, ErrMsg); if (Failed())return
-       endif
-       call ExtPtfm_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dx, ErrStat, ErrMsg); if(Failed()) return
-       dx_op(1:p%nCB)         = dx%qm(1:p%nCB)
-       dx_op(p%nCB+1:2*p%nCB) = dx%qmdot(1:p%nCB)
-   end if
-
-   if ( present( xd_op ) ) then
-   end if
-   
-   if ( present( z_op ) ) then
-   end if
-
-contains
-    logical function Failed()
-        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_GetOP')
-        Failed =  ErrStat >= AbortErrLev
-    end function Failed
-END SUBROUTINE ExtPtfm_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 END MODULE ExtPtfm_MCKF

@@ -174,6 +174,10 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%WaveStMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
+      ! WvCrntMod - Model switch for wave-current modeling.
+   call ParseVar( FileInfo_In, CurLine, 'WvCrntMod', InputFileData%WvCrntMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
       ! WaveTMax - Analysis time for incident wave calculations.
    call ParseVar( FileInfo_In, CurLine, 'WaveTMax', InputFileData%Waves%WaveTMax, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
@@ -618,7 +622,20 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          RETURN
       END IF
    END IF
-   
+
+   ! WvCrntMod - Model switch for wave-current modeling
+   SELECT CASE(InputFileData%WvCrntMod)
+      CASE(WvCrntMod_Superpose)
+      CASE(WvCrntMod_Doppler)
+      CASE(WvCrntMod_Full)
+      CASE DEFAULT
+         call SetErrStat( ErrID_Fatal,'WvCrntMod must be 0, 1, or 2',ErrStat,ErrMsg,RoutineName)
+         return
+   END SELECT
+
+   IF ( InputFileData%WaveMod == WaveMod_None .or. InputFileData%WaveMod == WaveMod_ExtFull ) THEN    ! WvCrntMod is not used
+      InputFileData%WvCrntMod = 0_IntKi
+   END IF
 
       ! WaveTMax - Analysis time for incident wave calculations.
 
@@ -691,11 +708,19 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    end if
 
-
        ! WavePkShp - Peak shape parameter
-   if ( ( InputFileData%Waves%WavePkShp < 1.0 ) .OR. ( InputFileData%Waves%WavePkShp > 7.0 ) )  then
-      call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
-      return
+   if ( InputFileData%WaveMod == WaveMod_JONSWAP ) then   ! Only used for JONSWAP/Pierson-Moskowitz spectrum
+
+      if ( ( InputFileData%Waves%WavePkShp < 1.0_SiKi ) .OR. ( InputFileData%Waves%WavePkShp > 7.0_SiKi ) )  then
+         call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+
+   else
+
+      ! For nonJONSWAP/Pierson-Moskowitz spectrum, WavePkShp is not used. Force it to 1.0.
+      InputFileData%Waves%WavePkShp = 1.0_SiKi
+
    end if
 
 
@@ -809,6 +834,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          call SetErrStat( ErrID_Fatal,' WaveDirRange should be less than a full circle.',ErrStat,ErrMsg,RoutineName)
       ENDIF
 
+      if ( InputFileData%Waves%WaveNDir == 1_IntKi) then
+         InputFileData%WaveMultiDir = .false.
+      endif
+
    else  ! Set everything to zero if we aren't going to use it
 
       InputFileData%Waves%WaveNDir        = 1         ! Only one direction set -- this shouldn't get used later anyhow
@@ -896,6 +925,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
       ! CurrMod - Current profile model switch
+   if ( InitInp%hasCurrField ) then
+      call SetErrStat( ErrID_Warn,'Expecting current field from InflowWind. Setting CurrMod to 0.',ErrStat,ErrMsg,RoutineName)
+      InputFileData%Current%CurrMod = 0
+   end if
 
    if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) )  then
       call SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
@@ -907,28 +940,23 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       return
    end if
 
+   ! if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= MHK_None ) ) then
+   !    call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 for an MHK turbine.',ErrStat,ErrMsg,RoutineName)
+   !    return
+   ! end if
 
-      ! CurrSSV0 - Sub-surface current velocity at still water level
 
    if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
 
+      !------------------------- Sub-surface current -------------------------
+
+      ! CurrSSV0 - Sub-surface current velocity at still water level
       if ( InputFileData%Current%CurrSSV0 < 0.0 )  then
          call SetErrStat( ErrID_Fatal,'CurrSSV0 must not be less than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
-
-      InputFileData%Current%CurrSSV0 = 0.0
-
-   end if
-
-
       ! CurrSSDirChr - Sub-surface current heading direction
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
-
       if ( TRIM(InputFileData%Current%CurrSSDirChr) == 'DEFAULT' )  then   ! .TRUE. when one wants to use the default value of codirectionality between sub-surface current and incident wave propogation heading directions.
 
          if ( InputFileData%WaveMod == WaveMod_None ) then
@@ -952,92 +980,61 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       end if
 
-
-   else
-
-      InputFileData%Current%CurrSSDir = 0.0
-
-   end if
-
+      !------------------------- Near-surface current ------------------------
 
       ! CurrNSRef - Near-surface current reference depth.
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
       if ( InputFileData%Current%CurrNSRef <= 0.0 ) then
          call SetErrStat( ErrID_Fatal,'CurrNSRef must be greater than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
-
-      InputFileData%Current%CurrNSRef = 0.0
-
-   end if
-
-
-
-        ! CurrNSV0 - Near-surface current velocity at still water level.
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
+      ! CurrNSV0 - Near-surface current velocity at still water level.
       if ( InputFileData%Current%CurrNSV0 < 0.0 ) then
          call SetErrStat( ErrID_Fatal,'CurrNSV0 must not be less than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
-
-      InputFileData%Current%CurrNSV0 = 0.0
-
-   end if
-
-
       ! CurrNSDir - Near-surface current heading direction.
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
       if ( ( InputFileData%Current%CurrNSDir <= -180.0 ) .OR. ( InputFileData%Current%CurrNSDir > 180.0 ) )  then
          call SetErrStat( ErrID_Fatal,'CurrNSDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
-
-      InputFileData%Current%CurrNSDir = 0.0
-
-   end if
-
+      !---------------------- Depth-independent current ----------------------
 
       ! CurrDIV - Depth-independent current velocity.
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
       if ( InputFileData%Current%CurrDIV < 0.0 ) then
          call SetErrStat( ErrID_Fatal,'CurrDIV must not be less than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
-
-      InputFileData%Current%CurrDIV = 0.0
-
-   end if
-
-
       ! CurrDIDir - Depth-independent current heading direction.
-
-   if ( InputFileData%Current%CurrMod == 1 )  then  ! .TRUE if we have standard current.
-
       if ( ( InputFileData%Current%CurrDIDir <= -180.0 ) .OR. ( InputFileData%Current%CurrDIDir > 180.0 ) ) then
          call SetErrStat( ErrID_Fatal,'CurrDIDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
-   else
+   else ! No current or user-defined current
 
+      InputFileData%Current%CurrSSV0  = 0.0
+      InputFileData%Current%CurrSSDir = 0.0
+      InputFileData%Current%CurrNSRef = 0.0
+      InputFileData%Current%CurrNSV0  = 0.0
+      InputFileData%Current%CurrNSDir = 0.0
+      InputFileData%Current%CurrDIV   = 0.0
       InputFileData%Current%CurrDIDir = 0.0
 
+   end if
+
+   if ( InputFileData%Current%CurrMod == 0 .and. .not. InitInp%hasCurrField ) then  ! No current
+      InputFileData%WvCrntMod = 0_IntKi
+   end if
+
+   if ( InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) then
+      if (InputFileData%WvCrntMod /= WvCrntMod_Superpose) then
+         call SetErrStat( ErrID_Fatal,' 2nd-order waves are not supported with WvCrntMod = 1 or 2. Set WvCrntMod = 0 or set both WvDiffQTF and WvSumQTF to false. ',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
    end if
 
    !-------------------------------------------------------------------------------------------------
@@ -1173,6 +1170,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    
    p%WaveField%WaveMod      = InputFileData%WaveMod
    p%WaveField%WaveStMod    = InputFileData%WaveStMod
+   p%WaveField%WvCrntMod    = InputFileData%WvCrntMod
    p%WaveField%WtrDens      = InputFileData%WtrDens     ! may have overwritten default InitInp
    p%WaveField%RhoXg        = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
    p%WaveField%WaveDir      = InputFileData%WaveDir

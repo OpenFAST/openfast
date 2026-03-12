@@ -7,38 +7,72 @@ for /f "tokens=* usebackq" %%f in (`dir /b "C:\Program Files (x86)\Intel\oneAPI\
 @REM since building the Visual Studio projects modifies files
 powershell -command "(Get-Content -Path '.\vs-build\CreateGitVersion.bat') -replace '--dirty', '' | Set-Content -Path '.\vs-build\CreateGitVersion.bat'"
 
-echo on
+setlocal enabledelayedexpansion
 
-@REM Build all solutions
-devenv vs-build/AeroDisk/AeroDisk_Driver.sln /Build "Release|x64"
-devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release|x64"
-devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release_OpenMP|x64"
-devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release|x64"
-devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release_OpenMP|x64"
-devenv vs-build/BeamDyn/BeamDyn-w-registry.sln /Build "Release|x64"
-devenv vs-build/Discon/Discon.sln /Build "Release|x64" 
-devenv vs-build/FAST-farm/FAST-Farm.sln /Build "Release|x64"
-devenv vs-build/FAST-farm/FAST-Farm.sln /Build "Release_OpenMP|x64"
-devenv vs-build/HydroDyn/HydroDynDriver.sln /Build "Release|x64"
-devenv vs-build/HydroDyn_c_binding/HydroDyn_c_binding.sln /Build "Release|x64"
-devenv vs-build/InflowWind_c_binding/InflowWind_c_binding.sln /Build "Release|x64"
-devenv vs-build/InflowWind/InflowWind_driver.sln /Build "Release|x64"
-devenv vs-build/InflowWind/InflowWind_driver.sln /Build "Release_OpenMP|x64"
-devenv vs-build/MoorDyn/MoorDynDriver.sln /Build "Release|x64"
-devenv vs-build/MoorDyn_c_binding/MoorDyn_c_binding.sln /Build "Release|x64"
-devenv vs-build/FAST/FAST.sln /Build "Release|x64"
-devenv vs-build/SeaState/SeaStateDriver.sln /Build "Release|x64"
-devenv vs-build/SeaState_c_binding/SeaState_c_binding.sln /Build "Release|x64"
-devenv vs-build/SimpleElastoDyn/SimpleElastoDyn_Driver.sln /Build "Release|x64"
-devenv vs-build/SubDyn/SubDyn.sln /Build "Release|x64"
-devenv vs-build/TurbSim/TurbSim.vfproj /Build "Release|x64"
-devenv vs-build/UnsteadyAero/UnsteadyAero.sln /Build "Release|x64"
+:: Initialize a variable to store failed solutions
+set "FailedSolutions="
+set "OverallErrorLevel=0"
 
-@REM Build MATLAB solution last
-rd /s /q .\build\lib
-devenv vs-build/FAST/FAST.sln /Build "Release_Matlab|x64"
 
-@REM Copy controllers to bin directory
-xcopy .\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData\*.dll .\build\bin\ /y
+echo "Build all projects (Release|64)"
+devenv vs-build/OpenFAST.sln /Build "Release|x64"
+if %ERRORLEVEL% NEQ 0 (
+    set "FailedSolutions=!FailedSolutions!Release  "
+    set "OverallErrorLevel=1"
+    echo Build of OpenFAST.sln Release failed!
+)
 
-exit /b %ERRORLEVEL%
+
+echo "Build all OpenMP projects (OpenMP_Release|64)"
+devenv vs-build/OpenFAST.sln /Build "OpenMP_Release|x64"
+if %ERRORLEVEL% NEQ 0 (
+    set "FailedSolutions=!FailedSolutions!OpenMP_Release  "
+    set "OverallErrorLevel=1"
+    echo Build of OpenFAST.sln OpenMP_Release failed!
+)
+
+
+echo "Build OpenFAST-Simulink shared library (Matlab_Release|x64)"
+devenv vs-build/OpenFAST.sln /Build "Matlab_Release|x64"
+if %ERRORLEVEL% NEQ 0 (
+    set "FailedSolutions=!FailedSolutions!Matlab_Release  "
+    set "OverallErrorLevel=1"
+    echo Build of OpenFAST.sln Matlab_Release failed!
+)
+
+
+echo "Build Summary:"
+if defined FailedSolutions (
+    echo The following solutions failed to build:
+    echo %FailedSolutions%
+) else (
+    echo All solutions built successfully.
+)
+
+@echo off
+setlocal enabledelayedexpansion
+
+cd /d build\bin || exit /b 1
+
+for %%F in (*_Release*) do (
+    set "name=%%~nxF"
+    set "newname=!name:_Release=!"
+    if not "!name!"=="!newname!" (
+        ren "%%F" "!newname!"
+    )
+)
+for %%F in (*_Matlab*) do (
+    set "name=%%~nxF"
+    set "newname=!name:_Matlab=!"
+    if not "!name!"=="!newname!" (
+        ren "%%F" "!newname!"
+    )
+)
+
+endlocal
+
+echo "List executables in build\bin"
+dir build\bin
+
+:: Set the final error level based on the overall build status
+exit /b %OverallErrorLevel%

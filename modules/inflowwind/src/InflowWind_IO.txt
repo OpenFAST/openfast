@@ -80,7 +80,20 @@ typedef  ^              ^                     ReKi                    dz        
 typedef  ^              ^                     Grid3D_InitInputType    G3D                     -     -     -     "Grid3D initialization input" -
 
 #----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              User_InitInputType    SiKi                    Dummy                   -     -     -     "User field initialization input dummy value"                     -
+# User_InitInputType: Initialization inputs for user-defined wind field
+#
+# These inputs are passed to IfW_User_Init() to set up the user-defined wind field.
+# Extend this structure to include any parameters needed for your custom wind model.
+#
+# Examples of parameters you might add:
+#   - File names for input data
+#   - Model-specific coefficients
+#   - Spatial domain boundaries
+#   - Time range for simulation
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              User_InitInputType    CHARACTER(1024)         WindFileName            -     -     -     "name of file containing user-defined wind data (if applicable)" -
+typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "reference height for user wind field"                        meters
+typedef  ^              ^                     IntKi                   NumDataColumns          -     0     -     "number of data columns in user wind file (if applicable)"    -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              Grid4D_InitInputType  IntKi                   n                       4     -     -     "number of grid points in the x, y, z, and t directions"                     -
