@@ -643,7 +643,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
          do k = 1, size(StCInds)
             call MV_AddVar(InitOut%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_BStC_StC_x, j), &
                            iAry=StCInds(k), jAry=i, &
-                           Flags=VF_DerivOrder2+VF_RotFrame, &
+                           Flags=ior(VF_DerivOrder2,VF_RotFrame), &
                            LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
                            Perturb=xPerturb)
          end do
@@ -696,7 +696,7 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
 
    call MV_AddVar(InitOut%Vars%u, "BlPitch", FieldScalar, &
                   DatLoc(SrvD_u_BlPitch), &
-                  Flags=VF_RotFrame + VF_2PI, &
+                  Flags=ior(VF_RotFrame, VF_2PI), &
                   Num=size(u%BlPitch), &
                   Perturb=uPerturbAng, &
                   LinNames=[('BlPitch('//trim(Num2LStr(i))//'), rad', i = 1, size(u%BlPitch))])
