@@ -275,6 +275,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        DL=DatLoc(ExtPtfm_x_qm), iAry=i, &
                        DerivOrder=0, &
                        Perturb=2.0_ReKi*D2R_D, &
+                       Flags=VF_Solve, &
                        LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' displacement, -'])
     end do
 
@@ -283,6 +284,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
                        DL=DatLoc(ExtPtfm_x_qmdot), iAry=i, &
                        DerivOrder=1, &
                        Perturb=2.0_ReKi*D2R_D, &
+                       Flags=VF_Solve, &
                        LinNames=['Mode '//trim(Num2LStr(p%ActiveCBDOF(i)))//' velocity, -/s'])
     end do
 
@@ -317,7 +319,7 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
        call MV_AddVar(Vars%u, 'Fm', FieldScalar, &
                       DL=DatLoc(ExtPtfm_u_Fm), &
                       Num=size(u%Fm), &
-                      Flags = VF_Linearize, &
+                      Flags = ior(VF_Linearize,VF_Solve), &
                       Perturb = 2.0_R8Ki*D2R_D, &  ! The inertias of Craig-Bampton modes are normalized to O(1)
                       LinNames=[('Follower mode '//trim(num2lstr(i))//' forcing, -', i=1,size(u%Fm))])
     end if
@@ -343,16 +345,19 @@ subroutine ExtPtfm_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrSt
        call MV_AddVar(Vars%y, "qm", FieldScalar, &
                      DL=DatLoc(ExtPtfm_y_qm), &
                      Num=size(y%qm), &
+                     Flags=VF_Solve, &
                      LinNames=[('Follower mode '//trim(num2lstr(i))//' displacement, -', i=1,size(y%qm))])
 
        call MV_AddVar(Vars%y, "qmdot", FieldScalar, &
                      DL=DatLoc(ExtPtfm_y_qmdot), &
                      Num=size(y%qmdot), &
+                     Flags=VF_Solve, &
                      LinNames=[('Follower mode '//trim(num2lstr(i))//' velocity, -/s', i=1,size(y%qmdot))])
 
        call MV_AddVar(Vars%y, "qmdotdot", FieldScalar, &
                      DL=DatLoc(ExtPtfm_y_qmdotdot), &
                      Num=size(y%qmdotdot), &
+                     Flags=VF_Solve, &
                      LinNames=[('Follower mode '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(y%qmdotdot))])
     end if
 

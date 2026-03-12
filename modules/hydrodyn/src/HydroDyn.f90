@@ -1040,21 +1040,21 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
       call MV_AddVar(Vars%u, "qAddDOF", FieldScalar, &
                      DL=DatLoc(HydroDyn_u_qAddDOF), &
                      Num=size(u%qAddDOF), &
-                     Flags = VF_Linearize, &
+                     Flags = ior(VF_Linearize,VF_Solve), &
                      Perturb = PerturbRot, &
                      LinNames=[('Generalized DOF '//trim(num2lstr(i))//' displacement, -', i=1,size(u%qAddDOF))])
 
       call MV_AddVar(Vars%u, "qAddDOFDot", FieldScalar, &
                      DL=DatLoc(HydroDyn_u_qAddDOFDot), &
                      Num=size(u%qAddDOFDot), &
-                     Flags = VF_Linearize, &
+                     Flags = ior(VF_Linearize,VF_Solve), &
                      Perturb = PerturbRot, &
                      LinNames=[('Generalized DOF '//trim(num2lstr(i))//' velocity, -/s', i=1,size(u%qAddDOFDot))])
 
       call MV_AddVar(Vars%u, "qAddDOFDotDot", FieldScalar, &
                      DL=DatLoc(HydroDyn_u_qAddDOFDotDot), &
                      Num=size(u%qAddDOFDotDot), &
-                     Flags = VF_Linearize, &
+                     Flags = ior(VF_Linearize,VF_Solve), &
                      Perturb = PerturbRot, &
                      LinNames=[('Generalized DOF '//trim(num2lstr(i))//' acceleration, -/s^2', i=1,size(u%qAddDOFDotDot))])
    end if
@@ -1087,6 +1087,7 @@ subroutine HydroDyn_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linear
       call MV_AddVar(Vars%y, "FAddDOF", FieldScalar, &
                      DL=DatLoc(HydroDyn_y_FAddDOF), &
                      Num=size(y%FAddDOF), &
+                     Flags=VF_Solve, &
                      LinNames=[('Generalized DOF '//trim(num2lstr(i))//' force, -', i=1,size(y%FAddDOF))])
    end if
 
