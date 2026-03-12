@@ -9,9 +9,9 @@ For the coordinates system not detailed in subsections below, please refer to th
 - :download:`OpenFAST_coords.pdf <../../../OtherSupporting/OpenFAST_coords.pdf>`:
   Presentation from 2024 overviewing some coordinate systems in OpenFAST.
 
-- `FAST 7 Manual <https://www.nrel.gov/docs/fy06osti/38230.pdf>`_
+- `FAST 7 Manual <https://www.nlr.gov/docs/fy06osti/38230.pdf>`_
 
-- `Technical report <https://www.nrel.gov/docs/fy04osti/34755.pdf>`_ on FAST_AD and modeling of the UAE wind turbine (in section 3)
+- `Technical report <https://www.nlr.gov/docs/fy04osti/34755.pdf>`_ on FAST_AD and modeling of the UAE wind turbine (in section 3)
 
 - :download:`FASTCoordinateSystems.doc <../../../OtherSupporting/ElastoDyn/FASTCoordinateSystems.doc>`:
   Documents the transformation matrices relating each coordinate system in OpenFAST. Unfortunately, there are no pictures in this document that diagram these coordinate systems. They can hopefully be visualized by means of the transformation matrices.

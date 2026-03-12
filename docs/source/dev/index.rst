@@ -8,7 +8,7 @@ documented, and self-sustaining software.** To that end, we
 continually work to improve the documentation and test coverage along with
 feature additions and improvements. This section of the documentation outlines
 the processes and procedures we have established for external developers
-to work with the NREL OpenFAST team on code development.
+to work with the NLR OpenFAST team on code development.
 
 If you'd like to help with general OpenFAST development or work on a particular
 feature, then first install OpenFAST following the
@@ -20,8 +20,8 @@ understand the general workflow for individual and coordinated development.
 Finally, be sure to review the :doc:`GitHub workflow <github_workflow>` to
 avoid any merge or code conflicts.
 
-With development happening in parallel between NREL, industry partners, and
-universities, NREL relies on GitHub to coordinate efforts:
+With development happening in parallel between NLR, industry partners, and
+universities, NLR relies on GitHub to coordinate efforts:
 
 - `GitHub Issues <https://github.com/openfast/openfast/issues>`_ is the place
   to ask usage or development questions, report bugs, and
@@ -49,15 +49,15 @@ Development Philosophy and Guidelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 OpenFAST is intended to be a self-sustaining, community developed software.
-While the NREL OpenFAST team serves as the gatekeeper of the repository, we
+While the NLR OpenFAST team serves as the gatekeeper of the repository, we
 actively encourage the community to share new ideas and contribute code.
 Considerations for contributing code are outlined here.
 
-Engagement with NREL
---------------------
+Engagement with NLR
+-------------------
 
 The process for community code contribution starts with engaging directly
-with the NREL OpenFAST team to define the scope of the work and coordinate
+with the NLR OpenFAST team to define the scope of the work and coordinate
 development efforts. This is particularly important since many groups
 work on OpenFAST simultaneously. By engaging early, all developers can
 stay up to date and minimize conflicts during the code merge.
@@ -67,17 +67,17 @@ development work, the areas of the software that will be impacted,
 and any model validation materials. See :ref:`development_plan`
 for more information on describing the planned work.
 
-The NREL OpenFAST team is always working on internal projects
+The NLR OpenFAST team is always working on internal projects
 that require the majority of our attention, but we will make every effort
 to engage with the community and support development efforts in
-a reasonable time frame. After posting an Issue, the NREL OpenFAST
+a reasonable time frame. After posting an Issue, the NLR OpenFAST
 team may reach out to schedule a meeting to talk through the details.
 
 .. _development_plan:
 
 Development Plan / Implementation Plan
 --------------------------------------
-Significant code development efforts at NREL begin with the development
+Significant code development efforts at NLR begin with the development
 of a detailed implementation plan, and a few such plans are available to
 download for reference:
 
@@ -147,10 +147,10 @@ as any algorithms or lines of code that are unclear. Ask yourself
 what you would need to know to fully understand your code if you don't
 see it again for two years.
 
-Submit for review and NREL feedback
+Submit for review and NLR feedback
 -----------------------------------
 
-New code can be submitted for review from the NREL OpenFAST team by
+New code can be submitted for review from the NLR OpenFAST team by
 opening a `pull request <https://github.com/openfast/openfast/pulls>`_
 as described in :ref:`github_workflow`. We will review the code for
 accuracy, validity, quality, and robustness. Reviewing open source
@@ -225,7 +225,7 @@ Additional guidance
 -------------------
 
 The following sections provide extended guidance on developing source code,
-interacting with the NREL OpenFAST team and other community contributors, and
+interacting with the NLR OpenFAST team and other community contributors, and
 generally debugging and building out features.
 
 .. toctree::

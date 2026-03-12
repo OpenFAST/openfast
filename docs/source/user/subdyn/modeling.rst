@@ -155,7 +155,7 @@ use of the SubDyn-derived equivalent substructure stiffness and mass
 matrices (the **KBBt** and **MBBt** matrices found in the SubDyn summary
 file) to prescribe the boundary conditions at the base of the tower.
 
-For instance, using NREL’s BModes software, the SubDyn-obtained matrices
+For instance, using NLR’s BModes software, the SubDyn-obtained matrices
 can be used in place of the hydrodynamic stiffness (**hydro\_K**) and mass
 matrices (**hydro\_M**) (**mooring\_K** can be set to zero). By setting
 the **hub\_conn** boundary condition to two (free-free), BModes will
@@ -166,8 +166,7 @@ and no distributed rotational-inertia contribution to the eigenmodes),
 the tower-distributed properties should be modified accordingly in
 BModes (e.g., by reducing mass moments of inertia towards zero and by
 increasing torsional and axial stiffness while assuring convergence of
-the results; see also
-`https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=742 <https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=742>`__).
+the results.
 
 The rotational inertia of the undeflected tower about its centerline is
 not currently accounted for in ElastoDyn. Thus, when the nacelle-yaw DOF
