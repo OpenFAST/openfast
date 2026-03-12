@@ -488,7 +488,12 @@ contains
                do i = 1, size(SrcMod%Vars%y)
                   associate (Var => SrcMod%Vars%y(i))
                      if (.not. MV_EqualDL(Mapping%SrcDL, Var%DL)) cycle
-                     call MV_SetFlags(Var, VF_Solve)
+                     select case (Var%Field)
+                     case (FieldForce, FieldMoment)
+                        call MV_SetFlags(Var, VF_Solve)
+                     case (FieldScalar)
+                        if (Var%DerivOrder == 2) call MV_SetFlags(Var, VF_Solve)
+                     end select
                   end associate
                end do
 
@@ -496,7 +501,12 @@ contains
                do i = 1, size(DstMod%Vars%u)
                   associate (Var => DstMod%Vars%u(i))
                      if (.not. MV_EqualDL(Mapping%DstDL, Var%DL)) cycle
-                     call MV_SetFlags(Var, VF_Solve)
+                     select case (Var%Field)
+                     case (FieldForce, FieldMoment)
+                        call MV_SetFlags(Var, VF_Solve)
+                     case (FieldScalar)
+                        if (Var%DerivOrder == 2) call MV_SetFlags(Var, VF_Solve)
+                     end select
                   end associate
                end do
 
