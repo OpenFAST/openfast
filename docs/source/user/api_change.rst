@@ -29,11 +29,11 @@ the input files specified in the first section. The `MirrorRotor` line sets a fl
 reverse the direction the rotor is spinning. The first rotor always spins in the typical direction. 
 These lines are specified only if NRotors is greater than 1 and are repeated for subsequent rotors.
 
-============================================= ======== ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Added in OpenFAST `5.0.0`                             
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line     Flag Name            Example Value
-============================================= ======== ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 OpenFAST                                      8        ModCoupling          3    ModCoupling  - Module coupling method (switch) {1=loose; 2=tight with fixed Jacobian updates (DT_UJac); 3=tight with automatic Jacobian updates}
 OpenFAST                                      11       RhoInf               1.0  RhoInf       - Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]
 OpenFAST                                      12       ConvTol              1e-4 ConvTol      - Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)
@@ -69,6 +69,19 @@ ElastoDyn                                     79       PBrIner(3)           200 
 ElastoDyn                                     80       BlPIner(1)           28578         BlPIner(1)  - Pitch inertia of an undeflected blade, blade 1 (kg m^2)
 ElastoDyn                                     81       BlPIner(2)           28578         BlPIner(2)  - Pitch inertia of an undeflected blade, blade 2 (kg m^2)
 ElastoDyn                                     82       BlPIner(3)           28578         BlPIner(3)  - Pitch inertia of an undeflected blade, blade 3 (kg m^2) [unused for 2 blades]
+ExtPtfm                                       8        RBMod                0             RBMod       - Method for handling rigid-body motion (switch) {0: No special handling for rigid-body motion; 1: Transform to rigid-body frame of reference; 2: Transform to rigid-body frame of reference and add fictitious forces and exact self-weight}
+ExtPtfm                                       16                            ---------------------- CONNECTION INPUTS ---------------------------------------
+ExtPtfm                                       17       Connections          False         Connections     - Flag for connection points on the structure (flag)
+ExtPtfm                                       18       Conn_FileName        "not_used"    Conn_FileName   - Path of the file containing connection points (-)
+ExtPtfm                                       19                            ---------------------- USER FORCING INPUTS ---------------------------------------
+ExtPtfm                                       20       UserForcing          False         UserForcing     - Flag for user-prescribed modal forcing (flag)
+ExtPtfm                                       21       Force_FileName       "not_used"    Force_FileName  - Path of the file containing user forcing time series (-)
+ExtPtfm                                       22       ConnForcing          False         ConnForcing     - Flag for user-prescribed connection forcing (flag)
+ExtPtfm                                       23       FCOnn_FileName       "not_used"    FConn_FileName  - Path of the file containing user connection force time series (-)
+ExtPtfm superelement input file                                             Redesigned input file. See ExtPtfm user documentation.
+ExtPtfm connection input file                                               New input file. See ExtPtfm user documentation.
+ExtPtfm user modal forcing file                                             New input file. See ExtPtfm user documentation.
+ExtPtfm user connection forcing file                                        New input file. See ExtPtfm user documentation.
 BeamDyn blade file                            10                            ------ Modal Damping [used only if damp_type=2] --------------------------------
 BeamDyn blade file                            11       n_modes              3             n_modes     - Number of modal damping coefficients (-)
 BeamDyn blade file                            12       zeta                 0.1, 0.2, 0.3 zeta        - Damping coefficients for mode 1 through n_modes
@@ -81,6 +94,16 @@ ServoDyn                                      14       PitSpr(3)            3.6E
 ServoDyn                                      15       PitDamp(1)           1.4E6         PitDamp(1)  - Blade 1 pitch damping constant
 ServoDyn                                      16       PitDamp(2)           1.4E6         PitDamp(2)  - Blade 2 pitch damping constant
 ServoDyn                                      17       PitDamp(3)           1.4E6         PitDamp(3)  - Blade 3 pitch damping constant *[unused for 2 blades]*
+SubDyn driver input file                      12       NTPs                 3             NTPs          - Number of transition pieces
+SubDyn driver input file                      13       TP_RefPoint_X        0  1  2       TP_RefPoint_X - X location of the TP reference points in global coordinates (m) {require NTPs entries}
+SubDyn driver input file                      14       TP_RefPoint_Y        0  0  0       TP_RefPoint_Y - Y location of the TP reference points in global coordinates (m) {require NTPs entries}
+SubDyn driver input file                      15       TP_RefPoint_Z        0  0  0       TP_RefPoint_Z - Z location of the TP reference points in global coordinates (m) {require NTPs entries}
+SubDyn                                        \*                            ------- INITIAL RIGID-BODY POSITION [used only for floating structures with more than one transition pieces] -------
+SubDyn                                        \*                            RBSurge    RBSway     RBHeave    RBRoll     RBPitch    RBYaw
+SubDyn                                        \*                              (m)        (m)        (m)      (deg)      (deg)      (deg)
+SubDyn                                        \*                              0.0        0.0        0.0       0.0        0.0        0.0
+HydroDyn driver input file                    18       NAddDOF              0             NAddDOF     - Number of additional generalized DOF of the WAMIT body (-)
+HydroDyn                                      27       NAddDOF              0             NAddDOF     - Number of additional generalized DOF of each WAMIT body (-) [1 to NBody] [>=0; =0 if NBody>1; only used when PotMod=1]
 HydroDyn                                      \*       HstMod               1             HstMod      - Method of computing hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) *[overwrite to 0 when WaveStMod = 0 in SeaState]*
 FAST.Farm                                     35                            --- AMBIENT WIND: AMReX MODULE --- [used only for Mod_AmbWind=4]
 FAST.Farm                                     36       WindDirPrefix        "inflow/ffboxes"   WindDirPrefix - Directory prefix of AMReX wind sub-volumes {0=low-res, 1+=high-res} (quoted string)
@@ -90,15 +113,15 @@ FAST.Farm                                     39       DT_High-AMReX        1.0 
 FAST.Farm                                     50       NumDFull             DEFAULT            NumDFull      - Distance of full wake propagation, expressed as a multiple of RotorDiamRef [>0.0] or DEFAULT [DEFAULT=15]
 FAST.Farm                                     51       NumDBuff             DEFAULT            NumDBuff      - Length of wake propagation buffer region, expressed as a multiple of RotorDiamRef [>=0.0] or DEFAULT [DEFAULT=5]
 SoilDyn                                       all                           New module
-============================================= ======== ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
 
 
-============================================= ======== ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Modified in OpenFAST `5.0.0`                             
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line     Flag Name            Example Value
-============================================= ======== ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 AeroDyn blade file                            5                             BlSpn      BlCrvAC    BlSwpAC    BlCrvAng    BlTwist    BlChord    BlAFID    t_c      BlCb     BlCenBn     BlCenBt    BlCpn    BlCpt    BlCan    BlCat    BlCam
 AeroDyn blade file                            6                             (m)        (m)        (m)        (deg)       (deg)      (m)        (-)       (-)      (-)      (m)         (m)        (-)      (-)      (-)      (-)      (-)
 AeroDyn                                       \*                            ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
@@ -107,7 +130,16 @@ AeroDyn                                       \*                            ====
 AeroDyn                                       \*       NumTwrNds            5     NumTwrNds     - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
 AeroDyn                                       \*                            TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2
 AeroDyn                                       \*                            (m)            (m)            (-)            (-)            (-)            (-)            (-)
-============================================= ======== ==================== ========================================================================================================================================================================================================
+ServoDyn StC input file                       6        StC_DOF_mode         1     StC_DOF_mode - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: StC_XYZ_DOF (Omni-Directional StC); 5: TLCD; 6: Prescribed force/moment time series; 7: Force determined by external DLL}
+ServoDyn StC input file                       30       StC_Omni_M           100.0 StC_Omni_M   - StC omni mass (kg) [used only when StC_DOF_MODE=2 or 3]
+ServoDyn StC input file                       \*       StC_CMODE            0     StC_CMODE    - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 3: Active Control Mode through user subroutine; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
+SubDyn                                        15       GuyanDampSize        18    GuyanDampSize (6nTP-by-6nTP if fixed bottom or 6(nTP-1)-by-6(nTP-1) if floating) [only if GuyanDampMod=2]
+SubDyn                                        \*                            IJointID   TPID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss    ![Global Coordinate System]
+SubDyn                                        \*                              (-)       (-)    (flag)      (flag)      (flag)      (flag)      (flag)      (flag)
+SubDyn                                        \*                               1         1        1           1           1           1           1           1       ! Added TPID
+SubDyn                                        \*       NPropSetsCyl         1   NPropSetsCyl - Number of structurally unique circular cross-sections (if 0 the following table is ignored)
+SubDyn                                        \*       NPropSetsRec         1   NPropSetsRec - Number of structurally unique rectangular cross-sections (if 0 the following table is ignored)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
 
 
@@ -124,6 +156,9 @@ BeamDyn                                       \*       PitchK               2000
 BeamDyn                                       \*       PitchC               500000        PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
 ElastoDyn Blade Input File                    \*                            The PitchAxis column has been removed from the DISTRIBUTED BLADE PROPERTIES table. The table should now only have 5 columns: BlFract, StrcTwst, BMassDen, FlpStff, and EdgStff
 FAST.Farm                                     50       NumPlanes            140           NumPlanes   - Number of wake planes (-) [>=2]
+SubDyn driver input file                      12       TP_RefPoint          0   0   0     TP_RefPoint - Location (x,y,z) of the TP reference point in global coordinates (m)
+ExtPtfm                                       8        FileFormat           1             FileFormat      - File Format {0:Guyan; 1:FlexASCII} (switch)
+ExtPtfm                                       10       RedCst_FileName      "NA"          RedCst_FileName - Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 
 New Modules in v5.0.0
