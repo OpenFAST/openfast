@@ -429,11 +429,12 @@ must match the modes in the 1st-order WAMIT-style input files, i.e., the .1,
 .3, and .hst files. The convention for the WAMIT-style input files requires 
 the first 6 modes to be rigid-body modes always, and the additional generalized 
 modes are numbered from 7 onward. The total number of modes in the 1st-order 
-WAMIT-style input files should be **6+NAddDOF** for each body. Currently, only 
-one potential-flow body is allowed when additional degrees of freedom are used, 
-requiring **NBody = 1**. In this case, the choice of **NBodyMod** does not 
-matter. If more than one potential-flow bodies are present, **NAddDOF** should 
-be populated with **NBody** zeros. This because, internally, HydroDyn supports 
+WAMIT-style input files should be **6+NAddDOF** for each body. 
+
+Currently, only one potential-flow body is allowed when additional degrees of 
+freedom are used, requiring **NBody = 1**. In this case, the choice of **NBodyMod** 
+does not matter. If more than one potential-flow bodies are present, **NAddDOF** 
+should be populated with **NBody** zeros. This because, internally, HydroDyn supports 
 additional degrees of freedom for an arbitrary number of bodies with any of the 
 **NBodyMod** options. The limitation of one potential-flow body only is due 
 to constraints with coupling to ExtPtfm, the only module that can make use of the 
@@ -441,6 +442,11 @@ additional modes so far and input file limitations. Generalized modes have not
 been implemented for 2nd-order loads; therefore, the 2nd-order WAMIT-style input 
 files, if included, should always contain **6NBody** modes irrespective of 
 **NAddDOF**. Finally, when **NAddDOF > 0**, **WAMITULEN** must be 1.
+
+In addition to being limited to one potential-flow body, **NAddDOF > 0** is only 
+supported when **ExctnMod** = 0 or 1 and **RdtnMod** = 0 or 1. State-space 
+wave-excitation and wave-radiation models are not supported. **NAddDOF** is not 
+used when **PotMod** = 0 or 2.
 
 Currently, the HydroDyn loads for the additional degrees of freedom can only be 
 used by the ExtPtfm module of OpenFAST with externally generated structural 
