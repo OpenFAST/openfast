@@ -59,6 +59,12 @@ module AWAE
    contains
 
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Extract a 2D slice from a 3D vector field `V` at the requested physical coordinate `s` along the slice-normal axis.
+!! The slice orientation is selected by `sliceType` (XYSlice, YZSlice, or XZSlice). The location `s` (in meters) is
+!! converted to grid units using the grid origin `s0` and spacing `ds`, the two bracketing grid planes are identified,
+!! and the output `slice` is filled by linear interpolation between them. If `s` coincides with the last grid index,
+!! the upper bracketing index is clamped so no out-of-bounds access occurs.
 subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
 
    integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
@@ -106,8 +112,16 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
 
 end subroutine ExtractSlice
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine
-!!
+!> Precompute, for every pair of adjacent wake planes (np, np+1) of every turbine, the geometric quantities that
+!! describe the relative orientation of the two planes. For each pair, this routine evaluates the cosine and sine of
+!! the angle between the plane normals `u%xhat_plane(:,np,nt)` and `u%xhat_plane(:,np+1,nt)` and uses them, together
+!! with the offset between the plane centers `u%p_plane`, to determine whether the planes are (numerically) parallel.
+!! When they are not parallel, the routine computes and caches in the misc-var struct `m` the perpendicular distances
+!! from each plane center to the line of intersection of the two planes (`r_s`, `r_e`), the in-plane unit vectors
+!! pointing from that intersection line toward each plane center (`rhat_s`, `rhat_e`), and the closest points on the
+!! intersection line to each plane center (`pvec_cs`, `pvec_ce`). The boolean `m%parallelFlag(np,nt)` records the
+!! parallel/non-parallel decision. These cached quantities are reused downstream (e.g., in `interp_planes_2_point`) to
+!! interpolate the wake-plane center and orientation between adjacent skewed wake planes.
 subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t

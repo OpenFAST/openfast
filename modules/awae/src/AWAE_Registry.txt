@@ -127,13 +127,13 @@ typedef   ^ MiscVarType    IntKi       iPlaneTurbTurb        {:}{:}{:} - -  "Fir
 typedef   ^ MiscVarType    IntKi       iPlaneTurbChunk       {:}{:}{:} - -  "First and Last plane index by source turbine and destination chunk index" -
 typedef   ^ MiscVarType    Logical     LowResChunkHasWake          {:} - -  "Low-res gridFirst and Last plane index by source turbine and destination chunk index" -
 typedef   ^ MiscVarType    ReKi        MaxWakePointSep              -  - -  "Maximum separation between wake points" -
-typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
+typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "Flag indicating whether adjacent wake planes np and np+1 are (numerically) parallel for each turbine; dims: (plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "Perpendicular distance from the start wake-plane center p_plane(:,np,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "Perpendicular distance from the end wake-plane center p_plane(:,np+1,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "Unit vector lying in the start wake plane (np) pointing from the plane-plane intersection line toward the start plane center; dims: (XYZ component, plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "Unit vector lying in the end wake plane (np+1) pointing from the plane-plane intersection line toward the end plane center; dims: (XYZ component, plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "Closest point on the plane-plane intersection line to the start wake-plane center, p_plane(:,np,nt) - r_s*rhat_s; dims: (XYZ component, plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt)" m
 #
 typedef   ^ MiscVarType    SiKi     outVizXYPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizYZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
