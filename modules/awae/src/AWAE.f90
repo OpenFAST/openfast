@@ -2060,9 +2060,117 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
                                  p%LowRes%dXYZ, m%outVizXZPlane, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
+
+      !-------------------------------------------------------------------------
+      ! Write a VTK polydata file containing the four corners of every active
+      ! wake plane for every turbine as a set of quads.
+      !-------------------------------------------------------------------------
+      call Write_Planes_WireFrame()
+
    end if
 
 contains
+
+   !> Write the four edges of every active wake plane (all turbines) as a
+   !! wireframe to a VTK polydata file. The plane normal is u%xhat_plane;
+   !! the in-plane half-extents are p%y(p%NumRadii-1) (horizontal) and
+   !! p%z(p%NumRadii-1) (vertical-ish). All coordinates are written in the
+   !! global inertial frame.
+   subroutine Write_Planes_WireFrame()
+      integer(IntKi)              :: nt_wp, np_wp, nActive, nTotal, iplane, ipt
+      real(ReKi)                  :: pc(3), corners(3,4)
+      real(ReKi)                  :: hy, hz
+      real(ReKi),     allocatable :: WPPoints(:,:)
+      integer(IntKi), allocatable :: WPLines(:,:)
+      type(VTK_Misc)              :: mvtk
+      character(1024)             :: WPFileName
+
+      ! Plane half-extents in the local Y and Z (in-plane) directions
+      hy = p%y(p%NumRadii-1)
+      hz = p%z(p%NumRadii-1)
+
+      ! Total number of active wake planes across all turbines (4 edges each)
+      nTotal = 0
+      do nt_wp = 1, p%NumTurbines
+         nTotal = nTotal + NINT(u%NumPlanes(nt_wp))
+      end do
+
+      if (nTotal <= 0) return
+
+      allocate(WPPoints(3, 4*nTotal))
+      allocate(WPLines(2, 4*nTotal))
+
+      iplane = 0
+      do nt_wp = 1, p%NumTurbines
+         nActive = NINT(u%NumPlanes(nt_wp))
+         do np_wp = 0, nActive - 1
+            pc = u%p_plane(:, np_wp, nt_wp)
+            call PlaneCorners(u%xhat_plane(:, np_wp, nt_wp), pc, hy, hz, corners)
+
+            ! Append four corners to the global point list
+            ipt = 4*iplane
+            WPPoints(:, ipt+1) = corners(:,1)
+            WPPoints(:, ipt+2) = corners(:,2)
+            WPPoints(:, ipt+3) = corners(:,3)
+            WPPoints(:, ipt+4) = corners(:,4)
+
+            ! Four edges of the closed quad outline (0-based point indices for VTK)
+            WPLines(:, ipt+1) = (/ ipt,   ipt+1 /)
+            WPLines(:, ipt+2) = (/ ipt+1, ipt+2 /)
+            WPLines(:, ipt+3) = (/ ipt+2, ipt+3 /)
+            WPLines(:, ipt+4) = (/ ipt+3, ipt   /)
+
+            iplane = iplane + 1
+         end do
+      end do
+
+      WPFileName = trim(p%OutFileVTKRoot)//".WakePlanesWireFrame."//trim(Tstr)//".vtk"
+
+      call vtk_misc_init(mvtk)
+      if (vtk_new_ascii_file(WPFileName, &
+          "Wake plane wireframes at time = "//trim(num2lstr(t))//" seconds.", mvtk)) then
+         call vtk_dataset_polydata(WPPoints, mvtk, .false.)
+         call vtk_lines(WPLines, mvtk)
+         call vtk_close_file(mvtk)
+      end if
+
+      deallocate(WPPoints, WPLines)
+   end subroutine Write_Planes_WireFrame
+
+   !> Compute the four corners of a single wake plane in the global inertial
+   !! frame from the plane normal `xhat`, the plane center `pc`, and the
+   !! in-plane half-extents `hy` (horizontal) and `hz` (vertical-ish).
+   !! Corners are returned counter-clockwise about +xhat.
+   subroutine PlaneCorners(xhat, pc, hy, hz, corners)
+      real(ReKi), intent(in   ) :: xhat(3)         !< Plane normal (unit vector)
+      real(ReKi), intent(in   ) :: pc(3)           !< Plane center, global frame
+      real(ReKi), intent(in   ) :: hy              !< In-plane horizontal half-extent
+      real(ReKi), intent(in   ) :: hz              !< In-plane vertical-ish half-extent
+      real(ReKi), intent(  out) :: corners(3,4)    !< Four corner positions, global frame
+
+      real(ReKi) :: yhat(3), zhat(3), ynorm
+
+      ! In-plane horizontal unit vector (orthogonal to xhat, no Z component)
+      yhat  = (/ -xhat(2), xhat(1), 0.0_ReKi /)
+      ynorm = TwoNorm(yhat)
+      if (ynorm > 0.0_ReKi) then
+         yhat = yhat / ynorm
+      else
+         ! xhat is purely vertical; fall back to global Y
+         yhat = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
+      end if
+
+      ! In-plane vertical-ish unit vector: zhat = xhat x yhat
+      zhat(1) = xhat(2)*yhat(3) - xhat(3)*yhat(2)
+      zhat(2) = xhat(3)*yhat(1) - xhat(1)*yhat(3)
+      zhat(3) = xhat(1)*yhat(2) - xhat(2)*yhat(1)
+
+      ! Four corners, ordered counter-clockwise about +xhat
+      corners(:,1) = pc - hy*yhat - hz*zhat
+      corners(:,2) = pc + hy*yhat - hz*zhat
+      corners(:,3) = pc + hy*yhat + hz*zhat
+      corners(:,4) = pc - hy*yhat + hz*zhat
+   end subroutine PlaneCorners
 
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
