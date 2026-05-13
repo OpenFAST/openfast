@@ -2067,6 +2067,13 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       !-------------------------------------------------------------------------
       call Write_Planes_WireFrame()
 
+      !-------------------------------------------------------------------------
+      ! Write one VTK STRUCTURED_GRID file per wake plane (per turbine) with
+      ! the wake velocity sampled on the plane's structured Y-Z grid, plus a
+      ! ParaView .vtk.series JSON index of all wake-plane files written so far.
+      !-------------------------------------------------------------------------
+      call Write_Planes_Data()
+
    end if
 
 contains
@@ -2148,22 +2155,9 @@ contains
       real(ReKi), intent(in   ) :: hz              !< In-plane vertical-ish half-extent
       real(ReKi), intent(  out) :: corners(3,4)    !< Four corner positions, global frame
 
-      real(ReKi) :: yhat(3), zhat(3), ynorm
+      real(ReKi) :: yhat(3), zhat(3)
 
-      ! In-plane horizontal unit vector (orthogonal to xhat, no Z component)
-      yhat  = (/ -xhat(2), xhat(1), 0.0_ReKi /)
-      ynorm = TwoNorm(yhat)
-      if (ynorm > 0.0_ReKi) then
-         yhat = yhat / ynorm
-      else
-         ! xhat is purely vertical; fall back to global Y
-         yhat = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
-      end if
-
-      ! In-plane vertical-ish unit vector: zhat = xhat x yhat
-      zhat(1) = xhat(2)*yhat(3) - xhat(3)*yhat(2)
-      zhat(2) = xhat(3)*yhat(1) - xhat(1)*yhat(3)
-      zhat(3) = xhat(1)*yhat(2) - xhat(2)*yhat(1)
+      call PlaneAxes(xhat, yhat, zhat)
 
       ! Four corners, ordered counter-clockwise about +xhat
       corners(:,1) = pc - hy*yhat - hz*zhat
@@ -2171,6 +2165,195 @@ contains
       corners(:,3) = pc + hy*yhat + hz*zhat
       corners(:,4) = pc - hy*yhat + hz*zhat
    end subroutine PlaneCorners
+
+   !> Construct the orthonormal in-plane basis (yhat, zhat) in the global
+   !! inertial frame for a wake plane with unit normal `xhat`. yhat is the
+   !! horizontal in-plane direction (no Z component); zhat = xhat x yhat.
+   !! If xhat is purely vertical, yhat falls back to the global Y axis.
+   subroutine PlaneAxes(xhat, yhat, zhat)
+      real(ReKi), intent(in   ) :: xhat(3)
+      real(ReKi), intent(  out) :: yhat(3)
+      real(ReKi), intent(  out) :: zhat(3)
+      real(ReKi)                :: ynorm
+
+      yhat  = (/ -xhat(2), xhat(1), 0.0_ReKi /)
+      ynorm = TwoNorm(yhat)
+      if (ynorm > 0.0_ReKi) then
+         yhat = yhat / ynorm
+      else
+         yhat = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
+      end if
+
+      zhat(1) = xhat(2)*yhat(3) - xhat(3)*yhat(2)
+      zhat(2) = xhat(3)*yhat(1) - xhat(1)*yhat(3)
+      zhat(3) = xhat(1)*yhat(2) - xhat(2)*yhat(1)
+   end subroutine PlaneAxes
+
+   !> Write one VTK STRUCTURED_GRID file per active wake plane containing the
+   !! wake velocity sampled on the plane's structured Y-Z grid. Point
+   !! coordinates and velocity vectors are written in the global inertial
+   !! frame. After writing the per-plane files, refresh the ParaView
+   !! .vtk.series JSON index so the full time/plane series can be loaded.
+   subroutine Write_Planes_Data()
+      integer(IntKi)              :: nt_wp, np_wp, nActive
+      integer(IntKi)              :: jy, kz, idx, nY, nZ
+      integer(IntKi)              :: pWidth
+      real(ReKi)                  :: pc(3), xhat(3), yhat(3), zhat(3)
+      real(ReKi),     allocatable :: Pts(:,:), Vel(:,:)
+      character(1024)             :: WPFileName
+      character(16)               :: PlaneNum, FmtStr
+
+      ! Plane grid dimensions (p%y and p%z run from -NumRadii+1 to NumRadii-1)
+      nY = 2*p%NumRadii - 1
+      nZ = 2*p%NumRadii - 1
+
+      ! Field width for plane index, based on MaxPlanes (1-based count)
+      pWidth = max(1, int(floor(log10(real(max(p%MaxPlanes, 1), ReKi))) + 1, IntKi))
+      write(FmtStr, '(A,I0,A,I0,A)') '(I', pWidth, '.', pWidth, ')'
+
+      allocate(Pts(3, nY*nZ))
+      allocate(Vel(3, nY*nZ))
+
+      do nt_wp = 1, p%NumTurbines
+         nActive = NINT(u%NumPlanes(nt_wp))
+         do np_wp = 0, nActive - 1
+            pc   = u%p_plane(:,    np_wp, nt_wp)
+            xhat = u%xhat_plane(:, np_wp, nt_wp)
+            call PlaneAxes(xhat, yhat, zhat)
+
+            ! Fill points and velocity in VTK natural order (jy fastest, then kz)
+            do kz = 1, nZ
+               do jy = 1, nY
+                  idx = jy + (kz-1)*nY
+                  Pts(:, idx) = pc + p%y(jy-p%NumRadii) * yhat &
+                                   + p%z(kz-p%NumRadii) * zhat
+                  ! Wake-plane velocity expressed in the global frame using
+                  ! the plane's own basis. No Z (plane-vertical) deficit is
+                  ! tracked, only Vx (along xhat) and Vy (along yhat).
+                  Vel(:, idx) = u%Vx_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * xhat &
+                              + u%Vy_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * yhat
+               end do
+            end do
+
+            ! Per-plane index string with consistent zero-padded width
+            write(PlaneNum, FmtStr) np_wp + (nt_wp-1)*p%MaxPlanes
+
+            WPFileName = trim(p%OutFileVTKRoot)//".WakePlane_"//trim(PlaneNum)// &
+                         "."//trim(Tstr)//".vtk"
+
+            call Write_Plane_Data_File(WPFileName, &
+                 "Wake plane "//trim(PlaneNum)//" at time = "// &
+                 trim(num2lstr(t))//" seconds.", nY, nZ, Pts, Vel)
+         end do
+      end do
+
+      deallocate(Pts, Vel)
+
+      ! Refresh the ParaView series file referencing all wake-plane files
+      ! written so far (across all output time steps).
+      call Write_WakePlane_Series(pWidth, FmtStr)
+   end subroutine Write_Planes_Data
+
+   !> Helper: write a single 2D VTK STRUCTURED_GRID file for one wake plane
+   !! containing point coordinates and a "WakeVelocity" point-data vector.
+   subroutine Write_Plane_Data_File(WPFileName, label, n1, n2, Pts, Vel)
+      character(*),   intent(in) :: WPFileName
+      character(*),   intent(in) :: label
+      integer(IntKi), intent(in) :: n1, n2
+      real(ReKi),     intent(in) :: Pts(:,:)    !< 3 x (n1*n2)
+      real(ReKi),     intent(in) :: Vel(:,:)    !< 3 x (n1*n2)
+      type(VTK_Misc)             :: mvtk
+
+      call vtk_misc_init(mvtk)
+      if (vtk_new_ascii_file(WPFileName, label, mvtk)) then
+         call vtk_dataset_structured_grid(Pts, n1, n2, 1, mvtk)
+         call vtk_point_data_init(mvtk)
+         call vtk_point_data_vector(Vel, "WakeVelocity", mvtk)
+         call vtk_close_file(mvtk)
+      end if
+   end subroutine Write_Plane_Data_File
+
+   !> Refresh the ParaView .vtk.series JSON index file referencing every
+   !! wake-plane VTK file currently on disk for this run. Entries are
+   !! discovered via INQUIRE so the file remains valid after restarts and
+   !! after the run ends. Filenames in the JSON are written relative to the
+   !! series file's own directory so ParaView can locate them regardless of
+   !! the current working directory.
+   subroutine Write_WakePlane_Series(pWidth, FmtStr)
+      integer(IntKi), intent(in) :: pWidth
+      character(*),   intent(in) :: FmtStr
+
+      integer(IntKi)             :: UnSer
+      integer(IntKi)             :: out_idx, n_out, pidx, nWritten
+      integer(IntKi)             :: SerErrStat
+      character(ErrMsgLen)       :: SerErrMsg
+      character(1024)            :: SeriesFile
+      character(1024)            :: rootDir, baseName
+      character(1024)            :: WPFileName, EntryName
+      character(p%VTK_tWidth)    :: TstrOut
+      character(16)              :: PlaneNum
+      character(32)              :: TimeStr
+      real(DbKi)                 :: t_out
+      logical                    :: fileExists, firstEntry
+
+      SeriesFile = trim(p%OutFileVTKRoot)//".WakePlane.vtk.series"
+
+      ! Determine the basename (filename portion of OutFileVTKRoot) so that
+      ! entries in the series file are relative to its directory.
+      call GetPath(p%OutFileVTKRoot, rootDir, baseName)
+
+      ! Total number of completed VTK output steps so far (inclusive of n)
+      n_out = n / p%WrDisSkp1
+
+      !$OMP critical(fileopen_critical)
+      call GetNewUnit(UnSer, SerErrStat, SerErrMsg)
+      call OpenFOutFile(UnSer, SeriesFile, SerErrStat, SerErrMsg)
+      !$OMP end critical(fileopen_critical)
+      if (SerErrStat >= AbortErrLev) return
+
+      write(UnSer, '(A)') '{'
+      write(UnSer, '(A)') '  "file-series-version" : "1.0",'
+      write(UnSer, '(A)') '  "files" : ['
+
+      firstEntry = .true.
+      nWritten   = 0
+      do out_idx = 0, n_out
+         t_out = real(out_idx, DbKi) * real(p%WrDisSkp1, DbKi) * p%dt_low
+
+         write(TstrOut, '(i'//trim(Num2LStr(p%VTK_tWidth))//'.'// &
+                            trim(Num2LStr(p%VTK_tWidth))//')') out_idx
+
+         do pidx = 0, p%NumTurbines * p%MaxPlanes - 1
+            write(PlaneNum, FmtStr) pidx
+            EntryName  = trim(baseName)//".WakePlane_"//trim(PlaneNum)// &
+                         "."//trim(TstrOut)//".vtk"
+            WPFileName = trim(p%OutFileVTKRoot)//".WakePlane_"//trim(PlaneNum)// &
+                         "."//trim(TstrOut)//".vtk"
+
+            inquire(file=trim(WPFileName), exist=fileExists)
+            if (.not. fileExists) cycle
+
+            write(TimeStr, '(F0.6)') t_out
+            if (firstEntry) then
+               write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
+                                           '", "time" : ', trim(TimeStr), ' }'
+               firstEntry = .false.
+            else
+               ! Leading comma on subsequent entries (valid JSON whitespace handling)
+               write(UnSer, '(A,A,A,A,A)') '   ,{ "name" : "', trim(EntryName), &
+                                           '", "time" : ', trim(TimeStr), ' }'
+            end if
+            nWritten = nWritten + 1
+         end do
+      end do
+
+      write(UnSer, '(A)') '  ]'
+      write(UnSer, '(A)') '}'
+
+      !$OMP critical(fileopen_critical)
+      close(UnSer)
+      !$OMP end critical(fileopen_critical)
+   end subroutine Write_WakePlane_Series
 
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
