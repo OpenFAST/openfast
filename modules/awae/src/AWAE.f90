@@ -2142,6 +2142,9 @@ contains
       end if
 
       deallocate(WPPoints, WPLines)
+
+      ! Refresh the ParaView series file for the wireframe outputs
+      call Write_WakePlane_Series("WakePlanesWireFrame", .false., 0, "")
    end subroutine Write_Planes_WireFrame
 
    !> Compute the four corners of a single wake plane in the global inertial
@@ -2241,7 +2244,7 @@ contains
             WPFileName = trim(p%OutFileVTKRoot)//".WakePlane_"//trim(PlaneNum)// &
                          "."//trim(Tstr)//".vtk"
 
-            call Write_Plane_Data_File(WPFileName, &
+            call Write_WakePlane_Data_File(WPFileName, &
                  "Wake plane "//trim(PlaneNum)//" at time = "// &
                  trim(num2lstr(t))//" seconds.", nY, nZ, Pts, Vel)
          end do
@@ -2249,14 +2252,14 @@ contains
 
       deallocate(Pts, Vel)
 
-      ! Refresh the ParaView series file referencing all wake-plane files
+      ! Refresh the ParaView series file referencing all wake-plane data files
       ! written so far (across all output time steps).
-      call Write_WakePlane_Series(pWidth, FmtStr)
+      call Write_WakePlane_Series("WakePlane", .true., pWidth, FmtStr)
    end subroutine Write_Planes_Data
 
    !> Helper: write a single 2D VTK STRUCTURED_GRID file for one wake plane
    !! containing point coordinates and a "WakeVelocity" point-data vector.
-   subroutine Write_Plane_Data_File(WPFileName, label, n1, n2, Pts, Vel)
+   subroutine Write_WakePlane_Data_File(WPFileName, label, n1, n2, Pts, Vel)
       character(*),   intent(in) :: WPFileName
       character(*),   intent(in) :: label
       integer(IntKi), intent(in) :: n1, n2
@@ -2271,15 +2274,30 @@ contains
          call vtk_point_data_vector(Vel, "WakeVelocity", mvtk)
          call vtk_close_file(mvtk)
       end if
-   end subroutine Write_Plane_Data_File
+   end subroutine Write_WakePlane_Data_File
 
    !> Refresh the ParaView .vtk.series JSON index file referencing every
-   !! wake-plane VTK file currently on disk for this run. Entries are
-   !! discovered via INQUIRE so the file remains valid after restarts and
+   !! VTK file with the given prefix currently on disk for this run. Entries
+   !! are discovered via INQUIRE so the file remains valid after restarts and
    !! after the run ends. Filenames in the JSON are written relative to the
    !! series file's own directory so ParaView can locate them regardless of
    !! the current working directory.
-   subroutine Write_WakePlane_Series(pWidth, FmtStr)
+   !!
+   !! @param VTKprefix  Base name fragment used in VTK filenames and the
+   !!                   series filename (e.g. "WakePlane" or
+   !!                   "WakePlanesWireFrame").
+   !! @param perPlane   If .true., files are named
+   !!                   <prefix>_<PlaneNum>.<Tstr>.vtk (one per plane per
+   !!                   timestep). If .false., files are named
+   !!                   <prefix>.<Tstr>.vtk (one per timestep, all planes
+   !!                   merged).
+   !! @param pWidth     Zero-padded field width for the plane index (only
+   !!                   used when perPlane = .true.).
+   !! @param FmtStr     Fortran format string for the plane index (only
+   !!                   used when perPlane = .true.).
+   subroutine Write_WakePlane_Series(VTKprefix, perPlane, pWidth, FmtStr)
+      character(*),   intent(in) :: VTKprefix
+      logical,        intent(in) :: perPlane
       integer(IntKi), intent(in) :: pWidth
       character(*),   intent(in) :: FmtStr
 
@@ -2296,7 +2314,7 @@ contains
       real(DbKi)                 :: t_out
       logical                    :: fileExists, firstEntry
 
-      SeriesFile = trim(p%OutFileVTKRoot)//".WakePlane.vtk.series"
+      SeriesFile = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//".vtk.series"
 
       ! Determine the basename (filename portion of OutFileVTKRoot) so that
       ! entries in the series file are relative to its directory.
@@ -2323,12 +2341,33 @@ contains
          write(TstrOut, '(i'//trim(Num2LStr(p%VTK_tWidth))//'.'// &
                             trim(Num2LStr(p%VTK_tWidth))//')') out_idx
 
-         do pidx = 0, p%NumTurbines * p%MaxPlanes - 1
-            write(PlaneNum, FmtStr) pidx
-            EntryName  = trim(baseName)//".WakePlane_"//trim(PlaneNum)// &
-                         "."//trim(TstrOut)//".vtk"
-            WPFileName = trim(p%OutFileVTKRoot)//".WakePlane_"//trim(PlaneNum)// &
-                         "."//trim(TstrOut)//".vtk"
+         if (perPlane) then
+            ! Per-plane files: <prefix>_<PlaneNum>.<Tstr>.vtk
+            do pidx = 0, p%NumTurbines * p%MaxPlanes - 1
+               write(PlaneNum, FmtStr) pidx
+               EntryName  = trim(baseName)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
+                            "."//trim(TstrOut)//".vtk"
+               WPFileName = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
+                            "."//trim(TstrOut)//".vtk"
+
+               inquire(file=trim(WPFileName), exist=fileExists)
+               if (.not. fileExists) cycle
+
+               write(TimeStr, '(F0.6)') t_out
+               if (firstEntry) then
+                  write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
+                                              '", "time" : ', trim(TimeStr), ' }'
+                  firstEntry = .false.
+               else
+                  write(UnSer, '(A,A,A,A,A)') '   ,{ "name" : "', trim(EntryName), &
+                                              '", "time" : ', trim(TimeStr), ' }'
+               end if
+               nWritten = nWritten + 1
+            end do
+         else
+            ! Single merged file per timestep: <prefix>.<Tstr>.vtk
+            EntryName  = trim(baseName)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
+            WPFileName = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
 
             inquire(file=trim(WPFileName), exist=fileExists)
             if (.not. fileExists) cycle
@@ -2339,12 +2378,11 @@ contains
                                            '", "time" : ', trim(TimeStr), ' }'
                firstEntry = .false.
             else
-               ! Leading comma on subsequent entries (valid JSON whitespace handling)
                write(UnSer, '(A,A,A,A,A)') '   ,{ "name" : "', trim(EntryName), &
                                            '", "time" : ', trim(TimeStr), ' }'
             end if
             nWritten = nWritten + 1
-         end do
+         end if
       end do
 
       write(UnSer, '(A)') '  ]'
