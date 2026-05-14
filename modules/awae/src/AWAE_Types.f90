@@ -251,7 +251,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: OutDisWindYvalid      !< Valid XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
-    CHARACTER(1024)  :: OutFileVTKRoot      !< The root name for VTK outputs [-]
+    CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
+    CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
     LOGICAL  :: WAT_Enabled = .false.      !< Switch for turning on and off wake-added turbulence [-]
     TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
@@ -2172,7 +2173,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%OutDisWindYvalid = SrcParamData%OutDisWindYvalid
    end if
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
-   DstParamData%OutFileVTKRoot = SrcParamData%OutFileVTKRoot
+   DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
+   DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
    DstParamData%WAT_Enabled = SrcParamData%WAT_Enabled
    DstParamData%WAT_FlowField => SrcParamData%WAT_FlowField
@@ -2298,7 +2300,8 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%OutDisWindY)
    call RegPackAlloc(RF, InData%OutDisWindYvalid)
    call RegPack(RF, InData%OutFileRoot)
-   call RegPack(RF, InData%OutFileVTKRoot)
+   call RegPack(RF, InData%OutFileFFvtkRoot)
+   call RegPack(RF, InData%OutFileFFvtkWakeRoot)
    call RegPack(RF, InData%VTK_tWidth)
    call RegPack(RF, InData%WAT_Enabled)
    call RegPack(RF, associated(InData%WAT_FlowField))
@@ -2384,7 +2387,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%OutDisWindY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindYvalid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%OutFileVTKRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_tWidth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_Enabled); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WAT_FlowField)) deallocate(OutData%WAT_FlowField)

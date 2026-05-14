@@ -80,7 +80,7 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n_out ! TODO use n instead..
 
-   FileName = trim(p%OutFileVTKRoot)//".Low.Dis."//trim(Tstr)//".vtk"
+   FileName = trim(p%OutFileFFvtkRoot)//".Low.Dis."//trim(Tstr)//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -92,7 +92,7 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
       ! We are only writing out the first of the high res data for a given low res time step
       ! NOTE: y%Vdist_high(nt)%data(:,:,:,:,1) is at T=t_low, and index 0 is at T=t_low-DT_high
       
-      FileName = trim(p%OutFileVTKRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
+      FileName = trim(p%OutFileFFvtkRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return

@@ -1268,7 +1268,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Vtk Outputs
    call GetPath( p%OutFileRoot, rootDir, baseName ) 
    OutFileVTKDir    = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
-   p%OutFileVTKRoot = trim(rootDir) // 'vtk_ff' // PathSep // trim(baseName) ! Basename for VTK files
+   p%OutFileFFvtkRoot = trim(rootDir) // 'vtk_ff' // PathSep // trim(baseName) ! Basename for VTK files
    p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi)/real(p%WrDisSkp1, ReKi) ) + 1) ! Length for time stamp
    if (p%WrDisWind .or. p%NOutDisWindXY>0 .or. p%NOutDisWindYZ>0 .or. p%NOutDisWindXZ>0) then
       call MKDIR(OutFileVTKDir) ! creating output directory
@@ -2018,7 +2018,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice(XYSlice, p%OutDisWindZ(k), p%LowRes%oXYZ(3), p%LowRes%nXYZ(3), p%LowRes%nXYZ(1), p%LowRes%nXYZ(2), p%LowRes%dXYZ(3), m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileFFvtkRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
          call WrVTK_SP_vectors3D(Un, "Velocity", &
                                  [p%LowRes%nXYZ(1), p%LowRes%nXYZ(2), 1_IntKi], &
@@ -2035,7 +2035,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice(YZSlice, p%OutDisWindX(k), p%LowRes%oXYZ(1), p%LowRes%nXYZ(1), p%LowRes%nXYZ(2), p%LowRes%nXYZ(3), p%LowRes%dXYZ(1), m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileFFvtkRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
          call WrVTK_SP_vectors3D(Un, "Velocity", &
                                  [1, p%LowRes%nXYZ(2), p%LowRes%nXYZ(3)], &
@@ -2052,7 +2052,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice(XZSlice, p%OutDisWindY(k), p%LowRes%oXYZ(2), p%LowRes%nXYZ(2), p%LowRes%nXYZ(1), p%LowRes%nXYZ(3), p%LowRes%dXYZ(2), m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileFFvtkRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2);   if (Failed()) return;
          call WrVTK_SP_vectors3D(Un, "Velocity", &
                                  [p%LowRes%nXYZ(1), 1, p%LowRes%nXYZ(3)], &
@@ -2131,7 +2131,7 @@ contains
          end do
       end do
 
-      WPFileName = trim(p%OutFileVTKRoot)//".WakePlanesWireFrame."//trim(Tstr)//".vtk"
+      WPFileName = trim(p%OutFileFFvtkRoot)//".WakePlanesWireFrame."//trim(Tstr)//".vtk"
 
       call vtk_misc_init(mvtk)
       if (vtk_new_ascii_file(WPFileName, &
@@ -2241,7 +2241,7 @@ contains
             ! Per-plane index string with consistent zero-padded width
             write(PlaneNum, FmtStr) np_wp + (nt_wp-1)*p%MaxPlanes
 
-            WPFileName = trim(p%OutFileVTKRoot)//".WakePlane_"//trim(PlaneNum)// &
+            WPFileName = trim(p%OutFileFFvtkRoot)//".WakePlane_"//trim(PlaneNum)// &
                          "."//trim(Tstr)//".vtk"
 
             call Write_WakePlane_Data_File(WPFileName, &
@@ -2314,11 +2314,11 @@ contains
       real(DbKi)                 :: t_out
       logical                    :: fileExists, firstEntry
 
-      SeriesFile = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//".vtk.series"
+      SeriesFile = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//".vtk.series"
 
-      ! Determine the basename (filename portion of OutFileVTKRoot) so that
+      ! Determine the basename (filename portion of OutFileFFvtkRoot) so that
       ! entries in the series file are relative to its directory.
-      call GetPath(p%OutFileVTKRoot, rootDir, baseName)
+      call GetPath(p%OutFileFFvtkRoot, rootDir, baseName)
 
       ! Total number of completed VTK output steps so far (inclusive of n)
       n_out = n / p%WrDisSkp1
@@ -2347,7 +2347,7 @@ contains
                write(PlaneNum, FmtStr) pidx
                EntryName  = trim(baseName)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
                             "."//trim(TstrOut)//".vtk"
-               WPFileName = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
+               WPFileName = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
                             "."//trim(TstrOut)//".vtk"
 
                inquire(file=trim(WPFileName), exist=fileExists)
@@ -2367,7 +2367,7 @@ contains
          else
             ! Single merged file per timestep: <prefix>.<Tstr>.vtk
             EntryName  = trim(baseName)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
-            WPFileName = trim(p%OutFileVTKRoot)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
+            WPFileName = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
 
             inquire(file=trim(WPFileName), exist=fileExists)
             if (.not. fileExists) cycle
