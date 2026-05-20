@@ -952,6 +952,11 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
 
+
+   ! --------------------------------------------------------------------------------
+   ! Drop planes that exit the buffer, and merge planes that collide.
+   ! --------------------------------------------------------------------------------
+
    xd%NumPlanes = xd%NumPlanes + 1.0
    if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
       xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
@@ -1123,8 +1128,8 @@ contains
          call gradient_z(m%nu_dvx_dz, p%dr, m%dnuvx_dz )
 
          ! Loop through all the points on the plane (y, z)
-         do iz = -p%NumRadii+2, p%NumRadii-2
-            do iy = -p%NumRadii+2, p%NumRadii-2
+         do iz = -p%NumRadii+1, p%NumRadii-1
+            do iy = -p%NumRadii+1, p%NumRadii-1
 
                ! Eddy viscosity term
                divTau = m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
