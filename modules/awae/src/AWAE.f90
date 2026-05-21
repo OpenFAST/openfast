@@ -1186,7 +1186,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    integer(IntKi),                 intent(  out) :: errStat       !< Error status of the operation
    character(*),                   intent(  out) :: errMsg        !< Error message if errStat /= ErrID_None
 
-   character(1024)                               :: rootDir, baseName, OutFileVTKDir ! Simulation root dir, basename for outputs
+   character(1024)                               :: rootDir, baseName, OutFileVTKDir, OutFileVTKwakeDir ! Simulation root dir, basename for outputs
    integer(IntKi)                                :: i,j,nt,c      ! loop counter
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
@@ -1267,11 +1267,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    ! --- Vtk Outputs
    call GetPath( p%OutFileRoot, rootDir, baseName ) 
-   OutFileVTKDir    = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
-   p%OutFileFFvtkRoot = trim(rootDir) // 'vtk_ff' // PathSep // trim(baseName) ! Basename for VTK files
+   OutFileVTKDir      = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
+   OutFileVTKwakeDir  = trim(OutFileVTKDir) // PathSep // 'wakes'  ! Directory for VTK wake outputs
+   p%OutFileFFvtkRoot = trim(OutFileVTKDir) // PathSep // trim(baseName) ! Basename for VTK files
+   p%OutFileFFvtkWakeRoot = trim(OutFileVTKwakeDir)  // PathSep // trim(baseName) ! Basename for VTK wake files
    p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi)/real(p%WrDisSkp1, ReKi) ) + 1) ! Length for time stamp
    if (p%WrDisWind .or. p%NOutDisWindXY>0 .or. p%NOutDisWindYZ>0 .or. p%NOutDisWindXZ>0) then
-      call MKDIR(OutFileVTKDir) ! creating output directory
+      call MKDIR(OutFileVTKDir)
+      call MKDIR(OutFileVTKwakeDir)
    end if
 
    ! Plane grids
@@ -2090,44 +2093,43 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
 contains
 
-   !> Write the four edges of every active wake plane (all turbines) as a
-   !! wireframe to a VTK polydata file. The plane normal is u%xhat_plane;
-   !! the in-plane half-extents are p%y(p%NumRadii-1) (horizontal) and
-   !! p%z(p%NumRadii-1) (vertical-ish). All coordinates are written in the
-   !! global inertial frame.
+   !> Write the four edges of every active wake plane for each turbine as a
+   !! wireframe to a per-turbine VTK polydata file.  One file is produced per
+   !! turbine per output step, named .T<nt>.WakePlanesWireFrame.<t>.vtk.
+   !! The plane normal is u%xhat_plane; the in-plane half-extents are
+   !! p%y(p%NumRadii-1) (horizontal) and p%z(p%NumRadii-1) (vertical-ish).
+   !! All coordinates are written in the global inertial frame.
    subroutine Write_Planes_WireFrame()
-      integer(IntKi)              :: nt_wp, np_wp, nActive, nTotal, iplane, ipt
+      integer(IntKi)              :: nt_wp, np_wp, nActive, ipt
       real(ReKi)                  :: pc(3), corners(3,4)
       real(ReKi)                  :: hy, hz
       real(ReKi),     allocatable :: WPPoints(:,:)
       integer(IntKi), allocatable :: WPLines(:,:)
       type(VTK_Misc)              :: mvtk
       character(1024)             :: WPFileName
+      integer(IntKi)              :: ntWidth
+      character(16)               :: TurbNum, FmtStrT
 
       ! Plane half-extents in the local Y and Z (in-plane) directions
       hy = p%y(p%NumRadii-1)
       hz = p%z(p%NumRadii-1)
 
-      ! Total number of active wake planes across all turbines (4 edges each)
-      nTotal = 0
-      do nt_wp = 1, p%NumTurbines
-         nTotal = nTotal + NINT(u%NumPlanes(nt_wp))
-      end do
+      ! Zero-padded width sufficient to represent all turbine indices
+      ntWidth = max(1, int(floor(log10(real(max(p%NumTurbines, 1), ReKi))) + 1, IntKi))
+      write(FmtStrT, '(A,I0,A,I0,A)') '(I', ntWidth, '.', ntWidth, ')'
 
-      if (nTotal <= 0) return
-
-      allocate(WPPoints(3, 4*nTotal))
-      allocate(WPLines(2, 4*nTotal))
-
-      iplane = 0
       do nt_wp = 1, p%NumTurbines
          nActive = NINT(u%NumPlanes(nt_wp))
+         if (nActive <= 0) cycle
+
+         allocate(WPPoints(3, 4*nActive))
+         allocate(WPLines(2, 4*nActive))
+
          do np_wp = 0, nActive - 1
             pc = u%p_plane(:, np_wp, nt_wp)
             call PlaneCorners(u%xhat_plane(:, np_wp, nt_wp), pc, hy, hz, corners)
 
-            ! Append four corners to the global point list
-            ipt = 4*iplane
+            ipt = 4*np_wp
             WPPoints(:, ipt+1) = corners(:,1)
             WPPoints(:, ipt+2) = corners(:,2)
             WPPoints(:, ipt+3) = corners(:,3)
@@ -2138,25 +2140,26 @@ contains
             WPLines(:, ipt+2) = (/ ipt+1, ipt+2 /)
             WPLines(:, ipt+3) = (/ ipt+2, ipt+3 /)
             WPLines(:, ipt+4) = (/ ipt+3, ipt   /)
-
-            iplane = iplane + 1
          end do
+
+         write(TurbNum, FmtStrT) nt_wp
+         WPFileName = trim(p%OutFileFFvtkWakeRoot)//".T"//trim(TurbNum)// &
+                      ".WakePlanesWireFrame."//trim(Tstr)//".vtk"
+
+         call vtk_misc_init(mvtk)
+         if (vtk_new_ascii_file(WPFileName, &
+             "Wake plane wireframes for turbine "//trim(TurbNum)// &
+             " at time = "//trim(num2lstr(t))//" seconds.", mvtk)) then
+            call vtk_dataset_polydata(WPPoints, mvtk, .false.)
+            call vtk_lines(WPLines, mvtk)
+            call vtk_close_file(mvtk)
+         end if
+
+         deallocate(WPPoints, WPLines)
+
+         ! Refresh the per-turbine ParaView series file
+         call Write_WakePlane_Series("T"//trim(TurbNum)//".WakePlanesWireFrame", .false., 0, "")
       end do
-
-      WPFileName = trim(p%OutFileFFvtkRoot)//".WakePlanesWireFrame."//trim(Tstr)//".vtk"
-
-      call vtk_misc_init(mvtk)
-      if (vtk_new_ascii_file(WPFileName, &
-          "Wake plane wireframes at time = "//trim(num2lstr(t))//" seconds.", mvtk)) then
-         call vtk_dataset_polydata(WPPoints, mvtk, .false.)
-         call vtk_lines(WPLines, mvtk)
-         call vtk_close_file(mvtk)
-      end if
-
-      deallocate(WPPoints, WPLines)
-
-      ! Refresh the ParaView series file for the wireframe outputs
-      call Write_WakePlane_Series("WakePlanesWireFrame", .false., 0, "")
    end subroutine Write_Planes_WireFrame
 
    !> Compute the four corners of a single wake plane in the global inertial
@@ -2254,7 +2257,7 @@ contains
             ! Per-plane index string with consistent zero-padded width
             write(PlaneNum, FmtStr) np_wp + (nt_wp-1)*p%MaxPlanes
 
-            WPFileName = trim(p%OutFileFFvtkRoot)//".WakePlane_"//trim(PlaneNum)// &
+            WPFileName = trim(p%OutFileFFvtkWakeRoot)//".WakePlane_"//trim(PlaneNum)// &
                          "."//trim(Tstr)//".vtk"
 
             call Write_WakePlane_Data_File(WPFileName, &
@@ -2284,7 +2287,7 @@ contains
       if (vtk_new_ascii_file(WPFileName, label, mvtk)) then
          call vtk_dataset_structured_grid(Pts, n1, n2, 1, mvtk)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_vector(Vel, "WakeVelocity", mvtk)
+         call vtk_point_data_vector(Vel, "WakeVelocityDefecit", mvtk)
          call vtk_close_file(mvtk)
       end if
    end subroutine Write_WakePlane_Data_File
@@ -2327,11 +2330,11 @@ contains
       real(DbKi)                 :: t_out
       logical                    :: fileExists, firstEntry
 
-      SeriesFile = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//".vtk.series"
+      SeriesFile = trim(p%OutFileFFvtkWakeRoot)//"."//trim(VTKprefix)//".vtk.series"
 
-      ! Determine the basename (filename portion of OutFileFFvtkRoot) so that
+      ! Determine the basename (filename portion of OutFileFFvtkWakeRoot) so that
       ! entries in the series file are relative to its directory.
-      call GetPath(p%OutFileFFvtkRoot, rootDir, baseName)
+      call GetPath(p%OutFileFFvtkWakeRoot, rootDir, baseName)
 
       ! Total number of completed VTK output steps so far (inclusive of n)
       n_out = n / p%WrDisSkp1
@@ -2360,13 +2363,13 @@ contains
                write(PlaneNum, FmtStr) pidx
                EntryName  = trim(baseName)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
                             "."//trim(TstrOut)//".vtk"
-               WPFileName = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
+               WPFileName = trim(p%OutFileFFvtkWakeRoot)//"."//trim(VTKprefix)//"_"//trim(PlaneNum)// &
                             "."//trim(TstrOut)//".vtk"
 
                inquire(file=trim(WPFileName), exist=fileExists)
                if (.not. fileExists) cycle
 
-               write(TimeStr, '(F0.6)') t_out
+               write(TimeStr, '(F14.5)') t_out
                if (firstEntry) then
                   write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
                                               '", "time" : ', trim(TimeStr), ' }'
@@ -2380,12 +2383,12 @@ contains
          else
             ! Single merged file per timestep: <prefix>.<Tstr>.vtk
             EntryName  = trim(baseName)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
-            WPFileName = trim(p%OutFileFFvtkRoot)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
+            WPFileName = trim(p%OutFileFFvtkWakeRoot)//"."//trim(VTKprefix)//"."//trim(TstrOut)//".vtk"
 
             inquire(file=trim(WPFileName), exist=fileExists)
             if (.not. fileExists) cycle
 
-            write(TimeStr, '(F0.6)') t_out
+            write(TimeStr, '(F14.5)') t_out
             if (firstEntry) then
                write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
                                            '", "time" : ', trim(TimeStr), ' }'
