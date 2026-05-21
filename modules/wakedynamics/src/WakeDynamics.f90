@@ -1870,47 +1870,52 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    character(ErrMsgLen)                         :: ErrMsg2
    real(ReKi)     :: correction(3)
    ! Note, all of these states will have been set to zero in the WD_Init routine
-   
-     
+
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   
+
    correction = 0.0_ReKi
    do i = 0, 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT_low,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
       xd%psi_skew_filt     = u%psi_skew
       xd%chi_skew_filt     = u%chi_skew
-      
+
       correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, xd%x_plane(i), p,  errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
       if (errStat >= AbortErrLev) then
          ! TEST: E3      
          return
       end if
-      
+
       !correction = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*u%YawErr )*xd%x_plane(i) + correctionA
-      
+
       xd%p_plane   (:,i)      = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
       xd%xhat_plane(:,i)      = u%xhat_disk(:)
       xd%V_plane_filt(:,i)    = u%V_plane(:,i)
       xd%Vx_wind_disk_filt(i) = u%Vx_wind_disk
       xd%TI_amb_filt      (i) = u%TI_amb
       xd%D_rotor_filt     (i) = u%D_rotor
-     
-      
    end do
-   
+
    xd%Vx_rel_disk_filt     = u%Vx_rel_disk    
-   
+
    ! Initialze Ct_azavg_filt, Cq_azavg_filt, and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
    xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
    xd%Cq_azavg_filt (:) = u%Cq_azavg(:)
-   
+
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
-      
+
+
+   ! Initialize states for cartesian and curled wake formulations
+   call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
+   xd%Vx_wake2(:,:,1) = xd%Vx_wake2(:,:,0)
+   xd%Vy_wake2(:,:,0) = 0.0_ReKi
+   xd%Vz_wake2(:,:,0) = 0.0_ReKi
+   xd%Vy_wake2(:,:,1) = xd%Vy_wake2(:,:,0)
+   xd%Vz_wake2(:,:,1) = xd%Vz_wake2(:,:,0)
+
 end subroutine InitStatesWithInputs
    
 !----------------------------------------------------------------------------------------------------------------------------------
