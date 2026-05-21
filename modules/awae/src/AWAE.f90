@@ -1442,10 +1442,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( u%D_wake    (                                                      0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%D_wake.'    )) return;
    allocate ( u%WAT_k     (1-p%NumRadii:p%NumRadii-1, 1-p%NumRadii:p%NumRadii-1, 0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%WAT_k.'     )) return;
 
-   u%NumPlanes = 2.0_ReKi
-   u%Vx_wake=0.0_ReKi
-   u%Vy_wake=0.0_ReKi
-   u%Vz_wake=0.0_ReKi
+   u%NumPlanes  = 2.0_ReKi
+   u%xhat_plane = 0.0_ReKi
+   u%p_plane    = 0.0_ReKi
+   u%Vx_wake    = 0.0_ReKi
+   u%Vy_wake    = 0.0_ReKi
+   u%Vz_wake    = 0.0_ReKi
+   u%D_wake     = 0.0_ReKi
+   u%WAT_k      = 0.0_ReKi
 
 
    !----------------------------------------------------------------------------
@@ -1485,12 +1489,15 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    if ( p%NOutDisWindXY > 0 ) then
       ALLOCATE ( m%OutVizXYPlane(3,p%LowRes%nXYZ(1), p%LowRes%nXYZ(2),1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXYPlane arrays.')) return;
+      m%OutVizXYPlane = 0.0_SiKi
    end if
    if ( p%NOutDisWindYZ > 0 ) then
       ALLOCATE ( m%OutVizYZPlane(3,p%LowRes%nXYZ(2), p%LowRes%nXYZ(3),1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizYZPlane arrays.')) return;
+      m%OutVizYZPlane = 0.0_SiKi
    end if
    if ( p%NOutDisWindXZ > 0 ) then
       ALLOCATE ( m%OutVizXZPlane(3,p%LowRes%nXYZ(1), p%LowRes%nXYZ(3),1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXZPlane arrays.')) return;
+      m%OutVizXZPlane = 0.0_SiKi
    end if
 
    ! miscvars to avoid the allocation per timestep
@@ -1498,20 +1505,25 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate(m%Vamb_low(       3, 0:p%LowRes%nXYZ(1)-1 , 0:p%LowRes%nXYZ(2)-1 , 0:p%LowRes%nXYZ(3)-1 ), STAT=errStat2);  if (Failed0('m%Vamb_low.'     )) return;
    allocate(m%Vdist_low(      3, 0:p%LowRes%nXYZ(1)-1 , 0:p%LowRes%nXYZ(2)-1 , 0:p%LowRes%nXYZ(3)-1 ), STAT=errStat2);  if (Failed0('m%Vdist_low.'    )) return;
    allocate(m%Vdist_low_full( 3, 0:p%LowRes%nXYZ(1)-1 , 0:p%LowRes%nXYZ(2)-1 , 0:p%LowRes%nXYZ(3)-1 ), STAT=errStat2);  if (Failed0('m%Vdist_low_full')) return;
+   m%Vamb_lowpol    = 0.0_ReKi
+   m%Vamb_low       = 0.0_SiKi
+   m%Vdist_low      = 0.0_SiKi
+   m%Vdist_low_full = 0.0_SiKi
 
    allocate(m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2);   if (Failed0('Could not allocate memory for m%Vamb_high.')) return;
    do nt = 1, p%NumTurbines
       allocate(m%Vamb_high(nt)%data(3,0:p%HighRes(nt)%nXYZ(1)-1, 0:p%HighRes(nt)%nXYZ(2)-1, 0:p%HighRes(nt)%nXYZ(3)-1, 0:p%n_high_low_p1), STAT=ErrStat2)
       if (Failed0('m%Vamb_high%data.')) return;
+      m%Vamb_high(nt)%data = 0.0_SiKi
    end do
 
-   allocate(m%parallelFlag( 0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%parallelFlag.')) return;
-   allocate(m%r_s(          0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%r_s.'         )) return;
-   allocate(m%r_e(          0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%r_e.'         )) return;
-   allocate(m%rhat_s(     3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%rhat_s.'      )) return;
-   allocate(m%rhat_e(     3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%rhat_e.'      )) return;
-   allocate(m%pvec_cs(    3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%pvec_cs.'     )) return;
-   allocate(m%pvec_ce(    3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%pvec_ce.'     )) return;
+   allocate(m%parallelFlag( 0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%parallelFlag.')) return;   m%parallelFlag = .false.
+   allocate(m%r_s(          0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%r_s.'         )) return;   m%r_s     = 0.0_ReKi 
+   allocate(m%r_e(          0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%r_e.'         )) return;   m%r_e     = 0.0_ReKi
+   allocate(m%rhat_s(     3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%rhat_s.'      )) return;   m%rhat_s  = 0.0_ReKi
+   allocate(m%rhat_e(     3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%rhat_e.'      )) return;   m%rhat_e  = 0.0_ReKi
+   allocate(m%pvec_cs(    3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%pvec_cs.'     )) return;   m%pvec_cs = 0.0_ReKi
+   allocate(m%pvec_ce(    3,0:p%MaxPlanes-2,1:p%NumTurbines ), STAT=errStat2);   if (Failed0('m%pvec_ce.'     )) return;   m%pvec_ce = 0.0_ReKi
 
    ! WAT - store array of disk average velocities for all turbines
    call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;

@@ -500,7 +500,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate( u%Ct_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Ct_azavg.')) return;
    allocate( u%Cq_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Cq_azavg.')) return;
    if (errStat /= ErrID_None) return
-   
+   u%V_plane  = 0.0_ReKi
+   u%Ct_azavg = 0.0_ReKi
+   u%Cq_azavg = 0.0_ReKi  
 
          
       
@@ -548,6 +550,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Vx_wake             = 0.0_ReKi
    xd%Vr_wake             = 0.0_ReKi
    xd%Vx_wake2            = 0.0_ReKi
+   xd%Vy_wake2            = 0.0_ReKi
+   xd%Vz_wake2            = 0.0_ReKi
    xd%V_plane_filt        = 0.0_ReKi
    xd%Vx_wind_disk_filt   = 0.0_ReKi
    xd%TI_amb_filt         = 0.0_ReKi
@@ -574,12 +578,15 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       allocate (   m%vt_tot (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_tot.')) return;
       allocate (   m%vt_amb (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_amb.')) return;
       allocate (   m%vt_shr (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_shr.')) return;
+      m%dvtdr  = 0.0_ReKi
+      m%vt_tot = 0.0_ReKi
+      m%vt_amb = 0.0_ReKi
+      m%vt_shr = 0.0_ReKi
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       allocate (   m%nu_dvx_dy(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dy.')) return;
       allocate (   m%nu_dvx_dz(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dz.')) return;
       allocate (   m%dnuvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dy.' )) return;
       allocate (   m%dnuvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dz.' )) return;
-      if (errStat /= ErrID_None) return
       m%nu_dvx_dy = 0.0_ReKi
       m%nu_dvx_dz = 0.0_ReKi
       m%dnuvx_dy  = 0.0_ReKi
@@ -597,8 +604,16 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate (    m%Vx_high(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
    allocate (    m%Vt_wake(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
    allocate (    m%Vx_polar(0:p%NumRadii-1 ), STAT=ErrStat2 );  if (Failed0('m%Vx_polar.')) return;
+
+   m%a        = 0.0_ReKi
+   m%b        = 0.0_ReKi
+   m%c        = 0.0_ReKi
+   m%d        = 0.0_ReKi
+   m%r_wake   = 0.0_ReKi
+   m%Vx_high  = 0.0_ReKi
    m%Vx_polar = 0.0_ReKi
-   m%Vt_wake = 0.0_ReKi
+   m%Vt_wake  = 0.0_ReKi
+
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
