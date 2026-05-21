@@ -2246,7 +2246,8 @@ contains
                   ! the plane's own basis. No Z (plane-vertical) deficit is
                   ! tracked, only Vx (along xhat) and Vy (along yhat).
                   Vel(:, idx) = u%Vx_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * xhat &
-                              + u%Vy_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * yhat
+                              + u%Vy_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * yhat &
+                              + u%Vz_wake(jy-p%NumRadii, kz-p%NumRadii, np_wp, nt_wp) * zhat
                end do
             end do
 
