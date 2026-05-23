@@ -87,6 +87,7 @@ CONTAINS
       INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
+      INTEGER(IntKi)                               :: CurrentTemp    ! temporary store of p%Current to disable currents during IC gen when wave-kinematic ramping is active
 !      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(ReKi)                                   :: OrMat2(3,3)
@@ -3044,6 +3045,12 @@ CONTAINS
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          m%IC_gen = .True. ! turn on IC_gen flag
+
+         ! If wave-kinematic ramping is active, disable currents during IC gen;
+         ! they will be applied at runtime alongside the wave grid.
+         CurrentTemp = p%Current
+         IF (p%waveKin_rampT > 0.0_DbKi) p%Current = 0_IntKi
+
          DO I = 1, p%nLines
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
@@ -3204,6 +3211,7 @@ CONTAINS
 
          ! Unboost drag coefficient of each line type   <<<
          m%IC_gen = .False. ! turn off IC_gen flag
+         p%Current = CurrentTemp  ! restore currents (may have been disabled during IC gen if wave-kinematic ramping was active)
          DO I = 1, p%nSlips
             IF (m%SlipList(I)%stateIs > 0) x%states(m%SlipList(I)%stateIs) = 0.0_DbKi
          END DO
