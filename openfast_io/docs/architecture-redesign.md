@@ -29,6 +29,15 @@ and approval.
 5. [Bug fixes discovered and applied](#bug-fixes-discovered-and-applied)
 6. [Backwards compatibility](#backwards-compatibility)
 7. [Numerical change summary](#numerical-change-summary)
+8. [MCP Server (`openfast-mcp`)](#mcp-server-openfast-mcp)
+   - 8.1 [Purpose](#81-purpose)
+   - 8.2 [Design principles](#82-design-principles)
+   - 8.3 [Tool interface (5 tools)](#83-tool-interface-5-tools)
+   - 8.4 [Supported executables](#84-supported-executables)
+   - 8.5 [Typical agent workflow](#85-typical-agent-workflow)
+   - 8.6 [Package structure](#86-package-structure)
+   - 8.7 [Dependencies](#87-dependencies)
+9. [Critical Analysis](#critical-analysis)
 
 ---
 
@@ -790,16 +799,143 @@ with source**.
 
 ---
 
-*Document last updated: April 2026.*
+## 8. MCP Server (`openfast-mcp`)
+
+### 8.1 Purpose
+
+`openfast-mcp` is an MCP (Model Context Protocol) server that exposes the
+`openfast_io` layer to AI agents.  It enables LLM-driven workflows to read,
+modify, run, and analyze OpenFAST simulations through a minimal, composable
+tool interface.
+
+### 8.2 Design principles
+
+- **Minimal tool count.** LLM agents perform best with fewer, more powerful
+  tools.  Each tool maps 1:1 to a workflow step rather than to an internal
+  function.
+- **Universal executable support.** The OpenFAST repo ships 17 executables
+  (openfast, turbsim, 15 standalone module drivers).  One `run` tool handles
+  all of them.
+- **Log parsing is not a tool.** Structured log output is always returned as
+  part of the `run` response.  No agent calls a log parser in isolation.
+- **Output reading is one tool.** Listing channels, reading data, and computing
+  statistics are parameters of a single `read_output` tool — not three separate
+  tools.
+
+### 8.3 Tool interface (5 tools)
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────┐     ┌─────────────┐
+│  read_deck  │ ──▶ │  patch_param │ ──▶ │   run   │ ──▶ │ read_output │
+└─────────────┘     └──────────────┘     └─────────┘     └─────────────┘
+                                              ▲
+                    ┌──────────────┐           │
+                    │   validate   │ ──────────┘ (pre-run check)
+                    └──────────────┘
+```
+
+| Tool | Parameters | Returns |
+|---|---|---|
+| **`read_deck`** | `input_path` (any `.fst`, `.dvr`, `.inp`) | Full fst_vt or driver dict as JSON |
+| **`patch_param`** | `input_path`, `module`, `key`, `value` | Confirmation + written file path |
+| **`run`** | `executable` (name or path), `input_file`, `timeout_s` | Exit code, parsed log (warnings/errors/timing), list of output files produced |
+| **`read_output`** | `output_path` (`.out`/`.outb`), `channels` (optional), `stats` (bool), `drop_transient_s` | If no channels: channel list. If channels: time-series data + optional stats (mean/std/min/max). |
+| **`validate`** | `input_path` | File-reference existence checks, cross-module consistency issues, schema version warnings |
+
+### 8.4 Supported executables
+
+The `run` tool resolves executable names from the OpenFAST build directory
+(configurable via `OPENFAST_BUILD_DIR` env var) or `$PATH`:
+
+| Name | Executable | Input file format |
+|---|---|---|
+| `openfast` | `openfast` | `.fst` |
+| `turbsim` | `turbsim` | TurbSim `.inp` |
+| `aerodyn` | `aerodyn_driver` | `ad_driver.dvr` |
+| `aerodisk` | `aerodisk_driver` | `adsk_driver.dvr` |
+| `beamdyn` | `beamdyn_driver` | `bd_driver.inp` |
+| `hydrodyn` | `hydrodyn_driver` | `hd_driver.inp` |
+| `inflowwind` | `inflowwind_driver` | `ifw_driver.inp` |
+| `moordyn` | `moordyn_driver` | `md_driver.inp` |
+| `seastate` | `seastate_driver` | `seastate_driver.inp` |
+| `subdyn` | `subdyn_driver` | `<case>.dvr` |
+| `simple_elastodyn` | `sed_driver` | `sed_driver.dvr` |
+| `unsteadyaero` | `unsteadyaero_driver` | `UA*.dvr` |
+| `servodyn` | `servodyn_driver` | `svd_driver.inp` |
+| `feamooring` | `feam_driver` | FEAM input |
+| `soildyn` | `soildyn_driver` | SoilDyn input |
+| `aeroacoustics` | `aeroacoustics_driver` | AA input |
+| `orcaflex` | `orca_driver` | OrcaFlex input |
+
+### 8.5 Typical agent workflow
+
+```python
+# 1. Read the simulation deck
+deck = read_deck(input_path="/cases/5MW_Land/5MW.fst")
+
+# 2. Modify a parameter
+patch_param(input_path="/cases/5MW_Land/5MW.fst",
+            module="Fst", key="TMax", value=60.0)
+
+# 3. Validate before running
+issues = validate(input_path="/cases/5MW_Land/5MW.fst")
+
+# 4. Run the simulation
+result = run(executable="openfast",
+             input_file="/cases/5MW_Land/5MW.fst",
+             timeout_s=600)
+# result.log_entries = [{severity: "WARNING", message: "..."}, ...]
+# result.output_files = ["5MW.out", "5MW.outb"]
+
+# 5. Analyze results
+stats = read_output(output_path="/cases/5MW_Land/5MW.outb",
+                    channels=["RotSpeed", "GenPwr", "BldPitch1"],
+                    stats=True, drop_transient_s=10.0)
+```
+
+### 8.6 Package structure
+
+```
+openfast-mcp/
+├── pyproject.toml
+├── src/openfast_mcp/
+│   ├── server.py          # FastMCP server, 5 tool definitions
+│   ├── config.py          # Executable resolution, env vars
+│   ├── resources.py       # MCP resource definitions
+│   └── tools/
+│       ├── io_tools.py    # read_deck, patch_param implementation
+│       ├── exec_tools.py  # run implementation (subprocess + log parsing)
+│       ├── output_tools.py # read_output implementation
+│       └── validation_tools.py  # validate implementation
+└── tests/
+    ├── conftest.py
+    ├── test_server.py
+    ├── test_io_tools.py
+    ├── test_exec_tools.py
+    ├── test_output_tools.py
+    └── test_validation_tools.py
+```
+
+### 8.7 Dependencies
+
+- `openfast_io` (the redesigned package — Layer 1 & 2 for reading/writing)
+- `mcp[cli]>=1.0.0` (MCP protocol server)
+- `pandas>=2.0` (output file handling)
+- `numpy>=1.24` (numerical operations)
+- `pyyaml>=6.0` (config)
+
+---
+
+*Document last updated: May 2026.*
 *Author: redesign carried out on branch `openfast_io_arch`.*
 
 ---
 
-## 8. Critical Analysis
+## 9. Critical Analysis
 
 The redesign is a clear net win, but several architectural choices warrant scrutiny.
 
-### 8.1 Architectural concerns
+### 9.1 Architectural concerns
 
 - **"Plain dicts in, plain dicts out" undermines half the redesign's value.** The
   document lists "no schema for `fst_vt`" as a core problem, then explicitly preserves
@@ -865,7 +1001,7 @@ The redesign is a clear net win, but several architectural choices warrant scrut
   > **Partial accept:** Extract a shared `resolve_file_ref(base_dir, ref_path)
   > -> Path` used by both layers. Planned for next iteration.
 
-### 8.2 Compatibility & migration
+### 9.2 Compatibility & migration
 
 - ~~**Two 3 000-line `_legacy` files retained "as reference."**~~ **Resolved:**
   `_FAST_reader_legacy.py` and `_FAST_writer_legacy.py` have been deleted from the
@@ -888,7 +1024,7 @@ The redesign is a clear net win, but several architectural choices warrant scrut
   > temporary. The contract is explicit: facade owns state, driver is stateless.
   > Downstream should migrate to `OpenFASTDriver` directly.
 
-### 8.3 Testing
+### 9.3 Testing
 
 - **262 tests / 87% coverage.** Coverage report now included (see §3.6).
   Remaining 13% is primarily: `turbsim_file.py` / `turbsim_util.py` (unchanged,
@@ -907,7 +1043,7 @@ The redesign is a clear net win, but several architectural choices warrant scrut
   values, negative exponents, and the exact values that triggered the original
   AeroDyn/BeamDyn bugs.
 
-### 8.4 Documentation & framing
+### 9.4 Documentation & framing
 
 - **Line counts presented as a quality metric.** "3 652 → 103 lines" describes
   redistribution, not improvement. The total LOC across `io/` + `drivers/` is
@@ -940,7 +1076,7 @@ The redesign is a clear net win, but several architectural choices warrant scrut
   `InputWriter_OpenFAST`) emit `DeprecationWarning` on instantiation. Target
   removal: next major version.
 
-### 8.5 Remaining follow-ups
+### 9.5 Remaining follow-ups
 
 1. Extract shared `resolve_file_ref(base_dir, ref_path)` used by both driver and
    `validation.py`.
