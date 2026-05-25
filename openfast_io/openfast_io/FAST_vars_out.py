@@ -1,5 +1,13 @@
 """ Generated from FAST OutListParameters.xlsx files with openfast_io/openfast_io/create_output_vars.py """
 
+import warnings as _warnings
+_warnings.warn(
+    "FAST_vars_out is deprecated and will be removed in a future version. "
+    "Use openfast_io.outlist.OutList instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 
 """ AeroDyn """
 AeroDyn = {}
