@@ -1651,13 +1651,14 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       y%NumPlanes  = xd%NumPlanes
    end if
 
-   ! --- Linearly decay wake deficits in the buffer region based on distance
+   ! --- Linearly decay wake deficits in the buffer region based on distance.
+   !     Polar arrays are tapered first; for the Polar wake model these tapered values
+   !     are then converted to the Cartesian output below, so the taper carries through.
    do i = 0,maxPln
-      if ( xd%x_plane(i) > p%x_full ) then
-          ! Note: Clamp to zero just in case, but all wake planes that propagated past x_buff should have been removed.
-          ScBuff = max( ( p%x_buff - xd%x_plane(i) ) / p%d_buff , 0.0 )
-          y%Vx_wake(:,i) = y%Vx_wake(:,i) * ScBuff
-          y%Vr_wake(:,i) = y%Vr_wake(:,i) * ScBuff
+      ScBuff = BufferScale(xd%x_plane(i))
+      if ( ScBuff < 1.0_ReKi ) then
+         y%Vx_wake(:,i) = y%Vx_wake(:,i) * ScBuff
+         y%Vr_wake(:,i) = y%Vr_wake(:,i) * ScBuff
       end if
    end do
 
@@ -1682,11 +1683,25 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          enddo
       endif
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+      ! For Cartesian/Curl, the Cartesian output arrays are copied from the (untapered)
+      ! discrete state. Apply the buffer-region taper here so that the wake deficit
+      ! handed to AWAE fades linearly from x_Full to x_Buff. Do NOT modify xd%*_wake2:
+      ! tapering the state would compound the scaling at every time step.
       do i = 0, maxPln
-         y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i)
-         y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i)
-         y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i)
+         ScBuff = BufferScale(xd%x_plane(i))
+         y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i) * ScBuff
+         y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i) * ScBuff
+         y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i) * ScBuff
       enddo
+      ! Recompute Cartesian gradients from the tapered output field so that the WAT
+      ! gradient term in Calc_k_WAT and the dvx_dy/dz VTK diagnostics fade consistently
+      ! with the velocity deficit in the buffer region.
+      if ( p%WAT .or. p%OutAllPlanes ) then
+         do i = 0, maxPln
+            call gradient_y(y%Vx_wake2(:,:,i), p%dr, m%dvx_dy(:,:,i))
+            call gradient_z(y%Vx_wake2(:,:,i), p%dr, m%dvx_dz(:,:,i))
+         end do
+      endif
    endif ! Curl or Polar
 
    ! --- WAT - Compute k_mt and add turbulence
@@ -1695,6 +1710,22 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    end if
 
 contains
+   !> Linear buffer-region taper applied to the output wake fields.
+   !! Returns 1 for x_plane <= x_Full, fades linearly to 0 at x_Buff, and is
+   !! clamped to 0 beyond x_Buff (or whenever d_Buff <= 0, which avoids a
+   !! divide-by-zero when the user sets NumDBuff = 0).
+   pure function BufferScale(x_plane) result(ScBuff_loc)
+      real(ReKi), intent(in) :: x_plane
+      real(ReKi)             :: ScBuff_loc
+      if ( x_plane <= p%x_Full ) then
+         ScBuff_loc = 1.0_ReKi
+      else if ( p%d_Buff > 0.0_ReKi ) then
+         ScBuff_loc = max( ( p%x_Buff - x_plane ) / p%d_Buff , 0.0_ReKi )
+      else
+         ScBuff_loc = 0.0_ReKi
+      end if
+   end function BufferScale
+
    subroutine Calc_k_WAT()
       integer(intKi) :: i, iy, iz
       real(ReKi)     :: C, S, dvdr, dvdtheta_r, R, r_tmp
