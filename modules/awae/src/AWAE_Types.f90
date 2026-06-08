@@ -254,6 +254,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
     CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
+    INTEGER(IntKi)  :: VTK_tWidthPlanes = 0      !< Number of charactes for the VTK plane numbers [-]
+    LOGICAL  :: WrPlanes = .false.      !< Write plane data out [-]
     LOGICAL  :: WAT_Enabled = .false.      !< Switch for turning on and off wake-added turbulence [-]
     TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
   END TYPE AWAE_ParameterType
@@ -2176,6 +2178,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
    DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
+   DstParamData%VTK_tWidthPlanes = SrcParamData%VTK_tWidthPlanes
+   DstParamData%WrPlanes = SrcParamData%WrPlanes
    DstParamData%WAT_Enabled = SrcParamData%WAT_Enabled
    DstParamData%WAT_FlowField => SrcParamData%WAT_FlowField
 end subroutine
@@ -2303,6 +2307,8 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%OutFileFFvtkRoot)
    call RegPack(RF, InData%OutFileFFvtkWakeRoot)
    call RegPack(RF, InData%VTK_tWidth)
+   call RegPack(RF, InData%VTK_tWidthPlanes)
+   call RegPack(RF, InData%WrPlanes)
    call RegPack(RF, InData%WAT_Enabled)
    call RegPack(RF, associated(InData%WAT_FlowField))
    if (associated(InData%WAT_FlowField)) then
@@ -2390,6 +2396,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_tWidth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_tWidthPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_Enabled); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WAT_FlowField)) deallocate(OutData%WAT_FlowField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return

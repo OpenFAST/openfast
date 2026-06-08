@@ -228,6 +228,8 @@ typedef  ^  ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The roo
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkRoot   -  - -   "The root name for VTK outputs" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeRoot -  - -   "The root name for VTK outputs for wake planes" -
 typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number of characters for VTK timestamp outputs" -
+typedef  ^  ParameterType  IntKi            VTK_tWidthPlanes   -  0 -   "Number of charactes for the VTK plane numbers" -
+typedef  ^  ParameterType  LOGICAL          WrPlanes           - .false. - "Write plane data out" -
 #typedef  ^  ParameterType  OutParmType      OutParam          {:} - -  "Names and units (and other characteristics) of all requested output parameters"      -
 #wake added turbulence
 typedef  ^  ParameterType  Logical          WAT_Enabled        -  - -   "Switch for turning on and off wake-added turbulence" -

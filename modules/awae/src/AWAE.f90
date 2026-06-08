@@ -1272,9 +1272,12 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%OutFileFFvtkRoot = trim(OutFileVTKDir) // PathSep // trim(baseName) ! Basename for VTK files
    p%OutFileFFvtkWakeRoot = trim(OutFileVTKwakeDir)  // PathSep // trim(baseName) ! Basename for VTK wake files
    p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi)/real(p%WrDisSkp1, ReKi) ) + 1) ! Length for time stamp
+   p%VTK_tWidthPlanes = CEILING( log10(real(max(p%MaxPlanes, 1), ReKi)) + 1)         ! length for the number of planes
    if (p%WrDisWind .or. p%NOutDisWindXY>0 .or. p%NOutDisWindYZ>0 .or. p%NOutDisWindXZ>0) then
       call MKDIR(OutFileVTKDir)
       call MKDIR(OutFileVTKwakeDir)
+      ! placeholder for writing planes -- this will eventually be an input (revise logic here then)
+      p%WrPlanes = .true.
    end if
 
    ! Plane grids
@@ -2076,18 +2079,20 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          if (Failed()) return
       end do
 
-      !-------------------------------------------------------------------------
-      ! Write a VTK polydata file containing the four corners of every active
-      ! wake plane for every turbine as a set of quads.
-      !-------------------------------------------------------------------------
-      call Write_Planes_WireFrame()
-
-      !-------------------------------------------------------------------------
-      ! Write one VTK STRUCTURED_GRID file per wake plane (per turbine) with
-      ! the wake velocity sampled on the plane's structured Y-Z grid, plus a
-      ! ParaView .vtk.series JSON index of all wake-plane files written so far.
-      !-------------------------------------------------------------------------
-      call Write_Planes_Data()
+      if (p%WrPlanes) then
+         !-------------------------------------------------------------------------
+         ! Write a VTK polydata file containing the four corners of every active
+         ! wake plane for every turbine as a set of quads.
+         !-------------------------------------------------------------------------
+         call Write_Planes_WireFrame()
+ 
+         !-------------------------------------------------------------------------
+         ! Write one VTK STRUCTURED_GRID file per wake plane (per turbine) with
+         ! the wake velocity sampled on the plane's structured Y-Z grid, plus a
+         ! ParaView .vtk.series JSON index of all wake-plane files written so far.
+         !-------------------------------------------------------------------------
+         call Write_Planes_Data()
+      endif
 
    end if
 
@@ -2158,7 +2163,7 @@ contains
          deallocate(WPPoints, WPLines)
 
          ! Refresh the per-turbine ParaView series file
-         call Write_WakePlane_Series("T"//trim(TurbNum)//".WakePlanesWireFrame", .false., 0, "")
+         call Write_WakePlane_Series("T"//trim(TurbNum)//".WakePlanesWireFrame", .false., "")
       end do
    end subroutine Write_Planes_WireFrame
 
@@ -2215,19 +2220,18 @@ contains
    subroutine Write_Planes_Data()
       integer(IntKi)              :: nt_wp, np_wp, nActive
       integer(IntKi)              :: jy, kz, idx, nY, nZ
-      integer(IntKi)              :: pWidth
       real(ReKi)                  :: pc(3), xhat(3), yhat(3), zhat(3)
       real(ReKi),     allocatable :: Pts(:,:), Vel(:,:)
       character(1024)             :: WPFileName
-      character(16)               :: PlaneNum, FmtStr
+      character(16)               :: FmtStr
+      character(p%VTK_tWidthPlanes) :: PlaneNum
 
       ! Plane grid dimensions (p%y and p%z run from -NumRadii+1 to NumRadii-1)
       nY = 2*p%NumRadii - 1
       nZ = 2*p%NumRadii - 1
 
       ! Field width for plane index, based on MaxPlanes (1-based count)
-      pWidth = max(1, int(floor(log10(real(max(p%MaxPlanes, 1), ReKi))) + 1, IntKi))
-      write(FmtStr, '(A,I0,A,I0,A)') '(I', pWidth, '.', pWidth, ')'
+      write(FmtStr, '(A,I0,A,I0,A)') '(I', p%VTK_tWidthPlanes, '.', p%VTK_tWidthPlanes, ')'
 
       allocate(Pts(3, nY*nZ))
       allocate(Vel(3, nY*nZ))
@@ -2270,7 +2274,7 @@ contains
 
       ! Refresh the ParaView series file referencing all wake-plane data files
       ! written so far (across all output time steps).
-      call Write_WakePlane_Series("WakePlane", .true., pWidth, FmtStr)
+      call Write_WakePlane_Series("WakePlane", .true., FmtStr)
    end subroutine Write_Planes_Data
 
    !> Helper: write a single 2D VTK STRUCTURED_GRID file for one wake plane
@@ -2287,7 +2291,7 @@ contains
       if (vtk_new_ascii_file(WPFileName, label, mvtk)) then
          call vtk_dataset_structured_grid(Pts, n1, n2, 1, mvtk)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_vector(Vel, "WakeVelocityDefecit", mvtk)
+         call vtk_point_data_vector(Vel, "WakeVelocityDeficit", mvtk)
          call vtk_close_file(mvtk)
       end if
    end subroutine Write_WakePlane_Data_File
@@ -2307,14 +2311,11 @@ contains
    !!                   timestep). If .false., files are named
    !!                   <prefix>.<Tstr>.vtk (one per timestep, all planes
    !!                   merged).
-   !! @param pWidth     Zero-padded field width for the plane index (only
-   !!                   used when perPlane = .true.).
    !! @param FmtStr     Fortran format string for the plane index (only
    !!                   used when perPlane = .true.).
-   subroutine Write_WakePlane_Series(VTKprefix, perPlane, pWidth, FmtStr)
+   subroutine Write_WakePlane_Series(VTKprefix, perPlane, FmtStr)
       character(*),   intent(in) :: VTKprefix
       logical,        intent(in) :: perPlane
-      integer(IntKi), intent(in) :: pWidth
       character(*),   intent(in) :: FmtStr
 
       integer(IntKi)             :: UnSer
