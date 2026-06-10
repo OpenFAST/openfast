@@ -147,6 +147,9 @@ typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High {:} - -  "InflowWi
 typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
 typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:} 0 -  "Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed" -
 
+#visualization
+typedef   ^ MiscVarType    IntKi    WakeVTK_StartN       {:}{:} - - "Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum]" -
+
 # Low-resolution grid chunk data
 typedef   ^ LRGChunkType     IntKi    iChunk                  {3} -  -  "XYZ index of chunk" -
 typedef   ^ LRGChunkType     IntKi    iSubGridX               {2} -  -  "start and end grid indices in X direction" -
@@ -227,6 +230,7 @@ typedef  ^  ParameterType  LOGICAL          OutDisWindYvalid  {:}   - - "Valid X
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkRoot   -  - -   "The root name for VTK outputs" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeRoot -  - -   "The root name for VTK outputs for wake planes" -
+typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeNullData - - -   "Null data for an unpopulated wake plane" -
 typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number of characters for VTK timestamp outputs" -
 typedef  ^  ParameterType  IntKi            VTK_tWidthPlanes   -  0 -   "Number of charactes for the VTK plane numbers" -
 typedef  ^  ParameterType  LOGICAL          WrPlanes           - .false. - "Write plane data out" -

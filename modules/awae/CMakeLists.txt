@@ -26,6 +26,7 @@ add_library(awaelib STATIC
   src/AWAE.f90
   src/AWAE_IO.f90
   src/AWAE_Types.f90
+  src/AWAE_vtk.f90
   src/amrex_utils.F90
 )
 target_link_libraries(awaelib awaelib_c ifwlib nwtclibs)

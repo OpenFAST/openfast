@@ -170,6 +170,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: planeDomainExit      !< Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum] [-]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  LRGChunkType  =======
@@ -253,6 +254,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
     CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
+    CHARACTER(1024)  :: OutFileFFvtkWakeNullData      !< Null data for an unpopulated wake plane [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
     INTEGER(IntKi)  :: VTK_tWidthPlanes = 0      !< Number of charactes for the VTK plane numbers [-]
     LOGICAL  :: WrPlanes = .false.      !< Write plane data out [-]
@@ -1455,6 +1457,18 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%planeDomainExit = SrcMiscData%planeDomainExit
    end if
+   if (allocated(SrcMiscData%WakeVTK_StartN)) then
+      LB(1:2) = lbound(SrcMiscData%WakeVTK_StartN)
+      UB(1:2) = ubound(SrcMiscData%WakeVTK_StartN)
+      if (.not. allocated(DstMiscData%WakeVTK_StartN)) then
+         allocate(DstMiscData%WakeVTK_StartN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WakeVTK_StartN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WakeVTK_StartN = SrcMiscData%WakeVTK_StartN
+   end if
 end subroutine
 
 subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -1567,6 +1581,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%planeDomainExit)) then
       deallocate(MiscData%planeDomainExit)
    end if
+   if (allocated(MiscData%WakeVTK_StartN)) then
+      deallocate(MiscData%WakeVTK_StartN)
+   end if
 end subroutine
 
 subroutine AWAE_PackMisc(RF, Indata)
@@ -1629,6 +1646,7 @@ subroutine AWAE_PackMisc(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%V_amb_low_disk)
    call RegPackAlloc(RF, InData%planeDomainExit)
+   call RegPackAlloc(RF, InData%WakeVTK_StartN)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1706,6 +1724,7 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%V_amb_low_disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%planeDomainExit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WakeVTK_StartN); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyLRGChunkType(SrcLRGChunkTypeData, DstLRGChunkTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -2177,6 +2196,7 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
    DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
+   DstParamData%OutFileFFvtkWakeNullData = SrcParamData%OutFileFFvtkWakeNullData
    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
    DstParamData%VTK_tWidthPlanes = SrcParamData%VTK_tWidthPlanes
    DstParamData%WrPlanes = SrcParamData%WrPlanes
@@ -2306,6 +2326,7 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%OutFileFFvtkRoot)
    call RegPack(RF, InData%OutFileFFvtkWakeRoot)
+   call RegPack(RF, InData%OutFileFFvtkWakeNullData)
    call RegPack(RF, InData%VTK_tWidth)
    call RegPack(RF, InData%VTK_tWidthPlanes)
    call RegPack(RF, InData%WrPlanes)
@@ -2395,6 +2416,7 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkWakeNullData); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_tWidth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_tWidthPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrPlanes); if (RegCheckErr(RF, RoutineName)) return
