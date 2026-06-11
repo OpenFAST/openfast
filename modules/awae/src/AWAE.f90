@@ -1707,8 +1707,11 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       errStat = ErrID_None
       errMsg  = ""
 
-      ! Write final ParaView .vtk.series files for wake planes
-      call Write_WakePlane_Series(p, m)
+      if (p%WrPlanes) then
+         ! Write final ParaView .vtk.series files for wake planes
+         call Write_WakePlane_Series(p, m)
+         call Write_WireFrame_Series(p)
+      endif
 
       ! Destroy InflowWind data
       select case(p%Mod_AmbWind)

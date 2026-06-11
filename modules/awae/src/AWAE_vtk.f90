@@ -39,6 +39,7 @@ module AWAE_vtk
    public :: Write_Planes_Data
    public :: Write_WakePlane_Data_File
    public :: Write_WakePlane_Series
+   public :: Write_WireFrame_Series
    public :: Write_NullPlane
 
 contains
@@ -361,5 +362,78 @@ subroutine Write_NullPlane(OutFileVTKwakeDir, p)
         "Wake plane NULL at time = NULL seconds.", nY, nZ, PtsVel, PtsVel)
    deallocate(PtsVel)
 end subroutine Write_NullPlane
+
+
+!> Write one ParaView .vtk.series index file per turbine for the wireframe
+!! VTK files produced by Write_Planes_WireFrame.  Called once from AWAE_End.
+subroutine Write_WireFrame_Series(p)
+   type(AWAE_ParameterType), intent(in) :: p   !< AWAE parameters
+
+   integer(IntKi)              :: nt_wp, ntWidth, n_out
+   integer(IntKi)              :: UnSer, out_idx, SerErrStat
+   character(ErrMsgLen)        :: SerErrMsg
+   character(16)               :: FmtStrT, TurbNum
+   character(1024)             :: SeriesFile, baseName, EntryName
+   character(p%VTK_tWidth)     :: TstrOut
+   character(32)               :: TimeStr
+   real(DbKi)                  :: t_out
+   logical                     :: firstEntry
+
+   if (.not. p%WrPlanes) return
+
+   ! Total number of VTK output steps
+   n_out = (p%NumDT - 1) / p%WrDisSkp1
+
+   ! Compute basename once (filename portion of OutFileFFvtkWakeRoot)
+   call GetPath(p%OutFileFFvtkWakeRoot, EntryName, baseName)
+
+   ! Format string for zero-padded turbine number
+   ntWidth = max(1, int(floor(log10(real(max(p%NumTurbines, 1), ReKi))) + 1, IntKi))
+   write(FmtStrT, '(A,I0,A,I0,A)') '(I', ntWidth, '.', ntWidth, ')'
+
+   do nt_wp = 1, p%NumTurbines
+      write(TurbNum, FmtStrT) nt_wp
+
+      SeriesFile = trim(p%OutFileFFvtkWakeRoot)//".T"//trim(TurbNum)// &
+                   ".WakePlanesWireFrame.vtk.series"
+
+      !$OMP critical(fileopen_critical)
+      call GetNewUnit(UnSer, SerErrStat, SerErrMsg)
+      call OpenFOutFile(UnSer, SeriesFile, SerErrStat, SerErrMsg)
+      !$OMP end critical(fileopen_critical)
+      if (SerErrStat >= AbortErrLev) cycle
+
+      write(UnSer, '(A)') '{'
+      write(UnSer, '(A)') '  "file-series-version" : "1.0",'
+      write(UnSer, '(A)') '  "files" : ['
+
+      firstEntry = .true.
+      do out_idx = 0, n_out
+         t_out = real(out_idx, DbKi) * real(p%WrDisSkp1, DbKi) * p%dt_low
+         write(TstrOut, '(i'//trim(Num2LStr(p%VTK_tWidth))//'.'// &
+               trim(Num2LStr(p%VTK_tWidth))//')') out_idx
+
+         EntryName = trim(baseName)//".T"//trim(TurbNum)// &
+                     ".WakePlanesWireFrame."//trim(TstrOut)//".vtk"
+
+         write(TimeStr, '(F14.5)') t_out
+         if (firstEntry) then
+            write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
+                                        '", "time" : ', trim(TimeStr), ' }'
+            firstEntry = .false.
+         else
+            write(UnSer, '(A,A,A,A,A)') '   ,{ "name" : "', trim(EntryName), &
+                                        '", "time" : ', trim(TimeStr), ' }'
+         end if
+      end do
+
+      write(UnSer, '(A)') '  ]'
+      write(UnSer, '(A)') '}'
+
+      !$OMP critical(fileopen_critical)
+      close(UnSer)
+      !$OMP end critical(fileopen_critical)
+   end do
+end subroutine Write_WireFrame_Series
 
 end module AWAE_vtk
