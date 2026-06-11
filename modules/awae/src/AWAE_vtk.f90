@@ -40,6 +40,7 @@ module AWAE_vtk
    public :: Write_WakePlane_Data_File
    public :: Write_WakePlane_Series
    public :: Write_WireFrame_Series
+   public :: Write_DisWind_Series
    public :: Write_NullPlane
 
 contains
@@ -435,5 +436,73 @@ subroutine Write_WireFrame_Series(p)
       !$OMP end critical(fileopen_critical)
    end do
 end subroutine Write_WireFrame_Series
+
+
+!> Write a ParaView .vtk.series index file for one disturbed-wind output
+!! slice (XY, YZ, or XZ).  The slice label and 1-based index select which
+!! series of per-timestep VTK files to reference.
+subroutine Write_DisWind_Series(p, sliceLabel, iSlice)
+   type(AWAE_ParameterType), intent(in) :: p          !< AWAE parameters
+   character(*),             intent(in) :: sliceLabel  !< "DisXY", "DisYZ", or "DisXZ"
+   integer(IntKi),           intent(in) :: iSlice      !< 1-based slice index
+
+   integer(IntKi)              :: n_out
+   integer(IntKi)              :: UnSer, out_idx, SerErrStat
+   character(ErrMsgLen)        :: SerErrMsg
+   character(1024)             :: SeriesFile, baseName, EntryName
+   character(p%VTK_tWidth)     :: TstrOut
+   character(32)               :: TimeStr
+   character(3)                :: PlaneNumStr
+   real(DbKi)                  :: t_out
+   logical                     :: firstEntry
+
+   ! Total number of VTK output steps
+   n_out = (p%NumDT - 1) / p%WrDisSkp1
+
+   ! 3-digit zero-padded slice index (matches CalcOutput naming)
+   write(PlaneNumStr, '(i3.3)') iSlice
+
+   ! Compute basename (filename portion of OutFileFFvtkRoot)
+   call GetPath(p%OutFileFFvtkRoot, EntryName, baseName)
+
+   ! Series filename
+   SeriesFile = trim(p%OutFileFFvtkRoot)//".Low."//trim(sliceLabel)//PlaneNumStr//".vtk.series"
+
+   !$OMP critical(fileopen_critical)
+   call GetNewUnit(UnSer, SerErrStat, SerErrMsg)
+   call OpenFOutFile(UnSer, SeriesFile, SerErrStat, SerErrMsg)
+   !$OMP end critical(fileopen_critical)
+   if (SerErrStat >= AbortErrLev) return
+
+   write(UnSer, '(A)') '{'
+   write(UnSer, '(A)') '  "file-series-version" : "1.0",'
+   write(UnSer, '(A)') '  "files" : ['
+
+   firstEntry = .true.
+   do out_idx = 0, n_out
+      t_out = real(out_idx, DbKi) * real(p%WrDisSkp1, DbKi) * p%dt_low
+      write(TstrOut, '(i'//trim(Num2LStr(p%VTK_tWidth))//'.'// &
+            trim(Num2LStr(p%VTK_tWidth))//')') out_idx
+
+      EntryName = trim(baseName)//".Low."//trim(sliceLabel)//PlaneNumStr//"."//trim(TstrOut)//".vtk"
+
+      write(TimeStr, '(F14.5)') t_out
+      if (firstEntry) then
+         write(UnSer, '(A,A,A,A,A)') '    { "name" : "', trim(EntryName), &
+                                     '", "time" : ', trim(TimeStr), ' }'
+         firstEntry = .false.
+      else
+         write(UnSer, '(A,A,A,A,A)') '   ,{ "name" : "', trim(EntryName), &
+                                     '", "time" : ', trim(TimeStr), ' }'
+      end if
+   end do
+
+   write(UnSer, '(A)') '  ]'
+   write(UnSer, '(A)') '}'
+
+   !$OMP critical(fileopen_critical)
+   close(UnSer)
+   !$OMP end critical(fileopen_critical)
+end subroutine Write_DisWind_Series
 
 end module AWAE_vtk

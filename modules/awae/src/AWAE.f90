@@ -1707,6 +1707,20 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       errStat = ErrID_None
       errMsg  = ""
 
+      ! Write .vtk.series files for disturbed-wind output slices
+      do nt = 1, p%NOutDisWindXY
+         if (.not. p%OutDisWindZvalid(nt)) cycle
+         call Write_DisWind_Series(p, "DisXY", nt)
+      end do
+      do nt = 1, p%NOutDisWindYZ
+         if (.not. p%OutDisWindXvalid(nt)) cycle
+         call Write_DisWind_Series(p, "DisYZ", nt)
+      end do
+      do nt = 1, p%NOutDisWindXZ
+         if (.not. p%OutDisWindYvalid(nt)) cycle
+         call Write_DisWind_Series(p, "DisXZ", nt)
+      end do
+
       if (p%WrPlanes) then
          ! Write final ParaView .vtk.series files for wake planes
          call Write_WakePlane_Series(p, m)
