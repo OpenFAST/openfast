@@ -1636,7 +1636,17 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       if ( p%OutAllPlanes ) then
          call mkdir(p%OutFileVTKDir)
       endif
-      
+
+      ! set initial outputs for Cartesian/Curl wake models from the polar info.
+      if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+         call Axisymmetric2CartesianVx(y%Vx_wake(:,0), p%r, p%y, p%z, y%Vx_wake2(:,:,0))
+         y%Vy_wake2(:,:,0) = 0.0_ReKi
+         y%Vz_wake2(:,:,0) = 0.0_ReKi
+         y%Vx_wake2(:,:,1) = y%Vx_wake2(:,:,0)
+         y%Vy_wake2(:,:,1) = 0.0_ReKi
+         y%Vz_wake2(:,:,1) = 0.0_ReKi
+      end if
+
    else
       y%x_plane    = xd%x_plane
       y%p_plane    = xd%p_plane
@@ -1687,21 +1697,25 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       ! discrete state. Apply the buffer-region taper here so that the wake deficit
       ! handed to AWAE fades linearly from x_Full to x_Buff. Do NOT modify xd%*_wake2:
       ! tapering the state would compound the scaling at every time step.
-      do i = 0, maxPln
-         ScBuff = BufferScale(xd%x_plane(i))
-         y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i) * ScBuff
-         y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i) * ScBuff
-         y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i) * ScBuff
-      enddo
-      ! Recompute Cartesian gradients from the tapered output field so that the WAT
-      ! gradient term in Calc_k_WAT and the dvx_dy/dz VTK diagnostics fade consistently
-      ! with the velocity deficit in the buffer region.
-      if ( p%WAT .or. p%OutAllPlanes ) then
+      ! Skip on firstPass: y%Vx_wake2 was already set from NearWakeCorrection above,
+      ! and xd%Vx_wake2 has not yet been initialized (still zero).
+      if (.not. OtherState%firstPass) then
          do i = 0, maxPln
-            call gradient_y(y%Vx_wake2(:,:,i), p%dr, m%dvx_dy(:,:,i))
-            call gradient_z(y%Vx_wake2(:,:,i), p%dr, m%dvx_dz(:,:,i))
-         end do
-      endif
+            ScBuff = BufferScale(xd%x_plane(i))
+            y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i) * ScBuff
+            y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i) * ScBuff
+            y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i) * ScBuff
+         enddo
+         ! Recompute Cartesian gradients from the tapered output field so that the WAT
+         ! gradient term in Calc_k_WAT and the dvx_dy/dz VTK diagnostics fade consistently
+         ! with the velocity deficit in the buffer region.
+         if ( p%WAT .or. p%OutAllPlanes ) then
+            do i = 0, maxPln
+               call gradient_y(y%Vx_wake2(:,:,i), p%dr, m%dvx_dy(:,:,i))
+               call gradient_z(y%Vx_wake2(:,:,i), p%dr, m%dvx_dz(:,:,i))
+            end do
+         endif
+      end if
    endif ! Curl or Polar
 
    ! --- WAT - Compute k_mt and add turbulence
@@ -1940,12 +1954,18 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
 
 
    ! Initialize states for cartesian and curled wake formulations
-   call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
-   xd%Vx_wake2(:,:,1) = xd%Vx_wake2(:,:,0)
-   xd%Vy_wake2(:,:,0) = 0.0_ReKi
-   xd%Vz_wake2(:,:,0) = 0.0_ReKi
-   xd%Vy_wake2(:,:,1) = xd%Vy_wake2(:,:,0)
-   xd%Vz_wake2(:,:,1) = xd%Vz_wake2(:,:,0)
+   if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+      ! Compute Vx(r)
+      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat2, errMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)
+      if (errStat >= AbortErrLev) return
+      call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
+      xd%Vy_wake2(:,:,0) = 0.0_ReKi
+      xd%Vz_wake2(:,:,0) = 0.0_ReKi
+      xd%Vx_wake2(:,:,1) = xd%Vx_wake2(:,:,0)
+      xd%Vy_wake2(:,:,1) = xd%Vy_wake2(:,:,0)
+      xd%Vz_wake2(:,:,1) = xd%Vz_wake2(:,:,0)
+   endif
 
 end subroutine InitStatesWithInputs
    
