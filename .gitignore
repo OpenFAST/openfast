@@ -64,3 +64,8 @@ varcache
 # Python cache files
 openfast_io/dist/
 openfast_io/openfast_io/_version.py
+
+# docker with VScode config
+*.code-workspace
+docker-compose.yml
+.devcontainer/
