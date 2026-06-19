@@ -602,7 +602,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate (    m%d(0:p%NumRadii-1 ),        STAT=ErrStat2 );  if (Failed0('m%d.')) return;
    allocate (    m%r_wake(0:p%NumRadii-1 ),   STAT=ErrStat2 );  if (Failed0('m%r_wake.'  )) return;
    allocate (    m%Vx_high(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
-   allocate (    m%Vt_wake(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
+   allocate (    m%Vt_wake(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vt_wake.' )) return;
    allocate (    m%Vx_polar(0:p%NumRadii-1 ), STAT=ErrStat2 );  if (Failed0('m%Vx_polar.')) return;
 
    m%a        = 0.0_ReKi
