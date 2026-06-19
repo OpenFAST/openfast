@@ -1586,6 +1586,7 @@ contains
       real(ReKi)                       :: Dxyz
       real(ReKi)                       :: ff_lim(2)
       real(ReKi)                       :: hr_lim(2)
+      real(ReKi),          parameter   :: GridTol = 1.0E-3  ! Tolerance from IfW for checking the high-res grid (Mod_AmbWind=3 only).
       character(1024)                  :: tmpMsg
 
       associate(ff => p%IfW(nt)%FlowField, wfi => IfW_InitOut%WindFileInfo)
