@@ -170,7 +170,11 @@ class OpenFASTDriver:
                     fst_vt['ElastoDynBlade'] = blades
 
         # ------- BeamDyn (per-blade) -------
-        if comp_elast == 2:
+        # Match baseline FAST_reader: read BeamDyn whenever BDBldFile(1) exists on
+        # disk, regardless of CompElast. Baseline reads (and captures the OutList of)
+        # an inactive BeamDyn when its blade file is present; this reproduces that.
+        _bd1 = os.path.normpath(os.path.join(fastdir, fst_vt['Fst'].get('BDBldFile(1)', '')))
+        if comp_elast == 2 or os.path.isfile(_bd1):
             num_bl = fst_vt['ElastoDyn'].get('NumBl', 3)
             bd_blades = []
             bd_blade_data = []
