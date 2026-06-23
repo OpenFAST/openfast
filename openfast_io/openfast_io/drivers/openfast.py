@@ -122,6 +122,9 @@ class OpenFASTDriver:
         def _cap(f, module, freeform=False):
             return capture_outlist(f, fst_vt['outlist'], module, freeform=freeform)
 
+        def _cap_ff(f, module):
+            return capture_outlist(f, fst_vt['outlist'], module, freeform=True)
+
         fst_vt['Fst'] = self._read_main_input(fst_path, base_dir)
 
         n_rotors = fst_vt['Fst'].get('NRotors', 1)
@@ -140,7 +143,7 @@ class OpenFASTDriver:
             sed_rel = fst_vt['Fst'].get('EDFile', '')
             sed_file = os.path.normpath(os.path.join(fastdir, sed_rel))
             if os.path.isfile(sed_file):
-                sed_data = self._simple_elastodyn.read(sed_file)
+                sed_data = self._simple_elastodyn.read(sed_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['SimpleElastoDyn'] = sed_data.get('SimpleElastoDyn', {})
         elif comp_elast in (1, 2):
             if os.path.isfile(ed_file):
@@ -206,6 +209,8 @@ class OpenFASTDriver:
                     base_dir=os.path.dirname(aero_file),
                     num_blades=num_bl,
                     aero_file_path=fst_vt['Fst'].get('AeroFile_path', ''),
+                    outlist=fst_vt['outlist'],
+                    read_outlist_fn=_cap,
                 )
                 fst_vt['AeroDyn'] = ad_data.get('AeroDyn', {})
 
@@ -221,7 +226,7 @@ class OpenFASTDriver:
             aero_rel = fst_vt['Fst'].get('AeroFile', '')
             aero_file = os.path.normpath(os.path.join(fastdir, aero_rel))
             if os.path.isfile(aero_file):
-                adsk_data = self._aerodisk.read(aero_file)
+                adsk_data = self._aerodisk.read(aero_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['AeroDisk'] = adsk_data.get('AeroDisk', {})
 
         # ------- ServoDyn -------
@@ -254,7 +259,7 @@ class OpenFASTDriver:
             hd_file = os.path.normpath(os.path.join(fastdir, hd_rel))
             if os.path.isfile(hd_file):
                 fst_vt['Fst']['HydroFile_path'] = os.path.split(hd_rel)[0]
-                hd_data = self._hydrodynamics.read(hd_file)
+                hd_data = self._hydrodynamics.read(hd_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['HydroDyn'] = hd_data.get('HydroDyn', {})
 
         # ------- SeaState -------
@@ -263,7 +268,7 @@ class OpenFASTDriver:
             ss_rel = fst_vt['Fst'].get('SeaStFile', '')
             ss_file = os.path.normpath(os.path.join(fastdir, ss_rel))
             if os.path.isfile(ss_file):
-                ss_data = self._seastate.read(ss_file)
+                ss_data = self._seastate.read(ss_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap_ff)
                 fst_vt['SeaState'] = ss_data.get('SeaState', {})
 
         # ------- SubDyn / ExtPtfm -------
@@ -273,14 +278,14 @@ class OpenFASTDriver:
             sub_file = os.path.normpath(os.path.join(fastdir, sub_rel))
             if os.path.isfile(sub_file):
                 fst_vt['Fst']['SubFile_path'] = os.path.split(sub_rel)[0]
-                sub_data = self._subdyn.read(sub_file)
+                sub_data = self._subdyn.read(sub_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap_ff)
                 fst_vt['SubDyn'] = sub_data.get('SubDyn', {})
         elif comp_sub == 2:
             sub_rel = fst_vt['Fst'].get('SubFile', '')
             sub_file = os.path.normpath(os.path.join(fastdir, sub_rel))
             if os.path.isfile(sub_file):
                 fst_vt['Fst']['SubFile_path'] = os.path.split(sub_rel)[0]
-                ep_data = self._extptfm.read(sub_file)
+                ep_data = self._extptfm.read(sub_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['ExtPtfm'] = ep_data.get('ExtPtfm', {})
 
         # ------- MoorDyn / MAP -------
@@ -297,7 +302,7 @@ class OpenFASTDriver:
             moor_file = os.path.normpath(os.path.join(fastdir, moor_rel))
             if os.path.isfile(moor_file):
                 fst_vt['Fst']['MooringFile_path'] = os.path.split(moor_rel)[0]
-                md_data = self._moordyn.read(moor_file)
+                md_data = self._moordyn.read(moor_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['MoorDyn'] = md_data.get('MoorDyn', {})
 
         return fst_vt
