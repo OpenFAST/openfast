@@ -116,6 +116,12 @@ class OpenFASTDriver:
         fst_vt = init_fst_vt()
         base_dir = fst_path.parent
 
+        # Callback that captures a module's OutList section into fst_vt['outlist'],
+        # mirroring baseline read_outlist/set_outlist. Modules that take a
+        # read_outlist_fn use this; freeform modules (SubDyn/SeaState) pass freeform=True.
+        def _cap(f, module, freeform=False):
+            return capture_outlist(f, fst_vt['outlist'], module, freeform=freeform)
+
         fst_vt['Fst'] = self._read_main_input(fst_path, base_dir)
 
         n_rotors = fst_vt['Fst'].get('NRotors', 1)
@@ -170,7 +176,7 @@ class OpenFASTDriver:
                 bd_rel = fst_vt['Fst'].get(bd_file_key, '')
                 bd_file = os.path.normpath(os.path.join(fastdir, bd_rel))
                 if os.path.isfile(bd_file):
-                    bd_data = self._beamdyn.read(bd_file, base_dir=os.path.dirname(bd_file))
+                    bd_data = self._beamdyn.read(bd_file, base_dir=os.path.dirname(bd_file), outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                     bd_blades.append(bd_data.get('BeamDyn', {}))
                     bd_blade_data.append(bd_data.get('BeamDynBlade', {}))
                 else:
@@ -185,7 +191,7 @@ class OpenFASTDriver:
             ifw_rel = fst_vt['Fst'].get('InflowFile', '')
             ifw_file = os.path.normpath(os.path.join(fastdir, ifw_rel))
             if os.path.isfile(ifw_file):
-                ifw_data = self._inflowwind.read(ifw_file, base_dir=os.path.dirname(ifw_file))
+                ifw_data = self._inflowwind.read(ifw_file, base_dir=os.path.dirname(ifw_file), outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['InflowWind'] = ifw_data.get('InflowWind', {})
 
         # ------- AeroDyn -------
@@ -228,6 +234,8 @@ class OpenFASTDriver:
                     sd_file,
                     base_dir=fastdir,
                     servo_file_rel=sd_rel,
+                    outlist=fst_vt['outlist'],
+                    read_outlist_fn=_cap,
                 )
                 fst_vt['ServoDyn'] = sd_data.get('ServoDyn', {})
                 fst_vt['BStC'] = sd_data.get('BStC', [])
