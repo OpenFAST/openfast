@@ -74,31 +74,34 @@ class SimpleElastoDynIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list
-        sed['_outlist'] = {}
-        data = f.readline()
-        while data.split().__len__() == 0:
+        # Read output list — route into the shared registry (mirrors baseline)
+        if read_outlist_fn is not None and outlist is not None:
+            read_outlist_fn(f, 'SimpleElastoDyn')
+        else:
+            sed['_outlist'] = {}
             data = f.readline()
-        while data.split()[0] != 'END':
-            if data.find('"') >= 0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string) == 1:
-                    channel_list = row_string[0].split('\n')[0]
+            while data.split().__len__() == 0:
+                data = f.readline()
+            while data.split()[0] != 'END':
+                if data.find('"') >= 0:
+                    channels = data.split('"')
+                    channel_list = channels[1].split(',')
                 else:
-                    channel_list = row_string
-            if isinstance(channel_list, list):
-                for ch in channel_list:
-                    ch = ch.strip()
+                    row_string = data.split(',')
+                    if len(row_string) == 1:
+                        channel_list = row_string[0].split('\n')[0]
+                    else:
+                        channel_list = row_string
+                if isinstance(channel_list, list):
+                    for ch in channel_list:
+                        ch = ch.strip()
+                        if ch:
+                            sed['_outlist'][ch] = True
+                else:
+                    ch = channel_list.strip()
                     if ch:
                         sed['_outlist'][ch] = True
-            else:
-                ch = channel_list.strip()
-                if ch:
-                    sed['_outlist'][ch] = True
-            data = f.readline()
+                data = f.readline()
 
         f.close()
         return {'SimpleElastoDyn': sed}

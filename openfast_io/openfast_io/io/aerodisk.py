@@ -90,31 +90,34 @@ class AeroDiskIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list
-        ad['_outlist'] = {}
-        data_line = f.readline()
-        while data_line.split().__len__() == 0:
+        # Read output list — route into the shared registry (mirrors baseline)
+        if read_outlist_fn is not None and outlist is not None:
+            read_outlist_fn(f, 'AeroDisk')
+        else:
+            ad['_outlist'] = {}
             data_line = f.readline()
-        while data_line.split()[0] != 'END':
-            if data_line.find('"') >= 0:
-                channels = data_line.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data_line.split(',')
-                if len(row_string) == 1:
-                    channel_list = row_string[0].split('\n')[0]
+            while data_line.split().__len__() == 0:
+                data_line = f.readline()
+            while data_line.split()[0] != 'END':
+                if data_line.find('"') >= 0:
+                    channels = data_line.split('"')
+                    channel_list = channels[1].split(',')
                 else:
-                    channel_list = row_string
-            if isinstance(channel_list, list):
-                for ch in channel_list:
-                    ch = ch.strip()
+                    row_string = data_line.split(',')
+                    if len(row_string) == 1:
+                        channel_list = row_string[0].split('\n')[0]
+                    else:
+                        channel_list = row_string
+                if isinstance(channel_list, list):
+                    for ch in channel_list:
+                        ch = ch.strip()
+                        if ch:
+                            ad['_outlist'][ch] = True
+                else:
+                    ch = channel_list.strip()
                     if ch:
                         ad['_outlist'][ch] = True
-            else:
-                ch = channel_list.strip()
-                if ch:
-                    ad['_outlist'][ch] = True
-            data_line = f.readline()
+                data_line = f.readline()
 
         f.close()
         return {'AeroDisk': ad}

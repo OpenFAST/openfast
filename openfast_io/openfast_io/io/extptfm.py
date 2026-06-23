@@ -115,6 +115,14 @@ class ExtPtfmIO(ModuleIO):
                     ep['_outlist'][ch] = True
             data = f.readline()
 
+        # Populate the shared registry (freeform — ExtPtfm CBD*/CBF* channels are
+        # not in the standard channel registry). data was pre-read, so we copy the
+        # parsed set rather than re-reading the section.
+        if outlist is not None:
+            outlist.setdefault('ExtPtfm', {})
+            for ch in ep['_outlist']:
+                outlist['ExtPtfm'][ch] = True
+
         f.close()
 
         # Read sub-files
