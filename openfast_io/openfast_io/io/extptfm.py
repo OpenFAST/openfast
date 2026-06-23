@@ -122,6 +122,9 @@ class ExtPtfmIO(ModuleIO):
             outlist.setdefault('ExtPtfm', {})
             for ch in ep['_outlist']:
                 outlist['ExtPtfm'][ch] = True
+            # Channels now live in the shared registry; don't pollute fst_vt['ExtPtfm']
+            # with a private '_outlist' key baseline never creates.
+            ep.pop('_outlist', None)
 
         f.close()
 

@@ -189,8 +189,17 @@ class OpenFASTDriver:
                 else:
                     bd_blades.append({})
                     bd_blade_data.append({})
-            fst_vt['BeamDyn'] = bd_blades
-            fst_vt['BeamDynBlade'] = bd_blade_data
+            # Blade dedup — match legacy (FAST_reader): collapse to a single dict when
+            # the BeamDyn blade files are identical. Mirrors the ElastoDyn block above.
+            bd1 = fst_vt['Fst'].get('BDBldFile(1)', '')
+            bd2 = fst_vt['Fst'].get('BDBldFile(2)', '')
+            bd3 = fst_vt['Fst'].get('BDBldFile(3)', '')
+            if (bd1 == bd2 == bd3) or num_bl == 1 or (num_bl == 2 and bd1 == bd2):
+                fst_vt['BeamDyn'] = bd_blades[0] if bd_blades else {}
+                fst_vt['BeamDynBlade'] = bd_blade_data[0] if bd_blade_data else {}
+            else:
+                fst_vt['BeamDyn'] = bd_blades
+                fst_vt['BeamDynBlade'] = bd_blade_data
 
         # ------- InflowWind -------
         comp_inflow = fst_vt['Fst'].get('CompInflow', 0)
@@ -379,22 +388,40 @@ class OpenFASTDriver:
             written.append(ed_path)
 
         # ------- BeamDyn -------
-        if comp_elast == 2:
-            bd_list = fst_vt.get('BeamDyn', [])
-            if isinstance(bd_list, list):
-                for i, bd in enumerate(bd_list):
-                    if bd:
-                        bd_name = case_name + '_BeamDyn_{}.dat'.format(i + 1)
-                        fst['BDBldFile({})'.format(i + 1)] = bd_name
-                        bd_path = str(output_dir / bd_name)
-                        self._beamdyn.write(
-                            {'BeamDyn': bd,
-                             'BeamDynBlade': fst_vt.get('BeamDynBlade', [{}])[i] if isinstance(fst_vt.get('BeamDynBlade'), list) else {}},
-                            bd_path,
-                            base_dir=str(output_dir),
-                            outlist=fst_vt.get('outlist'),
-                        )
-                        written.append(bd_path)
+        # Write whenever fst_vt['BeamDyn'] is populated (symmetric with the read guard,
+        # which reads BeamDyn whenever the blade file exists) — not gated on CompElast.
+        # Handle both the collapsed-dict shape (identical blades) and the list shape
+        # (distinct blades), and assign a UNIQUE per-blade BldFile so the writer does not
+        # send every blade to the same path (silent blade-property collision).
+        bd_data = fst_vt.get('BeamDyn')
+        bd_blade_all = fst_vt.get('BeamDynBlade')
+        num_bl_w = fst_vt.get('ElastoDyn', {}).get('NumBl', 3)
+
+        def _write_bd_blade(idx, bd_src, blade, main_name, blade_name):
+            bd = dict(bd_src)
+            bd['BldFile'] = blade_name
+            bd_path = str(output_dir / main_name)
+            self._beamdyn.write(
+                {'BeamDyn': bd, 'BeamDynBlade': blade},
+                bd_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'),
+            )
+            written.append(bd_path)
+
+        if isinstance(bd_data, dict) and bd_data:
+            # Collapsed identical blades: one file, all BDBldFile(i) point at it.
+            blade = bd_blade_all if isinstance(bd_blade_all, dict) else \
+                (bd_blade_all[0] if isinstance(bd_blade_all, list) and bd_blade_all else {})
+            main_name = case_name + '_BeamDyn.dat'
+            _write_bd_blade(0, bd_data, blade, main_name, case_name + '_BeamDyn_Blade.dat')
+            for k in range(num_bl_w):
+                fst['BDBldFile({})'.format(k + 1)] = main_name
+        elif isinstance(bd_data, list):
+            for i, bd in enumerate(bd_data):
+                if bd:
+                    main_name = case_name + '_BeamDyn_{}.dat'.format(i + 1)
+                    fst['BDBldFile({})'.format(i + 1)] = main_name
+                    blade = bd_blade_all[i] if isinstance(bd_blade_all, list) and i < len(bd_blade_all) else {}
+                    _write_bd_blade(i, bd, blade, main_name, case_name + '_BeamDyn_Blade_{}.dat'.format(i + 1))
 
         # ------- InflowWind -------
         if fst.get('CompInflow', 0) == 1:
