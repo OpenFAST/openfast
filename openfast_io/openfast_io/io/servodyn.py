@@ -19,6 +19,7 @@ import os
 from typing import Any, Dict, List, Optional, Callable
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -468,10 +469,7 @@ class ServoDynIO(ModuleIO):
             f.write('              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
 
             if outlist is not None:
-                ol = _get_outlist(outlist, ['ServoDyn'])
-                for channel_list in ol:
-                    for ch in channel_list:
-                        f.write('"' + ch + '"\n')
+                emit_outlist(f, outlist, 'ServoDyn')
 
             f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
             f.write('---------------------------------------------------------------------------------------\n')

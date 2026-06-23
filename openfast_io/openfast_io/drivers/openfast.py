@@ -336,7 +336,7 @@ class OpenFASTDriver:
             sed_name = case_name + '_SimpleElastoDyn.dat'
             fst['EDFile'] = sed_name
             sed_path = str(output_dir / sed_name)
-            self._simple_elastodyn.write({'SimpleElastoDyn': fst_vt.get('SimpleElastoDyn', {})}, sed_path, base_dir=str(output_dir))
+            self._simple_elastodyn.write({'SimpleElastoDyn': fst_vt.get('SimpleElastoDyn', {})}, sed_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(sed_path)
         elif comp_elast in (1, 2):
             # ElastoDyn blade(s)
@@ -392,6 +392,7 @@ class OpenFASTDriver:
                              'BeamDynBlade': fst_vt.get('BeamDynBlade', [{}])[i] if isinstance(fst_vt.get('BeamDynBlade'), list) else {}},
                             bd_path,
                             base_dir=str(output_dir),
+                            outlist=fst_vt.get('outlist'),
                         )
                         written.append(bd_path)
 
@@ -400,7 +401,7 @@ class OpenFASTDriver:
             ifw_name = case_name + '_InflowWind.dat'
             fst['InflowFile'] = ifw_name
             ifw_path = str(output_dir / ifw_name)
-            self._inflowwind.write({'InflowWind': fst_vt.get('InflowWind', {})}, ifw_path, base_dir=str(output_dir))
+            self._inflowwind.write({'InflowWind': fst_vt.get('InflowWind', {})}, ifw_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ifw_path)
 
         # ------- AeroDyn / AeroDisk -------
@@ -415,13 +416,14 @@ class OpenFASTDriver:
                  'AeroDynPolar': fst_vt.get('AeroDynPolar', [])},
                 ad_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(ad_path)
         elif comp_aero == 1:  # AeroDisk {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
             adsk_name = case_name + '_AeroDisk.dat'
             fst['AeroFile'] = adsk_name
             adsk_path = str(output_dir / adsk_name)
-            self._aerodisk.write({'AeroDisk': fst_vt.get('AeroDisk', {})}, adsk_path, base_dir=str(output_dir))
+            self._aerodisk.write({'AeroDisk': fst_vt.get('AeroDisk', {})}, adsk_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(adsk_path)
 
         # ------- ServoDyn -------
@@ -437,6 +439,7 @@ class OpenFASTDriver:
                  'SStC': fst_vt.get('SStC', [])},
                 sd_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(sd_path)
 
@@ -445,7 +448,7 @@ class OpenFASTDriver:
             ss_name = case_name + '_SeaState.dat'
             fst['SeaStFile'] = ss_name
             ss_path = str(output_dir / ss_name)
-            self._seastate.write({'SeaState': fst_vt.get('SeaState', {})}, ss_path, base_dir=str(output_dir))
+            self._seastate.write({'SeaState': fst_vt.get('SeaState', {})}, ss_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ss_path)
 
         # ------- HydroDyn -------
@@ -453,7 +456,7 @@ class OpenFASTDriver:
             hd_name = case_name + '_HydroDyn.dat'
             fst['HydroFile'] = hd_name
             hd_path = str(output_dir / hd_name)
-            self._hydrodynamics.write({'HydroDyn': fst_vt.get('HydroDyn', {})}, hd_path, base_dir=str(output_dir))
+            self._hydrodynamics.write({'HydroDyn': fst_vt.get('HydroDyn', {})}, hd_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(hd_path)
 
         # ------- SubDyn / ExtPtfm -------
@@ -462,13 +465,13 @@ class OpenFASTDriver:
             sub_name = case_name + '_SubDyn.dat'
             fst['SubFile'] = sub_name
             sub_path = str(output_dir / sub_name)
-            self._subdyn.write({'SubDyn': fst_vt.get('SubDyn', {})}, sub_path, base_dir=str(output_dir))
+            self._subdyn.write({'SubDyn': fst_vt.get('SubDyn', {})}, sub_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(sub_path)
         elif comp_sub == 2:
             ep_name = case_name + '_ExtPtfm.dat'
             fst['SubFile'] = ep_name
             ep_path = str(output_dir / ep_name)
-            self._extptfm.write({'ExtPtfm': fst_vt.get('ExtPtfm', {})}, ep_path, base_dir=str(output_dir))
+            self._extptfm.write({'ExtPtfm': fst_vt.get('ExtPtfm', {})}, ep_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ep_path)
 
         # ------- MoorDyn / MAP -------
@@ -483,7 +486,7 @@ class OpenFASTDriver:
             md_name = case_name + '_MoorDyn.dat'
             fst['MooringFile'] = md_name
             md_path = str(output_dir / md_name)
-            self._moordyn.write({'MoorDyn': fst_vt.get('MoorDyn', {})}, md_path, base_dir=str(output_dir))
+            self._moordyn.write({'MoorDyn': fst_vt.get('MoorDyn', {})}, md_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(md_path)
 
         # ------- Main .fst file -------

@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict, Optional, Callable
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -252,8 +253,5 @@ class SeaStateIO(ModuleIO):
 
             f.write('---------------------- OUTPUT CHANNELS -----------------------------------------\n')
             if outlist is not None:
-                ol = _get_outlist(outlist, ['SeaState'])
-                for channel_list in ol:
-                    for ch in channel_list:
-                        f.write('"' + ch + '"\n')
+                emit_outlist(f, outlist, 'SeaState')
             f.write('END of output channels and end of file.\n')
