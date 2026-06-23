@@ -153,6 +153,62 @@ class OutList:
         f.write('END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)\n')
 
 
+def _parse_outlist_section(f) -> list[str]:
+    """Parse channel tokens from an OutList section until 'END'.
+
+    Mirrors baseline FAST_reader.read_outlist parsing verbatim (split before the
+    '-' comment, strip quote/comma/semicolon/tab delimiters) so the captured set
+    matches the legacy reader exactly.
+    """
+    all_channels: list[str] = []
+    data = f.readline()
+    while data.strip() == '':
+        data = f.readline()
+    while data and not data.strip().startswith('END'):
+        line = data.split('-')[0]
+        for delim in ['"', "'", ',', ';', '\t']:
+            line = line.replace(delim, ' ')
+        line_channels = [w.strip() for w in line.split() if w.strip()]
+        if line_channels:
+            all_channels.extend(line_channels)
+        data = f.readline()
+        while data.strip() == '':
+            data = f.readline()
+    return all_channels
+
+
+def capture_outlist(f, registry: dict, module: str, freeform: bool = False) -> list[str]:
+    """Read an OutList section and set the found channels True in registry[module].
+
+    Mirrors baseline FAST_reader.read_outlist (freeform=False, registry-filtered via
+    set_outlist semantics) and read_outlist_freeForm (freeform=True, stores every
+    channel even if not in the registry — used by SubDyn/SeaState).
+    """
+    channels = _parse_outlist_section(f)
+    if registry is None:
+        return channels
+    if not isinstance(registry.get(module), dict):
+        registry[module] = {}
+    if freeform:
+        for ch in channels:
+            registry[module][ch] = True
+    elif channels:
+        _set_channels_in_dict(registry[module], set(channels))
+    return channels
+
+
+def emit_outlist(f, registry: dict, module: str) -> None:
+    """Write the truthy channels of registry[module] as quoted OutList lines.
+
+    The caller writes the section header and the 'END' line; this writes only the
+    channel body in between.
+    """
+    if not registry:
+        return
+    for ch in sorted(_extract_true_channels(registry.get(module, {}))):
+        f.write(f'"{ch}"\n')
+
+
 def _flatten_keys(d: dict) -> set[str]:
     """Recursively collect all leaf keys from a nested dict."""
     keys = set()

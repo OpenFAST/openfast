@@ -34,6 +34,8 @@ try:
 except ImportError:
     FstOutput = {}
 
+from openfast_io.outlist import OutList, capture_outlist, emit_outlist
+
 
 def init_fst_vt() -> dict:
     """Initialize the fst_vt structure.
@@ -50,6 +52,11 @@ def init_fst_vt() -> dict:
     """
     return {
         'Fst': {},
+        # Mirror baseline exactly: start from FstOutput (its built-in defaults) and
+        # ADD the deck's channels during read() via capture_outlist. Baseline does
+        # deepcopy(FstOutput) + set_outlist per module; reproducing that init is
+        # required for behavior parity (the prior bug was skipping the per-module
+        # capture entirely, leaving ONLY the defaults).
         'outlist': copy.deepcopy(FstOutput) if FstOutput else {},
         'description': '',
         'ElastoDyn': {},
@@ -132,7 +139,7 @@ class OpenFASTDriver:
         elif comp_elast in (1, 2):
             if os.path.isfile(ed_file):
                 fst_vt['Fst']['EDFile_path'] = os.path.split(fst_vt['Fst']['EDFile'])[0]
-                ed_data = self._elastodyn.read(Path(ed_file), Path(os.path.dirname(ed_file)))
+                ed_data = self._elastodyn.read(Path(ed_file), Path(os.path.dirname(ed_file)), outlist=fst_vt['outlist'])
 
                 fst_vt['ElastoDyn'] = ed_data.get('ElastoDyn', {})
                 fst_vt['ElastoDynTower'] = ed_data.get('ElastoDynTower', {})
@@ -350,6 +357,7 @@ class OpenFASTDriver:
                  'ElastoDynBlade': fst_vt.get('ElastoDynBlade', {})},
                 ed_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(ed_path)
 
