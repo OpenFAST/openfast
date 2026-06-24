@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from openfast_io.drivers import FASTFarmDriver
+from openfast_io.drivers.fastfarm import FASTFarmDriver
 
 
 @pytest.fixture
