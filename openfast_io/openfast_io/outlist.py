@@ -156,7 +156,7 @@ class OutList:
 def _parse_outlist_section(f) -> list[str]:
     """Parse channel tokens from an OutList section until 'END'.
 
-    Mirrors baseline FAST_reader.read_outlist parsing verbatim (split before the
+    Mirrors legacy openfast_io FAST_reader.read_outlist parsing verbatim (split before the
     '-' comment, strip quote/comma/semicolon/tab delimiters) so the captured set
     matches the legacy reader exactly.
     """
@@ -180,7 +180,7 @@ def _parse_outlist_section(f) -> list[str]:
 def capture_outlist(f, registry: dict, module: str, freeform: bool = False) -> list[str]:
     """Read an OutList section and set the found channels True in registry[module].
 
-    Mirrors baseline FAST_reader.read_outlist (freeform=False, registry-filtered via
+    Mirrors legacy openfast_io FAST_reader.read_outlist (freeform=False, registry-filtered via
     set_outlist semantics) and read_outlist_freeForm (freeform=True, stores every
     channel even if not in the registry — used by SubDyn/SeaState).
     """

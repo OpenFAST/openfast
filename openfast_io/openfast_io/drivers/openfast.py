@@ -52,11 +52,11 @@ def init_fst_vt() -> dict:
     """
     return {
         'Fst': {},
-        # Mirror baseline exactly: start from FstOutput (its built-in defaults) and
-        # ADD the deck's channels during read() via capture_outlist. Baseline does
-        # deepcopy(FstOutput) + set_outlist per module; reproducing that init is
-        # required for behavior parity (the prior bug was skipping the per-module
-        # capture entirely, leaving ONLY the defaults).
+        # Mirror the legacy openfast_io reader exactly: start from FstOutput (its
+        # built-in defaults) and ADD the deck's channels during read() via
+        # capture_outlist. The legacy reader does deepcopy(FstOutput) + set_outlist
+        # per module; reproducing that init is required for behavior parity (the prior
+        # bug was skipping the per-module capture entirely, leaving ONLY the defaults).
         'outlist': copy.deepcopy(FstOutput) if FstOutput else {},
         'description': '',
         'ElastoDyn': {},
@@ -117,7 +117,7 @@ class OpenFASTDriver:
         base_dir = fst_path.parent
 
         # Callback that captures a module's OutList section into fst_vt['outlist'],
-        # mirroring baseline read_outlist/set_outlist. Modules that take a
+        # mirroring legacy openfast_io read_outlist/set_outlist. Modules that take a
         # read_outlist_fn use this; freeform modules (SubDyn/SeaState) pass freeform=True.
         def _cap(f, module, freeform=False):
             return capture_outlist(f, fst_vt['outlist'], module, freeform=freeform)
@@ -170,9 +170,9 @@ class OpenFASTDriver:
                     fst_vt['ElastoDynBlade'] = blades
 
         # ------- BeamDyn (per-blade) -------
-        # Match baseline FAST_reader: read BeamDyn whenever BDBldFile(1) exists on
-        # disk, regardless of CompElast. Baseline reads (and captures the OutList of)
-        # an inactive BeamDyn when its blade file is present; this reproduces that.
+        # Match the legacy openfast_io FAST_reader: read BeamDyn whenever BDBldFile(1)
+        # exists on disk, regardless of CompElast. The legacy reader reads (and captures
+        # the OutList of) an inactive BeamDyn when its blade file is present; reproduce that.
         _bd1 = os.path.normpath(os.path.join(fastdir, fst_vt['Fst'].get('BDBldFile(1)', '')))
         if comp_elast == 2 or os.path.isfile(_bd1):
             num_bl = fst_vt['ElastoDyn'].get('NumBl', 3)

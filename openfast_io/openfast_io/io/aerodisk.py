@@ -11,6 +11,7 @@ import os
 from typing import Any, Callable, Dict, Optional
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import bool_read, float_read, quoted_read
 
 try:
@@ -90,7 +91,7 @@ class AeroDiskIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list — route into the shared registry (mirrors baseline)
+        # Read output list — route into the shared registry (mirrors legacy openfast_io)
         if read_outlist_fn is not None and outlist is not None:
             read_outlist_fn(f, 'AeroDisk')
         else:
@@ -172,10 +173,10 @@ class AeroDiskIO(ModuleIO):
             f.write('@{}\n'.format(csv_name))
             f.write('--- OUTPUTS --------------------\n')
             f.write('{:<22} {:<11} {:}'.format('OutList', 'OutList', '- The next line(s) contains a list of output parameters.\n'))
-            out_channels = ad.get('_outlist', {})
-            if outlist and 'AeroDisk' in outlist:
-                out_channels = outlist['AeroDisk']
-            for ch in out_channels:
-                f.write('"' + ch + '"\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'AeroDisk')
+            else:
+                for ch in ad.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
             f.write('---------------------------------------------------------------------------------------\n')

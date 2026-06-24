@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional, Callable
 import numpy as np
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -123,7 +124,7 @@ class ExtPtfmIO(ModuleIO):
             for ch in ep['_outlist']:
                 outlist['ExtPtfm'][ch] = True
             # Channels now live in the shared registry; don't pollute fst_vt['ExtPtfm']
-            # with a private '_outlist' key baseline never creates.
+            # with a private '_outlist' key the legacy openfast_io reader never creates.
             ep.pop('_outlist', None)
 
         f.close()
@@ -310,11 +311,11 @@ class ExtPtfmIO(ModuleIO):
             f.write('{!s:<22} {:<11} {:}'.format(ep['OutFmt'], 'OutFmt', '- Output format\n'))
             f.write('{:<22f} {:<11} {:}'.format(ep['TStart'], 'TStart', '- Time to begin output\n'))
             f.write('                    OutList\n')
-            out_channels = ep.get('_outlist', {})
-            if outlist and 'ExtPtfm' in outlist:
-                out_channels = outlist['ExtPtfm']
-            for ch in out_channels:
-                f.write('"' + ch + '"\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'ExtPtfm')
+            else:
+                for ch in ep.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of input file\n')
 
     # ------------------------------------------------------------------

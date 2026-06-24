@@ -219,7 +219,7 @@ class ElastoDynIO(ModuleIO):
         else:
             ed['BldGagNd'] = 0
 
-        # OutList — capture into the shared registry (mirrors baseline read_outlist)
+        # OutList — capture into the shared registry (mirrors legacy openfast_io read_outlist)
         f.readline()
         if outlist is not None:
             capture_outlist(f, outlist, 'ElastoDyn')
@@ -528,7 +528,7 @@ class ElastoDynIO(ModuleIO):
         else:
             f.write('{:<22} {:<11} {:}'.format('', 'BldGagNd', '- List of blade nodes that have strain gages\n'))
 
-        # OutList — emit the captured channels (mirrors baseline write)
+        # OutList — emit the captured channels (mirrors legacy openfast_io write)
         f.write('                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
         if outlist is not None:
             emit_outlist(f, outlist, 'ElastoDyn')

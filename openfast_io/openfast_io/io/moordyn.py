@@ -251,7 +251,10 @@ class MoorDynIO(ModuleIO):
                     dl = readline_filterComments(f)
                 if outlist is not None:
                     outlist['MoorDyn'] = outlist_md
-                md['_outlist'] = outlist_md
+                else:
+                    # standalone path only (no shared registry) — avoid polluting
+                    # fst_vt['MoorDyn'] with a private key when the driver supplies outlist.
+                    md['_outlist'] = outlist_md
                 f.close()
                 break
 

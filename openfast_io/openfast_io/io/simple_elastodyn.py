@@ -9,6 +9,7 @@ import os
 from typing import Any, Callable, Dict, Optional
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import bool_read, float_read, int_read
 
 
@@ -74,7 +75,7 @@ class SimpleElastoDynIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list — route into the shared registry (mirrors baseline)
+        # Read output list — route into the shared registry (mirrors legacy openfast_io)
         if read_outlist_fn is not None and outlist is not None:
             read_outlist_fn(f, 'SimpleElastoDyn')
         else:
@@ -151,10 +152,10 @@ class SimpleElastoDynIO(ModuleIO):
             f.write('{:<22} {:<11} {:}'.format(sed['GBoxRatio'], 'GBoxRatio', '- Gearbox ratio (-)\n'))
             f.write('---------------------- OUTPUT --------------------------------------------------\n')
             f.write('                   OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
-            out_channels = sed.get('_outlist', {})
-            if outlist and 'SimpleElastoDyn' in outlist:
-                out_channels = outlist['SimpleElastoDyn']
-            for ch in out_channels:
-                f.write('"' + ch + '"\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'SimpleElastoDyn')
+            else:
+                for ch in sed.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
             f.write('---------------------------------------------------------------------------------------\n')
