@@ -1083,3 +1083,41 @@ The redesign is a clear net win, but several architectural choices warrant scrut
 2. Add Hypothesis property-based tests for `parsing.py` primitives.
 3. Increase coverage of AeroDyn polar format branches (currently 78%).
 4. Remove `FAST_vars_out.py` and facade classes in next major version.
+
+---
+
+## 10. Differential audit corrections (2026-06-23)
+
+An external differential audit (newarch vs `OpenFAST/openfast@main` across the r-test
+glue-code corpus; harness + report at `vibeWork/openfast-io-roundtrip/`) found bugs the
+262-test suite passed over, and corrected several claims in §2/§4/§5/§7. **Net: the refactor
+is structurally sound, but several §5 "bug-fix" claims are overstated and the decomposition
+introduced new bugs (now fixed on branch `fix/outlist-assembly`).**
+
+### 10.1 Claims that do NOT match the code
+- **OutList read/write was broken, not improved.** The decomposition dropped baseline's
+  generic `read_outlist`/`set_outlist`; the driver never assembled `fst_vt['outlist']` →
+  **all-but-ElastoDyn OutList channels were silently dropped on read AND write** (3,200
+  channels across 63/77 decks). Fixed.
+- **`fmt_field` format-overflow fix is scoped narrower than §2.3/§4.2/§4.4/§5 imply.**
+  `fmt_field` exists (`parsing.py:181`) and is used — but **only in the standalone drivers**
+  (`drivers/{aerodyn,beamdyn,unsteadyaero}_driver.py`). It is **not** imported or used by the
+  `io/` module readers/writers, so the claimed AeroDyn-blade-table / BeamDyn-matrix overflow
+  fix is not present in `io/aerodyn.py` or `io/beamdyn.py`. Re-scope the claim to the drivers.
+- **CompAero `3→1`** (§4.3/§5 #8): newarch correctly branches on `comp_aero==1` for AeroDisk,
+  but no `==3` AeroDisk path was found in this baseline — the "3→1 fix" is against a strawman;
+  state it as "uses the correct value" rather than "fixed a 3-vs-1 bug."
+
+### 10.2 New bugs the audit found (all fixed on `fix/outlist-assembly`)
+- **HIGH — BeamDyn blade-file collision** (`io/beamdyn.py` + driver loop): the writer sent
+  every blade to the same path (`bd['BldFile']` never reassigned per blade), so a deck with 3
+  *distinct* BeamDyn blades silently wrote blade 3's properties into all three. Dormant in
+  r-test (identical blades). Fixed; guarded by a new 3-distinct-blade regression fixture.
+- **MED** — BeamDyn read never collapsed identical blades to a dict (ElastoDyn did) → broke the
+  `fst_vt` dict contract; and a read/write guard asymmetry dropped BeamDyn on round-trip. Fixed.
+- **LOW** — ExtPtfm reader polluted `fst_vt['ExtPtfm']` with a private `_outlist` key. Fixed.
+
+### 10.3 Verified-real fixes (these claims hold)
+BeamDyn `_write_blade` `mkdir(parents=True)`; HydroDyn `NBodyMod=1` matrix sizing (`6*NBody`);
+SubDyn GuyanDamp comma-trailing-float parse. (HydroDyn NBody≥2 and the distinct-blade path
+remain untested by the r-test corpus — see the audit's test-gap list.)
