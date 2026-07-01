@@ -169,7 +169,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_IfW_Low      !< InflowWind module outputs for the low-resolution grid [-]
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: planeDomainExit      !< Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed [-]
+    INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: planeDomainExit      !< Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum] [-]
   END TYPE AWAE_MiscVarType
 ! =======================
@@ -1446,10 +1446,10 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%V_amb_low_disk = SrcMiscData%V_amb_low_disk
    end if
    if (allocated(SrcMiscData%planeDomainExit)) then
-      LB(1:2) = lbound(SrcMiscData%planeDomainExit)
-      UB(1:2) = ubound(SrcMiscData%planeDomainExit)
+      LB(1:3) = lbound(SrcMiscData%planeDomainExit)
+      UB(1:3) = ubound(SrcMiscData%planeDomainExit)
       if (.not. allocated(DstMiscData%planeDomainExit)) then
-         allocate(DstMiscData%planeDomainExit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstMiscData%planeDomainExit(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%planeDomainExit.', ErrStat, ErrMsg, RoutineName)
             return

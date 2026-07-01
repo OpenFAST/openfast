@@ -831,8 +831,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
 
 
             ! -  no messages if inside bounds, so put error handling inside if
-            call PlaneOutOfDomain(u%D_wake(np,nt),u%p_plane(:,np,nt),y%V_plane(:,np,nt),m%planeDomainExit(np,nt),ErrStat2,ErrMsg2)
-            if (m%planeDomainExit(np,nt) /= 0_IntKi) then
+            call PlaneOutOfDomain(p%y(p%NumRadii-1)+p%y(1),u%p_plane(:,np,nt),y%V_plane(:,np,nt),m%planeDomainExit(:,np,nt),ErrStat2,ErrMsg2)
+            if (any(m%planeDomainExit(:,np,nt) /= 0_IntKi)) then
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                cycle
             endif
@@ -892,96 +892,71 @@ contains
    !> Check if the center of this wwake plane has left the domain.
    !! If a plane exits the domain, or previously exited the domain:
    !!    -  Set warning about first time this plane leaves.
-   !!    -  Set component perpendicular to plane exit direction to kick it outside the domain entirely
+   !!    -  For each dimension independently, set velocity component to kick it outside the domain
    !!       -  Target distance outside boundary = D.  Use a quadratic asymptotic distance per step to approach target distance.
-   !!    -  Add background flow in X or Y to keep the plane moving with others parallel to boundary it crossed (only using X and Y velocity)
-   !! NOTE: using m%planeDomainExit to track which boundary a plane crossed.
-   !!          0: Still in domain
-   !!       +/-1: +/-X
-   !!       +/-2: +/-Y
-   !!       +/-3: +/-Z
+   !!    -  Add background flow to keep the plane drifting
+   !! NOTE: using m%planeDomainExit(3) to track which boundary a plane crossed in each dimension.
+   !!       planeDomainExit(i): 0 = still in domain, -1 = crossed lower bound, +1 = crossed upper bound
    !! To understand intent, consider 2 cases for mean velocity in +X direction:
    !!    plane exits +Y boundary:
-   !!       1. plane with get a kick towards one wake diameter outside +Y boundary
+   !!       1. plane will get a kick towards one wake diameter outside +Y boundary
    !!       2. overall farm velocity added to keep plane drifting in +X following the target Y location (some jitter due to farm level Y velocity term)
    !!    plane exits +X boundary (travels beyond domain end in direction of overall flow)
    !!       1. plane will get a kick outside the end of the domain towards +X boundary plus wake diameter
    !!       2. farm velocity added will keep trying to push this plane further downstream, but step 1. will try to force it back.
-   !!       --> effectively 1. and 2. will constant be working against each other to hold the plane somewhere near the target location beyond +X boundary,
+   !!       --> effectively 1. and 2. will constantly be working against each other to hold the plane somewhere near the target location beyond +X boundary,
    !!           but this shouldn't really matter as the plane will get dropped at some point.  Even if multiple planes end up there, it shouldn't affect
    !!           any planes still in bounds -- so we really don't care if it jitters around at all
-   subroutine PlaneOutOfDomain(D_Wake,p_plane,V_plane,planeDomainExit,ErrStat3,ErrMsg3)
-      real(ReKi),                intent(in   )  :: D_wake            !< u%D_wake(np,nt)
+   subroutine PlaneOutOfDomain(PlaneHalfWidth,p_plane,V_plane,planeDomainExit,ErrStat3,ErrMsg3)
+      real(ReKi),                intent(in   )  :: PlaneHalfWidth    !< half-width of wake plane + dr
       real(ReKi),                intent(in   )  :: p_plane(3)        !< u%p_plane(:,np,nt)
       real(ReKi),                intent(inout)  :: V_plane(3)        !< y%V_plane(:,np,nt)
-      integer(IntKi),            intent(inout)  :: planeDomainExit   !< m%planeDomainExit(np,nt)
+      integer(IntKi),            intent(inout)  :: planeDomainExit(3) !< m%planeDomainExit(:,np,nt) per-dimension flag
       integer(IntKi),            intent(  out)  :: ErrStat3          !< Error status of the operation
       character(ErrMsgLen),      intent(  out)  :: ErrMsg3           !< Error message if errStat /= ErrID_None
       character(12)                             :: tmpStr12          !< for constructing error message
       real(ReKi)                                :: D_tgt             !< target distance outside bounds
-      ! Step 1: did a plane that was in the low res domain just cross out?
-      !        If plane crossed boundary, set message and tracking of it
-      if (planeDomainExit == 0_IntKi) then
-         if (p_plane(1) < p%LowRes%oXYZ(1)) then                           ! lower x boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'lower-most X'
-            planeDomainExit = -1
-         elseif ( p_plane(1) > p%LowRes%oXYZ(1) + p%LowRes%Size(1)) then   ! upper x boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'upper-most X'
-            planeDomainExit =  1
-         elseif ( p_plane(2) < p%LowRes%oXYZ(2)) then                      ! lower y boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'lower-most Y'
-            planeDomainExit = -2
-         elseif ( p_plane(2) > p%LowRes%oXYZ(2) + p%LowRes%Size(2)) then   ! upper y boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'upper-most Y'
-            planeDomainExit =  2
-         elseif ( p_plane(3) < p%LowRes%oXYZ(3)) then                      ! lower z boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'lower-most Z'
-            planeDomainExit = -3
-         elseif ( p_plane(3) > p%LowRes%oXYZ(3) + p%LowRes%Size(3)) then   ! upper z boundary
-            ErrStat3  = ErrID_Warn
-            tmpStr12 = 'upper-most Z'
-            planeDomainExit =  3
-         endif
-         if (errStat3 == ErrID_Warn) then
-            ErrMsg3 = 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the ' &
-                //tmpStr12//' boundary of the low-resolution domain. Further warnings are suppressed.'
-         endif
-      endif
-   
-      ! Step 2: for planes outside boundary (including one that just crossed outside) set velocity component to approach target offset.
-      !        asymptotically approach a distance D_wake away from the boundary (quadratic approach)
-      !          example: V at -Y boundary:
-      !                      Vy = (Y_target - Y_pos) / (2 * DT)
-      select case (planeDomainExit)
-         case (0_IntKi)
-            return
-         case (-1_IntKi)         ! Crossed -X
-            D_tgt = p%LowRes%oXYZ(1) - D_wake
-            V_plane(1) = (D_tgt - p_plane(1)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (-X_bound - D_wake)
-         case ( 1_IntKi)         ! Crossed +X
-            D_tgt = p%LowRes%oXYZ(1) + p%LowRes%Size(1) + D_wake
-            V_plane(1) = (D_tgt - p_plane(1)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (+X_bound + D_wake)
-         case (-2_IntKi)         ! Crossed -Y
-            D_tgt = p%LowRes%oXYZ(2) - D_wake
-            V_plane(2) = (D_tgt - p_plane(2)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (-Y_bound - D_wake)
-         case ( 2_IntKi)         ! Crossed +Y
-            D_tgt = p%LowRes%oXYZ(2) + p%LowRes%Size(2) + D_wake
-            V_plane(2) = (D_tgt - p_plane(2)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (-Y_bound - D_wake)
-         case (-3_IntKi)         ! Crossed -Z
-            D_tgt = p%LowRes%oXYZ(3) - D_wake
-            V_plane(3) = (D_tgt - p_plane(3)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (-Z_bound - D_wake)
-         case ( 3_IntKi)         ! Crossed +Z
-            D_tgt = p%LowRes%oXYZ(3) + p%LowRes%Size(3) + D_wake
-            V_plane(3) = (D_tgt - p_plane(3)) / (2.0_ReKi * real(p%dt_low,ReKi))    ! push towards (+Z_bound + D_wake)
-      end select
+      integer(IntKi)                            :: iDim              !< loop counter over dimensions
+      character(1), parameter                   :: dimLabels(3) = (/'X','Y','Z'/)
 
-      ! Step 3: add background XYZ flow to keep plane drifting (will have already returned on any planes still in bounds)
+      ! Step 1: did a plane that was in the low res domain just cross out in any dimension?
+      !        If plane crossed boundary, set message and tracking of it (check each dimension independently)
+      do iDim = 1, 3
+         if (planeDomainExit(iDim) == 0_IntKi) then
+            if (p_plane(iDim) < p%LowRes%oXYZ(iDim)) then
+               ErrStat3  = ErrID_Warn
+               tmpStr12 = 'lower-most '//dimLabels(iDim)
+               planeDomainExit(iDim) = -1_IntKi
+            elseif (p_plane(iDim) > p%LowRes%oXYZ(iDim) + p%LowRes%Size(iDim)) then
+               ErrStat3  = ErrID_Warn
+               tmpStr12 = 'upper-most '//dimLabels(iDim)
+               planeDomainExit(iDim) =  1_IntKi
+            endif
+         endif
+      end do
+      if (errStat3 == ErrID_Warn) then
+         ErrMsg3 = 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the ' &
+             //tmpStr12//' boundary of the low-resolution domain. Further warnings are suppressed.'
+      endif
+
+      ! If still fully in domain, nothing to do
+      if (all(planeDomainExit == 0_IntKi)) return
+
+      ! Step 2: add background XYZ flow to keep plane drifting
       V_plane(1:3) = V_plane(1:3) + xd%Ufarm(1:3)
+
+      ! Step 3: for each dimension where the plane is outside the boundary, set velocity component to reach target in one timestep.
+      !          example: V at -Y boundary:
+      !                      Vy = (Y_target - Y_pos) / DT
+      do iDim = 1, 3
+         if (planeDomainExit(iDim) == -1_IntKi) then
+            D_tgt = p%LowRes%oXYZ(iDim) - PlaneHalfWidth
+            V_plane(iDim) = (D_tgt - p_plane(iDim)) / real(p%dt_low,ReKi)
+         elseif (planeDomainExit(iDim) == 1_IntKi) then
+            D_tgt = p%LowRes%oXYZ(iDim) + p%LowRes%Size(iDim) + PlaneHalfWidth
+            V_plane(iDim) = (D_tgt - p_plane(iDim)) / real(p%dt_low,ReKi)
+         endif
+      end do
 
    end subroutine PlaneOutOfDomain
 end subroutine LowResGridCalcOutput
@@ -1573,9 +1548,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Initialize the KdTree with no active points
    call kdtree_build(m%KdT, m%AllPlanePoints(:,1:1), n_max=p%MaxPlanes*p%NumTurbines)
    
-   ! track if a plan has left the domain (all planes start in domain).
-   ! Value indicates edge number (+/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed
-   allocate(m%planeDomainExit(0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2);   if (Failed0('m%planeDomainExit.')) return;
+   ! track if a plane has left the domain (all planes start in domain).
+   ! Per-dimension flag: 0 = still in domain, -1 = crossed lower bound, +1 = crossed upper bound
+   allocate(m%planeDomainExit(3,0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2);   if (Failed0('m%planeDomainExit.')) return;
    m%planeDomainExit = 0_IntKi
 
    ! Read-in the ambient wind data for the initial calculate output
