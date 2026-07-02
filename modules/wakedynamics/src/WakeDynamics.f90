@@ -971,55 +971,23 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
 
    ! --------------------------------------------------------------------------------
-   ! Drop planes that exit the buffer, and merge planes that collide.
+   ! Drop planes that exit the buffer
    ! --------------------------------------------------------------------------------
 
    xd%NumPlanes = xd%NumPlanes + 1.0
    if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
       xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
       call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
-      if (errStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
    end if
    if ( NINT(xd%NumPlanes) < 2 ) then
       ! Check just in case following implementation plan; however, this should never happen. Consider removing in the future.
       call SetErrStat(ErrID_Fatal, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' has dropped below 2. ', errStat, errMsg, RoutineName)
+      call Cleanup()
+      return
    end if
 
-   maxPln = NINT(xd%NumPlanes) - 1
-
-   do i=maxPln,0,-1
-
-      ! if a plane is beyond the buffer, simply drop it and all following planes (it should only be the last plane that gets dropped)
-      if ( xd%x_plane(i) > p%x_Buff ) then
-         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )   ! Plane indexing includes 0, hence the -1.0
-         cycle
-      endif
-
-      ! If a plane overtakes another plane, merge the planes by averaging, then shift all remaining planes forward.
-      if ( i+1 < NINT(xd%NumPlanes)) then    ! don't overstep bounds with i+1 indexing
-         if (xd%x_plane(i) >= xd%x_plane(i+1) ) then
-
-            call SetErrStat(ErrID_Warn, ' Turbine '//trim(num2lstr(p%TurbNum))//' wake plane '//trim(num2lstr(i))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i)))//') has overtaken wake plane '//trim(num2lstr(i+1))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i+1)))// &
-                        '). Merging planes by averaging. Reduce f_c to prevent planes from passing each other. ', errStat, errMsg, RoutineName)
-            if (errStat >= AbortErrLev) then
-               call Cleanup()
-               return
-            end if
-
-            call MergeWakePlanes(i, i+1)
-
-         end if
-      end if
-
-   end do
-
    ! --------------------------------------------------------------------------------
-   ! --- Merge consecutive out-of-bounds planes that are within 2*dr of each other
+   ! Merge consecutive out-of-bounds planes that are within 2*dr of each other
    ! --------------------------------------------------------------------------------
    maxPln = NINT(xd%NumPlanes) - 1
    i = maxPln
@@ -1035,6 +1003,31 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          end if
       end if
       i = i - 1
+   end do
+
+   ! --------------------------------------------------------------------------------
+   ! merge planes that collide.
+   ! --------------------------------------------------------------------------------
+   maxPln = NINT(xd%NumPlanes) - 1
+
+   do i=maxPln,0,-1
+
+      ! if a plane is beyond the buffer, simply drop it and all following planes (it should only be the last plane that gets dropped)
+      if ( xd%x_plane(i) > p%x_Buff ) then
+         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )   ! Plane indexing includes 0, hence the -1.0
+         cycle
+      endif
+
+      ! If a plane overtakes another plane, merge the planes by averaging, then shift all remaining planes forward.
+      if ( i+1 < NINT(xd%NumPlanes)) then    ! don't overstep bounds with i+1 indexing
+         if (xd%x_plane(i) >= xd%x_plane(i+1) ) then
+            call SetErrStat(ErrID_Warn, ' Turbine '//trim(num2lstr(p%TurbNum))//' wake plane '//trim(num2lstr(i))// &
+                        ' (x_plane='//trim(num2lstr(xd%x_plane(i)))//') has overtaken wake plane '//trim(num2lstr(i+1))// &
+                        ' (x_plane='//trim(num2lstr(xd%x_plane(i+1)))// &
+                        '). Merging planes by averaging. Reduce f_c to prevent planes from passing each other. ', errStat, errMsg, RoutineName)
+            call MergeWakePlanes(i, i+1)
+         end if
+      end if
    end do
 
    call Cleanup()
