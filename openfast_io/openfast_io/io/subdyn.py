@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Callable
 import numpy as np
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -554,9 +555,5 @@ class SubDynIO(ModuleIO):
                                   ' '.join([str(nc) for nc in sd['NodeCnt'][i]])]) + '\n')
 
             f.write('---- SSOutList ----\n')
-            if outlist is not None:
-                ol = outlist.get('SubDyn', [])
-                if isinstance(ol, list):
-                    for ch in ol:
-                        f.write('"' + ch + '"\n')
+            emit_outlist(f, outlist, 'SubDyn')
             f.write('END of output channels and end of file.\n')
