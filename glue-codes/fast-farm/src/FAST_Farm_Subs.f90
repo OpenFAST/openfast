@@ -1822,6 +1822,7 @@ SUBROUTINE Transfer_AWAE_to_WD(farm)
       farm%WD(nt)%u%V_plane(:,0:MaxPln) = farm%AWAE%y%V_plane(:,0:MaxPln,nt)  ! Advection, deflection, and meandering velocity of wake planes, m/s
       farm%WD(nt)%u%Vx_wind_disk        = farm%AWAE%y%Vx_wind_disk(nt)        ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
       farm%WD(nt)%u%TI_amb              = farm%AWAE%y%TI_amb(nt)              ! Ambient turbulence intensity of wind at rotor disk
+      farm%WD(nt)%u%wakePlaneDomainExit(:,0:MaxPln) = farm%AWAE%y%wakePlaneDomainExit(:,0:MaxPln,nt)  ! Per-dimension domain exit flags
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD

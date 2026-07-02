@@ -235,6 +235,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Vx_rel_disk = 0.0_ReKi      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Ct_azavg      !< Azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cq_azavg      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: wakePlaneDomainExit      !< Per-dimension flag from AWAE (0: in domain, -1: crossed lower, +1: crossed upper) for each plane [dim,plane] [-]
   END TYPE WD_InputType
 ! =======================
 ! =========  WD_OutputType  =======
@@ -265,17 +266,18 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  11 ! WD%Vx_rel_disk
    integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  12 ! WD%Ct_azavg
    integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  13 ! WD%Cq_azavg
-   integer(IntKi), public, parameter :: WD_y_NumPlanes                   =  14 ! WD%NumPlanes
-   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  15 ! WD%xhat_plane
-   integer(IntKi), public, parameter :: WD_y_p_plane                     =  16 ! WD%p_plane
-   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  17 ! WD%Vx_wake
-   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  18 ! WD%Vr_wake
-   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  19 ! WD%Vx_wake2
-   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  20 ! WD%Vy_wake2
-   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  21 ! WD%Vz_wake2
-   integer(IntKi), public, parameter :: WD_y_D_wake                      =  22 ! WD%D_wake
-   integer(IntKi), public, parameter :: WD_y_x_plane                     =  23 ! WD%x_plane
-   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  24 ! WD%WAT_k
+   integer(IntKi), public, parameter :: WD_u_wakePlaneDomainExit         =  14 ! WD%wakePlaneDomainExit
+   integer(IntKi), public, parameter :: WD_y_NumPlanes                   =  15 ! WD%NumPlanes
+   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  16 ! WD%xhat_plane
+   integer(IntKi), public, parameter :: WD_y_p_plane                     =  17 ! WD%p_plane
+   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  18 ! WD%Vx_wake
+   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  19 ! WD%Vr_wake
+   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  20 ! WD%Vx_wake2
+   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  21 ! WD%Vy_wake2
+   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  22 ! WD%Vz_wake2
+   integer(IntKi), public, parameter :: WD_y_D_wake                      =  23 ! WD%D_wake
+   integer(IntKi), public, parameter :: WD_y_x_plane                     =  24 ! WD%x_plane
+   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  25 ! WD%WAT_k
 
 contains
 
@@ -1694,6 +1696,18 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstInputData%Cq_azavg = SrcInputData%Cq_azavg
    end if
+   if (allocated(SrcInputData%wakePlaneDomainExit)) then
+      LB(1:2) = lbound(SrcInputData%wakePlaneDomainExit)
+      UB(1:2) = ubound(SrcInputData%wakePlaneDomainExit)
+      if (.not. allocated(DstInputData%wakePlaneDomainExit)) then
+         allocate(DstInputData%wakePlaneDomainExit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%wakePlaneDomainExit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%wakePlaneDomainExit = SrcInputData%wakePlaneDomainExit
+   end if
 end subroutine
 
 subroutine WD_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1711,6 +1725,9 @@ subroutine WD_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
    if (allocated(InputData%Cq_azavg)) then
       deallocate(InputData%Cq_azavg)
+   end if
+   if (allocated(InputData%wakePlaneDomainExit)) then
+      deallocate(InputData%wakePlaneDomainExit)
    end if
 end subroutine
 
@@ -1731,6 +1748,7 @@ subroutine WD_PackInput(RF, Indata)
    call RegPack(RF, InData%Vx_rel_disk)
    call RegPackAlloc(RF, InData%Ct_azavg)
    call RegPackAlloc(RF, InData%Cq_azavg)
+   call RegPackAlloc(RF, InData%wakePlaneDomainExit)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1754,6 +1772,7 @@ subroutine WD_UnPackInput(RF, OutData)
    call RegUnpack(RF, OutData%Vx_rel_disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ct_azavg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cq_azavg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%wakePlaneDomainExit); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2108,6 +2127,8 @@ subroutine WD_VarPackInput(V, u, ValAry)
          VarVals = u%Ct_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
       case (WD_u_Cq_azavg)
          VarVals = u%Cq_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
+      case (WD_u_wakePlaneDomainExit)
+         VarVals = u%wakePlaneDomainExit(V%iLB:V%iUB,V%j)                     ! Rank 2 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -2154,6 +2175,8 @@ subroutine WD_VarUnpackInput(V, ValAry, u)
          u%Ct_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
       case (WD_u_Cq_azavg)
          u%Cq_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
+      case (WD_u_wakePlaneDomainExit)
+         u%wakePlaneDomainExit(V%iLB:V%iUB, V%j) = VarVals                    ! Rank 2 Array
       end select
    end associate
 end subroutine
@@ -2186,6 +2209,8 @@ function WD_InputFieldName(DL) result(Name)
        Name = "u%Ct_azavg"
    case (WD_u_Cq_azavg)
        Name = "u%Cq_azavg"
+   case (WD_u_wakePlaneDomainExit)
+       Name = "u%wakePlaneDomainExit"
    case default
        Name = "Unknown Field"
    end select

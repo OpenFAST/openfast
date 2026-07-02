@@ -499,10 +499,12 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate( u%V_plane       (3,0:p%MaxNumPlanes-1),stat=errStat2);  if (Failed0('u%V_plane.' )) return;
    allocate( u%Ct_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Ct_azavg.')) return;
    allocate( u%Cq_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Cq_azavg.')) return;
+   allocate( u%wakePlaneDomainExit(3,0:p%MaxNumPlanes-1),stat=errStat2);  if (Failed0('u%wakePlaneDomainExit.')) return;
    if (errStat /= ErrID_None) return
    u%V_plane  = 0.0_ReKi
    u%Ct_azavg = 0.0_ReKi
-   u%Cq_azavg = 0.0_ReKi  
+   u%Cq_azavg = 0.0_ReKi
+   u%wakePlaneDomainExit = 0.0_ReKi  
 
          
       
@@ -1009,50 +1011,81 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                return
             end if
 
-            ! Merge the i and i+1 plane by averaging them together
-            xd%Vx_wind_disk_filt(i) = (xd%Vx_wind_disk_filt(i) + xd%Vx_wind_disk_filt(i+1)) / 2.0_ReKi
-            xd%x_plane      (    i) = (xd%x_plane      (    i) + xd%x_plane      (    i+1)) / 2.0_ReKi
-            xd%TI_amb_filt  (    i) = (xd%TI_amb_filt  (    i) + xd%TI_amb_filt  (    i+1)) / 2.0_ReKi
-            xd%D_rotor_filt (    i) = (xd%D_rotor_filt (    i) + xd%D_rotor_filt (    i+1)) / 2.0_ReKi
-            xd%YawErr_filt  (    i) = (xd%YawErr_filt  (    i) + xd%YawErr_filt  (    i+1)) / 2.0_ReKi
-            xd%p_plane      (  :,i) = (xd%p_plane      (  :,i) + xd%p_plane      (  :,i+1)) / 2.0_ReKi
-            xd%xhat_plane   (  :,i) = (xd%xhat_plane   (  :,i) + xd%xhat_plane   (  :,i+1)) / 2.0_ReKi
-            xd%xhat_plane   (  :,i) =  xd%xhat_plane   (  :,i) / TwoNorm(xd%xhat_plane(  :,i))           ! renormalize
-            xd%V_plane_filt (  :,i) = (xd%V_plane_filt (  :,i) + xd%V_plane_filt (  :,i+1)) / 2.0_ReKi
-            xd%Vx_wake      (  :,i) = (xd%Vx_wake      (  :,i) + xd%Vx_wake      (  :,i+1)) / 2.0_ReKi
-            xd%Vr_wake      (  :,i) = (xd%Vr_wake      (  :,i) + xd%Vr_wake      (  :,i+1)) / 2.0_ReKi
-            xd%Vx_wake2     (:,:,i) = (xd%Vx_wake2     (:,:,i) + xd%Vx_wake2     (:,:,i+1)) / 2.0_ReKi
-            xd%Vy_wake2     (:,:,i) = (xd%Vy_wake2     (:,:,i) + xd%Vy_wake2     (:,:,i+1)) / 2.0_ReKi
-            xd%Vz_wake2     (:,:,i) = (xd%Vz_wake2     (:,:,i) + xd%Vz_wake2     (:,:,i+1)) / 2.0_ReKi
-
-            ! Since i and i+1 planes are now merged effectively dropping a plane, shift all planes that follow forward
-            do j = i+1,NINT(xd%NumPlanes)-2        ! NumPlanes includes 0 index plane, so last valid index is NumPlanes-1.
-                xd%Vx_wind_disk_filt(j) = xd%Vx_wind_disk_filt(j+1)
-                xd%x_plane      (    j) = xd%x_plane      (    j+1)
-                xd%TI_amb_filt  (    j) = xd%TI_amb_filt  (    j+1)
-                xd%D_rotor_filt (    j) = xd%D_rotor_filt (    j+1)
-                xd%YawErr_filt  (    j) = xd%YawErr_filt  (    j+1)
-                xd%p_plane      (  :,j) = xd%p_plane      (  :,j+1)
-                xd%xhat_plane   (  :,j) = xd%xhat_plane   (  :,j+1)
-                xd%V_plane_filt (  :,j) = xd%V_plane_filt (  :,j+1)
-                xd%Vx_wake      (  :,j) = xd%Vx_wake      (  :,j+1)
-                xd%Vr_wake      (  :,j) = xd%Vr_wake      (  :,j+1)
-                xd%Vx_wake2     (:,:,j) = xd%Vx_wake2     (:,:,j+1)
-                xd%Vy_wake2     (:,:,j) = xd%Vy_wake2     (:,:,j+1)
-                xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
-            end do
-
-            ! Now that we shifted the planes up, remove the last one
-            xd%NumPlanes = xd%NumPlanes - 1.0
+            call MergeWakePlanes(i, i+1)
 
          end if
       end if
 
    end do
 
+   ! --------------------------------------------------------------------------------
+   ! --- Merge consecutive out-of-bounds planes that are within 2*dr of each other
+   ! --------------------------------------------------------------------------------
+   maxPln = NINT(xd%NumPlanes) - 1
+   i = maxPln
+   do while (i >= 1)
+      ! Check if plane i is out of domain in any dimension
+      if (any(NINT(u%wakePlaneDomainExit(:,i)) /= 0)) then
+         ! Check if the adjacent lower-index plane (i-1) is also out of domain
+         if (any(NINT(u%wakePlaneDomainExit(:,i-1)) /= 0)) then
+            ! Check spatial proximity
+            if (TwoNorm(xd%p_plane(:,i) - xd%p_plane(:,i-1)) <= 2.0_ReKi * p%dr) then
+               call MergeWakePlanes(i-1, i)
+            end if
+         end if
+      end if
+      i = i - 1
+   end do
+
    call Cleanup()
    
 contains
+
+   !> Merge two adjacent wake planes by averaging their states into iKeep,
+   !! then shift all planes above iDrop down by one and decrement NumPlanes.
+   !! iKeep is the plane that survives (receives the average), iDrop is removed.
+   !! Typically iKeep = min(iA,iB) and iDrop = max(iA,iB).
+   subroutine MergeWakePlanes(iKeep, iDrop)
+      integer(IntKi), intent(in) :: iKeep  !< Index of plane to keep (receives averaged values)
+      integer(IntKi), intent(in) :: iDrop  !< Index of plane to remove (shifted out)
+      integer(IntKi) :: j
+
+      ! Average the two planes into iKeep
+      xd%Vx_wind_disk_filt(iKeep) = (xd%Vx_wind_disk_filt(iKeep) + xd%Vx_wind_disk_filt(iDrop)) / 2.0_ReKi
+      xd%x_plane      (    iKeep) = (xd%x_plane      (    iKeep) + xd%x_plane      (    iDrop)) / 2.0_ReKi
+      xd%TI_amb_filt  (    iKeep) = (xd%TI_amb_filt  (    iKeep) + xd%TI_amb_filt  (    iDrop)) / 2.0_ReKi
+      xd%D_rotor_filt (    iKeep) = (xd%D_rotor_filt (    iKeep) + xd%D_rotor_filt (    iDrop)) / 2.0_ReKi
+      xd%YawErr_filt  (    iKeep) = (xd%YawErr_filt  (    iKeep) + xd%YawErr_filt  (    iDrop)) / 2.0_ReKi
+      xd%p_plane      (  :,iKeep) = (xd%p_plane      (  :,iKeep) + xd%p_plane      (  :,iDrop)) / 2.0_ReKi
+      xd%xhat_plane   (  :,iKeep) = (xd%xhat_plane   (  :,iKeep) + xd%xhat_plane   (  :,iDrop)) / 2.0_ReKi
+      xd%xhat_plane   (  :,iKeep) =  xd%xhat_plane   (  :,iKeep) / TwoNorm(xd%xhat_plane(:,iKeep))
+      xd%V_plane_filt (  :,iKeep) = (xd%V_plane_filt (  :,iKeep) + xd%V_plane_filt (  :,iDrop)) / 2.0_ReKi
+      xd%Vx_wake      (  :,iKeep) = (xd%Vx_wake      (  :,iKeep) + xd%Vx_wake      (  :,iDrop)) / 2.0_ReKi
+      xd%Vr_wake      (  :,iKeep) = (xd%Vr_wake      (  :,iKeep) + xd%Vr_wake      (  :,iDrop)) / 2.0_ReKi
+      xd%Vx_wake2     (:,:,iKeep) = (xd%Vx_wake2     (:,:,iKeep) + xd%Vx_wake2     (:,:,iDrop)) / 2.0_ReKi
+      xd%Vy_wake2     (:,:,iKeep) = (xd%Vy_wake2     (:,:,iKeep) + xd%Vy_wake2     (:,:,iDrop)) / 2.0_ReKi
+      xd%Vz_wake2     (:,:,iKeep) = (xd%Vz_wake2     (:,:,iKeep) + xd%Vz_wake2     (:,:,iDrop)) / 2.0_ReKi
+
+      ! Shift all planes above iDrop down by one
+      do j = iDrop, NINT(xd%NumPlanes)-2
+         xd%Vx_wind_disk_filt(j) = xd%Vx_wind_disk_filt(j+1)
+         xd%x_plane      (    j) = xd%x_plane      (    j+1)
+         xd%TI_amb_filt  (    j) = xd%TI_amb_filt  (    j+1)
+         xd%D_rotor_filt (    j) = xd%D_rotor_filt (    j+1)
+         xd%YawErr_filt  (    j) = xd%YawErr_filt  (    j+1)
+         xd%p_plane      (  :,j) = xd%p_plane      (  :,j+1)
+         xd%xhat_plane   (  :,j) = xd%xhat_plane   (  :,j+1)
+         xd%V_plane_filt (  :,j) = xd%V_plane_filt (  :,j+1)
+         xd%Vx_wake      (  :,j) = xd%Vx_wake      (  :,j+1)
+         xd%Vr_wake      (  :,j) = xd%Vr_wake      (  :,j+1)
+         xd%Vx_wake2     (:,:,j) = xd%Vx_wake2     (:,:,j+1)
+         xd%Vy_wake2     (:,:,j) = xd%Vy_wake2     (:,:,j+1)
+         xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
+      end do
+
+      ! Decrement plane count
+      xd%NumPlanes = xd%NumPlanes - 1.0
+   end subroutine MergeWakePlanes
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j

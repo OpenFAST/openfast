@@ -213,6 +213,7 @@ typedef      ^      InputType          ReKi       D_rotor               -      -
 typedef      ^      InputType          ReKi       Vx_rel_disk           -      -      -      "Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      m/s
 typedef      ^      InputType          ReKi       Ct_azavg             {:}     -      -      "Azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      -
 typedef      ^      InputType          ReKi       Cq_azavg             {:}     -      -      "Azimuthally averaged torque coefficient (normal to disk), distributed radially"      -
+typedef      ^      InputType          ReKi       wakePlaneDomainExit  {:}{:}  0      -      "Per-dimension flag from AWAE (0: in domain, -1: crossed lower, +1: crossed upper) for each plane [dim,plane]" -
 
 
 # ..... Outputs ...................................................................................................................
