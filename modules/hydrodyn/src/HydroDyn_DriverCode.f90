@@ -23,7 +23,8 @@
 PROGRAM HydroDynDriver
 
    USE HydroDynDriverSubs
-   
+   USE NWTC_CheckInput
+
    IMPLICIT NONE
 
    INTEGER(IntKi), PARAMETER                          :: NumInp = 1           ! Number of inputs sent to HydroDyn_UpdateStates
@@ -89,13 +90,21 @@ PROGRAM HydroDynDriver
 
    CHARACTER(20)                                      :: FlagArg              ! Flag argument from command line
 
+   LOGICAL                                            :: CheckInputMode       ! true if -CheckInput was given on the command line (no initializer -- set below)
+   TYPE(CheckInputCollectorType)                      :: Checker              ! -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage              ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+   INTEGER(IntKi)                                     :: ErrStat2             ! secondary error status, used only for -CheckInput report calls
+   CHARACTER(ErrMsgLen)                                :: ErrMsg2              ! secondary error message, used only for -CheckInput report calls
+
    ! Variables Init
    Time = -99999 ! initialize to negative number for error messages
    ErrStat = ErrID_None
    ErrMsg = ""
    SeaState_Initialized = .false.
    HydroDyn_Initialized = .false.
-   
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
+
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -122,8 +131,12 @@ PROGRAM HydroDynDriver
 
    drvrFilename = ''
    CALL CheckArgs( drvrFilename, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
-   
+   IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+      CheckInputMode = .TRUE.
+   ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+      CALL NormStop()   ! -h/-v were already handled inside CheckArgs
+   END IF
+
    
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
@@ -136,13 +149,19 @@ PROGRAM HydroDynDriver
    
    
       ! Parse the driver input file and run the simulation based on that file
+   CkStage = 'Driver'
    CALL ReadDriverInputFile( drvrFilename, drvrData, ErrStat, ErrMsg )
       CALL CheckError()
-      
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(drvrData%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
       ! Read the PRPInputsFile:
    CALL ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
       CALL CheckError()
-      
+
    drvrData%OutData%NumOuts = 0
    drvrData%OutData%n_Out   = 0
    drvrData%TMax = (drvrData%NSteps-1) * drvrData%TimeInterval  ! Starting time is always t = 0.0
@@ -175,7 +194,8 @@ PROGRAM HydroDynDriver
 
       ! Initialize the HydroDyn module
    Interval = drvrData%TimeInterval
-   
+
+   CkStage = 'SeaState'
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
    SeaState_Initialized = .true.
       CALL CheckError()
@@ -184,14 +204,15 @@ PROGRAM HydroDynDriver
    if ( Interval /= drvrData%TimeInterval) then
       ErrMsg = 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.'
       ErrStat = ErrID_Fatal
-      call HD_DvrEnd()
+      CALL CheckError()   ! routes through the same chokepoint as every other fatal (was a direct HD_DvrEnd() call)
    end if
-  
+
       ! Set HD Init Inputs based on SeaStates Init Outputs
    call SetHD_InitInputs()
 
          ! Initialize the module
    Interval = drvrData%TimeInterval
+   CkStage = 'HydroDyn'
    CALL HydroDyn_Init( InitInData_HD, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData_HD, ErrStat, ErrMsg )
    HydroDyn_Initialized = .true.
       CALL CheckError()
@@ -199,12 +220,19 @@ PROGRAM HydroDynDriver
    IF ( Interval /= drvrData%TimeInterval) THEN
       ErrMsg = '  The HydroDyn Module attempted to change timestep interval, but this is not allowed.  The HydroDyn Module must use the Driver Interval.'
       ErrStat = ErrID_Fatal
-      call HD_DvrEnd() 
+      CALL CheckError()   ! routes through the same chokepoint as every other fatal (was a direct HD_DvrEnd() call)
    END IF
 
+   CkStage = 'Driver'   ! post-init mapping/interval validation below is attributed back to the Driver stage
 
    ! Initialization to concatenate all module data into a single output file
-   CALL InitOutputFile(InitOutData_HD, InitOutData_SeaSt, drvrData, ErrStat, ErrMsg );       CALL CheckError()
+   ! -CheckInput: drvrData%WrTxtOutFile is unconditionally .TRUE. (set in ReadDriverInputFile), so
+   ! InitOutputFile always opens <OutRootName>.out -- skip the call entirely in check mode so a
+   ! passing -CheckInput run leaves no compute-output artifact behind; nothing after this point
+   ! before P4 depends on drvrData%OutData being populated.
+   IF ( .NOT. CheckInputMode ) THEN
+      CALL InitOutputFile(InitOutData_HD, InitOutData_SeaSt, drvrData, ErrStat, ErrMsg );       CALL CheckError()
+   END IF
 
    
    ! Destroy InitInput and InitOutput data (and nullify pointers to SeaState data)
@@ -285,6 +313,19 @@ PROGRAM HydroDynDriver
    maxAngle = 0.0
    mappingData%Ind = 1 ! initialize
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through CheckError's CkIn_DriverFail interception and never returned). Record all three
+      ! stages as passed, in order, then finish -- this call never returns.
+      CALL CkIn_Collect( Checker, 'Driver',   ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',   ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'SeaState', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'SeaState', ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'HydroDyn', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'HydroDyn', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
+
    DO n = 1, drvrData%NSteps
       
       Time = (n-1) * drvrData%TimeInterval
@@ -357,8 +398,9 @@ end subroutine SetHD_InitInputs
 subroutine CheckError()
 
    IF ( ErrStat /= ErrID_None) THEN
-   
+
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL HD_DvrEnd()
       END IF
       
