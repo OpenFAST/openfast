@@ -272,7 +272,10 @@ CONTAINS
 
       CALL OpenFOutFile( collector%UnYaml, TRIM(collector%YamlFileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         collector%UnYaml = -1   ! the file did not open; do not leave a stale/invalid unit number behind
+         RETURN
+      END IF
 
       CALL yaml_write_comm( collector%UnYaml, &
          'OpenFAST -CheckInput report, auto-generated '//CurDate()//' '//CurTime()//' -- do not hand-edit', &

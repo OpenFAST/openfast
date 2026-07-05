@@ -97,10 +97,26 @@ endfunction(of_regression)
 # case, optionally corrupted) -- see executeCheckInputTest.py. No baseline comparison.
 function(of_checkinput TESTNAME CASE LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeCheckInputTest.py")
+  set(EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_CASE "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${CASE}")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast/${TESTNAME}")
+
+  # Same path hygiene as regression(): normalize to the native separator, then double any
+  # backslash it introduced (Windows) so it survives CTestTestfile.cmake being re-parsed.
+  file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
+  file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${SOURCE_CASE}" SOURCE_CASE)
+  file(TO_NATIVE_PATH "${BUILD_DIRECTORY}" BUILD_DIRECTORY)
+
+  string(REPLACE "\\" "\\\\" EXECUTABLE ${EXECUTABLE})
+  string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
+  string(REPLACE "\\" "\\\\" SOURCE_CASE ${SOURCE_CASE})
+  string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
+
   add_test(${TESTNAME} ${Python_EXECUTABLE} ${TEST_SCRIPT}
-    ${CTEST_OPENFAST_EXECUTABLE}
-    "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${CASE}"
-    "${CTEST_BINARY_DIR}/glue-codes/openfast/${TESTNAME}"
+    ${EXECUTABLE}
+    ${SOURCE_CASE}
+    ${BUILD_DIRECTORY}
     ${ARGN})
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 900 LABELS "${LABEL}")
 endfunction(of_checkinput)

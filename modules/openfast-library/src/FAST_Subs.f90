@@ -114,7 +114,6 @@ SUBROUTINE FAST_CheckInput_T( Turbine )
    TYPE(CheckInputCollectorType)           :: CkInCollector
    INTEGER(IntKi)                          :: ErrStat, ExitCode
    CHARACTER(ErrMsgLen)                    :: ErrMsg
-   INTEGER(IntKi)                          :: FIAStat
    LOGICAL                                 :: FIAHasMsgs
 
    Turbine%TurbID = 1
@@ -125,15 +124,20 @@ SUBROUTINE FAST_CheckInput_T( Turbine )
                Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                Turbine%IceF, Turbine%IceD, Turbine%SlD, .false., ErrStat, ErrMsg, CkInCollector=CkInCollector )
    IF (ErrStat >= AbortErrLev) THEN
-      ! Only unrecoverable pre-module failures land here (e.g. FAST_Init itself, or allocation).
+      ! Only failures that bypass the collect-and-continue path entirely land here -- e.g. FailedAlloc's
+      ! array-allocation checks, which call Cleanup()/return unconditionally regardless of CheckInputMode.
+      ! Every module Init failure itself takes the collect path above instead: CheckInputMode is already
+      ! set (see above) before FAST_InitializeAll is called, so Failed() routes those through CkIn_Collect
+      ! and continues rather than returning here.
       CALL CkIn_Collect( CkInCollector, 'FAST_InitializeAll', ErrStat, ErrMsg )
    END IF
    ! Flush whatever Failed() collected under this label during the call (every module's collect-and-continue
    ! error lands here until Task 7 gives each module its own CurrentComponent) so it appears in the YAML report.
    ! Only report when something was actually collected -- otherwise this would add a spurious
-   ! "unavailable, 0 messages" entry to a clean run's report.
-   FIAStat = CkIn_ComponentStatus( CkInCollector, 'FAST_InitializeAll', Found=FIAHasMsgs )
-   IF (FIAHasMsgs) THEN
+   ! "unavailable, 0 messages" entry to a clean run's report. CkIn_ComponentStatus's own return value isn't
+   ! needed here (only the Found= side-output is); discard it inline rather than storing it in an unused
+   ! variable -- CkIn_St_* is always >= CkIn_St_Passed, so FIAHasMsgs is what actually gates this.
+   IF ( CkIn_ComponentStatus( CkInCollector, 'FAST_InitializeAll', Found=FIAHasMsgs ) >= CkIn_St_Passed .AND. FIAHasMsgs ) THEN
       CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitializeAll', ErrStat, ErrMsg )
    END IF
 
@@ -807,6 +811,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       case (Module_ED)
          ! -CheckInput guard: if ED_Init failed, HubPtMotion is uncommitted and its POINTER
          ! Position component is NULL -- dereferencing segfaults. Feed a neutral hub position.
+         ! The else-branch below is unreachable when ED itself fails (its case-default block above
+         ! already stubs HubPtMotion to committed) -- kept as defense-in-depth for other uncommitted-mesh
+         ! causes.
          if (ED%y(1)%HubPtMotion%committed) then
             Init%InData_IfW%HubPosition = ED%y(1)%HubPtMotion%Position(:,1)
          else
@@ -1054,6 +1061,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
             ! -CheckInput guard: if ED_Init failed, its output meshes are uncommitted and their POINTER
             ! components are NULL -- dereferencing segfaults. Feed neutral geometry and mark AD tainted.
+            ! The else-branch below is unreachable when ED itself fails (its case-default block above
+            ! already stubs these meshes to committed) -- kept as defense-in-depth for other
+            ! uncommitted-mesh causes.
             if (ED%y(iRot)%HubPtMotion%committed) then
                Init%InData_AD%rotors(iRot)%HubPosition        = ED%y(iRot)%HubPtMotion%Position(:,1)
                Init%InData_AD%rotors(iRot)%HubOrientation     = ED%y(iRot)%HubPtMotion%RefOrientation(:,:,1)
@@ -1210,6 +1220,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! However, AD outputs are required
    !----------------------------------------------------------------------------
    IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
+
+      ! -CheckInput: this block's own label -- without it, a failure here would still carry whatever
+      ! CurrentComponent the previous module's block left set (AeroDyn/AeroDisk), misattributing the error.
+      CurrentComponent = 'ExternalInflow'
 
       ExtInfw_OK = .false.
       IF ( PRESENT(ExternInitData) ) THEN
@@ -1398,6 +1412,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_SD%nTP           = p_FAST%NRotors
       call AllocAry(Init%InData_SD%TP_RefPoint, 3, p_FAST%NRotors, "TP_RefPoint", ErrStat2, ErrMsg2); if (Failed()) return
       do iRot = 1, p_FAST%NRotors
+         ! -CheckInput guard: ED_Init commits PlatformPtMesh before any successful return; the else-branch
+         ! below is reachable only after a collected ED failure (uncommitted mesh, NULL Position pointer).
+         ! In practice it is unreachable even then -- ED's case-default block already stubs this mesh to
+         ! committed -- kept as defense-in-depth for other uncommitted-mesh causes.
          if (ED%y(iRot)%PlatformPtMesh%committed) then
             Init%InData_SD%TP_RefPoint(:,iRot) = ED%y(iRot)%PlatformPtMesh%Position(:,1)
          else
