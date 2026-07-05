@@ -25,7 +25,8 @@ subroutine test_NWTC_CheckInput_suite(testsuite)
                new_unittest("test_exit_code",                        test_exit_code), &
                new_unittest("test_empty_message_fatal",              test_empty_message_fatal), &
                new_unittest("test_driverrecord_fatal",                test_driverrecord_fatal), &
-               new_unittest("test_closereport_lastresort",             test_closereport_lastresort) &
+               new_unittest("test_closereport_lastresort",             test_closereport_lastresort), &
+               new_unittest("test_closereport_after_failed_open",      test_closereport_after_failed_open) &
                ]
 end subroutine
 
@@ -186,6 +187,47 @@ subroutine test_closereport_lastresort(error)
 
    call check(error, FoundOverallFailed); if (allocated(error)) return
    call check(error, FoundDriverComp)
+end subroutine
+
+subroutine test_closereport_after_failed_open(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(CheckInputCollectorType) :: collector
+   integer(IntKi) :: ErrStat, Un, IOS
+   character(ErrMsgLen) :: ErrMsg
+   character(*), parameter :: FileName = 'checkinput.verify.yaml'
+   character(256) :: Line
+   logical :: FileExists, FoundOverallFailed
+
+   ! Primary open must fail (the directory does not exist): CkIn_OpenReport must reset BOTH
+   ! UnYaml and YamlFileName on this failure path so the failed-open case is indistinguishable
+   ! from never-opened -- otherwise CkIn_CloseReport takes the "caller bug" severe branch and
+   ! writes nothing, defeating the last-resort report entirely.
+   inquire(file=FileName, exist=FileExists)
+   if (FileExists) then
+      open(newunit=Un, file=FileName, status='old')
+      close(Un, status='delete')
+   end if
+
+   call CkIn_OpenReport(collector, '/nonexistent_dir_xyz/deck', ErrStat, ErrMsg)
+   call check(error, ErrStat >= AbortErrLev); if (allocated(error)) return
+
+   call CkIn_Collect(collector, 'Driver', ErrID_Fatal, 'X:bad arg')
+   call CkIn_CloseReport(collector, ErrStat, ErrMsg)
+   call check(error, ErrStat < AbortErrLev); if (allocated(error)) return
+
+   inquire(file=FileName, exist=FileExists)
+   call check(error, FileExists); if (allocated(error)) return
+
+   FoundOverallFailed = .false.
+   open(newunit=Un, file=FileName, status='old', action='read')
+   do
+      read(Un, '(A)', iostat=IOS) Line
+      if (IOS /= 0) exit
+      if (index(Line, 'overall_status: failed') > 0) FoundOverallFailed = .true.
+   end do
+   close(Un, status='delete')
+
+   call check(error, FoundOverallFailed)
 end subroutine
 
 end module

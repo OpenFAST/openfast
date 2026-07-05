@@ -580,20 +580,16 @@ PROGRAM MoorDyn_Driver
          end do
       endif
    
-   end if   ! InputsMod == 1 
-   CALL MD_CalcOutput(  t, MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   end if   ! InputsMod == 1
 
-  
-  
-  ! -------------------------------------------------------------------------
-  ! BEGIN time marching 
-  ! -------------------------------------------------------------------------
-  
    IF ( CheckInputMode ) THEN
       ! Reaching here means every stage above completed without a fatal error (a fatal one would have
       ! routed through AbortIfFailed's CkIn_DriverFail interception and never returned). Record all four
       ! stages, marking SeaState/Motions not_used when the driver input file didn't enable them, then
-      ! finish -- this call never returns.
+      ! finish -- this call never returns. This must run BEFORE MD_CalcOutput below: MD_CalcOutput
+      ! internally calls MDIO_WriteOutputs and would append a t=0 data row to <Root>.MD.out, but a
+      ! check-mode run only validates input and must not produce simulation output (the header row
+      ! written during MD_Init is an unavoidable module-scope ride-along and is fine to leave).
       CALL CkIn_Collect( Checker, 'Driver', ErrID_None, '' )
       CALL CkIn_ReportComponent( Checker, 'Driver', ErrStat2, ErrMsg2 )
 
@@ -616,6 +612,15 @@ PROGRAM MoorDyn_Driver
 
       CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
    END IF
+
+   CALL MD_CalcOutput(  t, MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+
+
+
+  ! -------------------------------------------------------------------------
+  ! BEGIN time marching
+  ! -------------------------------------------------------------------------
+
 
    call WrScr("Doing time marching now...")
 

@@ -271,12 +271,21 @@ CONTAINS
 
       CALL GetNewUnit( collector%UnYaml, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         ! No unit was obtained; undo the YamlFileName set above so a failed open is indistinguishable
+         ! from never-opened -- CkIn_CloseReport's last-resort branch keys off LEN_TRIM(YamlFileName)==0.
+         collector%UnYaml       = -1
+         collector%YamlFileName = ''
+         RETURN
+      END IF
 
       CALL OpenFOutFile( collector%UnYaml, TRIM(collector%YamlFileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         collector%UnYaml = -1   ! the file did not open; do not leave a stale/invalid unit number behind
+         ! The file did not open; do not leave a stale/invalid unit number OR filename behind -- see
+         ! the comment above and CkIn_CloseReport's last-resort branch.
+         collector%UnYaml       = -1
+         collector%YamlFileName = ''
          RETURN
       END IF
 
