@@ -25,6 +25,7 @@ subroutine test_VersionInfo_CheckArgs_suite(testsuite)
                 new_unittest("test_help2", test_help2), &
                 new_unittest("test_version1", test_version1), &
                 new_unittest("test_version2", test_version2), &
+                new_unittest("test_checkinput_flag", test_checkinput_flag), &
                 new_unittest("test_no_args_no_default", test_no_args_no_default), &
                 new_unittest("test_unsupported_flag", test_unsupported_flag), &
                 new_unittest("test_restart_bad_syntax", test_restart_bad_syntax) &
@@ -292,6 +293,25 @@ subroutine test_version2(error)
    call check(error, 0, error_status); if (allocated(error)) return
    call check(error, "", second_argument); if (allocated(error)) return
    call check(error, "VERSION", flag); if (allocated(error)) return
+   deallocate (argument_array)
+end subroutine
+
+subroutine test_checkinput_flag(error)
+   type(error_type), allocatable, intent(out) :: error
+
+   character(1024) :: filename, second_argument, flag
+   integer(IntKi) :: error_status
+   character(16), dimension(:), allocatable :: argument_array
+
+   filename = ""
+   allocate (argument_array(2))
+   argument_array = ["input.fst       ", "-checkinput     "]
+   call hide_terminal_output()
+   call CheckArgs(filename, error_status, second_argument, flag, argument_array)
+   call show_terminal_output()
+   call check(error, "input.fst", filename); if (allocated(error)) return
+   call check(error, 0, error_status); if (allocated(error)) return
+   call check(error, "CHECKINPUT", flag); if (allocated(error)) return
    deallocate (argument_array)
 end subroutine
 

@@ -277,6 +277,17 @@ END FUNCTION GetVersion
                RETURN
          END IF
 
+      CASE ('CHECKINPUT')
+
+         IF ( SecondArgumentSet .AND. .NOT. FirstArgumentSet ) THEN
+            Arg1 = Arg2
+         END IF
+         IF ( .NOT. FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
+            CALL INVALID_SYNTAX( 'the input-check capability requires at least one argument: <input_file> -CheckInput' )
+            CALL CLEANUP()
+               RETURN
+         END IF
+
       CASE DEFAULT
          CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
          CALL CLEANUP()
