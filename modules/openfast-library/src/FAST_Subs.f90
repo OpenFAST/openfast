@@ -466,6 +466,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
                     Status='unavailable')
             end if
+            if (p_FAST%CompAero == Module_ADsk) then
+               call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
             if (p_FAST%CompInflow == Module_IfW) then
                call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
                     'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
