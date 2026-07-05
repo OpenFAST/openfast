@@ -419,12 +419,14 @@ subroutine Init_AFI(afName, AFInfo, ErrStat, ErrMsg)
 end subroutine Init_AFI
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the Airfoil Noise module from within AeroDyn.
-SUBROUTINE Init_AAmodule( DriverData, ErrStat, ErrMsg )
+SUBROUTINE Init_AAmodule( DriverData, ErrStat, ErrMsg, CheckInputMode )
 !..................................................................................................................................
    type(Dvr_Data),               intent(inout) :: DriverData    !< AeroDyn-level initialization inputs
 
    integer(IntKi),               intent(  out) :: errStat        !< Error status of the operation
    character(*),                 intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
+   logical, optional,            intent(in   ) :: CheckInputMode !< true under '-CheckInput': skip opening the driver output
+                                                                  !! file below so a validation-only run leaves no compute artifact behind
 
    ! Local variables
    real(DbKi)                                  :: Interval       ! DT
@@ -472,9 +474,10 @@ SUBROUTINE Init_AAmodule( DriverData, ErrStat, ErrMsg )
    
    ! --- AeroAcoustics initialization call
    call AA_Init(InitInp, DriverData%u, DriverData%p, DriverData%xd, DriverData%OtherState,DriverData%y, DriverData%m, Interval, DriverData%AFInfo, InitOut, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+   call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   if (ErrStat < AbortErrLev) then
+   ! -CheckInput: skip opening <OutRootName>.out -- a validation-only run must leave no compute-output artifact behind
+   if (ErrStat < AbortErrLev .and. .not. (present(CheckInputMode) .and. CheckInputMode)) then
       call Dvr_InitializeOutputs(DriverData, InitOut, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if

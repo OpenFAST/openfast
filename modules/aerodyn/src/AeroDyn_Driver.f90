@@ -22,7 +22,8 @@ program AeroDyn_Driver
    use AeroDyn_Driver_Subs, only: idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi
    use NWTC_IO
    use NWTC_Num, only: RunTimes, SimStatus, SimStatus_FirstTime
-   implicit none   
+   use NWTC_CheckInput
+   implicit none
    ! Program variables
    REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
    REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
@@ -35,20 +36,39 @@ program AeroDyn_Driver
    integer :: nt !< loop counter (for time step)
    integer(IntKi) :: iCase ! loop counter (for driver case)
 
+   LOGICAL                          :: CheckInputMode          ! true if -CheckInput was given on the command line; set by Dvr_Init's
+                                                                 ! optional out-argument below (Dvr_SimData is Registry-generated, so the
+                                                                 ! flag is threaded back here instead of adding a field to it) (no initializer -- set below)
+   TYPE(CheckInputCollectorType)    :: Checker                 ! -CheckInput result collector
+   CHARACTER(64)                    :: CkStage                 ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+   INTEGER(IntKi)                   :: ErrStat2                ! secondary error status, used only for -CheckInput report calls
+   CHARACTER(ErrMsgLen)             :: ErrMsg2                 ! secondary error message, used only for -CheckInput report calls
+
    CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
    UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
    ! -----
    dat%initialized=.false.
-   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label, covers the Dvr_Init call below; overridden to 'Case<i>'/'Case' per case
+   call Dvr_Init(dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg, CheckInputMode=CheckInputMode); call CheckError()
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(dat%dvr%root)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
    do iCase= 1,dat%dvr%numCases
 
+      IF ( CheckInputMode ) CkStage = CaseLabel(iCase, dat%dvr%numCases)
+
       ! Initial case
-      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg); call CheckError()
+      call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg, CheckInputMode=CheckInputMode); call CheckError()
       dat%initialized=.true.
-   
+
+      IF ( CheckInputMode ) CYCLE   ! validation only: every case is initialized above (validating it), but never time-stepped
+
       ! Init of time estimator
       t_global=0.0_DbKi
       t_final=dat%dvr%numSteps*dat%dvr%dt
@@ -75,18 +95,31 @@ program AeroDyn_Driver
 
    enddo ! Loop on cases
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every case's Dvr_InitCase above completed without a fatal error (a fatal
+      ! one would have routed through CheckError's CkIn_DriverFail interception and never returned).
+      ! Record each case as passed, in order, then finish -- this call never returns.
+      DO iCase = 1, dat%dvr%numCases
+         CkStage = CaseLabel(iCase, dat%dvr%numCases)
+         CALL CkIn_Collect( Checker, TRIM(CkStage), ErrID_None, '' )
+         CALL CkIn_ReportComponent( Checker, TRIM(CkStage), ErrStat2, ErrMsg2 )
+      END DO
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
+
    call Dvr_End()
 contains
-!................................   
+!................................
    subroutine CheckError()
       if (dat%ErrStat /= ErrID_None) then
          call WrScr(TRIM(dat%errMsg))
          if (dat%errStat >= AbortErrLev) then
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), dat%errStat, dat%errMsg )   ! never returns
             call Dvr_End()
          end if
       end if
    end subroutine CheckError
-!................................   
+!................................
    subroutine Dvr_End()
       integer(IntKi)       :: errStat2      ! local status of error message
       character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
@@ -94,7 +127,7 @@ contains
       call Dvr_CleanUp(dat%dvr, dat%ADI, dat%FED, dat%initialized, errStat2, errMsg2)
       CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'Dvr_End')
 
-      if (dat%errStat >= AbortErrLev) then      
+      if (dat%errStat >= AbortErrLev) then
          call WrScr('')
          CALL ProgAbort( 'AeroDyn Driver encountered simulation error level: '&
              //TRIM(GetErrStr(dat%errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
@@ -102,6 +135,16 @@ contains
          call NormStop()
       end if
    end subroutine Dvr_End
-!................................   
+!................................
+   function CaseLabel(i, n) result(lbl)
+      integer(IntKi), intent(in) :: i, n
+      character(64)              :: lbl
+      if (n > 1) then
+         lbl = 'Case'//trim(num2lstr(i))
+      else
+         lbl = 'Case'
+      end if
+   end function CaseLabel
+!................................
 end program AeroDyn_Driver
    
