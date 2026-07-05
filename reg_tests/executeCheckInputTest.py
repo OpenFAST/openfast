@@ -113,14 +113,22 @@ def main():
             got = block.group(1) if block else "absent"
             print(f"FAIL: component {comp} status {got} != failed"); ok = False
 
-    # console/file parity: every fatal text in the yaml must appear on stdout.
-    # OpenFAST's console writer hard-wraps long messages at a fixed column (it can even
-    # split a word across lines), so compare with all whitespace stripped rather than
-    # requiring an exact contiguous substring match.
-    flat_stdout = re.sub(r"\s+", "", r.stdout)
+    # console/file parity: every yaml message must appear on stdout.
+    # The console writer hard-wraps long messages (sometimes mid-word), so compare
+    # against a whitespace-normalized stdout, but keep summary-entry boundaries:
+    # entries start with a "[error]/[warn]/[info]" tag, so join wrapped lines onto
+    # their preceding tagged line before comparing.
+    entries = []
+    for line in r.stdout.splitlines():
+        s = line.strip()
+        if re.match(r"\[(error|warn|info)\]", s) or not entries:
+            entries.append(s)
+        else:
+            entries[-1] += " " + s
+    def squash(t): return re.sub(r"\s+", "", t)
+    squashed_entries = [squash(e) for e in entries]
     for text in re.findall(r'text: "(.*)"', y):
-        flat_text = re.sub(r"\s+", "", text)[:60]
-        if flat_text and flat_text not in flat_stdout:
+        if text and not any(squash(text[:60]) in e for e in squashed_entries):
             print(f"FAIL: yaml message missing from stdout summary: {text[:60]}"); ok = False
 
     sys.exit(0 if ok else 1)
