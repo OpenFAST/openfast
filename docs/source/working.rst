@@ -168,6 +168,41 @@ warnings, solver convergence, NaN blow-ups) are outside the scope of this check.
    DLL controller) the controller shared library.
 
 
+Availability across executables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``-CheckInput`` flag is available on all user-facing OpenFAST executables:
+
+- **Full accumulation (attempt-everything across modules):**
+
+  - ``openfast`` — checks all enabled modules in the input file and reports cross-module consistency
+  - ``FAST.Farm`` — checks farm input, initializes all wrapped turbines with per-turbine attribution in the report (T1, T2, etc. message prefixes); skips downstream steps if any turbine fails
+
+- **Init-only check with report (single-module drivers, fail-fast semantics):**
+
+  - ``turbsim`` — validates wind input
+  - Module drivers: ``aerodyn_driver``, ``aeroacoustics_driver``, ``hydrodyn_driver``, ``seastate_driver``, ``moordyn_driver``, ``inflowwind_driver``, ``aerodisk_driver``, ``sed_driver`` (simple ElastoDyn), ``soildyn_driver``, ``orca_driver``, ``beamdyn_driver``, ``unsteadyaero_driver``
+
+Each driver reads its input file(s), initializes its module, and exits before the time loop or compute phase.
+All failures are accumulated and reported before exit.
+
+**Report files:**
+
+- ``<RootName>.verify.yaml`` — for ``openfast``, ``FAST.Farm``, and ``turbsim``
+- ``<RootName>.driver.verify.yaml`` — for single-module drivers (``*_driver`` executables)
+- ``checkinput.verify.yaml`` (in the current working directory) — fallback when the root name cannot be determined before a failure
+
+**Excluded executables:**
+
+- ``servodyn_driver`` — hardcoded module-test harness; its input deck is a code literal embedded in the executable, not CLI-driven
+
+**DLL caveat:**
+
+SoilDyn (REDWIN) and OrcaFlex load their DLLs during initialization.
+Under ``-CheckInput``, a missing DLL is reported as that component's failure.
+This is deliberate: the DLL is part of the deck/environment, and its absence is a real problem the deck cannot solve around.
+
+
 
 
 
