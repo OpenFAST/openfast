@@ -33,6 +33,7 @@ PROGRAM OrcaDriver
    USE OrcaDriver_Types
    USE OrcaDriver_Subs
    USE OrcaFlexInterface
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -85,6 +86,13 @@ PROGRAM OrcaDriver
    INTEGER(IntKi)                                     :: ErrStatTmp
    CHARACTER(2048)                                    :: ErrMsgTmp
    INTEGER(IntKi)                                     :: LenErrMsgTmp            ! Length of ErrMsgTmp
+   INTEGER(IntKi)                                     :: ErrStat2                ! -CheckInput: temp error status for calls
+   CHARACTER(1024)                                    :: ErrMsg2                 ! -CheckInput: temp error message for calls
+
+      ! -CheckInput support (no initializers on these -- set as early executable statements below)
+   LOGICAL                                            :: CheckInputMode          ! true if -CheckInput was given on the command line
+   TYPE(CheckInputCollectorType)                      :: Checker                 ! -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage                 ! name of the -CheckInput stage/component currently executing
 
 
    !--------------------------------------------------------------------------
@@ -105,6 +113,9 @@ PROGRAM OrcaDriver
       ! Start the timer
    CALL CPU_TIME( Timer(1) )
 
+      ! -CheckInput: no initializers on these -- set as early executable statements
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before the Orca_Init call below
 
       ! Set some CLSettings to null/default values
    CLSettings%DvrIptFileName           =  ""             ! No input name name until set
@@ -135,6 +146,7 @@ PROGRAM OrcaDriver
    CLSettingsFlags%PointsOutputInit    =  .FALSE.        ! Points output file not started
    CLSettingsFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
    CLSettingsFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
+   CLSettingsFlags%CheckInput          =  .FALSE.        ! -CheckInput mode requested on the command line
 
 
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
@@ -153,6 +165,10 @@ PROGRAM OrcaDriver
       ErrStat  =  ErrID_None
       ErrMsg   =  ''
    ENDIF
+
+      ! -CheckInput is command-line only (mirrors how Verbose/VVerbose are handled below -- not
+      ! merged into SettingsFlags by UpdateSettingsWithCL, so read it straight off the CL flags).
+   CheckInputMode = CLSettingsFlags%CheckInput
 
 
       ! Check if we are doing verbose error reporting
@@ -202,6 +218,7 @@ PROGRAM OrcaDriver
          ! Read the driver input file
       CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -227,6 +244,7 @@ PROGRAM OrcaDriver
          ! was read.
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -254,6 +272,7 @@ PROGRAM OrcaDriver
          ! input file was not read.
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .FALSE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -276,11 +295,16 @@ PROGRAM OrcaDriver
 
    IF ( SettingsFlags%PointsFile ) THEN
       INQUIRE( file=TRIM(Settings%PointsFileName), exist=TempFileExist )
-      IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
+      IF ( TempFileExist .eqv. .FALSE. ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrID_Fatal, &
+            "Cannot find the points file "//TRIM(Settings%PointsFileName) )   ! never returns
+         CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
+      END IF
 
          ! Now read the file in and save the points
       CALL ReadPointsFile( Settings%PointsFileName, SettingsFlags%PointsDegrees, TimeList, PointsList, VelocList, AccelList, ErrStat,ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -343,20 +367,30 @@ PROGRAM OrcaDriver
 
       ! Some initialization settings
    Orca_InitInp%InputFile = Settings%OrcaIptFileName
-   CALL GetRoot( Orca_InitInp%InputFile, Orca_InitInp%RootName )      
+   CALL GetRoot( Orca_InitInp%InputFile, Orca_InitInp%RootName )
    Orca_InitInp%TMax             =  Settings%TMax
-  
+
+      ! -CheckInput: RootName is known now (pre-Init) -- open the report before Orca_Init runs so a
+      ! fatal from Init itself (e.g. the OrcaFlex DLL failing to load) is caught.
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(Orca_InitInp%RootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
    IF ( OrcaDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling Orca_Init...')
 
 
+   CkStage = 'OrcaFlexInterface'
    CALL Orca_Init( Orca_InitInp, Orca_u, Orca_p, &
                Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                Orca_y, Orca_m, Settings%DT,  Orca_InitOut, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occurred that give us reason to terminate now.
+      ! -CheckInput: the OrcaFlex DLL dlopen happens inside Orca_Init -- a missing/broken DLL must
+      ! surface as a failed 'OrcaFlexInterface' component with a completed report, not a crash.
    IF ( ErrStat >= AbortErrLev ) THEN
+      IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
@@ -369,6 +403,7 @@ PROGRAM OrcaDriver
       ErrStat  =  ErrID_None
       ErrMsg   =  ''
    ENDIF
+   CkStage = 'Driver'   ! post-Init timestep checks below are attributed back to the Driver stage
 
 
 
@@ -376,6 +411,17 @@ PROGRAM OrcaDriver
    IF ( OrcaDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'Orca_Init CALL returned without errors.'//NewLine)
 
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through one of the CkIn_DriverFail interceptions above and never returned). Record both
+      ! stages as passed, in order, then finish -- this call never returns, so the CalcOutput loop and
+      ! all output writes below are never reached in check mode.
+      CALL CkIn_Collect( Checker, 'Driver',            ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',            ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'OrcaFlexInterface',  ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'OrcaFlexInterface',  ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
 
    !--------------------------------------------------------------------------------------------------------------------------------

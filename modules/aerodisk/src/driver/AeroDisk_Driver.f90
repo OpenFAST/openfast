@@ -27,6 +27,7 @@ PROGRAM AeroDisk_Driver
    USE AeroDisk_Driver_Subs
    USE AeroDisk_Driver_Types
    USE IfW_FLowField
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -84,6 +85,13 @@ PROGRAM AeroDisk_Driver
    integer(IntKi)                                     :: TmpIdx               !< Index of last point accessed by dimension
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                     :: ErrStat2             !< -CheckInput: temp error status for calls
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2              !< -CheckInput: temp error message for calls
+
+      ! -CheckInput support (no initializers on these -- set as early executable statements below)
+   LOGICAL                                            :: CheckInputMode       !< true if -CheckInput was given on the command line
+   TYPE(CheckInputCollectorType)                      :: Checker              !< -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage              !< name of the -CheckInput stage/component currently executing
 
    CHARACTER(200)                                     :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER                          :: version   = ProgDesc( 'AeroDisk Driver', '', '' )  ! The version number of this program.
@@ -106,6 +114,10 @@ PROGRAM AeroDisk_Driver
       ! Start the timer
    call CPU_TIME( Timer(1) )
 
+      ! -CheckInput: no initializers on these -- set as early executable statements
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before the ADsk_Init call below
+
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
    call InitSettingsFlags( ProgInfo, CLSettings, CLSettingsFlags )
    Settings       =  CLSettings
@@ -119,6 +131,10 @@ PROGRAM AeroDisk_Driver
       CALL WrScr( NewLine//ErrMsg )
       ErrStat  =  ErrID_None
    ENDIF
+
+      ! -CheckInput is command-line only (mirrors how Verbose/VVerbose are handled below -- not
+      ! merged into SettingsFlags by UpdateSettingsWithCL, so read it straight off the CL flags).
+   CheckInputMode = CLSettingsFlags%CheckInput
 
       ! Check if we are doing verbose error reporting
    IF ( CLSettingsFlags%VVerbose )     ADskDriver_Verbose =  10_IntKi
@@ -178,6 +194,17 @@ PROGRAM AeroDisk_Driver
 
    ELSE
 
+         ! -CheckInput: the direct "-adsk" input-file mode never populates CaseTime/CaseData (those
+         ! are only read by ParseDvrIptFile above, in the driver-input-file branch) -- the time-step
+         ! setup below dereferences them unconditionally and crashes if they were never allocated.
+         ! That is a pre-existing bug in this mode and is out of scope here; under -CheckInput we
+         ! must not route into it, so fail cleanly with a clear message instead.
+      IF ( CheckInputMode ) THEN
+         CALL CkIn_DriverFail( Checker, 'Driver', ErrID_Fatal, &
+            'AeroDisk -CheckInput requires a driver input file (the direct AeroDisk-file mode, "'// &
+            SwChar//'adsk", is not supported under -CheckInput).' )   ! never returns
+      END IF
+
          ! VVerbose error reporting
       IF ( ADskDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
 
@@ -188,6 +215,14 @@ PROGRAM AeroDisk_Driver
       ! if the driver input file read.
    CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, SettingsFlags%DvrIptFile, ErrStat, ErrMsg )
    call CheckErr('')
+
+      ! -CheckInput: RootName is known now (pre-Init, driver-input-file mode only -- the direct
+      ! "-adsk" mode already exited above under CheckInputMode).  Open the report before ADsk_Init
+      ! runs so a fatal from Init itself is caught.
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(Settings%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
       ! Verbose error reporting
    IF ( ADskDriver_Verbose >= 10_IntKi ) THEN
@@ -266,15 +301,21 @@ PROGRAM AeroDisk_Driver
 
 
       ! Initialize the module
+   CkStage = 'AeroDisk'
    CALL ADsk_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       call CheckErr('After Init: ')
    END IF
+   CkStage = 'Driver'   ! output-file setup below is attributed back to the Driver stage
 
       ! Set the output file
-   call GetRoot(Settings%OutRootName,OutputFileRootName)
-   call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
-   call CheckErr('Setting output file');
+      ! -CheckInput: opening the output file is a real compute artifact -- skip it entirely in check
+      ! mode so a passing check run leaves no output file behind.
+   IF ( .NOT. CheckInputMode ) THEN
+      call GetRoot(Settings%OutRootName,OutputFileRootName)
+      call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
+      call CheckErr('Setting output file');
+   END IF
 
       ! Destroy initialization data
    CALL ADsk_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
@@ -285,6 +326,17 @@ PROGRAM AeroDisk_Driver
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through CheckErr's CkIn_DriverFail interception, or the -adsk-mode interception above,
+      ! and never returned). Record both stages as passed, in order, then finish -- this call never
+      ! returns, so the time-marching loop below is never reached in check mode.
+      CALL CkIn_Collect( Checker, 'Driver',   ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',   ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'AeroDisk', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'AeroDisk', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
    TmpIdx = 0_IntKi
 
@@ -351,6 +403,9 @@ CONTAINS
        IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( Text//ErrMsg )
          if ( ErrStat >= AbortErrLev ) then
+            ! -CheckInput: ProgEnd -> ProgAbort discards ErrMsg, so the collector call must fire
+            ! before Cleanup/ProgEnd, not after.
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
             call Cleanup()
             call ProgEnd()
          endif

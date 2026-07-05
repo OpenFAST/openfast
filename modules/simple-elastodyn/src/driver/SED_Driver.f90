@@ -27,6 +27,7 @@ PROGRAM SED_Driver
    USE SED_Types
    USE SED_Driver_Subs
    USE SED_Driver_Types
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -80,6 +81,13 @@ PROGRAM SED_Driver
    integer(IntKi)                                     :: TmpIdx               !< Index of last point accessed by dimension
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                     :: ErrStat2             !< -CheckInput: temp error status for calls
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2              !< -CheckInput: temp error message for calls
+
+      ! -CheckInput support (no initializers on these -- set as early executable statements below)
+   LOGICAL                                            :: CheckInputMode       !< true if -CheckInput was given on the command line
+   TYPE(CheckInputCollectorType)                      :: Checker              !< -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage              !< name of the -CheckInput stage/component currently executing
 
    CHARACTER(200)                                     :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER                          :: version   = ProgDesc( 'SED Driver', '', '' )  ! The version number of this program.
@@ -102,6 +110,10 @@ PROGRAM SED_Driver
       ! Start the timer
    call CPU_TIME( Timer(1) )
 
+      ! -CheckInput: no initializers on these -- set as early executable statements
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before the SED_Init call below
+
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
    call InitSettingsFlags( ProgInfo, CLSettings, CLSettingsFlags )
    Settings       =  CLSettings
@@ -110,6 +122,10 @@ PROGRAM SED_Driver
       ! Parse the input line
    call RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
    call CheckErr('')
+
+      ! -CheckInput is command-line only (mirrors how Verbose/VVerbose are handled below -- not
+      ! merged into SettingsFlags by UpdateSettingsWithCL, so read it straight off the CL flags).
+   CheckInputMode = CLSettingsFlags%CheckInput
 
       ! Check if we are doing verbose error reporting
    IF ( CLSettingsFlags%VVerbose )     SEDDriver_Verbose =  10_IntKi
@@ -169,6 +185,17 @@ PROGRAM SED_Driver
 
    ELSE
 
+         ! -CheckInput: the direct "-sed" input-file mode never populates CaseTime/CaseData (those
+         ! are only read by ParseDvrIptFile above, in the driver-input-file branch) -- the time-step
+         ! setup below dereferences them unconditionally and would crash if they were never
+         ! allocated (mirrors the same pre-existing gap in the AeroDisk driver). Fail cleanly with a
+         ! clear message under -CheckInput instead of routing into it.
+      IF ( CheckInputMode ) THEN
+         CALL CkIn_DriverFail( Checker, 'Driver', ErrID_Fatal, &
+            'Simplified-ElastoDyn -CheckInput requires a driver input file (the direct SED-file mode, "'// &
+            SwChar//'sed", is not supported under -CheckInput).' )   ! never returns
+      END IF
+
          ! VVerbose error reporting
       IF ( SEDDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
 
@@ -179,6 +206,14 @@ PROGRAM SED_Driver
       ! if the driver input file read.
    CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, SettingsFlags%DvrIptFile, ErrStat, ErrMsg )
    call CheckErr('')
+
+      ! -CheckInput: RootName is known now (pre-Init, driver-input-file mode only -- the direct
+      ! "-sed" mode already exited above under CheckInputMode). Open the report before SED_Init runs
+      ! so a fatal from Init itself is caught.
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(Settings%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
       ! Verbose error reporting
    IF ( SEDDriver_Verbose >= 10_IntKi ) THEN
@@ -240,8 +275,10 @@ PROGRAM SED_Driver
    InitInData%RootName  = Settings%OutRootName
 
       ! Initialize the module
+   CkStage = 'Simplified-ElastoDyn'
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    call CheckErr('After Init: ');
+   CkStage = 'Driver'   ! remaining post-Init checks below are attributed back to the Driver stage
 
       ! Make sure don't use a High-speed brake with RK4 method
    if (.not. EqualRealNos( maxval(abs(CaseData(2,:))), 0.0_ReKi)) then
@@ -258,13 +295,30 @@ PROGRAM SED_Driver
    enddo
 
       ! Set the output file
-   call GetRoot(Settings%OutRootName,OutputFileRootName)
-   call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
-   call CheckErr('Setting output file');
+      ! -CheckInput: opening the output file is a real compute artifact -- skip it entirely in check
+      ! mode so a passing check run leaves no output file behind.
+   IF ( .NOT. CheckInputMode ) THEN
+      call GetRoot(Settings%OutRootName,OutputFileRootName)
+      call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
+      call CheckErr('Setting output file');
+   END IF
 
       ! Destroy initialization data
    CALL SED_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL SED_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through CheckErr's CkIn_DriverFail interception, or the -sed-mode interception above,
+      ! and never returned). Record both stages as passed, in order, then finish -- this call never
+      ! returns, so the VTK-reference-mesh write and time-marching loop below are never reached in
+      ! check mode.
+      CALL CkIn_Collect( Checker, 'Driver',                ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',                ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'Simplified-ElastoDyn',  ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Simplified-ElastoDyn',  ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
    n = 0
    if (Settings%WrVTK > 0_IntKi) then
@@ -361,7 +415,12 @@ CONTAINS
       character(*), intent(in) :: Text
        IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( Text//trim(ErrMsg) )
-         if ( ErrStat >= AbortErrLev ) call ProgEnd()
+         if ( ErrStat >= AbortErrLev ) then
+            ! -CheckInput: ProgEnd calls SED_End (which can overwrite ErrStat/ErrMsg) before
+            ! ProgAbort, so the collector call must fire first.
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
+            call ProgEnd()
+         endif
       END IF
    end subroutine CheckErr
    subroutine ProgEnd()

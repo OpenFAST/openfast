@@ -27,6 +27,7 @@ PROGRAM SoilDyn_Driver
    USE SoilDyn_Driver_Subs
    USE SoilDyn_Driver_Types
    USE REDWINinterface, only: REDWINinterface_GetStiffMatrix
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -80,6 +81,14 @@ PROGRAM SoilDyn_Driver
    integer(IntKi)                                     :: TmpIdx(6)            !< Index of last point accessed by dimension
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                     :: ErrStat2             !< -CheckInput: temp error status for calls
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2              !< -CheckInput: temp error message for calls
+
+      ! -CheckInput support (no initializers on these -- set as early executable statements below)
+   LOGICAL                                            :: CheckInputMode       !< true if -CheckInput was given on the command line
+   TYPE(CheckInputCollectorType)                      :: Checker              !< -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage              !< name of the -CheckInput stage/component currently executing
+   CHARACTER(1024)                                    :: DvrRootName          !< -CheckInput: root name derived early (lexically) for the report file
 
    CHARACTER(200)                                     :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER                          :: version   = ProgDesc( 'SoilDyn Driver', '', '' )  ! The version number of this program.
@@ -102,6 +111,10 @@ PROGRAM SoilDyn_Driver
       ! Start the timer
    call CPU_TIME( Timer(1) )
 
+      ! -CheckInput: no initializers on these -- set as early executable statements
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before the SlD_Init call below
+
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
    call InitSettingsFlags( ProgInfo, CLSettings, CLSettingsFlags )
    Settings       =  CLSettings
@@ -115,6 +128,10 @@ PROGRAM SoilDyn_Driver
       CALL WrScr( NewLine//ErrMsg )
       ErrStat  =  ErrID_None
    ENDIF
+
+      ! -CheckInput is command-line only (mirrors how Verbose/VVerbose are handled below -- not
+      ! merged into SettingsFlags by UpdateSettingsWithCL, so read it straight off the CL flags).
+   CheckInputMode = CLSettingsFlags%CheckInput
 
       ! Check if we are doing verbose error reporting
    IF ( CLSettingsFlags%VVerbose )     SlDDriver_Verbose =  10_IntKi
@@ -176,6 +193,15 @@ PROGRAM SoilDyn_Driver
       ! if the driver input file read.
    CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, SettingsFlags%DvrIptFile, ErrStat, ErrMsg )
    call CheckErr('')
+
+      ! -CheckInput: RootName is normally only derived post-Init (see the GetRoot call further below,
+      ! from Settings%SlDIptFileName) -- that name is already known now, so derive it early (a pure
+      ! lexical operation, safe to do before Init) purely to name the driver-level report.
+   IF ( CheckInputMode ) THEN
+      CALL GetRoot( Settings%SlDIptFileName, DvrRootName )
+      CALL CkIn_OpenReport( Checker, TRIM(DvrRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
       ! Verbose error reporting
    IF ( SlDDriver_Verbose >= 10_IntKi ) THEN
@@ -262,21 +288,44 @@ PROGRAM SoilDyn_Driver
    InitInData%InputFile = Settings%SldIptFileName
 
       ! Initialize the module
+      ! -CheckInput: the REDWIN DLL (if configured) loads inside SlD_Init -- a missing/broken DLL
+      ! must surface as a failed 'SoilDyn' component with a completed report, not a crash. This
+      ! block is an inline duplicate of CheckErr (does not call it), so it needs its own interception.
+   CkStage = 'SoilDyn'
    CALL SlD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( 'After Init: '//ErrMsg )
-      if ( ErrStat >= AbortErrLev ) call ProgEnd()
+      if ( ErrStat >= AbortErrLev ) then
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
+         call ProgEnd()
+      endif
    END IF
+   CkStage = 'Driver'   ! output-file setup below is attributed back to the Driver stage
 
       ! Set the output file
-   call GetRoot(Settings%SlDIptFileName,OutputFileRootName)
-   call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
-   call CheckErr('Setting output file');
+      ! -CheckInput: opening the output file is a real compute artifact -- skip it entirely in check
+      ! mode so a passing check run leaves no output file behind.
+   IF ( .NOT. CheckInputMode ) THEN
+      call GetRoot(Settings%SlDIptFileName,OutputFileRootName)
+      call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
+      call CheckErr('Setting output file');
+   END IF
 
       ! Destroy initialization data
    CALL SlD_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL SlD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through the SlD_Init interception above or CheckErr's, and never returned). Record both
+      ! stages as passed, in order, then finish -- this call never returns, so the stiffness-matrix
+      ! printout and time-marching loop below are never reached in check mode.
+      CALL CkIn_Collect( Checker, 'Driver',  ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',  ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'SoilDyn', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'SoilDyn', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
       ! If requested, get the stiffness matrix
    if ( SettingsFlags%StiffMatOut .and. p%CalcOption==Calc_REDWIN ) then
@@ -359,7 +408,10 @@ CONTAINS
       character(*), intent(in) :: Text
        IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( Text//ErrMsg )
-         if ( ErrStat >= AbortErrLev ) call ProgEnd()
+         if ( ErrStat >= AbortErrLev ) then
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
+            call ProgEnd()
+         endif
       END IF
    end subroutine CheckErr
    subroutine ProgEnd()
