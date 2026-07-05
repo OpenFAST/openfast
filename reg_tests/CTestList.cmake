@@ -93,6 +93,18 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
 endfunction(of_regression)
 
+# openfast -CheckInput: runs against a fixture generated at test time (copy of an r-test
+# case, optionally corrupted) -- see executeCheckInputTest.py. No baseline comparison.
+function(of_checkinput TESTNAME CASE LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeCheckInputTest.py")
+  add_test(${TESTNAME} ${Python_EXECUTABLE} ${TEST_SCRIPT}
+    ${CTEST_OPENFAST_EXECUTABLE}
+    "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${CASE}"
+    "${CTEST_BINARY_DIR}/glue-codes/openfast/${TESTNAME}"
+    ${ARGN})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 900 LABELS "${LABEL}")
+endfunction(of_checkinput)
+
 function(of_aeromap_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
@@ -587,3 +599,42 @@ sed_regression("sed_test_freewheel"                           "simple-elastodyn"
 
 # Wavetank library interface (MD + SS + AD)
 py_wavetank_regression("py_wavetank_test1"                    "wavetank;aerodyn;moordyn;seastate;python;scaled")
+
+# openfast -CheckInput: representative decks initialize cleanly (positive), and two
+# independent module errors are both reported in a single run (negative). Fixtures are
+# generated at test time by executeCheckInputTest.py -- nothing here touches r-test.
+#
+# NOTE on case selection: the original candidates for the two 5MW positive cases
+# (5MW_OC3Mnpl_DLL_WTurb_WavesIrr, 5MW_Land_BD_DLL_WTurb) both drive ServoDyn through the
+# Bladed-style DISCON DLL (PCMode=5, VSContrl=5). That DLL is only produced by the
+# `regression_test_controllers` custom target (reg_tests/CMakeLists.txt), which is not
+# built by the default `openfast` target and was not compiled in this build -- wiring it
+# in as a test dependency here would be a much larger change than this task's scope.
+# Substituted instead with two controller-free cases (verified via grep for
+# PCMode/VSContrl/DLL_FileName in their ServoDyn decks, and by a manual run of
+# executeCheckInputTest.py against each):
+#   - 5MW_Land_BD_Init: CompServo=0 (no ServoDyn at all) -- BeamDyn-flavored, as preferred.
+#   - AWT_YFix_WSt: PCMode=0, VSContrl=0, DLL_FileName "unused" -- ElastoDyn+AeroDyn+
+#     InflowWind+ServoDyn coverage without a DLL.
+of_checkinput(checkinput_AOC_WSt AOC_WSt "checkinput;openfast"
+  --expect-exit 0 --expect-status passed)
+of_checkinput(checkinput_5MW_BD 5MW_Land_BD_Init "checkinput;openfast;beamdyn"
+  --expect-exit 0 --expect-status passed)
+of_checkinput(checkinput_AWT AWT_YFix_WSt "checkinput;openfast"
+  --expect-exit 0 --expect-status passed)
+# negative: two independent module errors must BOTH be reported in one run
+#
+# NOTE on backslash count: add_test()'s generator re-escapes embedded '"' correctly when
+# it writes build/reg_tests/CTestTestfile.cmake, but copies embedded '\' through verbatim
+# instead of doubling it. That file is parsed again (by CMake escape rules) when ctest
+# runs, which then collapses '\\' -> '\' a second time and errors ("Invalid character
+# escape") on any leftover lone backslash-letter sequence. So every literal backslash
+# that must survive to the Python regex (i.e. anything but the already-single-escaped
+# quotes) needs 4 backslashes here, not 2, to still be '\S'/'\s'/'\d'/'\1'/'\2' once
+# CTestTestfile.cmake is itself parsed. Verified by inspecting the generated
+# CTestTestfile.cmake and confirming `ctest -N -R checkinput` parses cleanly.
+of_checkinput(checkinput_multi_error AOC_WSt "checkinput;openfast"
+  --corrupt "*ElastoDyn*.dat::\"(\\\\S+)\"(\\\\s*BldFile.?1)::\"__missing__.dat\"\\\\2"
+  --corrupt "*InflowWind*.dat::^\\\\s*\\\\d+(\\\\s*WindType)::          99\\\\1"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 2
+  --expect-component-failed ElastoDyn --expect-component-failed InflowWind)
