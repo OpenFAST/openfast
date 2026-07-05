@@ -139,6 +139,33 @@ In general, if an error is displayed in the terminal, you can use the guidelines
    You can use relative and aboslute path to the OpenFAST executable and to the main OpenFAST input file. Input files of OpenFAST also contain filepaths that reference other input files. These filepaths are either relative to the current file, or, can be absolute paths.
 
 
+Checking an input deck without running
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``-CheckInput`` flag fully initializes every module enabled by the input file --
+reading and validating all module input files, resolving file references, building
+meshes and airfoil tables, and running the glue code's cross-module consistency checks
+-- and then exits without any time marching:
+
+.. code-block:: bash
+
+    ./openfast -CheckInput InputFile.fst
+
+Unlike a normal run, which stops at the first fatal error, ``-CheckInput`` attempts
+every module even after one fails, so a single invocation reports as many independent
+input problems as possible. Results are printed as a summary on the console and written
+to a machine-readable report ``<RootName>.verify.yaml`` next to the output files. The
+process exit code is ``0`` when the deck is valid (warnings allowed) and ``1`` when any
+fatal input error was found.
+
+The report file is append-only: readers must treat a file without a trailing
+``overall_status:`` entry as a crashed check. Runtime-only problems (large-deflection
+warnings, solver convergence, NaN blow-ups) are outside the scope of this check.
+
+.. note::
+   ``-CheckInput`` initializes modules exactly as a real run does, so it needs all
+   referenced resources present -- wind files, airfoil tables, and (if ServoDyn uses a
+   DLL controller) the controller shared library.
 
 
 
