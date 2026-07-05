@@ -165,6 +165,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
     LOGICAL  :: UseDWM = .false.      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize = .false.      !< Linearization analysis (flag) [-]
+    LOGICAL  :: CheckInputMode = .false.      !< -CheckInput run: initialize all modules with attempt-everything error collection, no time marching (flag) [-]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     LOGICAL  :: FarmIntegration = .false.      !< whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first) [-]
     REAL(SiKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_R4Ki      !< Initial position of turbine base (origin used for graphics) [m]
@@ -1184,6 +1185,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%MHK = SrcParamData%MHK
    DstParamData%UseDWM = SrcParamData%UseDWM
    DstParamData%Linearize = SrcParamData%Linearize
+   DstParamData%CheckInputMode = SrcParamData%CheckInputMode
    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
    DstParamData%FarmIntegration = SrcParamData%FarmIntegration
    DstParamData%TurbinePos = SrcParamData%TurbinePos
@@ -1415,6 +1417,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%UseDWM)
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%CheckInputMode)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%FarmIntegration)
    call RegPack(RF, InData%TurbinePos)
@@ -1539,6 +1542,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseDWM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CheckInputMode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FarmIntegration); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
