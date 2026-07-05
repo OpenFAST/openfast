@@ -703,6 +703,32 @@ of_checkinput(checkinput_SED_error 5MW_Land_DLL_WTurb_SED "checkinput;openfast;s
   --expect-exit 1 --expect-status failed --expect-min-fatals 1
   --expect-component-failed Simplified-ElastoDyn)
 
+# negative: 5MW_Land_AeroMap, uncorrupted (fails as-shipped -- this deck dir has no ServoDyn input
+# file of its own). Regression case for the FAST_InitializeAll segfault found by a 173-case corpus
+# sweep: ServoDyn's Init fails here (missing NRELOffshrBsline5MW_Onshore_ServoDyn.dat), and
+# FAST_InitializeAll's -CheckInput collect-and-continue then fell through to the "Initialize
+# external inputs for first step" block after FAST_InitOutput, unconditionally indexing
+# SrvD%Input(INPUT_CURR,1)%ExternalBlPitchCom/ExternalBlAirfoilCom -- allocatable arrays that a
+# failed SrvD_Init never allocates -- and segfaulted. Fixed by gating that block on the array
+# actually being allocated.
+of_checkinput(checkinput_aeromap_srvd_missing 5MW_Land_AeroMap "checkinput;openfast"
+  --expect-exit 1 --expect-status failed
+  --expect-component-failed ServoDyn)
+
+# negative: 5MW_OC3Mnpl_Sld_REDWIN, uncorrupted (fails as-shipped): ElastoDyn fails on a bad
+# numeric input (PtfmXZIner), SeaState's input file is missing, SoilDyn's REDWIN DLL cannot be
+# loaded on this platform, and HydroDyn then fails for lack of SeaState data -- a multi-module
+# failure cascade. Regression case for the second FAST_InitializeAll segfault found by the same
+# corpus sweep: when SlD_Init's REDWIN setup fails, it leaves Init%OutData_SlD%WriteOutputHdr
+# allocated but WriteOutputUnt not (SoilDyn.f90's own bug -- a stale Fatal ErrStat trips the next,
+# otherwise-successful AllocAry's "if (Failed()) return" before WriteOutputUnt is allocated).
+# FAST_InitOutput derived y_FAST%numOuts(Module_SlD) from WriteOutputHdr alone and then indexed
+# WriteOutputUnt(i) too, segfaulting on the unallocated array. Fixed by requiring both arrays
+# allocated before trusting SoilDyn has any outputs.
+of_checkinput(checkinput_redwin_cascade 5MW_OC3Mnpl_Sld_REDWIN "checkinput;openfast;soildyn"
+  --expect-exit 1 --expect-status failed
+  --expect-component-failed ElastoDyn)
+
 # openfast -CheckInput, round 2: FAST.Farm, TurbSim, and module drivers (Plan 2, Task 9). Same
 # no-baseline-comparison contract as above, via driver_checkinput() (see its definition for why
 # it's a separate function from of_checkinput). Each case/corruption below was run by hand with

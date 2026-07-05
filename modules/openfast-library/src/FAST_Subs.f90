@@ -2084,7 +2084,18 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    m_FAST%t_global        = t_initial
 
    ! Initialize external inputs for first step
+   !
+   ! -CheckInput guard: when SrvD_Init fails, Failed() (see above) collects the error and keeps
+   ! going instead of returning -- but SrvD%Input(INPUT_CURR,1)'s allocatable members (including
+   ! ExternalBlPitchCom, indexed below) are never allocated if SrvD_Init fails before reaching its
+   ! own Init_u allocation (e.g. its input file is missing, as in the AeroMap corpus-sweep case).
+   ! In the normal (non-CheckInput) path this whole section is unreachable after a real SrvD_Init
+   ! failure because Failed() already returned above, so gate the dereferences on the array being
+   ! allocated rather than adding a redundant CheckInputMode branch; m_FAST%ExternInput's fields
+   ! already default-initialize to zero (FAST_Types.f90), so skipping this block leaves them at a
+   ! sane value and ServoDyn's own failure has already been collected/reported above.
    if ( p_FAST%CompServo == MODULE_SrvD ) then
+   if (allocated(SrvD%Input(INPUT_CURR,1)%ExternalBlPitchCom)) then
 
       m_FAST%ExternInput%GenTrq     = SrvD%Input(INPUT_CURR,1)%ExternalGenTrq !0.0_ReKi
       m_FAST%ExternInput%ElecPwr    = SrvD%Input(INPUT_CURR,1)%ExternalElecPwr
@@ -2115,6 +2126,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       else  ! Initialize to zero for consistency
          m_FAST%ExternInput%CableDeltaLdot = 0.0_Reki
       endif
+   end if
    end if
 
    !----------------------------------------------------------------------------
@@ -2939,7 +2951,20 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    if (allocated(Init%OutData_Orca%WriteOutputHdr))      y_FAST%numOuts(Module_Orca)      = size(Init%OutData_Orca%WriteOutputHdr)
    if (allocated(Init%OutData_IceF%WriteOutputHdr))      y_FAST%numOuts(Module_IceF)      = size(Init%OutData_IceF%WriteOutputHdr)
    if (allocated(Init%OutData_IceD%WriteOutputHdr))      y_FAST%numOuts(Module_IceD)      = size(Init%OutData_IceD%WriteOutputHdr) * p_FAST%numIceLegs
-   IF (allocated(Init%OutData_SlD%WriteOutputHdr))       y_FAST%numOuts(Module_SlD)       = size(Init%OutData_SlD%WriteOutputHdr)
+   ! -CheckInput guard: SlD_Init (SoilDyn.f90) can leave WriteOutputHdr allocated but
+   ! WriteOutputUnt not -- when SlD_REDWINsetup() fails it sets ErrStat=Fatal without an
+   ! immediate return, so the next line's own (unrelated, successful) AllocAry(WriteOutputHdr,...)
+   ! is still followed by "if (Failed()) return" that now trips on the *stale* Fatal ErrStat,
+   ! returning before AllocAry(WriteOutputUnt,...) runs. In the normal (non-CheckInput) path this
+   ! is harmless -- SlD_Init's own Fatal return makes FAST_InitializeAll's Failed() abort the run
+   ! immediately, long before FAST_InitOutput reads either array. Under CheckInputMode, Failed()
+   ! collects and continues instead, so FAST_InitOutput below is reached with only WriteOutputHdr
+   ! allocated; require both arrays (not just WriteOutputHdr) before trusting SoilDyn has any
+   ! outputs, so the read loop over WriteOutputHdr/WriteOutputUnt is skipped rather than
+   ! dereferencing the unallocated WriteOutputUnt. SoilDyn's own failure is already collected/
+   ! reported via Failed() where SlD_Init is called, above.
+   IF (allocated(Init%OutData_SlD%WriteOutputHdr) .and. allocated(Init%OutData_SlD%WriteOutputUnt)) &
+                                                          y_FAST%numOuts(Module_SlD)       = size(Init%OutData_SlD%WriteOutputHdr)
 
    !......................................................
    ! Initialize the output channel names and units
