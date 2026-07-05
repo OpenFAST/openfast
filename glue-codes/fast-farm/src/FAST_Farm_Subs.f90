@@ -134,28 +134,39 @@ CONTAINS
 !!   -  Open Output File
 !!   -  n=0
 !!   -  t=0
-SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
+SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg, CkInCollector )
 
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                !< FAST.Farm data
-      
+
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
    CHARACTER(*),             INTENT(IN   ) :: InputFile           !< A CHARACTER string containing the name of the primary FAST.Farm input file
-   
-   
-   ! local variables 
+   TYPE(CheckInputCollectorType), OPTIONAL, INTENT(INOUT) :: CkInCollector !< -CheckInput accumulator; its mere presence IS the
+                                                                            !! -CheckInput mode (there is no farm-level analog of
+                                                                            !! p_FAST%CheckInputMode) -- when present, the patched
+                                                                            !! Failed() below collects and continues instead of
+                                                                            !! aborting, and StepOK gates each downstream component.
+
+
+   ! local variables
    type(AWAE_InitInputType)                :: AWAE_InitInput
    type(AWAE_InitOutputType)               :: AWAE_InitOutput
-   
-   INTEGER(IntKi)                          :: ErrStat2   
+
+   INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   INTEGER(IntKi)                          :: ErrStat3            ! -CheckInput: scratch status for CkIn_Report* calls (must not clobber ErrStat/ErrStat2)
+   CHARACTER(ErrMsgLen)                    :: ErrMsg3             ! -CheckInput: scratch message for CkIn_Report* calls
    TYPE(WD_InitInputType)                  :: WD_InitInput            ! init-input data for WakeDynamics module
-   CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'
    CHARACTER(ChanLen)                      :: OutList(Farm_MaxOutPts) ! list of user-requested output channels
    INTEGER(IntKi)                          :: i
+   CHARACTER(64)                           :: CurrentComponent    ! -CheckInput: component label used by Failed() when collecting
+   LOGICAL                                 :: StepOK              ! -CheckInput: sequential gate; once false, remaining components are marked 'skipped' rather than attempted
    !..........
    ErrStat = ErrID_None
-   ErrMsg  = ""         
+   ErrMsg  = ""
+   CurrentComponent = 'FAST.Farm'
+   StepOK  = .true.
    AbortErrLev  = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
       
    
@@ -168,8 +179,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    END IF            
                         
       ! Determine the root name of the primary file (will be used for output files)
-   CALL GetRoot( InputFile, farm%p%OutFileRoot )      
-    
+   CALL GetRoot( InputFile, farm%p%OutFileRoot )
+
+   IF ( PRESENT(CkInCollector) ) THEN
+      CALL CkIn_OpenReport( CkInCollector, TRIM(farm%p%OutFileRoot), ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 >= AbortErrLev ) CALL WrScr( 'Warning: could not open -CheckInput report file: '//TRIM(ErrMsg2) )
+   END IF
+
    DO i=1,NumFFModules
       farm%p%Module_Ver(i)%Date = 'unknown date'
       farm%p%Module_Ver(i)%Ver  = 'unknown version'
@@ -215,89 +231,187 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       farm%p%MaxNumPlanes(i) = max( 2, min( farm%p%MaxNumPlanes(i) , farm%p%n_TMax + 2 ) )
    end do
 
-   !...............................................................................................................................  
+   ! -CheckInput: 'FAST.Farm' covers the primary-file read, ValidateInput, and the DT/MaxNumPlanes setup above.
+   ! Report it now, before touching any downstream module, so a bad primary file (e.g. NumTurbines) never lets
+   ! WAT/AWAE/WD/Turbines/SharedMooring/FarmOutput run against garbage farm%p data (deliberate deviation from
+   ! FAST_Subs's attempt-everything: there is no stub infrastructure for farm-level parameters).
+   IF ( PRESENT(CkInCollector) ) THEN
+      CALL CkIn_Collect( CkInCollector, 'FAST.Farm', ErrID_None, '' )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST.Farm', ErrStat3, ErrMsg3 )
+      StepOK = ( CkIn_ComponentStatus( CkInCollector, 'FAST.Farm' ) /= CkIn_St_Failed )
+      ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+      ErrMsg  = ''
+   END IF
+
+   !...............................................................................................................................
    ! step 3: initialize WAT, AWAE, and WD (b, c, and d can be done in parallel)
-   !...............................................................................................................................  
+   !...............................................................................................................................
 
       !-------------------
       ! a. read WAT input files using InflowWind
-   if (farm%p%WAT /= Mod_WAT_None) then
-      call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput, ErrStat2, ErrMsg2 )
-      if(Failed()) return;
-   endif
+   CurrentComponent = 'WakeAddedTurbulence'
+   IF ( StepOK ) THEN
+      if (farm%p%WAT /= Mod_WAT_None) then
+         call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput, ErrStat2, ErrMsg2 )
+         if(Failed()) return;
+         IF ( PRESENT(CkInCollector) ) THEN
+            CALL CkIn_Collect( CkInCollector, 'WakeAddedTurbulence', ErrID_None, '' )
+            CALL CkIn_ReportComponent( CkInCollector, 'WakeAddedTurbulence', ErrStat3, ErrMsg3 )
+            StepOK = ( CkIn_ComponentStatus( CkInCollector, 'WakeAddedTurbulence' ) /= CkIn_St_Failed )
+            ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+            ErrMsg  = ''
+         END IF
+      else if ( PRESENT(CkInCollector) ) then
+         call CkIn_Collect( CkInCollector, 'WakeAddedTurbulence', ErrID_None, '', Status='not_used' )
+         call CkIn_ReportComponent( CkInCollector, 'WakeAddedTurbulence', ErrStat3, ErrMsg3 )
+      endif
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'WakeAddedTurbulence', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'WakeAddedTurbulence', ErrStat3, ErrMsg3 )
+   END IF
 
       !-------------------
       ! b. CALL AWAE_Init
+   CurrentComponent = 'AWAE'
+   IF ( StepOK ) THEN
+      if (farm%p%WAT /= Mod_WAT_None) AWAE_InitInput%WAT_Enabled = .true.
+      AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
+      AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
+      AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
+      AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
+      AWAE_InitInput%MaxPlanes                  = MAXVAL(farm%p%MaxNumPlanes)
+      AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
+      AWAE_InitInput%n_high_low                 = farm%p%n_high_low
+      AWAE_InitInput%NumDT                      = farm%p%n_TMax
+      AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
+      if (farm%p%WAT /= Mod_WAT_None .and. associated(farm%WAT_IfW%p%FlowField)) then
+         AWAE_InitInput%WAT_FlowField => farm%WAT_IfW%p%FlowField
+      endif
+      call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
+                      farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
+      if(Failed()) return;
 
-   if (farm%p%WAT /= Mod_WAT_None) AWAE_InitInput%WAT_Enabled = .true.
-   AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
-   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
-   AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
-   AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
-   AWAE_InitInput%MaxPlanes                  = MAXVAL(farm%p%MaxNumPlanes)
-   AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
-   AWAE_InitInput%n_high_low                 = farm%p%n_high_low
-   AWAE_InitInput%NumDT                      = farm%p%n_TMax
-   AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
-   if (farm%p%WAT /= Mod_WAT_None .and. associated(farm%WAT_IfW%p%FlowField)) then
-      AWAE_InitInput%WAT_FlowField => farm%WAT_IfW%p%FlowField
-   endif
-   call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
-                   farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
-   if(Failed()) return;
-      
-   farm%AWAE%IsInitialized = .true.
+      farm%AWAE%IsInitialized = .true.
 
-   farm%p%X0_Low = AWAE_InitOutput%oXYZ_Low(1)
-   farm%p%Y0_low = AWAE_InitOutput%oXYZ_Low(2)
-   farm%p%Z0_low = AWAE_InitOutput%oXYZ_Low(3)
-   farm%p%nX_Low = AWAE_InitOutput%nXYZ_Low(1)
-   farm%p%nY_low = AWAE_InitOutput%nXYZ_Low(2)
-   farm%p%nZ_low = AWAE_InitOutput%nXYZ_Low(3)
-   farm%p%dX_low = AWAE_InitOutput%dXYZ_Low(1)
-   farm%p%dY_low = AWAE_InitOutput%dXYZ_Low(2)
-   farm%p%dZ_low = AWAE_InitOutput%dXYZ_Low(3)
-   farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
-   
+      farm%p%X0_Low = AWAE_InitOutput%oXYZ_Low(1)
+      farm%p%Y0_low = AWAE_InitOutput%oXYZ_Low(2)
+      farm%p%Z0_low = AWAE_InitOutput%oXYZ_Low(3)
+      farm%p%nX_Low = AWAE_InitOutput%nXYZ_Low(1)
+      farm%p%nY_low = AWAE_InitOutput%nXYZ_Low(2)
+      farm%p%nZ_low = AWAE_InitOutput%nXYZ_Low(3)
+      farm%p%dX_low = AWAE_InitOutput%dXYZ_Low(1)
+      farm%p%dY_low = AWAE_InitOutput%dXYZ_Low(2)
+      farm%p%dZ_low = AWAE_InitOutput%dXYZ_Low(3)
+      farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
+
+      IF ( PRESENT(CkInCollector) ) THEN
+         CALL CkIn_Collect( CkInCollector, 'AWAE', ErrID_None, '' )
+         CALL CkIn_ReportComponent( CkInCollector, 'AWAE', ErrStat3, ErrMsg3 )
+         StepOK = ( CkIn_ComponentStatus( CkInCollector, 'AWAE' ) /= CkIn_St_Failed )
+         ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+         ErrMsg  = ''
+      END IF
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'AWAE', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'AWAE', ErrStat3, ErrMsg3 )
+   END IF
+
       !-------------------
       ! c. initialize WD (one instance per turbine, each can be done in parallel, too)
-      
-   call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 );  if(Failed()) return;
-      
-      
-   !...............................................................................................................................  
-   ! step 4: initialize FAST (each instance of FAST can also be done in parallel)
-   !...............................................................................................................................  
-
-   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, ErrStat2, ErrMsg2);  if(Failed()) return;
-      
-   !...............................................................................................................................  
-   ! step 4.5: initialize farm-level MoorDyn if applicable
-   !...............................................................................................................................  
-   
-   if (farm%p%MooringMod == 3) then
-      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2);  if(Failed()) return;  ! FAST instances must be initialized first so that turbine initial positions are known
-   end if
-
-   !...............................................................................................................................  
-   ! step 5: Open output file (or set up output file handling)      
-   !...............................................................................................................................  
-   
-      ! Set parameters for output channels:
-   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 );  if(Failed()) return; ! requires: p%NumOuts, sets: p%OutParam.
-      
-   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 );  if(Failed()) return;
-
-      ! Print the summary file if requested:
-   IF (farm%p%SumPrint) THEN
-      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 );  if(Failed()) return;
+   CurrentComponent = 'WakeDynamics'
+   IF ( StepOK ) THEN
+      call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 );  if(Failed()) return;
+      IF ( PRESENT(CkInCollector) ) THEN
+         CALL CkIn_Collect( CkInCollector, 'WakeDynamics', ErrID_None, '' )
+         CALL CkIn_ReportComponent( CkInCollector, 'WakeDynamics', ErrStat3, ErrMsg3 )
+         StepOK = ( CkIn_ComponentStatus( CkInCollector, 'WakeDynamics' ) /= CkIn_St_Failed )
+         ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+         ErrMsg  = ''
+      END IF
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'WakeDynamics', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'WakeDynamics', ErrStat3, ErrMsg3 )
    END IF
-   
+
+   !...............................................................................................................................
+   ! step 4: initialize FAST (each instance of FAST can also be done in parallel)
+   !...............................................................................................................................
+
+   ! -CheckInput: 'Turbines' -- Farm_InitFAST's per-turbine loop already runs every turbine even after one
+   ! fails (its ErrStat/ErrMsg only aborts the loop's *caller* after the loop, via 'T<nt>:'-prefixed messages
+   ! per turbine), so a single failing wrapped turbine still surfaces every other turbine's status here.
+   CurrentComponent = 'Turbines'
+   IF ( StepOK ) THEN
+      CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, ErrStat2, ErrMsg2);  if(Failed()) return;
+      IF ( PRESENT(CkInCollector) ) THEN
+         CALL CkIn_Collect( CkInCollector, 'Turbines', ErrID_None, '' )
+         CALL CkIn_ReportComponent( CkInCollector, 'Turbines', ErrStat3, ErrMsg3 )
+         StepOK = ( CkIn_ComponentStatus( CkInCollector, 'Turbines' ) /= CkIn_St_Failed )
+         ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+         ErrMsg  = ''
+      END IF
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'Turbines', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'Turbines', ErrStat3, ErrMsg3 )
+   END IF
+
+   !...............................................................................................................................
+   ! step 4.5: initialize farm-level MoorDyn if applicable
+   !...............................................................................................................................
+
+   CurrentComponent = 'SharedMooring'
+   IF ( StepOK ) THEN
+      if (farm%p%MooringMod == 3) then
+         CALL Farm_InitMD( farm, ErrStat2, ErrMsg2);  if(Failed()) return;  ! FAST instances must be initialized first so that turbine initial positions are known
+         IF ( PRESENT(CkInCollector) ) THEN
+            CALL CkIn_Collect( CkInCollector, 'SharedMooring', ErrID_None, '' )
+            CALL CkIn_ReportComponent( CkInCollector, 'SharedMooring', ErrStat3, ErrMsg3 )
+            StepOK = ( CkIn_ComponentStatus( CkInCollector, 'SharedMooring' ) /= CkIn_St_Failed )
+            ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+            ErrMsg  = ''
+         END IF
+      else if ( PRESENT(CkInCollector) ) then
+         call CkIn_Collect( CkInCollector, 'SharedMooring', ErrID_None, '', Status='not_used' )
+         call CkIn_ReportComponent( CkInCollector, 'SharedMooring', ErrStat3, ErrMsg3 )
+      end if
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'SharedMooring', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'SharedMooring', ErrStat3, ErrMsg3 )
+   END IF
+
+   !...............................................................................................................................
+   ! step 5: Open output file (or set up output file handling)
+   !...............................................................................................................................
+
+   CurrentComponent = 'FarmOutput'
+   IF ( StepOK ) THEN
+         ! Set parameters for output channels:
+      CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 );  if(Failed()) return; ! requires: p%NumOuts, sets: p%OutParam.
+
+      call Farm_InitOutput( farm, ErrStat2, ErrMsg2 );  if(Failed()) return;
+
+         ! Print the summary file if requested:
+      IF (farm%p%SumPrint) THEN
+         CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 );  if(Failed()) return;
+      END IF
+
+      IF ( PRESENT(CkInCollector) ) THEN
+         CALL CkIn_Collect( CkInCollector, 'FarmOutput', ErrID_None, '' )
+         CALL CkIn_ReportComponent( CkInCollector, 'FarmOutput', ErrStat3, ErrMsg3 )
+         StepOK = ( CkIn_ComponentStatus( CkInCollector, 'FarmOutput' ) /= CkIn_St_Failed )
+         ErrStat = ErrID_None   ! -CheckInput: don't let a benign accumulated message bleed into the next component
+         ErrMsg  = ''
+      END IF
+   ELSE IF ( PRESENT(CkInCollector) ) THEN
+      call CkIn_Collect( CkInCollector, 'FarmOutput', ErrID_Info, 'blocked by upstream failure(s)', Status='skipped' )
+      call CkIn_ReportComponent( CkInCollector, 'FarmOutput', ErrStat3, ErrMsg3 )
+   END IF
+
    !...............................................................................................................................
    ! Destroy initializion data
-   !...............................................................................................................................      
+   !...............................................................................................................................
    CALL Cleanup()
-   
+
 CONTAINS
    SUBROUTINE Cleanup()
       call WD_DestroyInitInput(WD_InitInput, ErrStat2, ErrMsg2)
@@ -308,10 +422,57 @@ CONTAINS
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
       Failed = errStat >= AbortErrLev
-      if (Failed) call cleanup()
+      if (Failed) then
+         if ( present(CkInCollector) ) then
+            ! -CheckInput: record under the current component and keep going; StepOK (set by the explicit
+            ! CkIn_Collect/CkIn_ReportComponent calls above, once this component's block finishes) is what
+            ! actually gates whether downstream components are attempted or marked 'skipped'.
+            call CkIn_Collect(CkInCollector, trim(CurrentComponent), errStat, errMsg)
+            errStat = ErrID_None
+            errMsg  = ''
+            Failed  = .false.
+         else
+            call cleanup()
+         end if
+      end if
    end function Failed
 END SUBROUTINE Farm_Initialize
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> -CheckInput driver for FAST.Farm: attempts every farm-level component (and, through Farm_InitFAST, every
+!! wrapped turbine) with collect-and-continue semantics, writes a console summary + <Root>.verify.yaml report,
+!! and exits the process with a report-derived exit code (0 valid / 1 any fatal input error). Never returns to
+!! the caller. Does NOT call FARM_InitialCO and does NOT enter the time-marching loop.
+SUBROUTINE Farm_CheckInput( farm, InputFileName )
+
+   TYPE(All_FastFarm_Data), INTENT(INOUT) :: farm                !< FAST.Farm data
+   CHARACTER(*),            INTENT(IN   ) :: InputFileName       !< primary FAST.Farm input file
+
+   TYPE(CheckInputCollectorType)          :: Checker
+   INTEGER(IntKi)                         :: ErrStat, ErrStat2
+   CHARACTER(ErrMsgLen)                   :: ErrMsg, ErrMsg2
+
+   CALL Farm_Initialize( farm, InputFileName, ErrStat, ErrMsg, CkInCollector=Checker )
+   IF (ErrStat >= AbortErrLev) THEN
+      ! Only a failure that bypasses the collect-and-continue path entirely lands here -- e.g. the
+      ! required-input-file-name check at the very top of Farm_Initialize, before the report is even open.
+      ! Every attempted component's own failure already took the collect path inside Farm_Initialize's
+      ! patched Failed() (see above), so this is a residual/last-resort catch-all under 'FAST.Farm'.
+      CALL CkIn_Collect( Checker, 'FAST.Farm', ErrStat, ErrMsg )
+   END IF
+
+   ! Tear down whatever did get initialized -- mirrors the FARM_End call in FAST_Farm.f90's CheckError, minus
+   ! the abort. Farm_CheckInput never calls FARM_InitialCO or enters the time loop, so FARM_End must tolerate a
+   ! farm left partially initialized by an early failure; this has been verified against every seeded failure
+   ! mode exercised by the -CheckInput smoke tests (bad primary file, corrupted wrapped-turbine deck).
+   CALL FARM_End( farm, ErrStat2, ErrMsg2 )
+   IF (ErrStat2 >= AbortErrLev) THEN
+      CALL CkIn_Collect( Checker, 'FAST.Farm', ErrStat2, ErrMsg2 )
+   END IF
+
+   CALL CkIn_DriverFinish( Checker )   ! writes the summary + closes the report + calls ProgExit; never returns
+
+END SUBROUTINE Farm_CheckInput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
