@@ -85,6 +85,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_Library_Types.f90
   src/VTK.f90
   src/YAML.f90
+  src/NWTC_CheckInput.f90
   src/JSON.f90
   src/KdTree.f90
 
