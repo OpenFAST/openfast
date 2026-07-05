@@ -364,15 +364,39 @@ CONTAINS
       CHARACTER(*),                  INTENT(OUT)   :: ErrMsg
 
       CHARACTER(*), PARAMETER :: RoutineName = 'CkIn_CloseReport'
-      INTEGER(IntKi) :: Un, Overall, IOS
+      INTEGER(IntKi) :: Un, Overall, IOS, i
+      INTEGER(IntKi) :: ErrStat2
+      CHARACTER(ErrMsgLen) :: ErrMsg2
 
       ErrStat = ErrID_None
       ErrMsg  = ''
       Un      = collector%UnYaml
 
       IF ( Un <= 0 ) THEN
-         CALL SetErrStat( ErrID_Severe, 'Report file is not open; call CkIn_OpenReport first.', ErrStat, ErrMsg, RoutineName )
-         RETURN
+         IF ( LEN_TRIM(collector%YamlFileName) == 0 ) THEN
+            ! The report was NEVER opened -- typically a driver failure before RootName was known
+            ! (early parse/settings failure). Open a last-resort report so CkIn_DriverFinish's
+            ! guarantee (a verify.yaml always exists after finish) still holds, then backfill every
+            ! component collected so far: they were skipped while the file was closed, but the
+            ! collector still holds everything.
+            CALL CkIn_OpenReport( collector, 'checkinput', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+            WRITE (collector%UnYaml, '(A)') '# input root name unknown at failure time'
+
+            DO i = 1, collector%NumComps
+               CALL CkIn_ReportComponent( collector, collector%CompNames(i), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            END DO
+
+            Un = collector%UnYaml
+         ELSE
+            ! Opened at some point, then already closed (UnYaml <= 0 but YamlFileName is set) --
+            ! that IS a caller bug: CkIn_CloseReport should only ever be called once.
+            CALL SetErrStat( ErrID_Severe, 'Report file is not open; call CkIn_OpenReport first.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
       END IF
 
       ! Unify with CkIn_ExitCode: a per-component CkIn_St_Failed can occur even when NumErrors is 0
@@ -444,6 +468,11 @@ CONTAINS
    !> Driver-side convenience: prints the console summary, closes the report (warning on error rather
    !! than aborting -- the report is best-effort at this point), then exits the process with the
    !! collector's exit code. Never returns.
+   !!
+   !! Guarantee: after this returns (i.e. right before the process exits), a verify.yaml always
+   !! exists on disk -- even for failures that occurred before the driver knew its RootName. In that
+   !! case CkIn_CloseReport opens a last-resort 'checkinput.verify.yaml' in the CWD and backfills any
+   !! components collected so far; a normal run's <RootName>.verify.yaml is unaffected.
    SUBROUTINE CkIn_DriverFinish(collector)
 
       TYPE(CheckInputCollectorType), INTENT(INOUT) :: collector

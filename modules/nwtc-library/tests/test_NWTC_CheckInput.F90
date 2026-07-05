@@ -1,7 +1,7 @@
 module test_NWTC_CheckInput
 
 use testdrive, only: new_unittest, unittest_type, error_type, check
-use NWTC_Library, only: IntKi, ErrMsgLen, NewLine, ErrID_None, ErrID_Info, ErrID_Warn, ErrID_Severe, ErrID_Fatal
+use NWTC_Library, only: IntKi, ErrMsgLen, NewLine, ErrID_None, ErrID_Info, ErrID_Warn, ErrID_Severe, ErrID_Fatal, AbortErrLev
 use NWTC_CheckInput   ! NWTC_CheckInput has a PRIVATE default and does NOT re-export NWTC_Library names
 
 implicit none
@@ -24,7 +24,8 @@ subroutine test_NWTC_CheckInput_suite(testsuite)
                new_unittest("test_component_status_unknown",         test_component_status_unknown), &
                new_unittest("test_exit_code",                        test_exit_code), &
                new_unittest("test_empty_message_fatal",              test_empty_message_fatal), &
-               new_unittest("test_driverrecord_fatal",                test_driverrecord_fatal) &
+               new_unittest("test_driverrecord_fatal",                test_driverrecord_fatal), &
+               new_unittest("test_closereport_lastresort",             test_closereport_lastresort) &
                ]
 end subroutine
 
@@ -145,6 +146,46 @@ subroutine test_driverrecord_fatal(error)
    call CkIn_DriverRecord(collector, 'HydroDyn', ErrID_Fatal, 'HD_Init:WAMIT file not found.')
    call check(error, CkIn_ComponentStatus(collector, 'HydroDyn'), CkIn_St_Failed); if (allocated(error)) return
    call check(error, CkIn_ExitCode(collector), 1)
+end subroutine
+
+subroutine test_closereport_lastresort(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(CheckInputCollectorType) :: collector
+   integer(IntKi) :: ErrStat, Un, IOS
+   character(ErrMsgLen) :: ErrMsg
+   character(*), parameter :: FileName = 'checkinput.verify.yaml'
+   character(256) :: Line
+   logical :: FileExists, FoundOverallFailed, FoundDriverComp
+
+   ! Never opened: driver failed before it knew its RootName. Clean up any leftover file from a
+   ! previous aborted run of this test first.
+   inquire(file=FileName, exist=FileExists)
+   if (FileExists) then
+      open(newunit=Un, file=FileName, status='old')
+      close(Un, status='delete')
+   end if
+
+   call CkIn_Collect(collector, 'Driver', ErrID_Fatal, 'X:bad arg')
+   call CkIn_CloseReport(collector, ErrStat, ErrMsg)
+
+   call check(error, ErrStat < AbortErrLev); if (allocated(error)) return
+
+   inquire(file=FileName, exist=FileExists)
+   call check(error, FileExists); if (allocated(error)) return
+
+   FoundOverallFailed = .false.
+   FoundDriverComp    = .false.
+   open(newunit=Un, file=FileName, status='old', action='read')
+   do
+      read(Un, '(A)', iostat=IOS) Line
+      if (IOS /= 0) exit
+      if (index(Line, 'overall_status: failed') > 0) FoundOverallFailed = .true.
+      if (index(Line, '- name: Driver') > 0)         FoundDriverComp    = .true.
+   end do
+   close(Un, status='delete')
+
+   call check(error, FoundOverallFailed); if (allocated(error)) return
+   call check(error, FoundDriverComp)
 end subroutine
 
 end module
