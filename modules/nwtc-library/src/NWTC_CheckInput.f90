@@ -74,6 +74,9 @@ MODULE NWTC_CheckInput
    PUBLIC :: CkIn_ReportComponent
    PUBLIC :: CkIn_CloseReport
    PUBLIC :: CkIn_ExitCode
+   PUBLIC :: CkIn_DriverRecord
+   PUBLIC :: CkIn_DriverFinish
+   PUBLIC :: CkIn_DriverFail
 
 CONTAINS
 
@@ -416,6 +419,63 @@ CONTAINS
          END IF
       END DO
    END FUNCTION CkIn_ExitCode
+
+   !=======================================================================
+   !> Driver-side convenience: CkIn_Collect then CkIn_ReportComponent for that component. If the
+   !! report file is not open, CkIn_ReportComponent's severe is swallowed into a local ErrStat2/ErrMsg2
+   !! and does not propagate -- the collector state is the point, and a caller mid-run with no report
+   !! open yet must not crash or abort over it.
+   SUBROUTINE CkIn_DriverRecord(collector, component, ErrStat, ErrMsg)
+
+      TYPE(CheckInputCollectorType), INTENT(INOUT) :: collector
+      CHARACTER(*),                  INTENT(IN)    :: component
+      INTEGER(IntKi),                INTENT(IN)    :: ErrStat
+      CHARACTER(*),                  INTENT(IN)    :: ErrMsg
+
+      INTEGER(IntKi)       :: ErrStat2
+      CHARACTER(ErrMsgLen) :: ErrMsg2
+
+      CALL CkIn_Collect( collector, component, ErrStat, ErrMsg )
+      CALL CkIn_ReportComponent( collector, component, ErrStat2, ErrMsg2 )
+
+   END SUBROUTINE CkIn_DriverRecord
+
+   !=======================================================================
+   !> Driver-side convenience: prints the console summary, closes the report (warning on error rather
+   !! than aborting -- the report is best-effort at this point), then exits the process with the
+   !! collector's exit code. Never returns.
+   SUBROUTINE CkIn_DriverFinish(collector)
+
+      TYPE(CheckInputCollectorType), INTENT(INOUT) :: collector
+
+      INTEGER(IntKi)       :: ErrStat2
+      CHARACTER(ErrMsgLen) :: ErrMsg2
+
+      CALL CkIn_WrSummary( collector )
+
+      CALL CkIn_CloseReport( collector, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
+         CALL WrScr( 'WARNING: '//TRIM(ErrMsg2) )
+      END IF
+
+      CALL ProgExit( CkIn_ExitCode(collector) )
+
+   END SUBROUTINE CkIn_DriverFinish
+
+   !=======================================================================
+   !> Driver-side convenience for a fatal, unrecoverable failure: record it, then finish and exit.
+   !! Never returns.
+   SUBROUTINE CkIn_DriverFail(collector, component, ErrStat, ErrMsg)
+
+      TYPE(CheckInputCollectorType), INTENT(INOUT) :: collector
+      CHARACTER(*),                  INTENT(IN)    :: component
+      INTEGER(IntKi),                INTENT(IN)    :: ErrStat
+      CHARACTER(*),                  INTENT(IN)    :: ErrMsg
+
+      CALL CkIn_DriverRecord( collector, component, ErrStat, ErrMsg )
+      CALL CkIn_DriverFinish( collector )
+
+   END SUBROUTINE CkIn_DriverFail
 
    !=======================================================================
    ! ---- private helpers ----

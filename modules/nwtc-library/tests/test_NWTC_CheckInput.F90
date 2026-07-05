@@ -23,7 +23,8 @@ subroutine test_NWTC_CheckInput_suite(testsuite)
                new_unittest("test_unavailable_status_sticky",        test_unavailable_status_sticky), &
                new_unittest("test_component_status_unknown",         test_component_status_unknown), &
                new_unittest("test_exit_code",                        test_exit_code), &
-               new_unittest("test_empty_message_fatal",              test_empty_message_fatal) &
+               new_unittest("test_empty_message_fatal",              test_empty_message_fatal), &
+               new_unittest("test_driverrecord_fatal",                test_driverrecord_fatal) &
                ]
 end subroutine
 
@@ -133,6 +134,16 @@ subroutine test_empty_message_fatal(error)
    call CkIn_Collect(collector, 'X', ErrID_Fatal, '')
    call check(error, collector%NumErrors, 0); if (allocated(error)) return
    call check(error, CkIn_ComponentStatus(collector, 'X'), CkIn_St_Failed); if (allocated(error)) return
+   call check(error, CkIn_ExitCode(collector), 1)
+end subroutine
+
+subroutine test_driverrecord_fatal(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(CheckInputCollectorType) :: collector
+   ! No CkIn_OpenReport call: CkIn_ReportComponent's "not open" severe must be swallowed by
+   ! CkIn_DriverRecord (collector state is still updated) rather than crashing or propagating.
+   call CkIn_DriverRecord(collector, 'HydroDyn', ErrID_Fatal, 'HD_Init:WAMIT file not found.')
+   call check(error, CkIn_ComponentStatus(collector, 'HydroDyn'), CkIn_St_Failed); if (allocated(error)) return
    call check(error, CkIn_ExitCode(collector), 1)
 end subroutine
 
