@@ -493,6 +493,12 @@ CONTAINS
          ! Failed status is sticky: a later benign collect for the same component (e.g. an info-level
          ! note after a fatal) must not downgrade the aggregate back to passed.
          IF ( collector%CompStat(idx) == CkIn_St_Failed .AND. Status == CkIn_St_Passed ) RETURN
+         ! Unavailable is likewise sticky against Passed: a component marked unavailable was attempted
+         ! only against fabricated/upstream-tainted data, so a later benign collect for it "succeeding"
+         ! must not be allowed to silently launder that into Passed. A real Failed still beats Unavailable
+         ! (an actual failure is strictly more informative than a taint marker), and explicit not_used /
+         ! skipped / failed overrides still apply normally.
+         IF ( collector%CompStat(idx) == CkIn_St_Unavailable .AND. Status == CkIn_St_Passed ) RETURN
          collector%CompStat(idx) = Status
       ELSE
          CALL CkIn_GrowComps( collector )

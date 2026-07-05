@@ -449,6 +449,38 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             call StubOutputPointMesh(ED%y(iRot)%HubPtMotion)
             call StubOutputPointMesh(ED%y(iRot)%NacelleMotion)
             call StubOutputPointMesh(ED%y(iRot)%PlatformPtMesh)
+            ! -CheckInput disclosure: every enabled direct consumer of ED's output data is about to be
+            ! attempted against the stubbed meshes above (or, for BeamDyn, cannot be attempted at all --
+            ! with ED failed, p_FAST%NumBD is never set, so BD's per-blade init loop zero-trips and BD
+            ! never calls into the collector on its own). Mark each one 'unavailable' now so the report
+            ! discloses that its checks (if any) ran on fabricated ElastoDyn data rather than silently
+            ! reporting them as passed. Gated on each module's own Comp switch so disabled modules are
+            ! not marked.
+            if (p_FAST%CompElast == Module_BD) then
+               call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; BeamDyn instances cannot be attempted (blade count unavailable)', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompAero == Module_AD .or. p_FAST%CompAero == Module_ExtLd) then
+               call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompInflow == Module_IfW) then
+               call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompSub == Module_SD) then
+               call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompServo == Module_SrvD) then
+               call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
          end if
          if (Failed()) return
 

@@ -20,6 +20,7 @@ subroutine test_NWTC_CheckInput_suite(testsuite)
                new_unittest("test_collect_status_override",          test_collect_status_override), &
                new_unittest("test_skipped_status",                   test_skipped_status), &
                new_unittest("test_failed_status_sticky",             test_failed_status_sticky), &
+               new_unittest("test_unavailable_status_sticky",        test_unavailable_status_sticky), &
                new_unittest("test_component_status_unknown",         test_component_status_unknown), &
                new_unittest("test_exit_code",                        test_exit_code) &
                ]
@@ -86,6 +87,21 @@ subroutine test_failed_status_sticky(error)
    call CkIn_Collect(collector, 'ElastoDyn', ErrID_Fatal, 'ED_Init:Blade file not found.')
    call CkIn_Collect(collector, 'ElastoDyn', ErrID_None, '')
    call check(error, CkIn_ComponentStatus(collector, 'ElastoDyn'), CkIn_St_Failed)
+end subroutine
+
+subroutine test_unavailable_status_sticky(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(CheckInputCollectorType) :: collector
+   ! An 'unavailable' mark (attempted only against fabricated/tainted upstream data) must not be
+   ! silently laundered into Passed by a later benign collect for the same component:
+   call CkIn_Collect(collector, 'AeroDyn', ErrID_Info, &
+        'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+        Status='unavailable')
+   call CkIn_Collect(collector, 'AeroDyn', ErrID_None, '')
+   call check(error, CkIn_ComponentStatus(collector, 'AeroDyn'), CkIn_St_Unavailable); if (allocated(error)) return
+   ! But a real failure still beats the taint marker:
+   call CkIn_Collect(collector, 'AeroDyn', ErrID_Fatal, 'AD_Init:msg')
+   call check(error, CkIn_ComponentStatus(collector, 'AeroDyn'), CkIn_St_Failed)
 end subroutine
 
 subroutine test_component_status_unknown(error)
