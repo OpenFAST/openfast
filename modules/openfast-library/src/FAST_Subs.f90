@@ -328,6 +328,93 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (ErrStat2 >= AbortErrLev) call WrScr('Warning: could not open -CheckInput report file: '//trim(ErrMsg2))
    end if
 
+   ! -CheckInput: mark every module the input file does not enable as 'not_used' up front, before any
+   ! module init is attempted. Modules that ARE enabled get their own passed/failed/unavailable report
+   ! after their init block completes (see the per-module CurrentComponent labels below); this sweep
+   ! covers only the disabled ones, so each component is reported exactly once.
+   if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+      if (p_FAST%CompElast /= Module_SED) then
+         call CkIn_Collect(CkInCollector, 'Simplified-ElastoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'Simplified-ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompElast == Module_SED) then
+         call CkIn_Collect(CkInCollector, 'ElastoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompElast /= Module_BD) then
+         call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'BeamDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompInflow /= Module_IfW) then
+         call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'InflowWind', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSeaSt /= Module_SeaSt) then
+         call CkIn_Collect(CkInCollector, 'SeaState', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SeaState', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompAero /= Module_AD .and. p_FAST%CompAero /= Module_ExtLd) then
+         call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompAero /= Module_ADsk) then
+         call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDisk', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSoil /= Module_SlD) then
+         call CkIn_Collect(CkInCollector, 'SoilDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SoilDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSub /= Module_SD) then
+         call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SubDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSub /= Module_ExtPtfm) then
+         call CkIn_Collect(CkInCollector, 'ExtPtfm', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ExtPtfm', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompHydro /= Module_HD) then
+         call CkIn_Collect(CkInCollector, 'HydroDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'HydroDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_MAP) then
+         call CkIn_Collect(CkInCollector, 'MAP', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'MAP', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_MD) then
+         call CkIn_Collect(CkInCollector, 'MoorDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'MoorDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_FEAM) then
+         call CkIn_Collect(CkInCollector, 'FEAMooring', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'FEAMooring', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_Orca) then
+         call CkIn_Collect(CkInCollector, 'OrcaFlex', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'OrcaFlex', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompIce /= Module_IceF) then
+         call CkIn_Collect(CkInCollector, 'IceFloe', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'IceFloe', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompIce /= Module_IceD) then
+         call CkIn_Collect(CkInCollector, 'IceDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'IceDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompServo /= Module_SrvD) then
+         call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ServoDyn', ErrStat2, ErrMsg2)
+      end if
+
+      ! ExternalInflow/ExternalLoads require ExternInitData, which the -CheckInput CLI entry point
+      ! never supplies (see FAST_CheckInput_T's call to FAST_InitializeAll); mark both not_used
+      ! unconditionally since they can never actually be attempted here.
+      call CkIn_Collect(CkInCollector, 'ExternalInflow', ErrID_None, '', Status='not_used')
+      call CkIn_ReportComponent(CkInCollector, 'ExternalInflow', ErrStat2, ErrMsg2)
+      call CkIn_Collect(CkInCollector, 'ExternalLoads', ErrID_None, '', Status='not_used')
+      call CkIn_ReportComponent(CkInCollector, 'ExternalLoads', ErrStat2, ErrMsg2)
+   end if
+
    ! Allocate array to hold number of blades per rotor
    call AllocAry(p_FAST%RotNumBld, p_FAST%NRotors, "p_FAST%RotNumBld", ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -383,6 +470,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    case (Module_SED) ! Simplified-ElastoDyn
 
+      CurrentComponent = 'Simplified-ElastoDyn'
+
       allocate(SED%Input       (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("SED%Input")) return
       allocate(SED%InputTimes  (InputAryUB           ), stat=ErrStat2); if (FailedAlloc("SED%InputTimes")) return
       allocate(SED%x           (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("SED%x")) return
@@ -407,9 +496,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
         
       ! Save number of blades
       p_FAST%RotNumBld(1) = Init%OutData_SED%NumBl
-      
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'Simplified-ElastoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'Simplified-ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+
    case default ! ElastoDyn
-      
+
+      CurrentComponent = 'ElastoDyn'
+
       ! Allocate module data arrays
       allocate(ED%Input       (InputAryLB:InputAryUB, p_FAST%NRotors), stat=ErrStat2); if (FailedAlloc("ED%Input")) return
       allocate(ED%InputTimes  (InputAryUB, p_FAST%NRotors           ), stat=ErrStat2); if (FailedAlloc("ED%InputTimes")) return
@@ -515,6 +611,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          end if
       end do
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ElastoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+
    end select ! SED/ED
 
 
@@ -548,6 +649,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(Init%OutData_BD (p_FAST%NumBD                       ), stat=ErrStat2); if (FailedAlloc("Init%OutData_BD")) return
 
    if (p_FAST%CompElast == Module_BD) then
+
+      CurrentComponent = 'BeamDyn'
 
       ! Set initialization input
       Init%InData_BD%DynamicSolve   = .TRUE.                                    ! FAST can only couple to BeamDyn when dynamic solve is used.
@@ -620,6 +723,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             
          END DO
       end do
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'BeamDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF
 
    !----------------------------------------------------------------------------
@@ -636,6 +745,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    select case(p_FAST%CompInflow)
    case (Module_IfW)
+
+      CurrentComponent = 'InflowWind'
 
       Init%InData_IfW%Linearize              = p_FAST%Linearize
       Init%InData_IfW%InputFileName          = p_FAST%InflowFile
@@ -724,6 +835,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_IfW%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'InflowWind', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ExtInfw)
       ! ExtInfw requires initialization of AD first, so nothing executed here
    case default
@@ -744,6 +860,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(SeaSt%OtherSt    (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("SeaSt%OtherSt")) return
 
    if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+
+      CurrentComponent = 'SeaState'
 
       Init%InData_SeaSt%TMax          = p_FAST%TMax
       Init%InData_SeaSt%Gravity       = p_FAST%Gravity
@@ -806,6 +924,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                  'downstream modules given a zero-valued WaveField fallback (upstream SeaState failure)')
          end if
       end if
+      ! Report SeaState now that its stub-fallback disclosure (if any) has been collected above.
+      if (p_FAST%CompSeaSt == Module_SeaSt) then
+         call CkIn_Collect(CkInCollector, 'SeaState', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SeaState', ErrStat2, ErrMsg2)
+      end if
    end if
 
    !----------------------------------------------------------------------------
@@ -815,6 +938,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    select case (p_FAST%CompAero)
 
    case (Module_AD, Module_ExtLd)
+
+      CurrentComponent = 'AeroDyn'
 
       ! Allocate module data arrays
       allocate(AD%Input           (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("AD%Input")) return
@@ -942,7 +1067,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       AirDens = Init%OutData_AD%rotors(1)%AirDens
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDyn', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ADsk)
+
+      CurrentComponent = 'AeroDisk'
 
       ! Allocate module data arrays
       allocate(ADsk%Input           (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("ADsk%Input")) return
@@ -985,6 +1117,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       ! AeroDisk may override the AirDens value.  Store this to inform other modules
       AirDens = Init%OutData_ADsk%AirDens
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDisk', ErrStat2, ErrMsg2)
+      end if
 
    end select ! CompAero
 
@@ -1101,6 +1238,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! SoilDyn
    case (Module_SlD)
 
+      CurrentComponent = 'SoilDyn'
+
       ! SoilDyn requires SubDyn
       SlD_OK = .true.
       if (p_FAST%CompSub /= Module_SD) then
@@ -1139,6 +1278,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
       end if
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'SoilDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SoilDyn', ErrStat2, ErrMsg2)
+      end if
+
    end select
 
    !----------------------------------------------------------------------------
@@ -1164,6 +1308,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    select case (p_FAST%CompSub)
 
    case (Module_SD)
+
+      CurrentComponent = 'SubDyn'
 
       Init%InData_SD%Linearize     = p_FAST%Linearize
       Init%InData_SD%g             = p_FAST%Gravity
@@ -1237,7 +1383,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       !    Use PlatformPosInit from ED above
       end if
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SubDyn', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ExtPtfm)
+
+      CurrentComponent = 'ExtPtfm'
 
       Init%InData_ExtPtfm%InputFile = p_FAST%SubFile
       Init%InData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//y_FAST%Module_Abrev(Module_ExtPtfm)
@@ -1259,6 +1412,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_ExtPtfm%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ExtPtfm', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ExtPtfm', ErrStat2, ErrMsg2)
+      end if
+
    end select
 
    !----------------------------------------------------------------------------
@@ -1274,6 +1432,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(HD%OtherSt           (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("HD%OtherSt")) return
 
    IF (p_FAST%CompHydro == Module_HD) THEN
+
+      CurrentComponent = 'HydroDyn'
 
       Init%InData_HD%Gravity       = p_FAST%Gravity
       Init%InData_HD%UseInputFile  = .TRUE.
@@ -1317,6 +1477,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_HD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'HydroDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'HydroDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF   ! CompHydro
 
    !----------------------------------------------------------------------------
@@ -1357,7 +1522,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    select case (p_FAST%CompMooring)
 
-   case (Module_MAP) 
+   case (Module_MAP)
+
+      CurrentComponent = 'MAP'
 
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
 
@@ -1387,7 +1554,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_MAP%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_MD) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'MAP', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'MAP', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_MD)
+
+      CurrentComponent = 'MoorDyn'
 
       ! some new allocations needed with version that's compatible with farm-level use
       allocate(Init%InData_MD%PtfmInit     (6,1), stat=ErrStat2); if (FailedAlloc("Init%InData_MD%PtfmInit")) return
@@ -1423,7 +1597,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_MD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_FEAM) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'MoorDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'MoorDyn', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_FEAM)
+
+      CurrentComponent = 'FEAMooring'
 
       Init%InData_FEAM%InputFile   = p_FAST%MooringFile         ! This needs to be set according to what is in the FAST input file.
       Init%InData_FEAM%RootName    = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_FEAM))
@@ -1447,7 +1628,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_FEAM%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_Orca) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'FEAMooring', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'FEAMooring', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_Orca)
+
+      CurrentComponent = 'OrcaFlex'
 
       Init%InData_Orca%InputFile = p_FAST%MooringFile
       Init%InData_Orca%RootName  = p_FAST%OutFileRoot
@@ -1465,6 +1653,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_Orca, 'Orca', 1, dt_module, p_FAST%DT, &
                         Init%OutData_Orca%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'OrcaFlex', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'OrcaFlex', ErrStat2, ErrMsg2)
+      end if
 
    END select
 
@@ -1486,6 +1679,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    IF (p_FAST%CompIce == Module_IceF) THEN
 
+      CurrentComponent = 'IceFloe'
+
       Init%InData_IceF%InputFile     = p_FAST%IceFile
       Init%InData_IceF%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceF))
       Init%InData_IceF%simLength     = p_FAST%TMax  !bjj: IceFloe stores this as single-precision (ReKi) TMax is DbKi
@@ -1502,6 +1697,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_IceF, 'IceF', 1, dt_module, p_FAST%DT, &
                         Init%OutData_IceF%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'IceFloe', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'IceFloe', ErrStat2, ErrMsg2)
+      end if
 
    end if
 
@@ -1526,6 +1726,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(IceD%m           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%m")) return
 
    IF (p_FAST%CompIce == Module_IceD) THEN
+
+      CurrentComponent = 'IceDyn'
 
       Init%InData_IceD%InputFile     = p_FAST%IceFile
       Init%InData_IceD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceD))//'1'
@@ -1588,6 +1790,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          if (Failed()) return
       END DO
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'IceDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'IceDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF
 
    !----------------------------------------------------------------------------
@@ -1607,6 +1814,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(Init%OutData_SrvD(p_FAST%NRotors                       ), stat=ErrStat2); if (FailedAlloc("Init%OutData_SrvD")) return
 
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
+
+      CurrentComponent = 'ServoDyn'
 
       ! Loop through the number of rotors
       do iRot = 1, p_FAST%NRotors
@@ -1750,11 +1959,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          if (ErrStat >= AbortErrLev) return
 
       end do
-      
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ServoDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF
 
+   ! -CheckInput: every module's own label has now been reported; restore the generic label so any
+   ! remaining failure below (FAST_InitOutput, VTK setup, ...) is attributed to FAST_InitializeAll
+   ! rather than misattributed to ServoDyn (the last per-module label set above).
+   CurrentComponent = 'FAST_InitializeAll'
+
    !----------------------------------------------------------------------------
-   ! Set up output for glue code 
+   ! Set up output for glue code
    ! (must be done after all modules are initialized so we have their WriteOutput information)
    !----------------------------------------------------------------------------
 
