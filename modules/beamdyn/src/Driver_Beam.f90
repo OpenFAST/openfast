@@ -22,6 +22,7 @@ PROGRAM BeamDyn_Driver_Program
 
    USE BeamDyn_driver_subs  ! all other modules inherited through this one
    USE VersionInfo
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -69,7 +70,17 @@ PROGRAM BeamDyn_Driver_Program
    CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'BeamDyn Driver', '', '' )  ! The version number of this program.
-   
+
+   LOGICAL                          :: CheckInputMode ! true if -CheckInput was given on the command line (no initializer -- set below)
+   TYPE(CheckInputCollectorType)    :: Checker        ! -CheckInput result collector
+   CHARACTER(64)                    :: CkStage        ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+   INTEGER(IntKi)                   :: ErrStat2       ! secondary error status, used only for -CheckInput report calls
+   CHARACTER(ErrMsgLen)             :: ErrMsg2        ! secondary error message, used only for -CheckInput report calls
+   INTEGER(IntKi)                   :: NumArgs        ! number of command-line arguments
+   INTEGER(IntKi)                   :: ArgIdx         ! loop counter for the command-line argument scan
+   CHARACTER(1024)                  :: ArgVal         ! one command-line argument, raw
+   CHARACTER(1024)                  :: ArgUC          ! ArgVal with the switch character stripped, upper-cased for flag matching
+
 
    ! -------------------------------------------------------------------------
    ! Initialization of library (especially for screen output)
@@ -92,11 +103,40 @@ PROGRAM BeamDyn_Driver_Program
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------   
    
-   CALL GET_COMMAND_ARGUMENT(1,DvrInputFile)
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
+   DvrInputFile   = ''
+
+      ! Scan the command line: no flag dispatch existed here before, so this driver never used
+      ! CheckArgs -- the first non-flag argument is the driver input file; a flag matching
+      ! CHECKINPUT (either switch character, case-insensitive) enables -CheckInput mode; any other
+      ! flag is silently ignored (this driver family's existing convention for unrecognized flags).
+   NumArgs = COMMAND_ARGUMENT_COUNT()
+   DO ArgIdx = 1, NumArgs
+      CALL GET_COMMAND_ARGUMENT( ArgIdx, ArgVal )
+      IF ( LEN_TRIM(ArgVal) > 0 .AND. ( ArgVal(1:1) == SwChar .OR. ArgVal(1:1) == '-' ) ) THEN
+         ArgUC = ArgVal(2:)
+         CALL Conv2UC( ArgUC )
+         IF ( TRIM(ArgUC) == 'CHECKINPUT' ) THEN
+            CheckInputMode = .TRUE.
+         END IF
+         ! unrecognized flags are silently ignored -- matches this driver's pre-existing behavior
+      ELSE IF ( LEN_TRIM(DvrInputFile) == 0 ) THEN
+         DvrInputFile = ArgVal
+      END IF
+   END DO
+
    CALL GetRoot(DvrInputFile,RootName)
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(RootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
+   CkStage = 'Driver'
    CALL BD_ReadDvrFile(DvrInputFile,dt_global,BD_InitInput,DvrData,ErrStat,ErrMsg)
       CALL CheckError()
-      
+
       ! initialize the BD_InitInput values not in the driver input file
    BD_InitInput%RootName = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootName = TRIM(RootName)//'.BD'
@@ -109,8 +149,9 @@ PROGRAM BeamDyn_Driver_Program
 
    !Module1: allocate Input and Output arrays; used for interpolation and extrapolation
    ALLOCATE(BD_Input(BD_interp_order + 1)) 
-   ALLOCATE(BD_InputTimes(BD_interp_order + 1)) 
+   ALLOCATE(BD_InputTimes(BD_interp_order + 1))
 
+   CkStage = 'BeamDyn'
    CALL BD_Init(BD_InitInput             &
                    , BD_Input(1)         &
                    , BD_Parameter        &
@@ -140,9 +181,15 @@ PROGRAM BeamDyn_Driver_Program
    call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,BD_OtherState, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    call Transfer_MultipointLoads(DvrData, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    
-   CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
-      CALL CheckError()
-      
+      ! -CheckInput: this call unconditionally opens <RootName>.out -- skip it entirely in check mode so
+      ! a passing check run leaves no compute-output artifact behind; DvrOut is never used before the
+      ! P4 exit below (Dvr_WriteOutputLine is only reached inside the time-marching loop, which check
+      ! mode never enters).
+   IF ( .NOT. CheckInputMode ) THEN
+      CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
+         CALL CheckError()
+   END IF
+
       
       ! initialize BD_Input and BD_InputTimes
    BD_InputTimes(1) = DvrData%t_initial
@@ -159,22 +206,39 @@ PROGRAM BeamDyn_Driver_Program
          CALL CheckError()
    END DO
    
+      ! -CheckInput: both VTK reference blocks below are file-write side effects driven by the driver
+      ! input file's WrVTK setting -- skip them entirely in check mode so a passing check run leaves no
+      ! compute artifacts behind. Nothing after this point before the P4 exit depends on them.
+   IF ( .NOT. CheckInputMode ) THEN
       ! Write VTK reference if requested (ref is (0,0,0)
-   if (DvrData%WrVTK > 0) then
-      call SetVTKvars()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion', ErrStat, ErrMsg );  call CheckError()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad', ErrStat, ErrMsg );  call CheckError()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad', ErrStat, ErrMsg );  call CheckError()
-   endif
-      ! Write VTK reference if requested (ref is (0,0,0)
-   if (DvrData%WrVTK == 2) then
-      n_t_vtk = 0
-      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
-      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
-      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
-      call CheckError()
-   endif
+      if (DvrData%WrVTK > 0) then
+         call SetVTKvars()
+         call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion', ErrStat, ErrMsg );  call CheckError()
+         call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad', ErrStat, ErrMsg );  call CheckError()
+         call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad', ErrStat, ErrMsg );  call CheckError()
+      endif
+         ! Write VTK reference if requested (ref is (0,0,0)
+      if (DvrData%WrVTK == 2) then
+         n_t_vtk = 0
+         call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+         call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+         call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+         call CheckError()
+      endif
+   END IF
 
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through CheckError's CkIn_DriverFail interception and never returned). A t=0 BD_CalcOutput
+      ! is compute (and its output-file write is a side effect), so the check ends here at init+meshes;
+      ! quasi-static init (RunQuasiStaticInit, applied inside BD_Init above) IS included -- it's part of
+      ! init. Record both stages, in order, then finish -- this call never returns.
+      CALL CkIn_Collect( Checker, 'Driver',  ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',  ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'BeamDyn', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'BeamDyn', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
       !.........................
       ! calculate outputs at t=0
@@ -285,8 +349,9 @@ CONTAINS
    
       if (ErrStat /= ErrID_None) then
          call WrScr(TRIM(ErrMsg))
-         
+
          if (ErrStat >= AbortErrLev) then
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
             call Dvr_End()
          end if
       end if
