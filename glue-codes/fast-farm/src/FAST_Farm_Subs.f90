@@ -162,6 +162,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg, CkInCollector )
    INTEGER(IntKi)                          :: i
    CHARACTER(64)                           :: CurrentComponent    ! -CheckInput: component label used by Failed() when collecting
    LOGICAL                                 :: StepOK              ! -CheckInput: sequential gate; once false, remaining components are marked 'skipped' rather than attempted
+   LOGICAL                                 :: AWAE_OK             ! -CheckInput: captures AWAE_Init's own success BEFORE the patched Failed() masks ErrStat, so IsInitialized is never set on a failed init
    !..........
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -289,9 +290,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg, CkInCollector )
       endif
       call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                       farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
+      ! Capture success BEFORE Failed() (patched, above) can mask ErrStat2 into a swallowed collector entry --
+      ! under -CheckInput, Failed() returns .false. even when AWAE_Init failed, so IsInitialized must not be
+      ! gated on Failed()'s return value.
+      AWAE_OK = (ErrStat2 < AbortErrLev)
       if(Failed()) return;
 
-      farm%AWAE%IsInitialized = .true.
+      if (AWAE_OK) farm%AWAE%IsInitialized = .true.
 
       farm%p%X0_Low = AWAE_InitOutput%oXYZ_Low(1)
       farm%p%Y0_low = AWAE_InitOutput%oXYZ_Low(2)
@@ -451,6 +456,7 @@ SUBROUTINE Farm_CheckInput( farm, InputFileName )
    TYPE(CheckInputCollectorType)          :: Checker
    INTEGER(IntKi)                         :: ErrStat, ErrStat2
    CHARACTER(ErrMsgLen)                   :: ErrMsg, ErrMsg2
+   INTEGER(IntKi)                         :: ExitCode
 
    CALL Farm_Initialize( farm, InputFileName, ErrStat, ErrMsg, CkInCollector=Checker )
    IF (ErrStat >= AbortErrLev) THEN
@@ -461,16 +467,23 @@ SUBROUTINE Farm_CheckInput( farm, InputFileName )
       CALL CkIn_Collect( Checker, 'FAST.Farm', ErrStat, ErrMsg )
    END IF
 
+   ! Finalize the report BEFORE teardown so a completed check's summary/yaml survive even if FARM_End
+   ! crashes on partially-initialized state -- mirrors FAST_CheckInput_T (FAST_Subs.f90): WrSummary +
+   ! CloseReport + capture the exit code, THEN tear down, THEN exit. Inlined (rather than
+   ! CkIn_DriverFinish) because FARM_End must run between CloseReport and ProgExit.
+   CALL CkIn_WrSummary( Checker )
+   CALL CkIn_CloseReport( Checker, ErrStat2, ErrMsg2 )
+   IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not finalize -CheckInput report: '//TRIM(ErrMsg2))
+   ExitCode = CkIn_ExitCode( Checker )
+
    ! Tear down whatever did get initialized -- mirrors the FARM_End call in FAST_Farm.f90's CheckError, minus
    ! the abort. Farm_CheckInput never calls FARM_InitialCO or enters the time loop, so FARM_End must tolerate a
    ! farm left partially initialized by an early failure; this has been verified against every seeded failure
-   ! mode exercised by the -CheckInput smoke tests (bad primary file, corrupted wrapped-turbine deck).
+   ! mode exercised by the -CheckInput smoke tests (bad primary file, corrupted wrapped-turbine deck). The
+   ! report is already finalized above, so any fatal here does not need to (and cannot) be folded into it.
    CALL FARM_End( farm, ErrStat2, ErrMsg2 )
-   IF (ErrStat2 >= AbortErrLev) THEN
-      CALL CkIn_Collect( Checker, 'FAST.Farm', ErrStat2, ErrMsg2 )
-   END IF
 
-   CALL CkIn_DriverFinish( Checker )   ! writes the summary + closes the report + calls ProgExit; never returns
+   CALL ProgExit( ExitCode )
 
 END SUBROUTINE Farm_CheckInput
 
@@ -785,8 +798,10 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                           farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, farm%p%dt_low, WD_InitOut, ErrStat2, ErrMsg2 )
-         
-         farm%WD(nt)%IsInitialized = .true.
+
+         ! Only mark this turbine's WD instance initialized if WD_Init actually succeeded for it -- previously
+         ! set unconditionally, so a failed WD_Init still left FARM_End calling WD_End on an uninitialized instance.
+         IF (ErrStat2 < AbortErrLev) farm%WD(nt)%IsInitialized = .true.
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
             if (ErrStat >= AbortErrLev) then
                call cleanup()
@@ -889,9 +904,12 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
             ! NOTE: FWrap_interval, and FWrap_InitOut appear unused
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                           farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, FWrap_Interval, FWrap_InitOut, ErrStat2, ErrMsg2 )
-         
-         farm%FWrap(nt)%IsInitialized = .true.
-         
+
+         ! Only mark this turbine's FWrap instance initialized if FWrap_Init actually succeeded for it -- this
+         ! loop runs every turbine even after one fails (by design, for attempt-everything reporting), so a
+         ! failed turbine must not be left marked initialized or FARM_End will call FWrap_End on it.
+         if (ErrStat2 < AbortErrLev) farm%FWrap(nt)%IsInitialized = .true.
+
          if (ErrStat2 >= AbortErrLev) then
             !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
