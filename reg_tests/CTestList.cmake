@@ -638,3 +638,14 @@ of_checkinput(checkinput_multi_error AOC_WSt "checkinput;openfast"
   --corrupt "*InflowWind*.dat::^\\\\s*\\\\d+(\\\\s*WindType)::          99\\\\1"
   --expect-exit 1 --expect-status failed --expect-min-fatals 2
   --expect-component-failed ElastoDyn --expect-component-failed InflowWind)
+# negative: Simplified-ElastoDyn (SED) failure path -- guards against the segfault-on-failure gap
+# fixed alongside this test (SED's HubPtMotion/NacelleMotion/PlatformPtMesh/BladeRootMotion were read
+# downstream, unguarded, by InflowWind/AeroDyn/AeroDisk/ServoDyn). Corrupt NumBl to 0 so SED_Init fails
+# in SEDInput_ValidateInput, before any of its output meshes are committed -- exactly the case that used
+# to crash. This deck's ServoDyn uses a Bladed-style DLL controller (Windows .dll) that may also fail to
+# load on macOS/Linux; that is expected and does not affect the assertions below -- what matters is that
+# SED's own failure is attributed and the process does not crash (an overall_status line proves liveness).
+of_checkinput(checkinput_SED_error 5MW_Land_DLL_WTurb_SED "checkinput;openfast;sed"
+  --corrupt "*Simplified-ElastoDyn*.dat::^(\\\\s*)\\\\d+(\\\\s*NumBl)::\\\\g<1>0\\\\g<2>"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed Simplified-ElastoDyn)

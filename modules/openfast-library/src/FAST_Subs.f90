@@ -487,6 +487,41 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       dt_module = p_FAST%DT
       CALL SED_Init( Init%InData_SED, SED%Input(1), SED%p, SED%x(STATE_CURR), SED%xd(STATE_CURR), SED%z(STATE_CURR), SED%OtherSt(STATE_CURR), &
                      SED%y, SED%m, dt_module, Init%OutData_SED, ErrStat2, ErrMsg2 )
+      ! -CheckInput guard: SED_Init failing leaves its output meshes uncommitted (see StubOutputPointMesh
+      ! above for why that matters). Capture the failure here -- before Failed() collects it below -- and
+      ! synthesize neutral stand-ins so every remaining module that reads SED%y can still be attempted.
+      ! Mirrors the ElastoDyn treatment below; SED excludes BeamDyn (mutually exclusive CompElast value)
+      ! and SubDyn (rejected earlier in ValidateInputData), so neither gets a disclosure mark here.
+      if (ErrStat2 >= AbortErrLev .and. p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call StubOutputPointMesh(SED%y%HubPtMotion)
+         call StubOutputPointMesh(SED%y%NacelleMotion)
+         call StubOutputPointMesh(SED%y%PlatformPtMesh)
+         ! -CheckInput disclosure: every enabled direct consumer of SED's output data is about to be
+         ! attempted against the stubbed meshes above. Mark each one 'unavailable' now so the report
+         ! discloses that its checks (if any) ran on fabricated Simplified-ElastoDyn data rather than
+         ! silently reporting them as passed. Gated on each module's own Comp switch so disabled modules
+         ! are not marked.
+         if (p_FAST%CompAero == Module_AD .or. p_FAST%CompAero == Module_ExtLd) then
+            call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompAero == Module_ADsk) then
+            call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompInflow == Module_IfW) then
+            call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompServo == Module_SrvD) then
+            call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+      end if
       if (Failed()) return
 
       ! Add module to array of modules, return if errors occurred
@@ -997,8 +1032,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_AD%rotors(iRot)%NacellePosition    = SED%y%NacelleMotion%Position(:,1)
             Init%InData_AD%rotors(iRot)%NacelleOrientation = SED%y%NacelleMotion%RefOrientation(:,:,1)
             do k = 1, p_FAST%RotNumBld(iRot)
-               Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
-               Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+               ! -CheckInput guard: mirrors the ED/BeamDyn root-motion guard above -- if SED_Init failed
+               ! before committing BladeRootMotion (or the array is unallocated/undersized), feed neutral
+               ! geometry instead of dereferencing a NULL/out-of-bounds mesh. In practice p_FAST%RotNumBld
+               ! is 0 for early SED failures, so this loop usually zero-trips; guarded here anyway as
+               ! defense-in-depth for late-stage failures.
+               if (allocated(SED%y%BladeRootMotion)) then
+                  if (k <= size(SED%y%BladeRootMotion)) then
+                     if (SED%y%BladeRootMotion(k)%committed) then
+                        Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
+                        Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+                        cycle
+                     end if
+                  end if
+               end if
+               Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = 0.0_ReKi
+               Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
             end do
 
          elseif (p_FAST%CompElast == Module_ED .or. p_FAST%CompElast == Module_BD) then
@@ -1859,7 +1908,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_SrvD%PtfmRefOrient(1:3,1:3)= SED%y%PlatformPtMesh%RefOrientation(1:3,1:3,1) ! R8Ki
             Init%InData_SrvD%PtfmOrient(1:3,1:3)   = SED%y%PlatformPtMesh%Orientation(1:3,1:3,1)    ! R8Ki
             Init%InData_SrvD%RotSpeedRef           = Init%OutData_SED%RotSpeed
-            Init%InData_SrvD%BlPitchInit           = Init%OutData_SED%BlPitch
+            ! -CheckInput guard: mirrors the ED guard below -- if SED_Init failed, InitOutput%BlPitch
+            ! (ALLOCATABLE) was never allocated; assigning an unallocated allocatable to another
+            ! allocatable is undefined behavior and segfaults.
+            if (allocated(Init%OutData_SED%BlPitch)) then
+               Init%InData_SrvD%BlPitchInit         = Init%OutData_SED%BlPitch
+            else
+               Init%InData_SrvD%BlPitchInit         = 0.0_ReKi
+            end if
          else
             Init%InData_SrvD%NacRefPos(1:3)        = ED%y(iRot)%NacelleMotion%Position(1:3,1)
             Init%InData_SrvD%NacTransDisp(1:3)     = ED%y(iRot)%NacelleMotion%TranslationDisp(1:3,1)     ! R8Ki
@@ -1888,10 +1944,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          select case (p_FAST%CompElast)
          case (Module_SED)
             do k = 1, p_FAST%RotNumBld(iRot)
-               Init%InData_SrvD%BladeRootRefPos(:,k)     = SED%y%BladeRootMotion(k)%Position(:,1)
-               Init%InData_SrvD%BladeRootTransDisp(:,k)  = SED%y%BladeRootMotion(k)%TranslationDisp(:,1)
-               Init%InData_SrvD%BladeRootRefOrient(:,:,k)= SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
-               Init%InData_SrvD%BladeRootOrient(:,:,k)   = SED%y%BladeRootMotion(k)%Orientation(:,:,1)
+               ! -CheckInput guard: mirrors the AeroDyn SED guard above -- feed neutral geometry if
+               ! BladeRootMotion is unallocated/undersized/uncommitted rather than dereferencing it.
+               if (allocated(SED%y%BladeRootMotion)) then
+                  if (k <= size(SED%y%BladeRootMotion)) then
+                     if (SED%y%BladeRootMotion(k)%committed) then
+                        Init%InData_SrvD%BladeRootRefPos(:,k)     = SED%y%BladeRootMotion(k)%Position(:,1)
+                        Init%InData_SrvD%BladeRootTransDisp(:,k)  = SED%y%BladeRootMotion(k)%TranslationDisp(:,1)
+                        Init%InData_SrvD%BladeRootRefOrient(:,:,k)= SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+                        Init%InData_SrvD%BladeRootOrient(:,:,k)   = SED%y%BladeRootMotion(k)%Orientation(:,:,1)
+                        cycle
+                     end if
+                  end if
+               end if
+               Init%InData_SrvD%BladeRootRefPos(:,k)     = 0.0_ReKi
+               Init%InData_SrvD%BladeRootTransDisp(:,k)  = 0.0_R8Ki
+               Init%InData_SrvD%BladeRootRefOrient(:,:,k)= reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
+               Init%InData_SrvD%BladeRootOrient(:,:,k)   = Init%InData_SrvD%BladeRootRefOrient(:,:,k)
             end do
          case (Module_ED, Module_BD)
             do k = 1, p_FAST%RotNumBld(iRot)

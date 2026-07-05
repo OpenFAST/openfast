@@ -369,10 +369,14 @@ CONTAINS
          RETURN
       END IF
 
-      IF ( collector%NumErrors > 0 ) THEN
-         Overall = CkIn_St_Failed
-      ELSE
+      ! Unify with CkIn_ExitCode: a per-component CkIn_St_Failed can occur even when NumErrors is 0
+      ! (e.g. a fatal collected with an empty ErrMsg never increments NumErrors but still marks the
+      ! component failed) -- deriving Overall straight from NumErrors would then disagree with the
+      ! process exit code. Ask CkIn_ExitCode for the authoritative answer instead.
+      IF ( CkIn_ExitCode(collector) == 0 ) THEN
          Overall = CkIn_St_Passed
+      ELSE
+         Overall = CkIn_St_Failed
       END IF
 
       WRITE (Un, '(A)', IOSTAT=IOS) 'overall_status: '//TRIM(CkIn_StatusName(Overall))

@@ -22,7 +22,8 @@ subroutine test_NWTC_CheckInput_suite(testsuite)
                new_unittest("test_failed_status_sticky",             test_failed_status_sticky), &
                new_unittest("test_unavailable_status_sticky",        test_unavailable_status_sticky), &
                new_unittest("test_component_status_unknown",         test_component_status_unknown), &
-               new_unittest("test_exit_code",                        test_exit_code) &
+               new_unittest("test_exit_code",                        test_exit_code), &
+               new_unittest("test_empty_message_fatal",              test_empty_message_fatal) &
                ]
 end subroutine
 
@@ -117,6 +118,21 @@ subroutine test_exit_code(error)
    type(CheckInputCollectorType) :: collector
    call check(error, CkIn_ExitCode(collector), 0); if (allocated(error)) return
    call CkIn_Collect(collector, 'BeamDyn', ErrID_Fatal, 'BD_Init:Blade input file not found.')
+   call check(error, CkIn_ExitCode(collector), 1)
+end subroutine
+
+subroutine test_empty_message_fatal(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(CheckInputCollectorType) :: collector
+   ! A fatal collect with an empty message: CkIn_Collect still marks the component failed (that
+   ! branch does not depend on ErrMsg), but it does NOT increment NumErrors (only the message-split
+   ! loop does that, and it is gated on LEN_TRIM(ErrMsg) > 0). This is exactly the divergence
+   ! CkIn_CloseReport's overall_status must not reproduce -- it now derives Overall from
+   ! CkIn_ExitCode (component status), not from NumErrors, so this empty-message fatal is not
+   ! silently reported as passed.
+   call CkIn_Collect(collector, 'X', ErrID_Fatal, '')
+   call check(error, collector%NumErrors, 0); if (allocated(error)) return
+   call check(error, CkIn_ComponentStatus(collector, 'X'), CkIn_St_Failed); if (allocated(error)) return
    call check(error, CkIn_ExitCode(collector), 1)
 end subroutine
 
