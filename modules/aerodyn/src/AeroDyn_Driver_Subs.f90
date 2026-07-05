@@ -416,7 +416,11 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             if (dvr%out%unOutFile(iWT) > 0) close(dvr%out%unOutFile(iWT))
          enddo
       endif
-      if (dvr%out%fileFmt==idFmtBoth .or. dvr%out%fileFmt == idFmtBinary) then
+      ! dvr%out%storage is only allocated when output init actually ran (Dvr_InitOutput, skipped
+      ! entirely under -CheckInput's skipOutputInit); guard against writing an unallocated array --
+      ! without this, calling Dvr_EndCase from the check-mode case loop segfaults for any case whose
+      ! driver input requests binary output.
+      if ( (dvr%out%fileFmt==idFmtBoth .or. dvr%out%fileFmt == idFmtBinary) .and. allocated(dvr%out%storage) ) then
          do iWT=1,dvr%numTurbines
             if (dvr%numTurbines >1) then
                sWT = '.T'//trim(num2lstr(iWT))

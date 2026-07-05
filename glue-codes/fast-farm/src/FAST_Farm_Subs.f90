@@ -27,6 +27,7 @@ MODULE FAST_Farm_Subs
 
    USE FAST_Farm_Types
    USE NWTC_Library
+   USE NWTC_CheckInput
    USE WakeDynamics
    USE AWAE
    USE FAST_Farm_IO

@@ -287,7 +287,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ELSEIF   ( ThisArgUC(1:1) == "V"   )   THEN
             CLFlags%Verbose         = .TRUE.
             RETURN
-         ELSEIF   ( ThisArgUC(1:10) == "CHECKINPUT" )   THEN
+         ELSEIF   ( TRIM(ThisArgUC) == "CHECKINPUT" )   THEN
             CLFlags%CheckInput      = .TRUE.
             RETURN
          ELSE

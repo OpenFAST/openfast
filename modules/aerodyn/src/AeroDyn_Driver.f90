@@ -67,7 +67,14 @@ program AeroDyn_Driver
       call Dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%SeaSt, dat%errStat, dat%errMsg, CheckInputMode=CheckInputMode); call CheckError()
       dat%initialized=.true.
 
-      IF ( CheckInputMode ) CYCLE   ! validation only: every case is initialized above (validating it), but never time-stepped
+      IF ( CheckInputMode ) THEN
+         ! validation only: every case is initialized above (validating it), but never time-stepped.
+         ! Mirror the normal path's inter-case teardown (below, after the time loop) before moving to
+         ! the next case -- without it, a combined-case deck's later cases would re-init on top of an
+         ! un-torn-down previous case.
+         call Dvr_EndCase(dat%dvr, dat%ADI, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
+         CYCLE
+      END IF
 
       ! Init of time estimator
       t_global=0.0_DbKi
