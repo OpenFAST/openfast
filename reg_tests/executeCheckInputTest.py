@@ -68,6 +68,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("executable"); ap.add_argument("source_case"); ap.add_argument("build_dir")
     ap.add_argument("--corrupt", action="append", default=[])
+    ap.add_argument("--input", default=None,
+                    help="relpath (inside the copied case) of the input deck to pass to "
+                         "-CheckInput. Default: the case's own *.fst glob (openfast/glue-code "
+                         "cases). Module driver decks aren't named *.fst (.dvr/.inp/.ipt/...), "
+                         "so those registrations must pass this explicitly.")
+    ap.add_argument("--report-glob", default="*.verify.yaml",
+                    help="glob (relative to the copied case dir) used to find the written "
+                         "report. Default matches both '<Root>.verify.yaml' (glue-code/module "
+                         "roots) and '<Root>.driver.verify.yaml' (module drivers), since both "
+                         "end in '.verify.yaml'.")
+    ap.add_argument("--exe-args", action="append", default=[],
+                    help="extra argument(s) to pass to the executable before -CheckInput/input, "
+                         "e.g. a driver flag some module needs unconditionally.")
     ap.add_argument("--expect-exit", type=int, required=True)
     ap.add_argument("--expect-status", choices=["passed", "failed"], required=True)
     ap.add_argument("--expect-min-fatals", type=int, default=0)
@@ -81,8 +94,13 @@ def main():
     work = copy_case_with_siblings(src, container)
     for spec in a.corrupt: corrupt(work, spec)
 
-    fst = next(work.glob("*.fst"))
-    r = subprocess.run([a.executable, "-CheckInput", fst.name], cwd=work,
+    if a.input:
+        deck = work / a.input
+        if not deck.exists():
+            sys.exit(f"--input {a.input!r} does not exist under copied case {work}")
+    else:
+        deck = next(work.glob("*.fst"))
+    r = subprocess.run([a.executable, *a.exe_args, "-CheckInput", deck.name], cwd=work,
                        capture_output=True, text=True, timeout=600)
     print(r.stdout[-4000:]); print(r.stderr[-2000:], file=sys.stderr)
 
@@ -92,9 +110,9 @@ def main():
     if "INPUT CHECK" not in r.stdout:
         print("FAIL: stdout has no INPUT CHECK summary"); ok = False
 
-    reports = list(work.glob("*.verify.yaml"))
+    reports = list(work.glob(a.report_glob))
     if not reports:
-        print("FAIL: no .verify.yaml written"); sys.exit(1)
+        print("FAIL: no report matching --report-glob written"); sys.exit(1)
     y = reports[0].read_text()
 
     m = re.search(r"^overall_status:\s*(\w+)", y, re.M)
@@ -127,7 +145,13 @@ def main():
             entries[-1] += " " + s
     def squash(t): return re.sub(r"\s+", "", t)
     squashed_entries = [squash(e) for e in entries]
-    for text in re.findall(r'text: "(.*)"', y):
+    for raw_text in re.findall(r'text: "(.*)"', y):
+        # Messages containing a literal '"' come back from the YAML text field with it
+        # backslash-escaped (\"); the console writer prints the raw, unescaped character.
+        # Unescape the *full* message before truncating to [:60] -- unescaping only the
+        # truncated slice is unsafe, since the slice boundary can fall between the
+        # backslash and the quote it's escaping, leaving an unmatched lone backslash.
+        text = raw_text.replace('\\"', '"')
         if text and not any(squash(text[:60]) in e for e in squashed_entries):
             print(f"FAIL: yaml message missing from stdout summary: {text[:60]}"); ok = False
 

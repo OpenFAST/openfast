@@ -80,6 +80,10 @@ set(CTEST_AERODISK_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodisk/aerodisk_dri
 # Set the SED executable configuration option and default
 set(CTEST_SED_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/simple-elastodyn/sed_driver" CACHE FILEPATH "Specify the SED driver executable to use in testing.")
 
+# Set the TurbSim executable configuration option and default (used by the -CheckInput tests only;
+# TurbSim has no baseline regression tests of its own in this file)
+set(CTEST_TURBSIM_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/turbsim/turbsim${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the TurbSim executable to use in testing.")
+
 
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
