@@ -82,7 +82,14 @@ INTEGER(IntKi)                        :: Restart_step                           
       ! this runs the steady-state solver driver and ENDS the program:
       CALL FAST_RunSteadyStateDriver( Turbine(1) )
       CALL ExitThisProgram_T( Turbine(1), ErrID_None, .true., SkipRunTimeMsg = .TRUE. )
-   
+
+   ELSE IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN ! Initialize every enabled module and report; no time-marching (NumTurbines==1 only)
+
+      ! Runs attempt-everything initialization, writes the -CheckInput report, and ENDS the program
+      ! with a report-derived exit code (it calls ProgExit itself and never returns; calling
+      ! ExitThisProgram_T here as the other branches do would double-free the already-destroyed turbine).
+      CALL FAST_CheckInput_T( Turbine(1) )
+
    ELSEIF ( LEN( TRIM(FlagArg) ) > 0 ) THEN ! Any other flag, end normally
       CALL NormStop()
 

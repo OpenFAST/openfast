@@ -25,6 +25,7 @@ MODULE FAST_Subs
    use FAST_ModTypes
    use FAST_ModGlue
    use VersionInfo
+   use NWTC_CheckInput
    use FAST_Funcs
    use FAST_Solver
    use FAST_Mapping, only: FAST_InitMappings
@@ -103,9 +104,67 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
+!> -CheckInput driver: attempt-everything initialization of every enabled module (no time stepping),
+!! console summary + <Root>.verify.yaml report, process exit code 0 (valid) / 1 (any fatal input error).
+!! Terminates the process itself via ProgExit; never returns to the caller.
+SUBROUTINE FAST_CheckInput_T( Turbine )
+
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine
+
+   TYPE(CheckInputCollectorType)           :: CkInCollector
+   INTEGER(IntKi)                          :: ErrStat, ExitCode
+   CHARACTER(ErrMsgLen)                    :: ErrMsg
+
+   Turbine%TurbID = 1
+   Turbine%p_FAST%CheckInputMode = .true.   ! read by Failed() inside FAST_InitializeAll
+
+   CALL FAST_InitializeAll( 0.0_DbKi, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+               Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, &
+               Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+               Turbine%IceF, Turbine%IceD, Turbine%SlD, .false., ErrStat, ErrMsg, CkInCollector=CkInCollector )
+   IF (ErrStat >= AbortErrLev) THEN
+      ! Only unrecoverable pre-module failures land here (e.g. FAST_Init itself, or allocation).
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitializeAll', ErrStat, ErrMsg )
+   END IF
+
+   ! Mappings + solver init require every module's meshes committed; only run when nothing failed.
+   IF ( CkIn_ExitCode(CkInCollector) == 0 ) THEN
+      CALL FAST_InitMappings(Turbine%m_Glue%Mappings, Turbine%m_Glue%ModData, Turbine, ErrStat, ErrMsg)
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+
+      IF ( CkIn_ExitCode(CkInCollector) == 0 ) THEN
+         CALL FAST_SolverInit(Turbine%p_FAST, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
+                              Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat, ErrMsg)
+         CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+         CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+      ELSE
+         CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrID_Info, &
+                            'blocked by upstream failure(s)', Status='skipped' )
+         CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+      END IF
+   ELSE
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitMappings', ErrID_Info, &
+                         'blocked by upstream module failure(s)', Status='skipped' )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+      CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrID_Info, &
+                         'blocked by upstream module failure(s)', Status='skipped' )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+   END IF
+
+   CALL CkIn_WrSummary( CkInCollector )                    ! full self-contained stdout summary
+   CALL CkIn_CloseReport( CkInCollector, ErrStat, ErrMsg ) ! authoritative overall_status trailer
+   ExitCode = CkIn_ExitCode( CkInCollector )
+
+   ! Normal shutdown (module End + close outputs + destroy turbine) WITHOUT its stop, then our exit code:
+   CALL ExitThisProgram_T( Turbine, ErrID_None, StopTheProgram=.FALSE., SkipRunTimeMsg=.TRUE. )
+   CALL ProgExit( ExitCode )
+
+END SUBROUTINE FAST_CheckInput_T
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
 SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SED, BD, SrvD, AD, ADsk, ExtLd, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, SlD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
+                               MAPp, FEAM, MD, Orca, IceF, IceD, SlD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData, CkInCollector )
 
    use ElastoDyn_Parameters, only: Method_RK4
 
@@ -145,9 +204,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    TYPE(FAST_ExternInitType), OPTIONAL, INTENT(IN) :: ExternInitData !< Initialization input data from an external source (Simulink)
 
+   TYPE(CheckInputCollectorType), OPTIONAL, INTENT(INOUT) :: CkInCollector !< -CheckInput accumulator; when present
+                                                                            !! and p_FAST%CheckInputMode, Failed() collects and continues
+
    ! local variables
    CHARACTER(1024)                         :: InputFile           !< A CHARACTER string containing the name of the primary FAST input file
    TYPE(FAST_InitData)                     :: Init                !< Initialization data for all modules
+   CHARACTER(64)                           :: CurrentComponent    ! component label used by Failed() when collecting
 
 
    REAL(ReKi)                              :: AirDens             ! air density for initialization/normalization of ExternalInflow data
@@ -174,6 +237,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !..........
    ErrStat = ErrID_None
    ErrMsg  = ""
+   CurrentComponent = 'FAST_InitializeAll'
 
    p_FAST%CompAeroMaps = CompAeroMaps
 
@@ -244,6 +308,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       p_FAST%WaveFieldMod = 0
       CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2 )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
       if (Failed()) return
+   end if
+
+   if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+      call CkIn_OpenReport(CkInCollector, trim(p_FAST%OutFileRoot), ErrStat2, ErrMsg2)
+      if (ErrStat2 >= AbortErrLev) call WrScr('Warning: could not open -CheckInput report file: '//trim(ErrMsg2))
    end if
 
    ! Allocate array to hold number of blades per rotor
@@ -1580,7 +1649,17 @@ CONTAINS
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
-      if (Failed) call Cleanup()
+      if (Failed) then
+         if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+            ! -CheckInput: record and keep going so every remaining module is still attempted.
+            call CkIn_Collect(CkInCollector, trim(CurrentComponent), ErrStat, ErrMsg)
+            ErrStat = ErrID_None
+            ErrMsg  = ''
+            Failed  = .false.
+         else
+            call Cleanup()
+         end if
+      end if
    end function Failed
 
    logical function FailedAlloc(txt)
