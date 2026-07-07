@@ -67,6 +67,7 @@ typedef     ^                 ^                 SiKi                 yGrid      
 typedef     ^                 ^                 SiKi                 CosWaveDirArr   {:}              -        -        "COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
 typedef     ^                 ^                 SiKi                 SinWaveDirArr   {:}              -        -        "SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
 typedef     ^                 ^                 LOGICAL              HasCurr         -             .false.     -        "True if a current profile was available to add to the wave velocities" -
+typedef     ^                 ^                 ReKi                 Gravity         -                0        -        "Gravitational acceleration, needed by the second-order kernel's per-pair dispersion solves" (m/s^2)
 typedef     ^                 ^                 LOGICAL              SecondOrderDiff -             .false.     -        "Add difference-QTF second-order kinematics during block population" -
 typedef     ^                 ^                 LOGICAL              SecondOrderSum  -             .false.     -        "Add sum-QTF second-order kinematics during block population" -
 typedef     ^                 ^                 DbKi                 LastSweep       -                0        -        "Simulation time of the last idle-block eviction sweep" (s)

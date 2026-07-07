@@ -94,6 +94,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CosWaveDirArr      !< COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SinWaveDirArr      !< SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
     LOGICAL  :: HasCurr = .false.      !< True if a current profile was available to add to the wave velocities [-]
+    REAL(ReKi)  :: Gravity = 0      !< Gravitational acceleration, needed by the second-order kernel's per-pair dispersion solves [(m/s^2)]
     LOGICAL  :: SecondOrderDiff = .false.      !< Add difference-QTF second-order kinematics during block population [-]
     LOGICAL  :: SecondOrderSum = .false.      !< Add sum-QTF second-order kinematics during block population [-]
     REAL(DbKi)  :: LastSweep = 0      !< Simulation time of the last idle-block eviction sweep [(s)]
@@ -487,6 +488,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcSeaSt_WaveBlockStoreT
       DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr = SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr
    end if
    DstSeaSt_WaveBlockStoreTypeData%HasCurr = SrcSeaSt_WaveBlockStoreTypeData%HasCurr
+   DstSeaSt_WaveBlockStoreTypeData%Gravity = SrcSeaSt_WaveBlockStoreTypeData%Gravity
    DstSeaSt_WaveBlockStoreTypeData%SecondOrderDiff = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderDiff
    DstSeaSt_WaveBlockStoreTypeData%SecondOrderSum = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderSum
    DstSeaSt_WaveBlockStoreTypeData%LastSweep = SrcSeaSt_WaveBlockStoreTypeData%LastSweep
@@ -578,6 +580,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, Indata)
    call RegPackAlloc(RF, InData%CosWaveDirArr)
    call RegPackAlloc(RF, InData%SinWaveDirArr)
    call RegPack(RF, InData%HasCurr)
+   call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%SecondOrderDiff)
    call RegPack(RF, InData%SecondOrderSum)
    call RegPack(RF, InData%LastSweep)
@@ -624,6 +627,7 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockStoreType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%CosWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SinWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasCurr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SecondOrderDiff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SecondOrderSum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastSweep); if (RegCheckErr(RF, RoutineName)) return

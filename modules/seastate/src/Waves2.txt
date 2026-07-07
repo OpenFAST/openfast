@@ -30,13 +30,9 @@ typedef     ^                 ^                 LOGICAL              WvDiffQTFF 
 typedef     ^                 ^                 LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
 
 
-# Define outputs from the initialization routine here:
-#
-typedef     ^                 InitOutputType    SiKi                 WaveAcc2D         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order difference frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2D        {:}{:}{:}{:}   -        -  "Instantaneous 2nd-order difference frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKinGrid points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveAcc2S         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2S        {:}{:}{:}{:}   -        -  "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKinGrid points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveVel2D         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
+# NOTE: Waves2 no longer defines an InitOutputType. The second-order volume kinematics are computed per grid column
+# by WaveKinKernel_AddSecondOrderColumns (module Waves2) and added directly into the SeaSt_WaveFieldType volume
+# arrays (mode 0) or an on-demand block (mode 1), so the full-size init-time temporaries WaveVel2D/S, WaveAcc2D/S,
+# WaveDynP2D/S are gone. Waves2_Init now only checks inputs and computes the WaveElev2 surface correction.
 
 
