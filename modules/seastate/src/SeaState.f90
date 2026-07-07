@@ -325,6 +325,50 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL WaveField_BlockStore_Init( p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
       END IF
 
+      ! Report the wave-kinematics memory footprint (both modes): what the full domain would cost,
+      ! what the eager surface arrays cost, and — in on-demand mode — the block layout that replaces
+      ! the full-domain volume arrays (populated lazily, so nothing is resident at init).
+      BLOCK
+         real(ReKi)         :: VolGB, SurfB, BlkGB
+         integer(IntKi)     :: nComp, nPtXt, nPtYt
+         character(16)      :: sVol, sSurf, sBlk
+         real(ReKi), parameter :: B2GB = 1.0_ReKi / 1.0E9_ReKi
+         nComp = MERGE( 10_IntKi, 7_IntKi, p%WaveField%MCFD > 0.0_SiKi )   ! DynP(1)+Vel(3)+Acc(3)[+MCF(3)]
+         VolGB = REAL(p%WaveField%NStepWave+1,ReKi) * p%nGrid(1) * p%nGrid(2) * p%nGrid(3) * 4.0_ReKi * nComp * B2GB
+         SurfB = 0.0_ReKi
+         if (ALLOCATED(p%WaveField%WaveTime  )) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveTime  )/8,ReKi)*size(p%WaveField%WaveTime  )
+         if (ALLOCATED(p%WaveField%WaveElev0 )) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveElev0 )/8,ReKi)*size(p%WaveField%WaveElev0 )
+         if (ALLOCATED(p%WaveField%WaveElev1 )) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveElev1 )/8,ReKi)*size(p%WaveField%WaveElev1 )
+         if (ALLOCATED(p%WaveField%WaveElev2 )) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveElev2 )/8,ReKi)*size(p%WaveField%WaveElev2 )
+         if (ALLOCATED(p%WaveField%WaveElevC )) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveElevC )/8,ReKi)*size(p%WaveField%WaveElevC )
+         if (ALLOCATED(p%WaveField%WaveElevC0)) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveElevC0)/8,ReKi)*size(p%WaveField%WaveElevC0)
+         if (ALLOCATED(p%WaveField%WaveDirArr)) SurfB = SurfB + REAL(storage_size(p%WaveField%WaveDirArr)/8,ReKi)*size(p%WaveField%WaveDirArr)
+         if (ALLOCATED(p%WaveField%PWaveDynP0)) SurfB = SurfB + REAL(storage_size(p%WaveField%PWaveDynP0)/8,ReKi)*size(p%WaveField%PWaveDynP0)
+         if (ALLOCATED(p%WaveField%PWaveVel0 )) SurfB = SurfB + REAL(storage_size(p%WaveField%PWaveVel0 )/8,ReKi)*size(p%WaveField%PWaveVel0 )
+         if (ALLOCATED(p%WaveField%PWaveAcc0 )) SurfB = SurfB + REAL(storage_size(p%WaveField%PWaveAcc0 )/8,ReKi)*size(p%WaveField%PWaveAcc0 )
+         if (ALLOCATED(p%WaveField%PWaveAccMCF0)) SurfB = SurfB + REAL(storage_size(p%WaveField%PWaveAccMCF0)/8,ReKi)*size(p%WaveField%PWaveAccMCF0)
+         write(sVol ,'(F13.3)') VolGB
+         write(sSurf,'(F13.3)') SurfB*B2GB
+         call WrScr ( ' SeaState wave-kinematics memory:' )
+         call WrScr ( '   Grid '//TRIM(Num2LStr(p%nGrid(1)))//' x '//TRIM(Num2LStr(p%nGrid(2)))//' x '// &
+                      TRIM(Num2LStr(p%nGrid(3)))//' points, '//TRIM(Num2LStr(p%WaveField%NStepWave+1))// &
+                      ' time steps, '//TRIM(Num2LStr(nComp))//' volume components' )
+         call WrScr ( '   Full-domain volume data: '//TRIM(ADJUSTL(sVol))//' GB  ('// &
+                      MERGE('mode 0: allocated','mode 1: on demand',p%WaveField%WvKinBlockMod==0_IntKi)//')' )
+         call WrScr ( '   Surface (eager) data:    '//TRIM(ADJUSTL(sSurf))//' GB' )
+         IF ( ASSOCIATED(p%WaveField%BlockStore) ) THEN
+            ASSOCIATE ( Store => p%WaveField%BlockStore )
+               nPtXt = MIN( Store%BlkCellsX+3_IntKi, p%nGrid(1) )   ! typical interior block: BlkCells+3 stored planes
+               nPtYt = MIN( Store%BlkCellsY+3_IntKi, p%nGrid(2) )
+               BlkGB = REAL(p%WaveField%NStepWave+1,ReKi) * nPtXt * nPtYt * p%nGrid(3) * 4.0_ReKi * nComp * B2GB
+               write(sBlk,'(F13.3)') BlkGB
+               call WrScr ( '   [mode 1] Block layout '//TRIM(Num2LStr(Store%nBlkX))//' x '//TRIM(Num2LStr(Store%nBlkY))// &
+                            ' ('//TRIM(Num2LStr(Store%BlkCellsX))//'x'//TRIM(Num2LStr(Store%BlkCellsY))// &
+                            ' cells/block), per full block ~'//TRIM(ADJUSTL(sBlk))//' GB, populated at init: 0' )
+            END ASSOCIATE
+         END IF
+      END BLOCK
+
 
       IF ( p%OutSwtch == 1 ) THEN ! Only SeaSt-level output writing
          ! HACK  WE can tell FAST not to write any SeaState outputs by simply deallocating the WriteOutputHdr array!
