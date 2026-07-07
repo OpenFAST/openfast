@@ -107,6 +107,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(SiKi)  :: GridDepth = 0.0_R4Ki      !< Depth (>0) of wave grid below SWL [m]
     REAL(DbKi)  :: WaveTimeShift = 0      !< Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time) [(s)]
+    INTEGER(IntKi)  :: WvKinBlockMod = 0      !< Wave kinematics volume-data mode {0: full-domain precompute, 1: on-demand blocks} [-]
+    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target XY edge length of an on-demand block [(m)]
+    REAL(DbKi)  :: WvKinBlockFreeT = 0.0_R8Ki      !< Idle simulation time after which a block is freed; <=0 never [(s)]
     TYPE(Current_InitInputType)  :: Current_InitInput      !< InitInputs in the Current Module. For coupling with MD. [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
@@ -387,6 +390,9 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%NStepWave2 = SrcSeaSt_WaveFieldTypeData%NStepWave2
    DstSeaSt_WaveFieldTypeData%GridDepth = SrcSeaSt_WaveFieldTypeData%GridDepth
    DstSeaSt_WaveFieldTypeData%WaveTimeShift = SrcSeaSt_WaveFieldTypeData%WaveTimeShift
+   DstSeaSt_WaveFieldTypeData%WvKinBlockMod = SrcSeaSt_WaveFieldTypeData%WvKinBlockMod
+   DstSeaSt_WaveFieldTypeData%WvKinBlockSize = SrcSeaSt_WaveFieldTypeData%WvKinBlockSize
+   DstSeaSt_WaveFieldTypeData%WvKinBlockFreeT = SrcSeaSt_WaveFieldTypeData%WvKinBlockFreeT
    call Current_CopyInitInput(SrcSeaSt_WaveFieldTypeData%Current_InitInput, DstSeaSt_WaveFieldTypeData%Current_InitInput, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -510,6 +516,9 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPack(RF, InData%NStepWave2)
    call RegPack(RF, InData%GridDepth)
    call RegPack(RF, InData%WaveTimeShift)
+   call RegPack(RF, InData%WvKinBlockMod)
+   call RegPack(RF, InData%WvKinBlockSize)
+   call RegPack(RF, InData%WvKinBlockFreeT)
    call Current_PackInitInput(RF, InData%Current_InitInput) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -584,6 +593,9 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GridDepth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTimeShift); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockFreeT); if (RegCheckErr(RF, RoutineName)) return
    call Current_UnpackInitInput(RF, OutData%Current_InitInput) ! Current_InitInput 
 end subroutine
 

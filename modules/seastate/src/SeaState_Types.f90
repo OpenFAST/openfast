@@ -49,6 +49,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NX = 0_IntKi      !< Number of nodes in half of the X-direction domain [-]
     INTEGER(IntKi)  :: NY = 0_IntKi      !< Number of nodes in half of the Y-direction domain [-]
     INTEGER(IntKi)  :: NZ = 0_IntKi      !< Number of nodes in half of the Z-direction domain [-]
+    INTEGER(IntKi)  :: WvKinBlockMod = 0_IntKi      !< Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch) [-]
+    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target XY edge length of an on-demand block, snapped to whole grid cells [used only when WvKinBlockMod=1] [(m)]
+    REAL(DbKi)  :: WvKinBlockFreeT = 0.0_R8Ki      !< Free a block after this much simulation time without an access; <=0 disables freeing [used only when WvKinBlockMod=1] [(s)]
     TYPE(Waves_InitInputType)  :: Waves      !< Initialization data for Waves module [-]
     TYPE(Waves2_InitInputType)  :: Waves2      !< Initialization data for Waves2 module [-]
     TYPE(Current_InitInputType)  :: Current      !< Initialization data for Current module [-]
@@ -216,6 +219,9 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%NX = SrcInputFileData%NX
    DstInputFileData%NY = SrcInputFileData%NY
    DstInputFileData%NZ = SrcInputFileData%NZ
+   DstInputFileData%WvKinBlockMod = SrcInputFileData%WvKinBlockMod
+   DstInputFileData%WvKinBlockSize = SrcInputFileData%WvKinBlockSize
+   DstInputFileData%WvKinBlockFreeT = SrcInputFileData%WvKinBlockFreeT
    call Waves_CopyInitInput(SrcInputFileData%Waves, DstInputFileData%Waves, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -372,6 +378,9 @@ subroutine SeaSt_PackInputFile(RF, Indata)
    call RegPack(RF, InData%NX)
    call RegPack(RF, InData%NY)
    call RegPack(RF, InData%NZ)
+   call RegPack(RF, InData%WvKinBlockMod)
+   call RegPack(RF, InData%WvKinBlockSize)
+   call RegPack(RF, InData%WvKinBlockFreeT)
    call Waves_PackInitInput(RF, InData%Waves) 
    call Waves2_PackInitInput(RF, InData%Waves2) 
    call Current_PackInitInput(RF, InData%Current) 
@@ -425,6 +434,9 @@ subroutine SeaSt_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%NX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NZ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockFreeT); if (RegCheckErr(RF, RoutineName)) return
    call Waves_UnpackInitInput(RF, OutData%Waves) ! Waves 
    call Waves2_UnpackInitInput(RF, OutData%Waves2) ! Waves2 
    call Current_UnpackInitInput(RF, OutData%Current) ! Current 
