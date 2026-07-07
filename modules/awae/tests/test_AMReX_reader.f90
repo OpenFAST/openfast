@@ -27,7 +27,8 @@ contains
       character(ErrMsgLen)    :: ErrMsg
       integer(IntKi)          :: i, j, k
       integer(IntKi)          :: dims(3)
-      real(ReKi)              :: time, origin(3), gridSpacing(3), gridSize(3), bounds(2,3)
+      real(DbKi)              :: time
+      real(ReKi)              :: origin(3), gridSpacing(3), gridSize(3), bounds(2,3)
 
       ! Read header
       call amrex_read_header(trim(DirPath), time, dims, gridSpacing, origin, ErrStat, ErrMsg)
@@ -35,14 +36,14 @@ contains
       if (ErrStat /= ErrID_None) print*, "ErrMsg = ", ErrMsg
 
       ! Calculate grid size
-      gridSize = gridSpacing*real(dims - 1, c_double)
+      gridSize = gridSpacing*real(dims - 1, ReKi)
 
       ! Calculate the grid bounds
       bounds(1,:) = origin
       bounds(2,:) = origin + gridSize
 
       ! Check time
-      call check(error, time, 0.6_c_double); if (allocated(error)) return
+      call check(error, time, 0.6_DbKi); if (allocated(error)) return
 
       ! Check dimensions
       call check(error, dims(1), 3_c_int, more="dims(1)"); if (allocated(error)) return
@@ -50,24 +51,24 @@ contains
       call check(error, dims(3), 5_c_int, more="dims(3)"); if (allocated(error)) return
 
       ! Check spacing
-      call check(error, gridSpacing(1), 1.0_c_double, more="gridSpacing(1)"); if (allocated(error)) return
-      call check(error, gridSpacing(2), 1.0_c_double, more="gridSpacing(2)"); if (allocated(error)) return
-      call check(error, gridSpacing(3), 1.0_c_double, more="gridSpacing(3)"); if (allocated(error)) return
+      call check(error, gridSpacing(1), 1.0_ReKi, more="gridSpacing(1)"); if (allocated(error)) return
+      call check(error, gridSpacing(2), 1.0_ReKi, more="gridSpacing(2)"); if (allocated(error)) return
+      call check(error, gridSpacing(3), 1.0_ReKi, more="gridSpacing(3)"); if (allocated(error)) return
 
       ! Check grid size
-      call check(error, gridSize(1), 2.0_c_double, more="gridSize(1)"); if (allocated(error)) return
-      call check(error, gridSize(2), 3.0_c_double, more="gridSize(2)"); if (allocated(error)) return
-      call check(error, gridSize(3), 4.0_c_double, more="gridSize(3)"); if (allocated(error)) return
+      call check(error, gridSize(1), 2.0_ReKi, more="gridSize(1)"); if (allocated(error)) return
+      call check(error, gridSize(2), 3.0_ReKi, more="gridSize(2)"); if (allocated(error)) return
+      call check(error, gridSize(3), 4.0_ReKi, more="gridSize(3)"); if (allocated(error)) return
 
       ! Check lower bounds
-      call check(error, bounds(1,1), 6.5_c_double, more="origin(1)"); if (allocated(error)) return
-      call check(error, bounds(1,2), 6.5_c_double, more="origin(2)"); if (allocated(error)) return
-      call check(error, bounds(1,3), 6.5_c_double, more="origin(3)"); if (allocated(error)) return
+      call check(error, bounds(1,1), 6.5_ReKi, more="origin(1)"); if (allocated(error)) return
+      call check(error, bounds(1,2), 6.5_ReKi, more="origin(2)"); if (allocated(error)) return
+      call check(error, bounds(1,3), 6.5_ReKi, more="origin(3)"); if (allocated(error)) return
 
       ! Check upper bounds
-      call check(error, bounds(2,1), 8.5_c_double, more="ub(1)"); if (allocated(error)) return
-      call check(error, bounds(2,2), 9.5_c_double, more="ub(2)"); if (allocated(error)) return
-      call check(error, bounds(2,3), 10.5_c_double, more="ub(3)"); if (allocated(error)) return
+      call check(error, bounds(2,1), 8.5_ReKi, more="ub(1)"); if (allocated(error)) return
+      call check(error, bounds(2,2), 9.5_ReKi, more="ub(2)"); if (allocated(error)) return
+      call check(error, bounds(2,3), 10.5_ReKi, more="ub(3)"); if (allocated(error)) return
 
       ! Display grid properties
       print*, "dir         = ", trim(DirPath)
@@ -109,7 +110,8 @@ contains
       character(ErrMsgLen)    :: ErrMsg
       integer(IntKi)          :: i, j, k
       integer(IntKi)          :: dims(3)
-      real(ReKi)              :: time, origin(3), gridSpacing(3), gridSize(3), bounds(2,3)
+      real(DbKi)              :: time
+      real(ReKi)              :: origin(3), gridSpacing(3), gridSize(3), bounds(2,3)
 
       ! Read header
       call amrex_read_header(trim(DirPath), time, dims, gridSpacing, origin, ErrStat, ErrMsg)
@@ -117,14 +119,14 @@ contains
       if (ErrStat /= ErrID_None) print*, "ErrMsg = ", ErrMsg
 
       ! Calculate grid size
-      gridSize = gridSpacing*real(dims - 1, c_double)
+      gridSize = gridSpacing*real(dims - 1, ReKi)
 
       ! Calculate the grid bounds
       bounds(1,:) = origin
       bounds(2,:) = origin + gridSize
 
       ! Check time
-      call check(error, time, 1.6_c_double); if (allocated(error)) return
+      call check(error, time, 1.6_DbKi); if (allocated(error)) return
 
       ! Check dimensions
       call check(error, dims(1), 2_c_int, more="dims(1)"); if (allocated(error)) return
@@ -132,24 +134,24 @@ contains
       call check(error, dims(3), 5_c_int, more="dims(3)"); if (allocated(error)) return
 
       ! Check spacing
-      call check(error, gridSpacing(1), 1.0_c_double, more="gridSpacing(1)"); if (allocated(error)) return
-      call check(error, gridSpacing(2), 1.0_c_double, more="gridSpacing(2)"); if (allocated(error)) return
-      call check(error, gridSpacing(3), 1.0_c_double, more="gridSpacing(3)"); if (allocated(error)) return
+      call check(error, gridSpacing(1), 1.0_ReKi, more="gridSpacing(1)"); if (allocated(error)) return
+      call check(error, gridSpacing(2), 1.0_ReKi, more="gridSpacing(2)"); if (allocated(error)) return
+      call check(error, gridSpacing(3), 1.0_ReKi, more="gridSpacing(3)"); if (allocated(error)) return
 
       ! Check grid size
-      call check(error, gridSize(1), 1.0_c_double, more="gridSize(1)"); if (allocated(error)) return
-      call check(error, gridSize(2), 2.0_c_double, more="gridSize(2)"); if (allocated(error)) return
-      call check(error, gridSize(3), 4.0_c_double, more="gridSize(3)"); if (allocated(error)) return
+      call check(error, gridSize(1), 1.0_ReKi, more="gridSize(1)"); if (allocated(error)) return
+      call check(error, gridSize(2), 2.0_ReKi, more="gridSize(2)"); if (allocated(error)) return
+      call check(error, gridSize(3), 4.0_ReKi, more="gridSize(3)"); if (allocated(error)) return
 
       ! Check lower bounds
-      call check(error, bounds(1,1), 6.5_c_double, more="origin(1)"); if (allocated(error)) return
-      call check(error, bounds(1,2), 6.5_c_double, more="origin(2)"); if (allocated(error)) return
-      call check(error, bounds(1,3), 6.5_c_double, more="origin(3)"); if (allocated(error)) return
+      call check(error, bounds(1,1), 6.5_ReKi, more="origin(1)"); if (allocated(error)) return
+      call check(error, bounds(1,2), 6.5_ReKi, more="origin(2)"); if (allocated(error)) return
+      call check(error, bounds(1,3), 6.5_ReKi, more="origin(3)"); if (allocated(error)) return
 
       ! Check upper bounds
-      call check(error, bounds(2,1), 7.5_c_double, more="ub(1)"); if (allocated(error)) return
-      call check(error, bounds(2,2), 8.5_c_double, more="ub(2)"); if (allocated(error)) return
-      call check(error, bounds(2,3), 10.5_c_double, more="ub(3)"); if (allocated(error)) return
+      call check(error, bounds(2,1), 7.5_ReKi, more="ub(1)"); if (allocated(error)) return
+      call check(error, bounds(2,2), 8.5_ReKi, more="ub(2)"); if (allocated(error)) return
+      call check(error, bounds(2,3), 10.5_ReKi, more="ub(3)"); if (allocated(error)) return
 
       ! Display grid properties
       print*, "dir         = ", trim(DirPath)
