@@ -188,6 +188,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
     TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_WaveBlockStoreType) , POINTER :: WaveBlockStore => NULL()      !< On-demand wave-kinematics block store (allocated only when WvKinBlockMod=1; WaveField%BlockStore points here) [-]
     TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
     TYPE(SeaSt_InputType)  :: u_perturb      !< Input type for linearization perturbation [-]
     TYPE(SeaSt_OutputType)  :: y_lin      !< Output type for linearization perturbation [-]
@@ -1310,6 +1311,7 @@ subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SeaSt_CopyMisc'
@@ -1321,6 +1323,18 @@ subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call GridInterp_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (associated(SrcMiscData%WaveBlockStore)) then
+      if (.not. associated(DstMiscData%WaveBlockStore)) then
+         allocate(DstMiscData%WaveBlockStore, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WaveBlockStore.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcMiscData%WaveBlockStore, DstMiscData%WaveBlockStore, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
    call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1343,6 +1357,12 @@ subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call GridInterp_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (associated(MiscData%WaveBlockStore)) then
+      call SeaSt_WaveField_DestroySeaSt_WaveBlockStoreType(MiscData%WaveBlockStore, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(MiscData%WaveBlockStore)
+      MiscData%WaveBlockStore => null()
+   end if
    call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SeaSt_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
@@ -1355,11 +1375,19 @@ subroutine SeaSt_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SeaSt_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackMisc'
+   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Decimate)
    call RegPack(RF, InData%LastOutTime)
    call RegPack(RF, InData%LastIndWave)
    call GridInterp_PackMisc(RF, InData%WaveField_m) 
+   call RegPack(RF, associated(InData%WaveBlockStore))
+   if (associated(InData%WaveBlockStore)) then
+      call RegPackPointer(RF, c_loc(InData%WaveBlockStore), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, InData%WaveBlockStore) 
+      end if
+   end if
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call SeaSt_PackInput(RF, InData%u_perturb) 
    call SeaSt_PackOutput(RF, InData%y_lin) 
@@ -1370,11 +1398,34 @@ subroutine SeaSt_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SeaSt_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackMisc'
+   integer(B4Ki)   :: LB(0), UB(0)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
    call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   if (associated(OutData%WaveBlockStore)) deallocate(OutData%WaveBlockStore)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WaveBlockStore)
+      else
+         allocate(OutData%WaveBlockStore,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveBlockStore.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveBlockStore)
+         call SeaSt_WaveField_UnpackSeaSt_WaveBlockStoreType(RF, OutData%WaveBlockStore) ! WaveBlockStore 
+      end if
+   else
+      OutData%WaveBlockStore => null()
+   end if
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call SeaSt_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
    call SeaSt_UnpackOutput(RF, OutData%y_lin) ! y_lin 

@@ -172,6 +172,7 @@ typedef   ^                  MiscVarType            INTEGER                     
 typedef   ^                  ^                      DbKi                           LastOutTime        -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                        LastIndWave        -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
 typedef   ^                  ^                      GridInterp_MiscVarType         WaveField_m        -       -      -  "misc var information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      SeaSt_WaveBlockStoreType       &WaveBlockStore    -       -      -  "On-demand wave-kinematics block store (allocated only when WvKinBlockMod=1; WaveField%BlockStore points here)"   -
 
 # .... Linearization .......................................................................................................
 typedef   ^                  ^                      ModJacType                     Jac                -       -      -  "Values corresponding to module variables"  -

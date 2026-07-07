@@ -200,6 +200,7 @@
 			<File RelativePath="..\..\modules\seastate\src\SeaState_Output.f90"/>
 			<File RelativePath="..\..\modules\seastate\src\SeaState_Types.f90"/>
 			<File RelativePath="..\..\modules\seastate\src\UserWaves.f90"/>
+			<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveKinKernel.f90"/>
 			<File RelativePath="..\..\modules\seastate\src\Waves.f90"/>
 			<File RelativePath="..\..\modules\seastate\src\Waves2.f90"/>
 			<File RelativePath="..\..\modules\seastate\src\Waves2_Types.f90"/>

@@ -33,6 +33,7 @@ MODULE SeaState
    USE Current
    USE Waves2
    USE GridInterp
+   USE SeaSt_WaveKinKernel, ONLY: WaveKinKernel_CaptureGridSeeds
    
    IMPLICIT NONE
    PRIVATE
@@ -182,9 +183,29 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
       
+      ! Set up the on-demand wave-kinematics block store (WvKinBlockMod=1): owned by the misc vars and exposed to the
+      ! wave-field accessors through a non-owning pointer. Must be wired before Waves_Init so that VariousWaves_Init
+      ! can capture the per-frequency generation seeds as it computes them.
+      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
+         allocate( m%WaveBlockStore, STAT=ErrStat2 )
+         if ( ErrStat2 /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error allocating m%WaveBlockStore.', ErrStat, ErrMsg, RoutineName )
+            return
+         end if
+         p%WaveField%BlockStore => m%WaveBlockStore
+         m%WaveBlockStore%SecondOrderDiff = InputFileData%Waves2%WvDiffQTFF
+         m%WaveBlockStore%SecondOrderSum  = InputFileData%Waves2%WvSumQTFF
+      end if
+
       ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
-      
+
+      ! Capture the remaining block-store generation seeds (grid z levels, steady current profile)
+      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
+         call WaveKinKernel_CaptureGridSeeds( InputFileData%Waves, m%WaveBlockStore, ErrStat2, ErrMsg2 ); if(Failed()) return;
+      end if
+
+
       ! Store the WaveTimeShift
       p%WaveField%WaveTimeShift = InitInp%WaveTimeShift
       if (p%WaveField%WaveTimeShift < 0.0_DbKi) then

@@ -24,6 +24,7 @@ endif()
 
 add_library(seastlib STATIC
   src/Current.f90
+  src/SeaSt_WaveKinKernel.f90
   src/Waves.f90
   src/Waves2.f90
   src/UserWaves.f90

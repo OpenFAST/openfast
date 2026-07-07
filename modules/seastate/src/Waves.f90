@@ -1089,6 +1089,23 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    !!   incident waves at each desired point on the still water level plane
    !!   where it can be output:
 
+   ! On-demand block partitioning (WvKinBlockMod=1): capture the per-frequency generation seeds from the exact values
+   ! computed in the loop below (recomputing them in another compilation unit is not bit-identical).
+   ! WaveField%BlockStore is never associated when WvKinBlockMod=0.
+   IF ( ASSOCIATED(WaveField%BlockStore) ) THEN
+      ALLOCATE ( WaveField%BlockStore%WaveNmbrArr(0:WaveField%NStepWave2), &
+                 WaveField%BlockStore%OmegaIArr  (0:WaveField%NStepWave2), &
+                 WaveField%BlockStore%MCFCArr    (0:WaveField%NStepWave2), STAT=ErrStatTmp )
+      IF ( ErrStatTmp /= 0 ) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating the wave-block per-frequency seed arrays.',ErrStat,ErrMsg,RoutineName)
+         CALL CleanUp()
+         RETURN
+      END IF
+      WaveField%BlockStore%WaveNmbrArr = 0.0_SiKi
+      WaveField%BlockStore%OmegaIArr   = -1.0_SiKi   ! <0 marks components at/beyond the critical frequency (see the EXIT below)
+      WaveField%BlockStore%MCFCArr     = 0.0_SiKi
+   END IF
+
    DO I = 0,WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
       ! Set tmpComplex to the Ith element of the WAveElevC0 array
       tmpComplex  = CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))
@@ -1100,6 +1117,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
           CALL CleanUp()
           RETURN
         END IF
+      IF ( ASSOCIATED(WaveField%BlockStore) ) WaveField%BlockStore%OmegaIArr(I) = OmegaI   ! seed capture
       IF (OmegaI < 0.0_SiKi) EXIT
 
       ! Compute the frequency of this component and its imaginary value:
@@ -1113,6 +1131,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
          HPrime = SQRT(JPrime*JPrime + YPrime*YPrime)
          MCFC = 4.0_ReKi/( PI * ka * ka * HPrime )
+      END IF
+
+      IF ( ASSOCIATED(WaveField%BlockStore) ) THEN   ! seed capture
+         WaveField%BlockStore%WaveNmbrArr(I) = WaveNmbr
+         WaveField%BlockStore%MCFCArr(I)     = MCFC
       END IF
 
       ! Compute the discrete Fourier transform of the incident wave kinematics
