@@ -89,6 +89,10 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVxi      !< Steady current xi-velocity at each grid z level (NZ) [(m/s)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !< Steady current yi-velocity at each grid z level (NZ) [(m/s)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: zGrid      !< Grid z coordinates relative to SWL, <=0 (NZ) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: xGrid      !< Grid x coordinates (NX) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: yGrid      !< Grid y coordinates (NY) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CosWaveDirArr      !< COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SinWaveDirArr      !< SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
     LOGICAL  :: HasCurr = .false.      !< True if a current profile was available to add to the wave velocities [-]
     LOGICAL  :: SecondOrderDiff = .false.      !< Add difference-QTF second-order kinematics during block population [-]
     LOGICAL  :: SecondOrderSum = .false.      !< Add sum-QTF second-order kinematics during block population [-]
@@ -434,6 +438,54 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcSeaSt_WaveBlockStoreT
       end if
       DstSeaSt_WaveBlockStoreTypeData%zGrid = SrcSeaSt_WaveBlockStoreTypeData%zGrid
    end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%xGrid)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%xGrid)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%xGrid)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%xGrid)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%xGrid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%xGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%xGrid = SrcSeaSt_WaveBlockStoreTypeData%xGrid
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%yGrid)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%yGrid)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%yGrid)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%yGrid)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%yGrid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%yGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%yGrid = SrcSeaSt_WaveBlockStoreTypeData%yGrid
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr = SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr = SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr
+   end if
    DstSeaSt_WaveBlockStoreTypeData%HasCurr = SrcSeaSt_WaveBlockStoreTypeData%HasCurr
    DstSeaSt_WaveBlockStoreTypeData%SecondOrderDiff = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderDiff
    DstSeaSt_WaveBlockStoreTypeData%SecondOrderSum = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderSum
@@ -481,6 +533,18 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveBlockStoreType(SeaSt_WaveBlockStoreT
    if (allocated(SeaSt_WaveBlockStoreTypeData%zGrid)) then
       deallocate(SeaSt_WaveBlockStoreTypeData%zGrid)
    end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%xGrid)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%xGrid)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%yGrid)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%yGrid)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+   end if
 end subroutine
 
 subroutine SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, Indata)
@@ -509,6 +573,10 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, Indata)
    call RegPackAlloc(RF, InData%CurrVxi)
    call RegPackAlloc(RF, InData%CurrVyi)
    call RegPackAlloc(RF, InData%zGrid)
+   call RegPackAlloc(RF, InData%xGrid)
+   call RegPackAlloc(RF, InData%yGrid)
+   call RegPackAlloc(RF, InData%CosWaveDirArr)
+   call RegPackAlloc(RF, InData%SinWaveDirArr)
    call RegPack(RF, InData%HasCurr)
    call RegPack(RF, InData%SecondOrderDiff)
    call RegPack(RF, InData%SecondOrderSum)
@@ -551,6 +619,10 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockStoreType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%CurrVxi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%zGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%xGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%yGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CosWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SinWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasCurr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SecondOrderDiff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SecondOrderSum); if (RegCheckErr(RF, RoutineName)) return

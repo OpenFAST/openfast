@@ -62,6 +62,10 @@ typedef     ^                 ^                 SiKi                 MCFCArr    
 typedef     ^                 ^                 SiKi                 CurrVxi         {:}              -        -        "Steady current xi-velocity at each grid z level (NZ)" (m/s)
 typedef     ^                 ^                 SiKi                 CurrVyi         {:}              -        -        "Steady current yi-velocity at each grid z level (NZ)" (m/s)
 typedef     ^                 ^                 SiKi                 zGrid           {:}              -        -        "Grid z coordinates relative to SWL, <=0 (NZ)" (m)
+typedef     ^                 ^                 SiKi                 xGrid           {:}              -        -        "Grid x coordinates (NX)" (m)
+typedef     ^                 ^                 SiKi                 yGrid           {:}              -        -        "Grid y coordinates (NY)" (m)
+typedef     ^                 ^                 SiKi                 CosWaveDirArr   {:}              -        -        "COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
+typedef     ^                 ^                 SiKi                 SinWaveDirArr   {:}              -        -        "SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
 typedef     ^                 ^                 LOGICAL              HasCurr         -             .false.     -        "True if a current profile was available to add to the wave velocities" -
 typedef     ^                 ^                 LOGICAL              SecondOrderDiff -             .false.     -        "Add difference-QTF second-order kinematics during block population" -
 typedef     ^                 ^                 LOGICAL              SecondOrderSum  -             .false.     -        "Add sum-QTF second-order kinematics during block population" -

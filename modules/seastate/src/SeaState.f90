@@ -33,7 +33,6 @@ MODULE SeaState
    USE Current
    USE Waves2
    USE GridInterp
-   USE SeaSt_WaveKinKernel, ONLY: WaveKinKernel_CaptureGridSeeds
    
    IMPLICIT NONE
    PRIVATE
@@ -197,13 +196,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          m%WaveBlockStore%SecondOrderSum  = InputFileData%Waves2%WvSumQTFF
       end if
 
-      ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
+      ! Initialize Waves module, which also captures the block-store generation seeds when WvKinBlockMod=1
+      ! (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
-
-      ! Capture the remaining block-store generation seeds (grid z levels, steady current profile)
-      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
-         call WaveKinKernel_CaptureGridSeeds( InputFileData%Waves, m%WaveBlockStore, ErrStat2, ErrMsg2 ); if(Failed()) return;
-      end if
 
 
       ! Store the WaveTimeShift
