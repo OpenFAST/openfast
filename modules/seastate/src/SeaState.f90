@@ -187,6 +187,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! wave-field accessors through a non-owning pointer. Must be wired before Waves_Init so that VariousWaves_Init
       ! can capture the per-frequency generation seeds as it computes them.
       if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
+         if ( InputFileData%WaveMod == WaveMod_None ) then
+            call WrScr ( ' WvKinBlockMod=1 has no benefit in still water (WaveMod=0); using full-domain arrays.' )
+            p%WaveField%WvKinBlockMod = 0_IntKi
+         else if ( InitInp%WrWvKinMod == 2 ) then
+            call WrScr ( ' WvKinBlockMod=1 cannot be used with full-field wave-kinematics file output (WrWvKinMod=2); using full-domain arrays.' )
+            p%WaveField%WvKinBlockMod = 0_IntKi
+         end if
+      end if
+      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
          allocate( m%WaveBlockStore, STAT=ErrStat2 )
          if ( ErrStat2 /= 0 ) then
             call SetErrStat( ErrID_Fatal, 'Error allocating m%WaveBlockStore.', ErrStat, ErrMsg, RoutineName )
@@ -262,9 +271,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                W2Seeds => W2LocalSeeds
             END IF
             CALL Waves2_CaptureKernelSeeds( InputFileData%Waves2, W2Seeds, ErrStat2, ErrMsg2 ); if(Failed()) return;
-            CALL WaveKinKernel_AddSecondOrderColumns( p%WaveField, W2Seeds, 1, p%nGrid(1), 1, p%nGrid(2), &
-                                                      p%WaveField%WaveDynP, p%WaveField%WaveVel, p%WaveField%WaveAcc, &
-                                                      ErrStat2, ErrMsg2 ); if(Failed()) return;
+            IF ( .NOT. ASSOCIATED(p%WaveField%BlockStore) ) THEN
+               CALL WaveKinKernel_AddSecondOrderColumns( p%WaveField, W2Seeds, 1, p%nGrid(1), 1, p%nGrid(2), &
+                                                         p%WaveField%WaveDynP, p%WaveField%WaveVel, p%WaveField%WaveAcc, &
+                                                         ErrStat2, ErrMsg2 ); if(Failed()) return;
+            END IF
 
          ELSE
             ! these need to be set to zero since we don't have a UseWaves2 flag:
@@ -308,6 +319,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                                 (/.true.,.false.,.false.,.false./),                                   & ! periodicity
                                 p%WaveField%VolGridParams, ErrStat2, ErrMsg2 )
       if(Failed()) return;
+
+      ! Set up the XY block layout for on-demand wave-kinematics population (WvKinBlockMod=1)
+      IF ( ASSOCIATED(p%WaveField%BlockStore) ) THEN
+         CALL WaveField_BlockStore_Init( p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
+      END IF
 
 
       IF ( p%OutSwtch == 1 ) THEN ! Only SeaSt-level output writing

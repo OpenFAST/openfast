@@ -4,6 +4,8 @@ USE GridInterp
 USE SeaSt_WaveField_Types
 USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
 USE GridInterp_Types
+USE Waves,  ONLY: WaveKinKernel_ComputeColumns          ! shared first-order per-column generation kernel (on-demand block population)
+USE Waves2, ONLY: WaveKinKernel_AddSecondOrderColumns   ! shared second-order per-column kernel (on-demand block population)
 
 IMPLICIT NONE
 
@@ -20,6 +22,7 @@ PUBLIC WaveField_GetWaveKin
 PUBLIC WaveField_GetWaveVelAcc_AD
 PUBLIC WaveField_GetMeanDynSurfCurr
 PUBLIC WaveField_GetDynP
+PUBLIC WaveField_BlockStore_Init
 
 CONTAINS
 
@@ -184,12 +187,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
          CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-         FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-         FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
-         FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
-         IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-            FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
-         END IF
+         CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP, FV=FV, FA=FA, FAMCF=FAMCF ); if (Failed()) return;
       ELSE ! Node is above the SWL
          nodeInWater = 0_IntKi
          FV(:)       = 0.0_SiKi
@@ -210,23 +208,13 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
 
                ! Use location to obtain interpolated values of kinematics
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-               FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
-               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
-               IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-                  FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
-               END IF
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP, FV=FV, FA=FA, FAMCF=FAMCF ); if (Failed()) return;
 
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-               FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
-               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
-               IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-                  FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
-               END IF
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP, FV=FV, FA=FA, FAMCF=FAMCF ); if (Failed()) return;
 
                ! Extrapolated wave stretching
                IF (WaveField%WaveStMod == 2) THEN
@@ -234,7 +222,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
                   FV(:) = FV(:) + GridInterp3DVec( WaveField%PWaveVel0,  WaveField_m ) * pos(3)
                   FA(:) = FA(:) + GridInterp3DVec( WaveField%PWaveAcc0,  WaveField_m ) * pos(3)
                   FDynP = FDynP + GridInterp3D   ( WaveField%PWaveDynP0, WaveField_m ) * pos(3)
-                  IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
+                  IF ( WaveField_HasMCF(WaveField) ) THEN
                      FAMCF(:) = FAMCF(:) + GridInterp3DVec( WaveField%PWaveAccMCF0, WaveField_m ) * pos(3)
                   END IF
                END IF
@@ -250,12 +238,7 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-            FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-            FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
-            FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
-            IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
-               FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
-            END IF
+            CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP, FV=FV, FA=FA, FAMCF=FAMCF ); if (Failed()) return;
          END IF
 
       ELSE ! Node is out of water - zero-out all wave dynamics
@@ -338,7 +321,7 @@ SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWate
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
          CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-         FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+         CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP ); if (Failed()) return;
       ELSE ! Node is above the SWL
          nodeInWater = 0_IntKi
          FDynP       = 0.0_SiKi
@@ -352,12 +335,12 @@ SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWate
             IF ( pos(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
                ! Use location to obtain interpolated values of kinematics
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP ); if (Failed()) return;
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP ); if (Failed()) return;
 
                ! Extrapoled wave stretching
                IF (WaveField%WaveStMod == 2) THEN
@@ -376,7 +359,7 @@ SUBROUTINE WaveField_GetDynP( WaveField, WaveField_m, Time, pos, forceNodeInWate
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-            FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+            CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FDynP=FDynP ); if (Failed()) return;
          END IF
 
       ELSE ! Node is out of water - zero-out all wave dynamics
@@ -437,7 +420,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
          CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-         FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+         CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV ); if (Failed()) return;
       ELSE ! Node is above the SWL
          nodeInWater = 0_IntKi
          FV(:)       = 0.0_SiKi
@@ -455,13 +438,13 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
 
                ! Use location to obtain interpolated values of kinematics
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV ); if (Failed()) return;
 
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
                CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV ); if (Failed()) return;
 
                ! Extrapolated wave stretching
                IF (WaveField%WaveStMod == 2) THEN
@@ -480,7 +463,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-            FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+            CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV ); if (Failed()) return;
 
          END IF
 
@@ -559,8 +542,7 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
          nodeInWater = 1_IntKi
          ! Use location to obtain interpolated values of kinematics
          CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-         FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-         FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
+         CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV, FA=FA ); if (Failed()) return;
       ELSE ! Node is above the SWL
          nodeInWater = 0_IntKi
          FV(:)       = 0.0_SiKi
@@ -579,15 +561,13 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
 
                ! Use location to obtain interpolated values of kinematics
                CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, pos, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-               FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV, FA=FA ); if (Failed()) return;
 
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
                CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-               FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-               FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
+               CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV, FA=FA ); if (Failed()) return;
 
                ! Extrapolated wave stretching
                IF (WaveField%WaveStMod == 2) THEN
@@ -607,8 +587,7 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
 
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posPrime, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
-            FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
-            FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
+            CALL WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat2, ErrMsg2, FV=FV, FA=FA ); if (Failed()) return;
          END IF
 
       ELSE ! Node is out of water - zero-out all wave dynamics
@@ -681,7 +660,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, WaveField_m, Time, pos, forceNodeInW
       FDynP(i) = REAL(FDynP_node,ReKi)
       FV(:, i) = REAL(FV_node,   ReKi)
       FA(:, i) = REAL(FA_node,   ReKi)
-      IF (ALLOCATED(WaveField%WaveAccMCF)) THEN
+      IF ( WaveField_HasMCF(WaveField) ) THEN
          FAMCF(:,i) = REAL(FAMCF_node,ReKi)
       END IF
    END DO
@@ -856,6 +835,262 @@ contains
       FailedMsg = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE WaveField_GetMeanDynSurfCurr
+
+!----------------------------------------------------------------------------------------------------
+! On-demand wave-kinematics block partitioning (WvKinBlockMod=1)
+!----------------------------------------------------------------------------------------------------
+
+!> True when a MacCamy-Fuchs scaled acceleration field exists — either the eager full-domain array
+!! (WvKinBlockMod=0) or per-block MCF data (WvKinBlockMod=1 with MCFD>0, where the full-domain array
+!! is never allocated).
+LOGICAL FUNCTION WaveField_HasMCF( WaveField )
+   type(SeaSt_WaveFieldType), intent(in   ) :: WaveField
+   WaveField_HasMCF = ALLOCATED(WaveField%WaveAccMCF) .OR. &
+                      ( WaveField%WvKinBlockMod == 1_IntKi .AND. WaveField%MCFD > 0.0_SiKi )
+END FUNCTION WaveField_HasMCF
+
+
+!> Set up the XY block layout of the wave-kinematics volume grid (WvKinBlockMod=1). Blocks partition the
+!! grid CELLS; each block additionally stores the grid-point planes its interpolation stencils reach into
+!! (the volume interpolation uses a 4-point stencil per dimension, base cell c touching points c-1..c+2),
+!! so any query whose base cell lies in a block is served entirely from that block. No block data is
+!! allocated here — population happens on first access.
+SUBROUTINE WaveField_BlockStore_Init( WaveField, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),    intent(in   ) :: WaveField   ! block store reached through the pointer component (mutable)
+   integer(IntKi),               intent(  out) :: ErrStat
+   character(*),                 intent(  out) :: ErrMsg
+
+   integer(IntKi)                              :: NX, NY, ib, jb, k, c0, c1, iP0, iP1
+   integer(IntKi)                              :: ErrStat2
+   character(*), parameter                     :: RoutineName = 'WaveField_BlockStore_Init'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   IF ( .NOT. ASSOCIATED(WaveField%BlockStore) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'The wave-kinematics block store has not been wired up.', ErrStat, ErrMsg, RoutineName )
+      RETURN
+   END IF
+
+   ASSOCIATE ( Store => WaveField%BlockStore )
+
+      NX = WaveField%VolGridParams%n(2)
+      NY = WaveField%VolGridParams%n(3)
+
+      ! Target edge length snapped to whole grid cells, at least 8 cells (overlap economy), at most the whole grid
+      IF ( NX > 1_IntKi ) THEN
+         Store%BlkCellsX = MIN( MAX( 8_IntKi, NINT( WaveField%WvKinBlockSize / WaveField%VolGridParams%delta(2) ) ), NX-1_IntKi )
+         Store%nBlkX     = ( (NX-1_IntKi) + Store%BlkCellsX - 1_IntKi ) / Store%BlkCellsX
+      ELSE
+         Store%BlkCellsX = 1_IntKi
+         Store%nBlkX     = 1_IntKi
+      END IF
+      IF ( NY > 1_IntKi ) THEN
+         Store%BlkCellsY = MIN( MAX( 8_IntKi, NINT( WaveField%WvKinBlockSize / WaveField%VolGridParams%delta(3) ) ), NY-1_IntKi )
+         Store%nBlkY     = ( (NY-1_IntKi) + Store%BlkCellsY - 1_IntKi ) / Store%BlkCellsY
+      ELSE
+         Store%BlkCellsY = 1_IntKi
+         Store%nBlkY     = 1_IntKi
+      END IF
+
+      ALLOCATE ( Store%Blocks( Store%nBlkX * Store%nBlkY ), STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error allocating the wave-kinematics block array.', ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+
+      DO jb = 1, Store%nBlkY
+         DO ib = 1, Store%nBlkX
+            k = (jb-1)*Store%nBlkX + ib
+            ! x extent: cells [c0..c1] (0-based), stored points [c0-1 .. c1+2] clamped to the grid
+            IF ( NX > 1_IntKi ) THEN
+               c0  = (ib-1_IntKi)*Store%BlkCellsX
+               c1  = MIN( ib*Store%BlkCellsX - 1_IntKi, NX - 2_IntKi )
+               iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
+               iP1 = MIN( NX - 1_IntKi, c1 + 2_IntKi )
+            ELSE
+               iP0 = 0_IntKi
+               iP1 = 0_IntKi
+            END IF
+            Store%Blocks(k)%iPtX0 = iP0 + 1_IntKi   ! stored 1-based
+            Store%Blocks(k)%nPtX  = iP1 - iP0 + 1_IntKi
+            ! y extent
+            IF ( NY > 1_IntKi ) THEN
+               c0  = (jb-1_IntKi)*Store%BlkCellsY
+               c1  = MIN( jb*Store%BlkCellsY - 1_IntKi, NY - 2_IntKi )
+               iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
+               iP1 = MIN( NY - 1_IntKi, c1 + 2_IntKi )
+            ELSE
+               iP0 = 0_IntKi
+               iP1 = 0_IntKi
+            END IF
+            Store%Blocks(k)%iPtY0 = iP0 + 1_IntKi
+            Store%Blocks(k)%nPtY  = iP1 - iP0 + 1_IntKi
+         END DO
+      END DO
+
+      CALL WrScr ( ' SeaState wave-kinematics on-demand blocks: '//TRIM(Num2LStr(Store%nBlkX))//' x '// &
+                   TRIM(Num2LStr(Store%nBlkY))//' blocks of '//TRIM(Num2LStr(Store%BlkCellsX))//' x '// &
+                   TRIM(Num2LStr(Store%BlkCellsY))//' grid cells (+stencil overlap); populated on first access.' )
+
+   END ASSOCIATE
+
+END SUBROUTINE WaveField_BlockStore_Init
+
+
+!> Locate the wave block containing the interpolation stencil last set up in WaveField_m, populate it on
+!! first access (first- and, if enabled, second-order kinematics via the shared column kernels — the same
+!! code path as the full-domain fill, so block contents are bit-identical to the mode-0 arrays), and stamp
+!! its last-access time. The check-allocate-fill-publish sequence is serialized for thread safety
+!! (FAST.Farm shares turbine 1's wave field with farm-level MoorDyn).
+SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, ErrMsg )
+   type(SeaSt_WaveFieldType),    intent(in   ) :: WaveField
+   type(GridInterp_MiscVarType), intent(in   ) :: WaveField_m
+   real(DbKi),                   intent(in   ) :: Time
+   integer(IntKi),               intent(  out) :: iBlk
+   integer(IntKi),               intent(  out) :: ErrStat
+   character(*),                 intent(  out) :: ErrMsg
+
+   integer(IntKi)                              :: ib, jb, nZ, nResident
+   real(ReKi)                                  :: MBytes
+   integer(IntKi)                              :: ErrStat2
+   character(ErrMsgLen)                        :: ErrMsg2
+   character(*), parameter                     :: RoutineName = 'WaveField_EnsureBlock'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ASSOCIATE ( Store => WaveField%BlockStore )
+
+      ! Locate the block from the stencil's base cell: Indx(2,dim) is the 0-based lower cell index of the
+      ! query, already clamped in range by GridInterpSetup4D. All four stencil points per dimension are
+      ! then guaranteed to lie within the block's stored point range (see WaveField_BlockStore_Init).
+      ib   = MIN( WaveField_m%Indx(2,2) / Store%BlkCellsX, Store%nBlkX - 1_IntKi ) + 1_IntKi
+      jb   = MIN( WaveField_m%Indx(2,3) / Store%BlkCellsY, Store%nBlkY - 1_IntKi ) + 1_IntKi
+      iBlk = (jb-1_IntKi)*Store%nBlkX + ib
+
+      IF ( .NOT. Store%Blocks(iBlk)%Populated ) THEN
+         !$OMP CRITICAL(SeaSt_BlockPop)
+         IF ( .NOT. Store%Blocks(iBlk)%Populated ) THEN
+
+            ASSOCIATE ( Blk => Store%Blocks(iBlk) )
+
+               nZ = SIZE(Store%zGrid)
+               ALLOCATE ( Blk%WaveDynP(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ   ), &
+                          Blk%WaveVel (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), &
+                          Blk%WaveAcc (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), STAT=ErrStat2 )
+               IF ( ErrStat2 == 0 .AND. WaveField%MCFD > 0.0_SiKi ) &
+                  ALLOCATE ( Blk%WaveAccMCF(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), STAT=ErrStat2 )
+               IF ( ErrStat2 /= 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating the arrays of wave block ('// &
+                                   TRIM(Num2LStr(ib))//','//TRIM(Num2LStr(jb))//').', ErrStat, ErrMsg, RoutineName )
+               END IF
+
+               IF ( ErrStat < AbortErrLev ) THEN
+                  IF ( WaveField%MCFD > 0.0_SiKi ) THEN
+                     CALL WaveKinKernel_ComputeColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                         Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2, &
+                                                         WaveAccMCF=Blk%WaveAccMCF )
+                  ELSE
+                     CALL WaveKinKernel_ComputeColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                         Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2 )
+                  END IF
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               END IF
+
+               IF ( ErrStat < AbortErrLev .AND. ( Store%SecondOrderDiff .OR. Store%SecondOrderSum ) ) THEN
+                  CALL WaveKinKernel_AddSecondOrderColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                             Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               END IF
+
+               IF ( ErrStat < AbortErrLev ) THEN
+                  Store%nPopulated    = Store%nPopulated + 1_IntKi
+                  nResident           = Store%nPopulated - Store%nEvicted
+                  Store%nPeakResident = MAX( Store%nPeakResident, nResident )
+                  MBytes = REAL(WaveField%NStepWave+1,ReKi) * Blk%nPtX * Blk%nPtY * nZ * 4.0_ReKi * &
+                           MERGE( 10.0_ReKi, 7.0_ReKi, WaveField%MCFD > 0.0_SiKi ) / 1.0E6_ReKi
+                  CALL WrScr ( ' SeaState: populated wave block ('//TRIM(Num2LStr(ib))//','//TRIM(Num2LStr(jb))// &
+                               ') covering x('//TRIM(Num2LStr(Blk%iPtX0))//':'//TRIM(Num2LStr(Blk%iPtX0+Blk%nPtX-1))// &
+                               '), y('//TRIM(Num2LStr(Blk%iPtY0))//':'//TRIM(Num2LStr(Blk%iPtY0+Blk%nPtY-1))// &
+                               ') of the volume grid at t='//TRIM(Num2LStr(REAL(Time,ReKi)))//' s ('// &
+                               TRIM(Num2LStr(MBytes))//' MB; '//TRIM(Num2LStr(nResident))//' block(s) resident).' )
+                  Blk%Populated = .TRUE.   ! publish last
+               END IF
+
+            END ASSOCIATE
+
+         END IF
+         !$OMP END CRITICAL(SeaSt_BlockPop)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      END IF
+
+      Store%Blocks(iBlk)%LastAccess = MAX( Store%Blocks(iBlk)%LastAccess, Time )
+
+   END ASSOCIATE
+
+END SUBROUTINE WaveField_EnsureBlock
+
+
+!> Interpolate the wave-kinematics volume quantities for the point/time previously set up through
+!! WaveField_Interp_Setup4D. This is the only place the volume data is read: in full-domain mode
+!! (WvKinBlockMod=0) it reads the eager WaveField arrays; in on-demand mode (WvKinBlockMod=1) it
+!! locates (and if needed populates) the wave block containing the interpolation stencil and reads
+!! the block-local arrays — same values by construction, since blocks are filled by the same kernels
+!! as the full-domain arrays. FAMCF is only written when a MacCamy-Fuchs field exists.
+SUBROUTINE WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat, ErrMsg, FDynP, FV, FA, FAMCF )
+   type(SeaSt_WaveFieldType),    intent(in   ) :: WaveField
+   type(GridInterp_MiscVarType), intent(inout) :: WaveField_m
+   real(DbKi),                   intent(in   ) :: Time      !< Simulation time, for block bookkeeping
+   integer(IntKi),               intent(  out) :: ErrStat
+   character(*),                 intent(  out) :: ErrMsg
+   real(SiKi), optional,         intent(  out) :: FDynP
+   real(SiKi), optional,         intent(  out) :: FV(3)
+   real(SiKi), optional,         intent(  out) :: FA(3)
+   real(SiKi), optional,         intent(  out) :: FAMCF(3)
+
+   type(GridInterp_MiscVarType)                :: m_blk
+   integer(IntKi)                              :: iBlk
+   character(*), parameter                     :: RoutineName = 'WaveField_InterpVol'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   IF ( WaveField%WvKinBlockMod == 1_IntKi ) THEN
+
+      CALL WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+      ASSOCIATE ( Blk => WaveField%BlockStore%Blocks(iBlk) )
+         ! Shift the stencil indices from global to block-local (both are 0-based inside GridInterp)
+         m_blk = WaveField_m
+         m_blk%Indx(:,2) = WaveField_m%Indx(:,2) - ( Blk%iPtX0 - 1_IntKi )
+         m_blk%Indx(:,3) = WaveField_m%Indx(:,3) - ( Blk%iPtY0 - 1_IntKi )
+         IF ( PRESENT(FV)    ) FV(:) = GridInterp4DVec( Blk%WaveVel,  m_blk )
+         IF ( PRESENT(FA)    ) FA(:) = GridInterp4DVec( Blk%WaveAcc,  m_blk )
+         IF ( PRESENT(FDynP) ) FDynP = GridInterp4D   ( Blk%WaveDynP, m_blk )
+         IF ( PRESENT(FAMCF) ) THEN
+            IF ( ALLOCATED(Blk%WaveAccMCF) ) THEN
+               FAMCF(:) = GridInterp4DVec( Blk%WaveAccMCF, m_blk )
+            END IF
+         END IF
+      END ASSOCIATE
+
+   ELSE
+
+      IF ( PRESENT(FV)    ) FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
+      IF ( PRESENT(FA)    ) FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
+      IF ( PRESENT(FDynP) ) FDynP = GridInterp4D   ( WaveField%WaveDynP, WaveField_m )
+      IF ( PRESENT(FAMCF) ) THEN
+         IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
+            FAMCF(:) = GridInterp4DVec( WaveField%WaveAccMCF, WaveField_m )
+         END IF
+      END IF
+
+   END IF
+
+END SUBROUTINE WaveField_InterpVol
+
 
 !----------------------------------------------------------------------------------------------------
 ! Interpolation related functions

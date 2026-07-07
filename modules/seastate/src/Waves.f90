@@ -876,7 +876,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    ! Allocate all the arrays we need.
    ALLOCATE ( tmpComplexArr(0:WaveField%NStepWave2                        ), STAT=ErrStatTmp ); if (Failed0('tmpComplexArr')) return;
 
-   IF (WaveField%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
+   IF (WaveField%MCFD > 0.0_SiKi .AND. .NOT. ASSOCIATED(WaveField%BlockStore)) THEN ! MacCamy-Fuchs model (full-domain array; per-block in mode 1)
       ALLOCATE ( WaveField%WaveAccMCF  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp ); if (Failed0('WaveField%WaveAccMCF')) return;
    END IF
    
@@ -1191,8 +1191,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    END DO
 
    ! Compute the wave-kinematics volume arrays (first-order kinematics + steady current, with above-SWL/below-seabed
-   ! zeroing and the periodic last-step wrap) via the shared per-column kernel over the full grid.
-   IF (WaveField%MCFD > 0.0_SiKi) THEN
+   ! zeroing and the periodic last-step wrap) via the shared per-column kernel over the full grid. With on-demand
+   ! block partitioning (WvKinBlockMod=1) the full-domain fill is skipped entirely -- the same kernel populates
+   ! individual blocks on first access, driven by the seeds captured above.
+   IF ( ASSOCIATED(WaveField%BlockStore) ) THEN
+      ! on-demand blocks: nothing to fill at init
+   ELSE IF (WaveField%MCFD > 0.0_SiKi) THEN
       CALL WaveKinKernel_ComputeColumns ( WaveField, Seeds, 1, InitInp%NGrid(1), 1, InitInp%NGrid(2), &
                                           WaveField%WaveDynP, WaveField%WaveVel, WaveField%WaveAcc, &
                                           ErrStatTmp, ErrMsgTmp, WaveAccMCF=WaveField%WaveAccMCF )
