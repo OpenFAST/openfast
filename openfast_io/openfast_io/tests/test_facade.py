@@ -136,6 +136,14 @@ class TestLegacyImportPaths:
 
             assert reader2.fst_vt['Fst']['TMax'] == reader.fst_vt['Fst']['TMax']
 
+    def test_reader_instantiation_warns_deprecation(self):
+        with pytest.warns(DeprecationWarning, match="InputReader_OpenFAST is deprecated"):
+            InputReader_OpenFAST()
+
+    def test_writer_instantiation_warns_deprecation(self):
+        with pytest.warns(DeprecationWarning, match="InputWriter_OpenFAST is deprecated"):
+            InputWriter_OpenFAST()
+
     def test_parsing_re_exports(self):
         """External code importing parsing helpers from FAST_reader still works."""
         from openfast_io.FAST_reader import bool_read, float_read, int_read, quoted_read

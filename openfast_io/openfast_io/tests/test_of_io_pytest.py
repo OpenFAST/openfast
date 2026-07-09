@@ -229,11 +229,10 @@ def test_rtest_cloned(request):
     REPOSITORY_ROOT = osp.join(request.config.getoption("--source_dir"))
     path_dict = getPaths(REPOSITORY_ROOT=REPOSITORY_ROOT)
 
-    if check_rtest_cloned(path_dict['test_data_dir']):
-        assert True, "R-tests cloned properly"
-    else:# stop the test if the r-tests are not cloned properly
-        print("R-tests not cloned properly")
-        sys.exit(1)
+    try:
+        check_rtest_cloned(path_dict['test_data_dir'])
+    except FileNotFoundError as e:
+        pytest.skip(f"r-test data not available: {e}")
 
 def test_DLLs_exist(request):
     """
@@ -247,11 +246,9 @@ def test_DLLs_exist(request):
 
     # Check if the DISCON.dll file exists
     DISCON_DLL = osp.join(path_dict['discon_dir'], "DISCON.dll")
-    if osp.exists(DISCON_DLL):
-        assert True, f"DISCON.dll found at {DISCON_DLL}"
-    else: # stop the test if the DISCON.dll is not found
-        print(f"DISCON.dll not found at {DISCON_DLL}. Please build with ''' make regression_test_controllers ''' and try again.")
-        sys.exit(1)
+    if not osp.exists(DISCON_DLL):
+        pytest.skip(f"DISCON.dll not found at {DISCON_DLL}. Please build with "
+                    f"'make regression_test_controllers' and try again.")
 
 def test_openfast_executable_exists(request):
     """
@@ -263,11 +260,9 @@ def test_openfast_executable_exists(request):
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")))
 
-    if osp.exists(path_dict['executable']):
-        assert True, f"OpenFAST executable found at {path_dict['executable']}"
-    else: # stop the test if the OpenFAST executable is not found
-        print(f"OpenFAST executable not found at {path_dict['executable']}. Please build OpenFAST and try again.")
-        sys.exit(1)
+    if not osp.exists(path_dict['executable']):
+        pytest.skip(f"OpenFAST executable not found at {path_dict['executable']}. "
+                    f"Please build OpenFAST and try again.")
 
 
 
@@ -282,10 +277,16 @@ def test_openfast_io_read_write_run_readOut_verify(folder, request):
     request (fixture): pytest request
     """
 
-    path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")), 
-                         REPOSITORY_ROOT=osp.join(request.config.getoption("--source_dir")), 
+    path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")),
+                         REPOSITORY_ROOT=osp.join(request.config.getoption("--source_dir")),
                          BUILD_DIR=osp.join(request.config.getoption("--build_dir")))
 
+    case_dir = osp.join(path_dict['test_data_dir'], folder)
+    if not osp.isdir(case_dir):
+        pytest.skip(f"r-test case directory not found: {case_dir}")
+    if not osp.exists(path_dict['executable']):
+        pytest.skip(f"OpenFAST executable not found at {path_dict['executable']}. "
+                    f"Please build OpenFAST and try again.")
 
     try:
         action_name = "read"

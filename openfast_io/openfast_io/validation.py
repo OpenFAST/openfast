@@ -3,6 +3,7 @@
 Performs schema-based checks, cross-module consistency checks, and
 file-reference existence checks.
 """
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from .schema import get_schema, FILE_REF_PARAMS
@@ -19,13 +20,25 @@ class ValidationIssue:
 
 
 def validate_fst_vt(fst_vt: dict, version: str = '5.0.0',
-                    check_files: bool = True) -> list[ValidationIssue]:
-    """Validate a loaded fst_vt. Returns list of issues ordered by severity."""
+                    check_files: bool = True,
+                    base_dir: 'Path | str | None' = None) -> list[ValidationIssue]:
+    """Validate a loaded fst_vt. Returns list of issues ordered by severity.
+
+    Args:
+        fst_vt: the loaded variable tree to validate.
+        version: target OpenFAST version, used for removed-parameter checks.
+        check_files: if True, verify that file-reference parameters point to
+            existing files.
+        base_dir: directory that relative file-reference paths in ``fst_vt``
+            are resolved against (fst_vt stores paths relative to the case
+            directory, not the current working directory). If ``None``,
+            falls back to resolving against the current working directory.
+    """
     issues = []
     issues.extend(_check_removed_params(fst_vt, version))
     issues.extend(_check_cross_module(fst_vt))
     if check_files:
-        issues.extend(_check_file_refs(fst_vt))
+        issues.extend(_check_file_refs(fst_vt, base_dir=base_dir))
     severity_order = {'ERROR': 0, 'WARNING': 1, 'INFO': 2}
     return sorted(issues, key=lambda i: severity_order.get(i.severity, 3))
 
@@ -89,8 +102,14 @@ def _check_cross_module(fst_vt: dict) -> list[ValidationIssue]:
     return issues
 
 
-def _check_file_refs(fst_vt: dict) -> list[ValidationIssue]:
-    """Check that file-reference parameters point to existing files."""
+def _check_file_refs(fst_vt: dict, base_dir: 'Path | str | None' = None) -> list[ValidationIssue]:
+    """Check that file-reference parameters point to existing files.
+
+    Relative paths are resolved against ``base_dir`` when given (fst_vt
+    stores paths relative to the case directory). When ``base_dir`` is
+    ``None``, relative paths are resolved against the current working
+    directory instead, matching the historical behavior.
+    """
     issues = []
     for module, param_names in FILE_REF_PARAMS.items():
         data = fst_vt.get(module, {})
@@ -104,7 +123,10 @@ def _check_file_refs(fst_vt: dict) -> list[ValidationIssue]:
             for p in paths:
                 p_str = str(p).strip('"').strip("'")
                 if p_str and p_str.lower() not in ('unused', 'default', ''):
-                    if not Path(p_str).exists():
+                    candidate = Path(p_str)
+                    if base_dir is not None and not candidate.is_absolute():
+                        candidate = Path(os.path.normpath(Path(base_dir) / candidate))
+                    if not candidate.exists():
                         issues.append(ValidationIssue(
                             severity='ERROR', modules=[module], parameter=param,
                             message=f"{module}.{param} references a file that does not exist: {p_str}"
