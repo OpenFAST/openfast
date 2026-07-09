@@ -105,9 +105,92 @@ Currently, the SeaState wave grid is always centered at the global origin and sy
 
 **WvKinBlockMod** selects whether the wave-kinematics volume-data grid is precomputed over its full domain (**WvKinBlockMod** = 0, the default/current behavior) or partitioned into on-demand blocks (**WvKinBlockMod** = 1). When on-demand block partitioning is enabled, the wave-kinematics grid is divided into XY blocks that span the full *Z* extent; each block is computed and stored only once wave kinematics are first requested at a point inside it. This reduces initialization time and memory use for domains that are much larger than the region actually queried during the simulation. Results with **WvKinBlockMod** = 1 are identical to those with **WvKinBlockMod** = 0 to within solver precision.
 
-**WvKinBlockSize** sets (in m) the target *XY* edge length of an on-demand block; it is used only when **WvKinBlockMod** = 1. The requested size is snapped to whole grid cells, with a minimum of 8 cells per side. A block size on the order of the platform footprint is recommended (DEFAULT = 100 m); detailed sizing guidance will be added in the future.
+**WvKinBlockSize** sets (in m) the target *XY* edge length of an on-demand block; it is used only when **WvKinBlockMod** = 1. The requested size is snapped to whole grid cells, with a minimum of 8 cells per side. A block size on the order of the platform footprint is recommended (DEFAULT = 100 m). See :ref:`sea-block-sizing` below for measured sizing guidance.
 
 **WvKinBlockFreeT** sets (in s) the amount of simulation time a block may go without being accessed before it is freed; it is used only when **WvKinBlockMod** = 1. A freed block is transparently recomputed if it is revisited later in the simulation. **WvKinBlockFreeT** should be set larger than the platform's slow-drift (surge) period to avoid repeatedly freeing and recomputing blocks that are still in active use. Setting **WvKinBlockFreeT** less than or equal to zero disables freeing, so all populated blocks remain resident in memory (DEFAULT = 600 s).
+
+.. _sea-block-sizing:
+
+Choosing WvKinBlockSize and WvKinBlockFreeT
++++++++++++++++++++++++++++++++++++++++++++
+
+On-demand block partitioning (**WvKinBlockMod** = 1) pays off when the wave
+grid is much larger than the region a structure actually visits during the
+simulation: only the blocks touched by a query are ever computed and stored.
+For a typical station-keeping floating platform the queried footprint is
+established early and stays essentially static, so the memory saving comes
+from the resident block **size**, not from freeing blocks over time.
+
+Two behaviors are worth understanding before tuning these inputs:
+
+- **Blocks carry a halo.** Each block stores three extra grid planes per side
+  to satisfy the 4-point interpolation stencil. Several small blocks
+  therefore duplicate more grid points than one large block covering the same
+  footprint, and can use *more* memory than the full-domain default. In a
+  measured MHK case, **WvKinBlockSize** = 50 m split the footprint across
+  three blocks and consumed ~17% *more* peak memory than **WvKinBlockMod** = 0,
+  whereas **WvKinBlockSize** = 100–200 m used a single block at parity with
+  the full domain.
+
+- **Eviction only helps a moving query.** **WvKinBlockFreeT** frees blocks
+  that have gone untouched; for a station-keeping platform whose footprint is
+  fixed, no block is ever idle and eviction never fires. In the sweeps below,
+  **WvKinBlockFreeT** = -1 (disabled) and 600 s produced effectively unchanged
+  peak memory (within ~1%); wall time varied by up to ~8%, consistent with
+  run-to-run measurement noise. Eviction matters only for large horizontal drift or prescribed
+  translation that carries the query across the grid over time — set
+  **WvKinBlockFreeT** larger than the slow-drift (surge) period so blocks
+  still in active use are not repeatedly freed and recomputed.
+
+Measured peak resident memory (single-turbine glue-code cases, ~600 s):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 18 18 18 16
+
+   * - Configuration
+     - Peak mem
+     - Blocks
+     - Evictions
+     - vs. mode 0
+   * - **WvKinBlockMod** = 0 (full domain)
+     - 1216 MB
+     - —
+     - —
+     - baseline
+   * - size 50 m
+     - 1165 MB
+     - 1
+     - 0
+     - −4%
+   * - size 100 m (default)
+     - 1157 MB
+     - 1
+     - 0
+     - −5%
+   * - size 200 m
+     - 1204 MB
+     - 1
+     - 0
+     - −1%
+
+(5MW OC4-Semi, moored; **WvKinBlockFreeT** had no measurable effect.)
+
+Practical guidance:
+
+- Start with the default **WvKinBlockSize** = 100 m. Increase it toward the
+  platform footprint plus expected drift; avoid values so small that the
+  footprint spans several blocks, which the halo makes counterproductive.
+- The largest savings appear when the wave grid is deliberately oversized
+  relative to the structure (e.g. a fine grid sized for a rare large-drift
+  event). If your grid is already sized tightly to the footprint, expect
+  block partitioning to break even rather than save memory.
+- Leave **WvKinBlockFreeT** at its default (600 s) for station-keeping
+  platforms; raise it above the surge period, or set it ≤ 0 to keep all
+  blocks resident, only when the query migrates across the grid.
+- To reduce memory further, first shrink the grid itself (**WaveTMax**,
+  **WaveDT**, **NX**/**NY**) as described below — those act on the full
+  domain regardless of **WvKinBlockMod**.
 
 When setting up the wave grid, it is necessary to make sure the wave grid is large enough in all three directions, so that no part of the structure defined in HydroDyn moves out of the wave grid during the simulation. At the same time, the grid should also be fine enough to resolve the shortest wave of interest.
 
