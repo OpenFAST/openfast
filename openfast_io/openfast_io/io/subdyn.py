@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional, Callable
 import numpy as np
 
 from .base import ModuleIO
-from ..outlist import emit_outlist
+from ..outlist import emit_outlist, capture_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -337,8 +337,14 @@ class SubDynIO(ModuleIO):
         f.readline()
 
         # SSOutList
-        if read_outlist_fn is not None:
+        if read_outlist_fn is not None and outlist is not None:
             read_outlist_fn(f, 'SubDyn')
+        else:
+            # Standalone use with no shared registry — consume the section
+            # safely and stash the found channels so write() can still emit
+            # them (mirrors the aerodisk.py fallback pattern).
+            channels = capture_outlist(f, None, 'SubDyn', freeform=True)
+            sd['_outlist'] = {ch: True for ch in channels}
 
         f.close()
         return {'SubDyn': sd}
@@ -555,5 +561,9 @@ class SubDynIO(ModuleIO):
                                   ' '.join([str(nc) for nc in sd['NodeCnt'][i]])]) + '\n')
 
             f.write('---- SSOutList ----\n')
-            emit_outlist(f, outlist, 'SubDyn')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'SubDyn')
+            else:
+                for ch in sd.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of output channels and end of file.\n')
