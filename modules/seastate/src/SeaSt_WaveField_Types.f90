@@ -64,25 +64,29 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_WaveBlockType  =======
   TYPE, PUBLIC :: SeaSt_WaveBlockType
-    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveDynP      !< Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,NZ] [(N/m^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel      !< Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,NZ,3] [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAcc      !< Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,NZ,3] [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAccMCF      !< Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,NZ,3] [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveDynP      !< Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,nPtZ] [(N/m^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel      !< Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAcc      !< Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAccMCF      !< Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s^2)]
     REAL(DbKi)  :: LastAccess = 0      !< Simulation time of the most recent access to this block [(s)]
     LOGICAL  :: Populated = .false.      !< True when the block arrays are allocated and filled [-]
     INTEGER(IntKi)  :: iPtX0 = 0      !< Global x-index of this block's first grid point [-]
     INTEGER(IntKi)  :: iPtY0 = 0      !< Global y-index of this block's first grid point [-]
+    INTEGER(IntKi)  :: iPtZ0 = 0      !< Global z-index of this block's first grid point [-]
     INTEGER(IntKi)  :: nPtX = 0      !< Number of grid points this block covers in x [-]
     INTEGER(IntKi)  :: nPtY = 0      !< Number of grid points this block covers in y [-]
+    INTEGER(IntKi)  :: nPtZ = 0      !< Number of grid points this block covers in z [-]
   END TYPE SeaSt_WaveBlockType
 ! =======================
 ! =========  SeaSt_WaveBlockStoreType  =======
   TYPE, PUBLIC :: SeaSt_WaveBlockStoreType
-    TYPE(SeaSt_WaveBlockType) , DIMENSION(:), ALLOCATABLE  :: Blocks      !< Wave-kinematics blocks, index = (jb-1)*nBlkX + ib [-]
+    TYPE(SeaSt_WaveBlockType) , DIMENSION(:), ALLOCATABLE  :: Blocks      !< Wave-kinematics blocks, index = ((kb-1)*nBlkY + (jb-1))*nBlkX + ib [-]
     INTEGER(IntKi)  :: nBlkX = 0      !< Number of blocks in x [-]
     INTEGER(IntKi)  :: nBlkY = 0      !< Number of blocks in y [-]
+    INTEGER(IntKi)  :: nBlkZ = 0      !< Number of blocks in z [-]
     INTEGER(IntKi)  :: BlkCellsX = 0      !< Grid cells per block in x (interior blocks) [-]
     INTEGER(IntKi)  :: BlkCellsY = 0      !< Grid cells per block in y (interior blocks) [-]
+    INTEGER(IntKi)  :: BlkCellsZ = 0      !< Grid cells per block in z (interior blocks) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveNmbrArr      !< Wave number of each non-negative frequency component (0:NStepWave2) [(1/m)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: OmegaIArr      !< Intrinsic (Doppler-corrected) angular frequency of each component; <0 marks components beyond the critical frequency (0:NStepWave2) [(rad/s)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MCFCArr      !< MacCamy-Fuchs acceleration scaling coefficient of each component (0:NStepWave2) [-]
@@ -271,8 +275,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveBlockType(SrcSeaSt_WaveBlockTypeData, D
    DstSeaSt_WaveBlockTypeData%Populated = SrcSeaSt_WaveBlockTypeData%Populated
    DstSeaSt_WaveBlockTypeData%iPtX0 = SrcSeaSt_WaveBlockTypeData%iPtX0
    DstSeaSt_WaveBlockTypeData%iPtY0 = SrcSeaSt_WaveBlockTypeData%iPtY0
+   DstSeaSt_WaveBlockTypeData%iPtZ0 = SrcSeaSt_WaveBlockTypeData%iPtZ0
    DstSeaSt_WaveBlockTypeData%nPtX = SrcSeaSt_WaveBlockTypeData%nPtX
    DstSeaSt_WaveBlockTypeData%nPtY = SrcSeaSt_WaveBlockTypeData%nPtY
+   DstSeaSt_WaveBlockTypeData%nPtZ = SrcSeaSt_WaveBlockTypeData%nPtZ
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveBlockType(SeaSt_WaveBlockTypeData, ErrStat, ErrMsg)
@@ -309,8 +315,10 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveBlockType(RF, Indata)
    call RegPack(RF, InData%Populated)
    call RegPack(RF, InData%iPtX0)
    call RegPack(RF, InData%iPtY0)
+   call RegPack(RF, InData%iPtZ0)
    call RegPack(RF, InData%nPtX)
    call RegPack(RF, InData%nPtY)
+   call RegPack(RF, InData%nPtZ)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -330,8 +338,10 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockType(RF, OutData)
    call RegUnpack(RF, OutData%Populated); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iPtX0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iPtY0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iPtZ0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nPtX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nPtY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPtZ); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcSeaSt_WaveBlockStoreTypeData, DstSeaSt_WaveBlockStoreTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -365,8 +375,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcSeaSt_WaveBlockStoreT
    end if
    DstSeaSt_WaveBlockStoreTypeData%nBlkX = SrcSeaSt_WaveBlockStoreTypeData%nBlkX
    DstSeaSt_WaveBlockStoreTypeData%nBlkY = SrcSeaSt_WaveBlockStoreTypeData%nBlkY
+   DstSeaSt_WaveBlockStoreTypeData%nBlkZ = SrcSeaSt_WaveBlockStoreTypeData%nBlkZ
    DstSeaSt_WaveBlockStoreTypeData%BlkCellsX = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsX
    DstSeaSt_WaveBlockStoreTypeData%BlkCellsY = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsY
+   DstSeaSt_WaveBlockStoreTypeData%BlkCellsZ = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsZ
    if (allocated(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)) then
       LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)
       UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)
@@ -567,8 +579,10 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, Indata)
    end if
    call RegPack(RF, InData%nBlkX)
    call RegPack(RF, InData%nBlkY)
+   call RegPack(RF, InData%nBlkZ)
    call RegPack(RF, InData%BlkCellsX)
    call RegPack(RF, InData%BlkCellsY)
+   call RegPack(RF, InData%BlkCellsZ)
    call RegPackAlloc(RF, InData%WaveNmbrArr)
    call RegPackAlloc(RF, InData%OmegaIArr)
    call RegPackAlloc(RF, InData%MCFCArr)
@@ -614,8 +628,10 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockStoreType(RF, OutData)
    end if
    call RegUnpack(RF, OutData%nBlkX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nBlkY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nBlkZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BlkCellsX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BlkCellsY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlkCellsZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveNmbrArr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OmegaIArr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MCFCArr); if (RegCheckErr(RF, RoutineName)) return

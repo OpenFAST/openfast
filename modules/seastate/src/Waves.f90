@@ -1198,10 +1198,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! on-demand blocks: nothing to fill at init
    ELSE IF (WaveField%MCFD > 0.0_SiKi) THEN
       CALL WaveKinKernel_ComputeColumns ( WaveField, Seeds, 1, InitInp%NGrid(1), 1, InitInp%NGrid(2), &
+                                          1, InitInp%NGrid(3), &
                                           WaveField%WaveDynP, WaveField%WaveVel, WaveField%WaveAcc, &
                                           ErrStatTmp, ErrMsgTmp, WaveAccMCF=WaveField%WaveAccMCF )
    ELSE
       CALL WaveKinKernel_ComputeColumns ( WaveField, Seeds, 1, InitInp%NGrid(1), 1, InitInp%NGrid(2), &
+                                          1, InitInp%NGrid(3), &
                                           WaveField%WaveDynP, WaveField%WaveVel, WaveField%WaveAcc, &
                                           ErrStatTmp, ErrMsgTmp )
    END IF
@@ -1473,7 +1475,7 @@ END SUBROUTINE VariousWaves_Init
 !!
 !! Every arithmetic expression here is copied verbatim from the frequency/point loops of VariousWaves_Init (Waves.f90),
 !! driven by the generation seeds captured there, so per-element results are bit-identical to the full-domain precompute.
-SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, nPtY, &
+SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, nPtY, iPtZ0, nPtZ, &
                                          WaveDynP, WaveVel, WaveAcc, ErrStat, ErrMsg, WaveAccMCF )
 
       TYPE(SeaSt_WaveFieldType),      INTENT(IN   ) :: WaveField       !< Initialized wave field (WaveElevC0 must be final)
@@ -1482,12 +1484,14 @@ SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, n
       INTEGER(IntKi),                 INTENT(IN   ) :: nPtX            !< Number of columns to compute in x
       INTEGER(IntKi),                 INTENT(IN   ) :: iPtY0           !< Global y-index of the first column to compute
       INTEGER(IntKi),                 INTENT(IN   ) :: nPtY            !< Number of columns to compute in y
-      REAL(SiKi),                     INTENT(INOUT) :: WaveDynP(0:,1:,1:,1:)        !< (0:NStepWave,nPtX,nPtY,NZ)
-      REAL(SiKi),                     INTENT(INOUT) :: WaveVel (0:,1:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,NZ,3)
-      REAL(SiKi),                     INTENT(INOUT) :: WaveAcc (0:,1:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,NZ,3)
+      INTEGER(IntKi),                 INTENT(IN   ) :: iPtZ0           !< Global z-index of the first grid level to compute
+      INTEGER(IntKi),                 INTENT(IN   ) :: nPtZ            !< Number of grid levels to compute in z
+      REAL(SiKi),                     INTENT(INOUT) :: WaveDynP(0:,1:,1:,1:)        !< (0:NStepWave,nPtX,nPtY,nPtZ)
+      REAL(SiKi),                     INTENT(INOUT) :: WaveVel (0:,1:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,nPtZ,3)
+      REAL(SiKi),                     INTENT(INOUT) :: WaveAcc (0:,1:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,nPtZ,3)
       INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat         !< Error status of the operation
       CHARACTER(*),                   INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
-      REAL(SiKi),           OPTIONAL, INTENT(INOUT) :: WaveAccMCF(0:,1:,1:,1:,1:)   !< (0:NStepWave,nPtX,nPtY,NZ,3) [only when MCFD>0]
+      REAL(SiKi),           OPTIONAL, INTENT(INOUT) :: WaveAccMCF(0:,1:,1:,1:,1:)   !< (0:NStepWave,nPtX,nPtY,nPtZ,3) [only when MCFD>0]
 
          ! Local Variables:
       COMPLEX(SiKi), ALLOCATABLE   :: WaveDynPC0(:)            ! Discrete Fourier transform of the instantaneous dynamic pressure at this point (N/m^2)
@@ -1526,8 +1530,9 @@ SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, n
       INTEGER(IntKi)               :: I                        ! Frequency-component index
       INTEGER(IntKi)               :: jx, jy                   ! Column-local x/y indices
       INTEGER(IntKi)               :: ixG, iyG                 ! Global grid x/y indices
-      INTEGER(IntKi)               :: kz                       ! Grid z-level index
-      INTEGER(IntKi)               :: NZgrid                   ! Number of grid z levels
+      INTEGER(IntKi)               :: kz                       ! Block-local grid z-level index
+      INTEGER(IntKi)               :: kzG                      ! Global grid z-level index
+      INTEGER(IntKi)               :: NZgrid                   ! Number of grid z levels to compute
 
       INTEGER(IntKi)               :: ErrStatTmp               ! Temporary error status
       CHARACTER(*),  PARAMETER     :: RoutineName = 'WaveKinKernel_ComputeColumns'
@@ -1536,7 +1541,7 @@ SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, n
       ErrMsg  = ""
 
       doMCF  = ( WaveField%MCFD > 0.0_SiKi .AND. PRESENT(WaveAccMCF) )
-      NZgrid = SIZE(Store%zGrid)
+      NZgrid = nPtZ
 
       CALL InitFFT ( WaveField%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
@@ -1572,7 +1577,8 @@ SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, n
             ixG = iPtX0 + jx - 1
             xi  = Store%xGrid(ixG)
             DO kz = 1, NZgrid
-               zi = Store%zGrid(kz)
+               kzG = iPtZ0 + kz - 1
+               zi = Store%zGrid(kzG)
 
                IF (   ( zi < -WaveField%EffWtrDpth ) .OR. ( zi > 0.0 ) ) THEN
                   ! The point lies below the seabed or above mean sea level (exclusive) — no wave kinematics
@@ -1648,8 +1654,8 @@ SUBROUTINE WaveKinKernel_ComputeColumns( WaveField, Store, iPtX0, nPtX, iPtY0, n
                   ! Add the steady current velocity to the wave velocity (same expression as VariousWaves_Init; skipped
                   ! entirely when no current profile exists so that -0.0 values are preserved exactly)
                   IF ( Store%HasCurr ) THEN
-                     WaveVel0Hxi (:) =  WaveVel0Hxi (:) +  Store%CurrVxi(kz)     ! xi-direction
-                     WaveVel0Hyi (:) =  WaveVel0Hyi (:) +  Store%CurrVyi(kz)     ! yi-direction
+                     WaveVel0Hxi (:) =  WaveVel0Hxi (:) +  Store%CurrVxi(kzG)     ! xi-direction
+                     WaveVel0Hyi (:) =  WaveVel0Hyi (:) +  Store%CurrVyi(kzG)     ! yi-direction
                   END IF
 
                   ! Copy into the output arrays and wrap the last time step (periodic, = time step 0)

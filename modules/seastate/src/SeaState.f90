@@ -273,6 +273,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             CALL Waves2_CaptureKernelSeeds( InputFileData%Waves2, W2Seeds, ErrStat2, ErrMsg2 ); if(Failed()) return;
             IF ( .NOT. ASSOCIATED(p%WaveField%BlockStore) ) THEN
                CALL WaveKinKernel_AddSecondOrderColumns( p%WaveField, W2Seeds, 1, p%nGrid(1), 1, p%nGrid(2), &
+                                                         1, p%nGrid(3), &
                                                          p%WaveField%WaveDynP, p%WaveField%WaveVel, p%WaveField%WaveAcc, &
                                                          ErrStat2, ErrMsg2 ); if(Failed()) return;
             END IF
@@ -330,7 +331,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! the full-domain volume arrays (populated lazily, so nothing is resident at init).
       BLOCK
          real(ReKi)         :: VolGB, SurfB, BlkGB
-         integer(IntKi)     :: nComp, nPtXt, nPtYt
+         integer(IntKi)     :: nComp, nPtXt, nPtYt, nPtZt
          character(16)      :: sVol, sSurf, sBlk
          real(ReKi), parameter :: B2GB = 1.0_ReKi / 1.0E9_ReKi
          nComp = MERGE( 10_IntKi, 7_IntKi, p%WaveField%MCFD > 0.0_SiKi )   ! DynP(1)+Vel(3)+Acc(3)[+MCF(3)]
@@ -360,10 +361,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             ASSOCIATE ( Store => p%WaveField%BlockStore )
                nPtXt = MIN( Store%BlkCellsX+3_IntKi, p%nGrid(1) )   ! typical interior block: BlkCells+3 stored planes
                nPtYt = MIN( Store%BlkCellsY+3_IntKi, p%nGrid(2) )
-               BlkGB = REAL(p%WaveField%NStepWave+1,ReKi) * nPtXt * nPtYt * p%nGrid(3) * 4.0_ReKi * nComp * B2GB
+               nPtZt = MIN( Store%BlkCellsZ+3_IntKi, p%nGrid(3) )
+               BlkGB = REAL(p%WaveField%NStepWave+1,ReKi) * nPtXt * nPtYt * nPtZt * 4.0_ReKi * nComp * B2GB
                write(sBlk,'(F13.3)') BlkGB
                call WrScr ( '   [mode 1] Block layout '//TRIM(Num2LStr(Store%nBlkX))//' x '//TRIM(Num2LStr(Store%nBlkY))// &
+                            ' x '//TRIM(Num2LStr(Store%nBlkZ))// &
                             ' ('//TRIM(Num2LStr(Store%BlkCellsX))//'x'//TRIM(Num2LStr(Store%BlkCellsY))// &
+                            'x'//TRIM(Num2LStr(Store%BlkCellsZ))// &
                             ' cells/block), per full block ~'//TRIM(ADJUSTL(sBlk))//' GB, populated at init: 0' )
             END ASSOCIATE
          END IF

@@ -955,7 +955,7 @@ END SUBROUTINE Waves2_CaptureKernelSeeds
 !! Grid points below the seabed or above the still water level get no second-order contribution (the former code only
 !! computed the z levels in [-EffWtrDpth, 0] and added zeros elsewhere).
 !! Note: the MacCamy-Fuchs scaled acceleration deliberately carries no second-order contribution.
-SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, iPtY0, nPtY, &
+SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, iPtY0, nPtY, iPtZ0, nPtZ, &
                                                 WaveDynP, WaveVel, WaveAcc, ErrStat, ErrMsg )
 
       TYPE(SeaSt_WaveFieldType),          INTENT(IN   )  :: WaveField            !< Initialized wave field (WaveElevC0/WaveDirArr must be final)
@@ -964,9 +964,11 @@ SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, i
       INTEGER(IntKi),                     INTENT(IN   )  :: nPtX                 !< Number of columns to compute in x
       INTEGER(IntKi),                     INTENT(IN   )  :: iPtY0                !< Global y-index of the first column to compute
       INTEGER(IntKi),                     INTENT(IN   )  :: nPtY                 !< Number of columns to compute in y
-      REAL(SiKi),                         INTENT(INOUT)  :: WaveDynP(0:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,NZ)
-      REAL(SiKi),                         INTENT(INOUT)  :: WaveVel (0:,1:,1:,1:,1:)  !< (0:NStepWave,nPtX,nPtY,NZ,3)
-      REAL(SiKi),                         INTENT(INOUT)  :: WaveAcc (0:,1:,1:,1:,1:)  !< (0:NStepWave,nPtX,nPtY,NZ,3)
+      INTEGER(IntKi),                     INTENT(IN   )  :: iPtZ0                !< Global z-index of the first grid level to compute
+      INTEGER(IntKi),                     INTENT(IN   )  :: nPtZ                 !< Number of grid levels to compute in z
+      REAL(SiKi),                         INTENT(INOUT)  :: WaveDynP(0:,1:,1:,1:)     !< (0:NStepWave,nPtX,nPtY,nPtZ)
+      REAL(SiKi),                         INTENT(INOUT)  :: WaveVel (0:,1:,1:,1:,1:)  !< (0:NStepWave,nPtX,nPtY,nPtZ,3)
+      REAL(SiKi),                         INTENT(INOUT)  :: WaveAcc (0:,1:,1:,1:,1:)  !< (0:NStepWave,nPtX,nPtY,nPtZ,3)
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -1071,8 +1073,9 @@ SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, i
 
       INTEGER(IntKi)                                     :: jx, jy               !< Column-local x/y indices
       INTEGER(IntKi)                                     :: ixG, iyG             !< Global grid x/y indices
-      INTEGER(IntKi)                                     :: kz                   !< Grid z-level index
-      INTEGER(IntKi)                                     :: NZgrid               !< Number of grid z levels
+      INTEGER(IntKi)                                     :: kz                   !< Block-local grid z-level index
+      INTEGER(IntKi)                                     :: kzG                  !< Global grid z-level index
+      INTEGER(IntKi)                                     :: NZgrid               !< Number of grid z levels to compute
 
          ! Stuff for the FFT calculations
       TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
@@ -1088,7 +1091,7 @@ SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, i
       IF ( .NOT. ( Store%SecondOrderDiff .OR. Store%SecondOrderSum ) ) RETURN
 
       Gravity = Store%Gravity
-      NZgrid  = SIZE(Store%zGrid)
+      NZgrid  = nPtZ
 
          ! The wave elevation information in frequency space -- we need to normalize this by NStepWave2
          ! (identical to the normalization in Waves2_Init)
@@ -1152,7 +1155,8 @@ SUBROUTINE WaveKinKernel_AddSecondOrderColumns( WaveField, Store, iPtX0, nPtX, i
             ixG = iPtX0 + jx - 1
             xi  = Store%xGrid(ixG)
             DO kz = 1, NZgrid
-               zi = Store%zGrid(kz)
+               kzG = iPtZ0 + kz - 1
+               zi = Store%zGrid(kzG)
 
                ! Only points between the seabed and the still water level (inclusive) carry second-order kinematics
                ! (same selection as the former WaveKinzi0Prime array in Waves2_Init).

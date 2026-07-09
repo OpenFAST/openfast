@@ -860,7 +860,8 @@ SUBROUTINE WaveField_BlockStore_Init( WaveField, ErrStat, ErrMsg )
    integer(IntKi),               intent(  out) :: ErrStat
    character(*),                 intent(  out) :: ErrMsg
 
-   integer(IntKi)                              :: NX, NY, ib, jb, k, c0, c1, iP0, iP1
+   integer(IntKi)                              :: NX, NY, NZ, ib, jb, kb, k, c0, c1, iP0, iP1
+   real(ReKi)                                  :: mean_dz
    integer(IntKi)                              :: ErrStat2
    character(*), parameter                     :: RoutineName = 'WaveField_BlockStore_Init'
 
@@ -876,6 +877,7 @@ SUBROUTINE WaveField_BlockStore_Init( WaveField, ErrStat, ErrMsg )
 
       NX = WaveField%VolGridParams%n(2)
       NY = WaveField%VolGridParams%n(3)
+      NZ = WaveField%VolGridParams%n(4)
 
       ! Target edge length snapped to whole grid cells, at least 8 cells (overlap economy), at most the whole grid
       IF ( NX > 1_IntKi ) THEN
@@ -892,46 +894,76 @@ SUBROUTINE WaveField_BlockStore_Init( WaveField, ErrStat, ErrMsg )
          Store%BlkCellsY = 1_IntKi
          Store%nBlkY     = 1_IntKi
       END IF
+      ! z: the grid is cosine-distributed (non-uniform), so snap using the mean spacing; this keeps
+      ! z blocks as cubes only in the mean-spacing sense (exact metre-cubes where spacing is uniform).
+      IF ( NZ > 1_IntKi ) THEN
+         mean_dz = ABS( Store%zGrid(SIZE(Store%zGrid)) - Store%zGrid(1) ) / REAL( MAX(1_IntKi,NZ-1_IntKi), ReKi )
+         IF ( mean_dz > 0.0_ReKi ) THEN
+            Store%BlkCellsZ = MIN( MAX( 8_IntKi, NINT( WaveField%WvKinBlockSize / mean_dz ) ), NZ-1_IntKi )
+            Store%nBlkZ     = ( (NZ-1_IntKi) + Store%BlkCellsZ - 1_IntKi ) / Store%BlkCellsZ
+         ELSE
+            Store%BlkCellsZ = NZ-1_IntKi
+            Store%nBlkZ     = 1_IntKi
+         END IF
+      ELSE
+         Store%BlkCellsZ = 1_IntKi
+         Store%nBlkZ     = 1_IntKi
+      END IF
 
-      ALLOCATE ( Store%Blocks( Store%nBlkX * Store%nBlkY ), STAT=ErrStat2 )
+      ALLOCATE ( Store%Blocks( Store%nBlkX * Store%nBlkY * Store%nBlkZ ), STAT=ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error allocating the wave-kinematics block array.', ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
-      DO jb = 1, Store%nBlkY
-         DO ib = 1, Store%nBlkX
-            k = (jb-1)*Store%nBlkX + ib
-            ! x extent: cells [c0..c1] (0-based), stored points [c0-1 .. c1+2] clamped to the grid
-            IF ( NX > 1_IntKi ) THEN
-               c0  = (ib-1_IntKi)*Store%BlkCellsX
-               c1  = MIN( ib*Store%BlkCellsX - 1_IntKi, NX - 2_IntKi )
-               iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
-               iP1 = MIN( NX - 1_IntKi, c1 + 2_IntKi )
-            ELSE
-               iP0 = 0_IntKi
-               iP1 = 0_IntKi
-            END IF
-            Store%Blocks(k)%iPtX0 = iP0 + 1_IntKi   ! stored 1-based
-            Store%Blocks(k)%nPtX  = iP1 - iP0 + 1_IntKi
-            ! y extent
-            IF ( NY > 1_IntKi ) THEN
-               c0  = (jb-1_IntKi)*Store%BlkCellsY
-               c1  = MIN( jb*Store%BlkCellsY - 1_IntKi, NY - 2_IntKi )
-               iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
-               iP1 = MIN( NY - 1_IntKi, c1 + 2_IntKi )
-            ELSE
-               iP0 = 0_IntKi
-               iP1 = 0_IntKi
-            END IF
-            Store%Blocks(k)%iPtY0 = iP0 + 1_IntKi
-            Store%Blocks(k)%nPtY  = iP1 - iP0 + 1_IntKi
+      DO kb = 1, Store%nBlkZ
+         DO jb = 1, Store%nBlkY
+            DO ib = 1, Store%nBlkX
+               k = ((kb-1)*Store%nBlkY + (jb-1))*Store%nBlkX + ib
+               ! x extent: cells [c0..c1] (0-based), stored points [c0-1 .. c1+2] clamped to the grid
+               IF ( NX > 1_IntKi ) THEN
+                  c0  = (ib-1_IntKi)*Store%BlkCellsX
+                  c1  = MIN( ib*Store%BlkCellsX - 1_IntKi, NX - 2_IntKi )
+                  iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
+                  iP1 = MIN( NX - 1_IntKi, c1 + 2_IntKi )
+               ELSE
+                  iP0 = 0_IntKi
+                  iP1 = 0_IntKi
+               END IF
+               Store%Blocks(k)%iPtX0 = iP0 + 1_IntKi   ! stored 1-based
+               Store%Blocks(k)%nPtX  = iP1 - iP0 + 1_IntKi
+               ! y extent
+               IF ( NY > 1_IntKi ) THEN
+                  c0  = (jb-1_IntKi)*Store%BlkCellsY
+                  c1  = MIN( jb*Store%BlkCellsY - 1_IntKi, NY - 2_IntKi )
+                  iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
+                  iP1 = MIN( NY - 1_IntKi, c1 + 2_IntKi )
+               ELSE
+                  iP0 = 0_IntKi
+                  iP1 = 0_IntKi
+               END IF
+               Store%Blocks(k)%iPtY0 = iP0 + 1_IntKi
+               Store%Blocks(k)%nPtY  = iP1 - iP0 + 1_IntKi
+               ! z extent
+               IF ( NZ > 1_IntKi ) THEN
+                  c0  = (kb-1_IntKi)*Store%BlkCellsZ
+                  c1  = MIN( kb*Store%BlkCellsZ - 1_IntKi, NZ - 2_IntKi )
+                  iP0 = MAX( 0_IntKi, c0 - 1_IntKi )
+                  iP1 = MIN( NZ - 1_IntKi, c1 + 2_IntKi )
+               ELSE
+                  iP0 = 0_IntKi
+                  iP1 = 0_IntKi
+               END IF
+               Store%Blocks(k)%iPtZ0 = iP0 + 1_IntKi
+               Store%Blocks(k)%nPtZ  = iP1 - iP0 + 1_IntKi
+            END DO
          END DO
       END DO
 
       CALL WrScr ( ' SeaState wave-kinematics on-demand blocks: '//TRIM(Num2LStr(Store%nBlkX))//' x '// &
-                   TRIM(Num2LStr(Store%nBlkY))//' blocks of '//TRIM(Num2LStr(Store%BlkCellsX))//' x '// &
-                   TRIM(Num2LStr(Store%BlkCellsY))//' grid cells (+stencil overlap); populated on first access.' )
+                   TRIM(Num2LStr(Store%nBlkY))//' x '//TRIM(Num2LStr(Store%nBlkZ))//' blocks of '// &
+                   TRIM(Num2LStr(Store%BlkCellsX))//' x '//TRIM(Num2LStr(Store%BlkCellsY))//' x '// &
+                   TRIM(Num2LStr(Store%BlkCellsZ))//' grid cells (+stencil overlap); populated on first access.' )
 
    END ASSOCIATE
 
@@ -951,7 +983,7 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
    integer(IntKi),               intent(  out) :: ErrStat
    character(*),                 intent(  out) :: ErrMsg
 
-   integer(IntKi)                              :: ib, jb, nZ, nResident
+   integer(IntKi)                              :: ib, jb, kb, nResident
    real(ReKi)                                  :: MBytes
    integer(IntKi)                              :: ErrStat2
    character(ErrMsgLen)                        :: ErrMsg2
@@ -967,7 +999,8 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
       ! then guaranteed to lie within the block's stored point range (see WaveField_BlockStore_Init).
       ib   = MIN( WaveField_m%Indx(2,2) / Store%BlkCellsX, Store%nBlkX - 1_IntKi ) + 1_IntKi
       jb   = MIN( WaveField_m%Indx(2,3) / Store%BlkCellsY, Store%nBlkY - 1_IntKi ) + 1_IntKi
-      iBlk = (jb-1_IntKi)*Store%nBlkX + ib
+      kb   = MIN( WaveField_m%Indx(2,4) / Store%BlkCellsZ, Store%nBlkZ - 1_IntKi ) + 1_IntKi
+      iBlk = ((kb-1_IntKi)*Store%nBlkY + (jb-1_IntKi))*Store%nBlkX + ib
 
       IF ( .NOT. Store%Blocks(iBlk)%Populated ) THEN
          !$OMP CRITICAL(SeaSt_BlockPop)
@@ -975,12 +1008,11 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
 
             ASSOCIATE ( Blk => Store%Blocks(iBlk) )
 
-               nZ = SIZE(Store%zGrid)
-               ALLOCATE ( Blk%WaveDynP(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ   ), &
-                          Blk%WaveVel (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), &
-                          Blk%WaveAcc (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), STAT=ErrStat2 )
+               ALLOCATE ( Blk%WaveDynP(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, Blk%nPtZ   ), &
+                          Blk%WaveVel (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, Blk%nPtZ, 3), &
+                          Blk%WaveAcc (0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, Blk%nPtZ, 3), STAT=ErrStat2 )
                IF ( ErrStat2 == 0 .AND. WaveField%MCFD > 0.0_SiKi ) &
-                  ALLOCATE ( Blk%WaveAccMCF(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, nZ, 3), STAT=ErrStat2 )
+                  ALLOCATE ( Blk%WaveAccMCF(0:WaveField%NStepWave, Blk%nPtX, Blk%nPtY, Blk%nPtZ, 3), STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 ) THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating the arrays of wave block ('// &
                                    TRIM(Num2LStr(ib))//','//TRIM(Num2LStr(jb))//').', ErrStat, ErrMsg, RoutineName )
@@ -989,10 +1021,12 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
                IF ( ErrStat < AbortErrLev ) THEN
                   IF ( WaveField%MCFD > 0.0_SiKi ) THEN
                      CALL WaveKinKernel_ComputeColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                         Blk%iPtZ0, Blk%nPtZ, &
                                                          Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2, &
                                                          WaveAccMCF=Blk%WaveAccMCF )
                   ELSE
                      CALL WaveKinKernel_ComputeColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                         Blk%iPtZ0, Blk%nPtZ, &
                                                          Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2 )
                   END IF
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1000,6 +1034,7 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
 
                IF ( ErrStat < AbortErrLev .AND. ( Store%SecondOrderDiff .OR. Store%SecondOrderSum ) ) THEN
                   CALL WaveKinKernel_AddSecondOrderColumns ( WaveField, Store, Blk%iPtX0, Blk%nPtX, Blk%iPtY0, Blk%nPtY, &
+                                                             Blk%iPtZ0, Blk%nPtZ, &
                                                              Blk%WaveDynP, Blk%WaveVel, Blk%WaveAcc, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
@@ -1008,11 +1043,13 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
                   Store%nPopulated    = Store%nPopulated + 1_IntKi
                   nResident           = Store%nPopulated - Store%nEvicted
                   Store%nPeakResident = MAX( Store%nPeakResident, nResident )
-                  MBytes = REAL(WaveField%NStepWave+1,ReKi) * Blk%nPtX * Blk%nPtY * nZ * 4.0_ReKi * &
+                  MBytes = REAL(WaveField%NStepWave+1,ReKi) * Blk%nPtX * Blk%nPtY * Blk%nPtZ * 4.0_ReKi * &
                            MERGE( 10.0_ReKi, 7.0_ReKi, WaveField%MCFD > 0.0_SiKi ) / 1.0E6_ReKi
-                  CALL WrScr ( ' SeaState: populated wave block ('//TRIM(Num2LStr(ib))//','//TRIM(Num2LStr(jb))// &
+                  CALL WrScr ( ' SeaState: populated wave block ('//TRIM(Num2LStr(ib))//','//TRIM(Num2LStr(jb))//','// &
+                               TRIM(Num2LStr(kb))// &
                                ') covering x('//TRIM(Num2LStr(Blk%iPtX0))//':'//TRIM(Num2LStr(Blk%iPtX0+Blk%nPtX-1))// &
                                '), y('//TRIM(Num2LStr(Blk%iPtY0))//':'//TRIM(Num2LStr(Blk%iPtY0+Blk%nPtY-1))// &
+                               '), z('//TRIM(Num2LStr(Blk%iPtZ0))//':'//TRIM(Num2LStr(Blk%iPtZ0+Blk%nPtZ-1))// &
                                ') of the volume grid at t='//TRIM(Num2LStr(REAL(Time,ReKi)))//' s ('// &
                                TRIM(Num2LStr(MBytes))//' MB; '//TRIM(Num2LStr(nResident))//' block(s) resident).' )
                   Blk%LastAccess = Time    ! stamp before any sweep so the fresh block is never a victim
@@ -1129,6 +1166,7 @@ SUBROUTINE WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat, ErrMsg, F
          m_blk = WaveField_m
          m_blk%Indx(:,2) = WaveField_m%Indx(:,2) - ( Blk%iPtX0 - 1_IntKi )
          m_blk%Indx(:,3) = WaveField_m%Indx(:,3) - ( Blk%iPtY0 - 1_IntKi )
+         m_blk%Indx(:,4) = WaveField_m%Indx(:,4) - ( Blk%iPtZ0 - 1_IntKi )
          IF ( PRESENT(FV)    ) FV(:) = GridInterp4DVec( Blk%WaveVel,  m_blk )
          IF ( PRESENT(FA)    ) FA(:) = GridInterp4DVec( Blk%WaveAcc,  m_blk )
          IF ( PRESENT(FDynP) ) FDynP = GridInterp4D   ( Blk%WaveDynP, m_blk )

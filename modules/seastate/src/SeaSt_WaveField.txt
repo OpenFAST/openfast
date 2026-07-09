@@ -38,24 +38,28 @@ typedef     ^             MiscVarType           integer              Indx_Hi    
 typedef     ^             MiscVarType           logical              FirstWarn_Clamp  -            .true.      -        "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
 
 
-# On-demand wave-kinematics block partitioning (WvKinBlockMod=1): one XY block of the volume grid (full Z and time extent)
-typedef     ^             SeaSt_WaveBlockType   SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,NZ]" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveVel         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,NZ,3]"       (m/s)
-typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,NZ,3]"   (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveAccMCF      {:}{:}{:}{:}{:}  -        -        "Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,NZ,3]" (m/s^2)
+# On-demand wave-kinematics block partitioning (WvKinBlockMod=1): one cube block of the volume grid (partitioned in x, y, z; full time extent)
+typedef     ^             SeaSt_WaveBlockType   SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,nPtZ]" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveVel         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,nPtZ,3]"       (m/s)
+typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,nPtZ,3]"   (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveAccMCF      {:}{:}{:}{:}{:}  -        -        "Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3]" (m/s^2)
 typedef     ^                 ^                 DbKi                 LastAccess      -                0        -        "Simulation time of the most recent access to this block" (s)
 typedef     ^                 ^                 LOGICAL              Populated       -             .false.     -        "True when the block arrays are allocated and filled" -
 typedef     ^                 ^                 INTEGER              iPtX0           -                0        -        "Global x-index of this block's first grid point" -
 typedef     ^                 ^                 INTEGER              iPtY0           -                0        -        "Global y-index of this block's first grid point" -
+typedef     ^                 ^                 INTEGER              iPtZ0           -                0        -        "Global z-index of this block's first grid point" -
 typedef     ^                 ^                 INTEGER              nPtX            -                0        -        "Number of grid points this block covers in x" -
 typedef     ^                 ^                 INTEGER              nPtY            -                0        -        "Number of grid points this block covers in y" -
+typedef     ^                 ^                 INTEGER              nPtZ            -                0        -        "Number of grid points this block covers in z" -
 
 # Block store: block-grid layout, per-frequency/per-level generation seeds, and bookkeeping (owned by SeaState MiscVarType)
-typedef     ^          SeaSt_WaveBlockStoreType SeaSt_WaveBlockType  Blocks          {:}              -        -        "Wave-kinematics blocks, index = (jb-1)*nBlkX + ib" -
+typedef     ^          SeaSt_WaveBlockStoreType SeaSt_WaveBlockType  Blocks          {:}              -        -        "Wave-kinematics blocks, index = ((kb-1)*nBlkY + (jb-1))*nBlkX + ib" -
 typedef     ^                 ^                 INTEGER              nBlkX           -                0        -        "Number of blocks in x" -
 typedef     ^                 ^                 INTEGER              nBlkY           -                0        -        "Number of blocks in y" -
+typedef     ^                 ^                 INTEGER              nBlkZ           -                0        -        "Number of blocks in z" -
 typedef     ^                 ^                 INTEGER              BlkCellsX       -                0        -        "Grid cells per block in x (interior blocks)" -
 typedef     ^                 ^                 INTEGER              BlkCellsY       -                0        -        "Grid cells per block in y (interior blocks)" -
+typedef     ^                 ^                 INTEGER              BlkCellsZ       -                0        -        "Grid cells per block in z (interior blocks)" -
 typedef     ^                 ^                 SiKi                 WaveNmbrArr     {:}              -        -        "Wave number of each non-negative frequency component (0:NStepWave2)" (1/m)
 typedef     ^                 ^                 SiKi                 OmegaIArr       {:}              -        -        "Intrinsic (Doppler-corrected) angular frequency of each component; <0 marks components beyond the critical frequency (0:NStepWave2)" (rad/s)
 typedef     ^                 ^                 SiKi                 MCFCArr         {:}              -        -        "MacCamy-Fuchs acceleration scaling coefficient of each component (0:NStepWave2)" -
