@@ -988,7 +988,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
    ! --------------------------------------------------------------------------------
    ! Merge consecutive out-of-bounds planes that are within 2*dr of each other
+   ! TODO: this assumes that only sequential planes will be out of bounds.  We may need to modify this for drones.
    ! --------------------------------------------------------------------------------
+!FIXME: change to checking against parameters for box dimensions.
    maxPln = NINT(xd%NumPlanes) - 1
    i = maxPln
    do while (i >= 1)
@@ -1006,28 +1008,20 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end do
 
    ! --------------------------------------------------------------------------------
-   ! merge planes that collide.
+   ! Drop individual planes that have gone beyond the buffer.
+   ! Each out-of-buffer plane is removed and higher-indexed planes are shifted down,
+   ! so this works even when the furthest-travelled plane is not the last index
+   ! (e.g. for drones).
    ! --------------------------------------------------------------------------------
-   maxPln = NINT(xd%NumPlanes) - 1
-
-   do i=maxPln,0,-1
-
-      ! if a plane is beyond the buffer, simply drop it and all following planes (it should only be the last plane that gets dropped)
+   i = NINT(xd%NumPlanes) - 1
+   do while (i >= 0 .and. NINT(xd%NumPlanes) > 2)
       if ( xd%x_plane(i) > p%x_Buff ) then
-         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )   ! Plane indexing includes 0, hence the -1.0
-         cycle
+         call ShiftWakePlanesDown(i)
+         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )
+         ! Don't decrement i: the plane that shifted into position i needs checking too
+      else
+         i = i - 1
       endif
-
-      ! If a plane overtakes another plane, merge the planes by averaging, then shift all remaining planes forward.
-      if ( i+1 < NINT(xd%NumPlanes)) then    ! don't overstep bounds with i+1 indexing
-         if (xd%x_plane(i) >= xd%x_plane(i+1) ) then
-            call SetErrStat(ErrID_Warn, ' Turbine '//trim(num2lstr(p%TurbNum))//' wake plane '//trim(num2lstr(i))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i)))//') has overtaken wake plane '//trim(num2lstr(i+1))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i+1)))// &
-                        '). Merging planes by averaging. Reduce f_c to prevent planes from passing each other. ', errStat, errMsg, RoutineName)
-            call MergeWakePlanes(i, i+1)
-         end if
-      end if
    end do
 
    call Cleanup()
@@ -1059,7 +1053,16 @@ contains
       xd%Vy_wake2     (:,:,iKeep) = (xd%Vy_wake2     (:,:,iKeep) + xd%Vy_wake2     (:,:,iDrop)) / 2.0_ReKi
       xd%Vz_wake2     (:,:,iKeep) = (xd%Vz_wake2     (:,:,iKeep) + xd%Vz_wake2     (:,:,iDrop)) / 2.0_ReKi
 
-      ! Shift all planes above iDrop down by one
+      ! Shift all planes above iDrop down by one and decrement plane count
+      call ShiftWakePlanesDown(iDrop)
+      xd%NumPlanes = xd%NumPlanes - 1.0
+   end subroutine MergeWakePlanes
+
+   !> Shift all wake-plane state arrays above index iDrop down by one.
+   !! This removes the plane at iDrop; the caller must also decrement xd%NumPlanes.
+   subroutine ShiftWakePlanesDown(iDrop)
+      integer(IntKi), intent(in) :: iDrop  !< Index of plane to remove
+      integer(IntKi) :: j
       do j = iDrop, NINT(xd%NumPlanes)-2
          xd%Vx_wind_disk_filt(j) = xd%Vx_wind_disk_filt(j+1)
          xd%x_plane      (    j) = xd%x_plane      (    j+1)
@@ -1075,10 +1078,7 @@ contains
          xd%Vy_wake2     (:,:,j) = xd%Vy_wake2     (:,:,j+1)
          xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
       end do
-
-      ! Decrement plane count
-      xd%NumPlanes = xd%NumPlanes - 1.0
-   end subroutine MergeWakePlanes
+   end subroutine ShiftWakePlanesDown
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j
