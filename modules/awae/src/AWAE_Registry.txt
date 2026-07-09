@@ -169,7 +169,6 @@ typedef   ^ LRGParamType     IntKi    nXYZ                    {3} -  -  "Number 
 typedef   ^ LRGParamType     IntKi    nPoints                  -  -  -  "Number of spatial nodes" -
 typedef   ^ LRGParamType     ReKi     GridPoints           {:}{:} -  -  "XYZ components (global positions) of the spatial discretization of the grid" m
 typedef   ^ LRGParamType     ReKi     Size                    {3} -  -  "XYZ size of the grid" m
-typedef   ^ LRGParamType     ReKi     Center                  {3} -  -  "XYZ coordinates of the grid center" m
 typedef   ^ LRGParamType     LRGChunkType  WakeChunks         {:} -  -  "Chunks for updating grid from wake" -
 
 
@@ -246,7 +245,6 @@ typedef   ^ OutputType     AWAE_HighWindGrid Vdist_High   {:}     -      -      
 typedef   ^ OutputType     ReKi       V_plane      {:}{:}{:}              -      -      "Advection, deflection, and meandering velocity of wake planes for each turbine"      m/s
 typedef   ^ OutputType     ReKi       TI_amb       {:}                    -      -      "Ambient turbulence intensity of wind at rotor disk for each turbine"      -
 typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -      -      "Rotor-disk-averaged ambient wind speed, normal to disk, for each turbine"      m/s
-typedef   ^ OutputType     ReKi       wakePlaneDomainExit {:}{:}{:}           0      -      "Per-dimension flag (0: in domain, -1: crossed lower, +1: crossed upper) for each plane [dim,plane,turbine]" -
 
 
 # ..... Inputs ...........................................................................................................

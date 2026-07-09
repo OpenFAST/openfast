@@ -195,7 +195,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nPoints = 0_IntKi      !< Number of spatial nodes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GridPoints      !< XYZ components (global positions) of the spatial discretization of the grid [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Size = 0.0_ReKi      !< XYZ size of the grid [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: Center = 0.0_ReKi      !< XYZ coordinates of the grid center [m]
     TYPE(LRGChunkType) , DIMENSION(:), ALLOCATABLE  :: WakeChunks      !< Chunks for updating grid from wake [-]
   END TYPE LRGParamType
 ! =======================
@@ -268,7 +267,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: V_plane      !< Advection, deflection, and meandering velocity of wake planes for each turbine [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TI_amb      !< Ambient turbulence intensity of wind at rotor disk for each turbine [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_wind_disk      !< Rotor-disk-averaged ambient wind speed, normal to disk, for each turbine [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: wakePlaneDomainExit      !< Per-dimension flag (0: in domain, -1: crossed lower, +1: crossed upper) for each plane [dim,plane,turbine] [-]
   END TYPE AWAE_OutputType
 ! =======================
 ! =========  AWAE_InputType  =======
@@ -296,7 +294,6 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AWAE_y_V_plane                   =  11 ! AWAE%V_plane
    integer(IntKi), public, parameter :: AWAE_y_TI_amb                    =  12 ! AWAE%TI_amb
    integer(IntKi), public, parameter :: AWAE_y_Vx_wind_disk              =  13 ! AWAE%Vx_wind_disk
-   integer(IntKi), public, parameter :: AWAE_y_wakePlaneDomainExit       =  14 ! AWAE%wakePlaneDomainExit
 
 contains
 
@@ -1843,7 +1840,6 @@ subroutine AWAE_CopyLRGParamType(SrcLRGParamTypeData, DstLRGParamTypeData, CtrlC
       DstLRGParamTypeData%GridPoints = SrcLRGParamTypeData%GridPoints
    end if
    DstLRGParamTypeData%Size = SrcLRGParamTypeData%Size
-   DstLRGParamTypeData%Center = SrcLRGParamTypeData%Center
    if (allocated(SrcLRGParamTypeData%WakeChunks)) then
       LB(1:1) = lbound(SrcLRGParamTypeData%WakeChunks)
       UB(1:1) = ubound(SrcLRGParamTypeData%WakeChunks)
@@ -1900,7 +1896,6 @@ subroutine AWAE_PackLRGParamType(RF, Indata)
    call RegPack(RF, InData%nPoints)
    call RegPackAlloc(RF, InData%GridPoints)
    call RegPack(RF, InData%Size)
-   call RegPack(RF, InData%Center)
    call RegPack(RF, allocated(InData%WakeChunks))
    if (allocated(InData%WakeChunks)) then
       call RegPackBounds(RF, 1, lbound(InData%WakeChunks), ubound(InData%WakeChunks))
@@ -1928,7 +1923,6 @@ subroutine AWAE_UnPackLRGParamType(RF, OutData)
    call RegUnpack(RF, OutData%nPoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GridPoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Size); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Center); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%WakeChunks)) deallocate(OutData%WakeChunks)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -2508,18 +2502,6 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       end if
       DstOutputData%Vx_wind_disk = SrcOutputData%Vx_wind_disk
    end if
-   if (allocated(SrcOutputData%wakePlaneDomainExit)) then
-      LB(1:3) = lbound(SrcOutputData%wakePlaneDomainExit)
-      UB(1:3) = ubound(SrcOutputData%wakePlaneDomainExit)
-      if (.not. allocated(DstOutputData%wakePlaneDomainExit)) then
-         allocate(DstOutputData%wakePlaneDomainExit(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%wakePlaneDomainExit.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputData%wakePlaneDomainExit = SrcOutputData%wakePlaneDomainExit
-   end if
 end subroutine
 
 subroutine AWAE_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -2551,9 +2533,6 @@ subroutine AWAE_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%Vx_wind_disk)) then
       deallocate(OutputData%Vx_wind_disk)
    end if
-   if (allocated(OutputData%wakePlaneDomainExit)) then
-      deallocate(OutputData%wakePlaneDomainExit)
-   end if
 end subroutine
 
 subroutine AWAE_PackOutput(RF, Indata)
@@ -2575,7 +2554,6 @@ subroutine AWAE_PackOutput(RF, Indata)
    call RegPackAlloc(RF, InData%V_plane)
    call RegPackAlloc(RF, InData%TI_amb)
    call RegPackAlloc(RF, InData%Vx_wind_disk)
-   call RegPackAlloc(RF, InData%wakePlaneDomainExit)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2604,7 +2582,6 @@ subroutine AWAE_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%V_plane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TI_amb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Vx_wind_disk); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%wakePlaneDomainExit); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -3005,8 +2982,6 @@ subroutine AWAE_VarPackOutput(V, y, ValAry)
          VarVals = y%TI_amb(V%iLB:V%iUB)                                      ! Rank 1 Array
       case (AWAE_y_Vx_wind_disk)
          VarVals = y%Vx_wind_disk(V%iLB:V%iUB)                                ! Rank 1 Array
-      case (AWAE_y_wakePlaneDomainExit)
-         VarVals = y%wakePlaneDomainExit(V%iLB:V%iUB, V%j, V%k)               ! Rank 3 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -3037,8 +3012,6 @@ subroutine AWAE_VarUnpackOutput(V, ValAry, y)
          y%TI_amb(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
       case (AWAE_y_Vx_wind_disk)
          y%Vx_wind_disk(V%iLB:V%iUB) = VarVals                                ! Rank 1 Array
-      case (AWAE_y_wakePlaneDomainExit)
-         y%wakePlaneDomainExit(V%iLB:V%iUB, V%j, V%k) = VarVals               ! Rank 3 Array
       end select
    end associate
 end subroutine
@@ -3055,8 +3028,6 @@ function AWAE_OutputFieldName(DL) result(Name)
        Name = "y%TI_amb"
    case (AWAE_y_Vx_wind_disk)
        Name = "y%Vx_wind_disk"
-   case (AWAE_y_wakePlaneDomainExit)
-       Name = "y%wakePlaneDomainExit"
    case default
        Name = "Unknown Field"
    end select

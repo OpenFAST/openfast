@@ -624,6 +624,12 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          WD_InitInp%TurbNum      = nt
          WD_InitInp%MaxNumPlanes = farm%p%MaxNumPlanes(nt)
          WD_InitInp%OutFileRoot  = farm%p%OutFileRoot
+         WD_InitInp%LowResBounds(1,1) = farm%p%X0_low
+         WD_InitInp%LowResBounds(2,1) = farm%p%Y0_low
+         WD_InitInp%LowResBounds(3,1) = farm%p%Z0_low
+         WD_InitInp%LowResBounds(1,2) = farm%p%X0_low + farm%p%dX_low * real(farm%p%nX_low - 1, ReKi)
+         WD_InitInp%LowResBounds(2,2) = farm%p%Y0_low + farm%p%dY_low * real(farm%p%nY_low - 1, ReKi)
+         WD_InitInp%LowResBounds(3,2) = farm%p%Z0_low + farm%p%dZ_low * real(farm%p%nZ_low - 1, ReKi)
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -1822,7 +1828,6 @@ SUBROUTINE Transfer_AWAE_to_WD(farm)
       farm%WD(nt)%u%V_plane(:,0:MaxPln) = farm%AWAE%y%V_plane(:,0:MaxPln,nt)  ! Advection, deflection, and meandering velocity of wake planes, m/s
       farm%WD(nt)%u%Vx_wind_disk        = farm%AWAE%y%Vx_wind_disk(nt)        ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
       farm%WD(nt)%u%TI_amb              = farm%AWAE%y%TI_amb(nt)              ! Ambient turbulence intensity of wind at rotor disk
-      farm%WD(nt)%u%wakePlaneDomainExit(:,0:MaxPln) = farm%AWAE%y%wakePlaneDomainExit(:,0:MaxPln,nt)  ! Per-dimension domain exit flags
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD

@@ -1462,7 +1462,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    allocate (y%Vx_wind_disk (1:p%NumTurbines), STAT=ErrStat2);  if (Failed0('y%Vx_rel_disk.')) return;
    allocate (y%TI_amb       (1:p%NumTurbines), STAT=ErrStat2);  if (Failed0('y%TI_amb.')) return;
-   allocate (y%wakePlaneDomainExit(3,0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2);  if (Failed0('y%wakePlaneDomainExit.')) return;
 
    ! Set pointers to high resolution wind in InitOutput
    allocate(InitOut%Vdist_High(1:p%NumTurbines), STAT=ErrStat2 )
@@ -1475,7 +1474,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    y%V_plane          = 0.0_Reki
    y%Vx_wind_disk     = 0.0_Reki
    y%TI_amb           = 0.0_Reki
-   y%wakePlaneDomainExit  = 0.0_ReKi
 
    !----------------------------------------------------------------------------
    ! Initialize misc 
@@ -2028,9 +2026,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    ! Low-resolution grid output
    call LowResGridCalcOutput(n, u, p, xd, y, m, ErrStat2, ErrMsg2)
    if (Failed()) return
-
-   ! Expose planeDomainExit as output for WakeDynamics
-   y%wakePlaneDomainExit = real(m%planeDomainExit, ReKi)
 
    ! If it's time to write wind VTK files
    if (WriteWindVTK) then

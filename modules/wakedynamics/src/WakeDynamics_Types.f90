@@ -92,6 +92,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     INTEGER(IntKi)  :: MaxNumPlanes = 0_IntKi      !< Maximum number of wake planes allowed [-]
+    REAL(ReKi) , DIMENSION(1:3,1:2)  :: LowResBounds = 0.0_ReKi      !< Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper [m]
   END TYPE WD_InitInputType
 ! =======================
 ! =========  WD_InitOutputType  =======
@@ -208,6 +209,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
+    REAL(ReKi) , DIMENSION(1:3,1:2)  :: LowResBounds = 0.0_ReKi      !< Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper [m]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Def_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
@@ -235,7 +237,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Vx_rel_disk = 0.0_ReKi      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Ct_azavg      !< Azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cq_azavg      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: wakePlaneDomainExit      !< Per-dimension flag from AWAE (0: in domain, -1: crossed lower, +1: crossed upper) for each plane [dim,plane] [-]
   END TYPE WD_InputType
 ! =======================
 ! =========  WD_OutputType  =======
@@ -266,18 +267,17 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  11 ! WD%Vx_rel_disk
    integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  12 ! WD%Ct_azavg
    integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  13 ! WD%Cq_azavg
-   integer(IntKi), public, parameter :: WD_u_wakePlaneDomainExit         =  14 ! WD%wakePlaneDomainExit
-   integer(IntKi), public, parameter :: WD_y_NumPlanes                   =  15 ! WD%NumPlanes
-   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  16 ! WD%xhat_plane
-   integer(IntKi), public, parameter :: WD_y_p_plane                     =  17 ! WD%p_plane
-   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  18 ! WD%Vx_wake
-   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  19 ! WD%Vr_wake
-   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  20 ! WD%Vx_wake2
-   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  21 ! WD%Vy_wake2
-   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  22 ! WD%Vz_wake2
-   integer(IntKi), public, parameter :: WD_y_D_wake                      =  23 ! WD%D_wake
-   integer(IntKi), public, parameter :: WD_y_x_plane                     =  24 ! WD%x_plane
-   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  25 ! WD%WAT_k
+   integer(IntKi), public, parameter :: WD_y_NumPlanes                   =  14 ! WD%NumPlanes
+   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  15 ! WD%xhat_plane
+   integer(IntKi), public, parameter :: WD_y_p_plane                     =  16 ! WD%p_plane
+   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  17 ! WD%Vx_wake
+   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  18 ! WD%Vr_wake
+   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  19 ! WD%Vx_wake2
+   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  20 ! WD%Vy_wake2
+   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  21 ! WD%Vz_wake2
+   integer(IntKi), public, parameter :: WD_y_D_wake                      =  22 ! WD%D_wake
+   integer(IntKi), public, parameter :: WD_y_x_plane                     =  23 ! WD%x_plane
+   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  24 ! WD%WAT_k
 
 contains
 
@@ -459,6 +459,7 @@ subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%TurbNum = SrcInitInputData%TurbNum
    DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
    DstInitInputData%MaxNumPlanes = SrcInitInputData%MaxNumPlanes
+   DstInitInputData%LowResBounds = SrcInitInputData%LowResBounds
 end subroutine
 
 subroutine WD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -483,6 +484,7 @@ subroutine WD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%MaxNumPlanes)
+   call RegPack(RF, InData%LowResBounds)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -495,6 +497,7 @@ subroutine WD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxNumPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LowResBounds); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1411,7 +1414,7 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyParam'
    ErrStat = ErrID_None
@@ -1489,6 +1492,7 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileVTKDir = SrcParamData%OutFileVTKDir
    DstParamData%TurbNum = SrcParamData%TurbNum
+   DstParamData%LowResBounds = SrcParamData%LowResBounds
    DstParamData%WAT = SrcParamData%WAT
    DstParamData%WAT_k_Def_k_c = SrcParamData%WAT_k_Def_k_c
    DstParamData%WAT_k_Def_FMin = SrcParamData%WAT_k_Def_FMin
@@ -1565,6 +1569,7 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%OutFileVTKDir)
    call RegPack(RF, InData%TurbNum)
+   call RegPack(RF, InData%LowResBounds)
    call RegPack(RF, InData%WAT)
    call RegPack(RF, InData%WAT_k_Def_k_c)
    call RegPack(RF, InData%WAT_k_Def_FMin)
@@ -1583,7 +1588,7 @@ subroutine WD_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WD_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackParam'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1627,6 +1632,7 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileVTKDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LowResBounds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Def_k_c); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Def_FMin); if (RegCheckErr(RF, RoutineName)) return
@@ -1696,18 +1702,6 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstInputData%Cq_azavg = SrcInputData%Cq_azavg
    end if
-   if (allocated(SrcInputData%wakePlaneDomainExit)) then
-      LB(1:2) = lbound(SrcInputData%wakePlaneDomainExit)
-      UB(1:2) = ubound(SrcInputData%wakePlaneDomainExit)
-      if (.not. allocated(DstInputData%wakePlaneDomainExit)) then
-         allocate(DstInputData%wakePlaneDomainExit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%wakePlaneDomainExit.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%wakePlaneDomainExit = SrcInputData%wakePlaneDomainExit
-   end if
 end subroutine
 
 subroutine WD_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1725,9 +1719,6 @@ subroutine WD_DestroyInput(InputData, ErrStat, ErrMsg)
    end if
    if (allocated(InputData%Cq_azavg)) then
       deallocate(InputData%Cq_azavg)
-   end if
-   if (allocated(InputData%wakePlaneDomainExit)) then
-      deallocate(InputData%wakePlaneDomainExit)
    end if
 end subroutine
 
@@ -1748,7 +1739,6 @@ subroutine WD_PackInput(RF, Indata)
    call RegPack(RF, InData%Vx_rel_disk)
    call RegPackAlloc(RF, InData%Ct_azavg)
    call RegPackAlloc(RF, InData%Cq_azavg)
-   call RegPackAlloc(RF, InData%wakePlaneDomainExit)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1772,7 +1762,6 @@ subroutine WD_UnPackInput(RF, OutData)
    call RegUnpack(RF, OutData%Vx_rel_disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ct_azavg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cq_azavg); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%wakePlaneDomainExit); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2127,8 +2116,6 @@ subroutine WD_VarPackInput(V, u, ValAry)
          VarVals = u%Ct_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
       case (WD_u_Cq_azavg)
          VarVals = u%Cq_azavg(V%iLB:V%iUB)                                    ! Rank 1 Array
-      case (WD_u_wakePlaneDomainExit)
-         VarVals = u%wakePlaneDomainExit(V%iLB:V%iUB,V%j)                     ! Rank 2 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -2175,8 +2162,6 @@ subroutine WD_VarUnpackInput(V, ValAry, u)
          u%Ct_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
       case (WD_u_Cq_azavg)
          u%Cq_azavg(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
-      case (WD_u_wakePlaneDomainExit)
-         u%wakePlaneDomainExit(V%iLB:V%iUB, V%j) = VarVals                    ! Rank 2 Array
       end select
    end associate
 end subroutine
@@ -2209,8 +2194,6 @@ function WD_InputFieldName(DL) result(Name)
        Name = "u%Ct_azavg"
    case (WD_u_Cq_azavg)
        Name = "u%Cq_azavg"
-   case (WD_u_wakePlaneDomainExit)
-       Name = "u%wakePlaneDomainExit"
    case default
        Name = "Unknown Field"
    end select

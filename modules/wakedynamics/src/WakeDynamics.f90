@@ -426,6 +426,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    !............................................................................................
    p%TurbNum     = InitInp%TurbNum
    p%DT_low      = interval
+   p%LowResBounds = InitInp%LowResBounds
    ! Parameters from input file
    p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
    p%MaxNumPlanes  = InitInp%MaxNumPlanes
@@ -499,12 +500,10 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate( u%V_plane       (3,0:p%MaxNumPlanes-1),stat=errStat2);  if (Failed0('u%V_plane.' )) return;
    allocate( u%Ct_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Ct_azavg.')) return;
    allocate( u%Cq_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Cq_azavg.')) return;
-   allocate( u%wakePlaneDomainExit(3,0:p%MaxNumPlanes-1),stat=errStat2);  if (Failed0('u%wakePlaneDomainExit.')) return;
    if (errStat /= ErrID_None) return
    u%V_plane  = 0.0_ReKi
    u%Ct_azavg = 0.0_ReKi
    u%Cq_azavg = 0.0_ReKi
-   u%wakePlaneDomainExit = 0.0_ReKi  
 
          
       
@@ -967,11 +966,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       endif
    endif
 
-   !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
-
 
    ! --------------------------------------------------------------------------------
-   ! Drop planes that exit the buffer
+   ! Drop planes that exit the allocated memory buffer
    ! --------------------------------------------------------------------------------
 
    xd%NumPlanes = xd%NumPlanes + 1.0
@@ -990,14 +987,13 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! Merge consecutive out-of-bounds planes that are within 2*dr of each other
    ! TODO: this assumes that only sequential planes will be out of bounds.  We may need to modify this for drones.
    ! --------------------------------------------------------------------------------
-!FIXME: change to checking against parameters for box dimensions.
    maxPln = NINT(xd%NumPlanes) - 1
    i = maxPln
    do while (i >= 1)
       ! Check if plane i is out of domain in any dimension
-      if (any(NINT(u%wakePlaneDomainExit(:,i)) /= 0)) then
+      if (PlaneOutOfBounds(xd%p_plane(:,i))) then
          ! Check if the adjacent lower-index plane (i-1) is also out of domain
-         if (any(NINT(u%wakePlaneDomainExit(:,i-1)) /= 0)) then
+         if (PlaneOutOfBounds(xd%p_plane(:,i-1))) then
             ! Check spatial proximity
             if (TwoNorm(xd%p_plane(:,i) - xd%p_plane(:,i-1)) <= 2.0_ReKi * p%dr) then
                call MergeWakePlanes(i-1, i)
@@ -1079,6 +1075,13 @@ contains
          xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
       end do
    end subroutine ShiftWakePlanesDown
+
+   !> Check whether a wake plane center is outside the low-resolution domain bounds.
+   pure function PlaneOutOfBounds(p_pos) result(outOfBounds)
+      real(ReKi), intent(in) :: p_pos(3) !< Plane center position (XYZ)
+      logical                :: outOfBounds
+      outOfBounds = any(p_pos < p%LowResBounds(:,1)) .or. any(p_pos > p%LowResBounds(:,2))
+   end function PlaneOutOfBounds
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j

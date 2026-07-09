@@ -328,7 +328,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%LowRes%nXYZ = dims
    p%LowRes%nPoints = product(dims)
    p%LowRes%Size = gridSpacing * real(dims - 1, ReKi)
-   p%LowRes%Center = origin + 0.5_ReKi * p%LowRes%Size
    
    ! Polar data
    p%dPol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.0_ReKi
