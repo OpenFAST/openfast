@@ -38,6 +38,11 @@ and approval.
    - 8.6 [Package structure](#86-package-structure)
    - 8.7 [Dependencies](#87-dependencies)
 9. [Critical Analysis](#critical-analysis)
+10. [Differential audit — corrections and follow-up fixes](#differential-audit--corrections-and-follow-up-fixes)
+    - 10.1 [Corrections folded into §2–§5 (resolved)](#101-corrections-folded-into-25-resolved)
+    - 10.2 [New bugs the audit found (fixed on this branch)](#102-new-bugs-the-audit-found-fixed-on-this-branch)
+    - 10.3 [Verified-real fixes (audit-confirmed, unchanged)](#103-verified-real-fixes-audit-confirmed-unchanged)
+    - 10.4 [Further fixes made on this branch](#104-further-fixes-made-on-this-branch)
 
 ---
 
@@ -129,9 +134,11 @@ Key structural problems:
 - **File-path resolution was ad-hoc** — every `read_X()` method computed its own
   absolute path from `self.FAST_directory`, sometimes incorrectly for cases where
   referenced files crossed case boundaries (e.g., `../5MW_Baseline/`).
-- **`CompAero` enum was wrong** — the code tested `comp_aero == 3` to identify
-  AeroDisk, but the OpenFAST input format defines AeroDisk as `CompAero = 1`.
-  This caused AeroDisk cases to silently skip aero I/O.
+- **`CompAero` branching for AeroDisk vs. AeroDyn was buried inline** in the
+  monolithic `execute()` method's module-orchestration logic rather than being
+  a clearly named, independently testable check. `AeroDisk` corresponds to
+  `CompAero = 1` in the OpenFAST input format. (See §4.3 for how the new
+  driver expresses this branch.)
 
 ### 2.3 FAST\_writer.py — the god class
 
@@ -139,11 +146,12 @@ Key structural problems:
 
 - Each `write_X()` method used large f-string templates that mixed field values and
   comments in a single pass.
-- **Format-width overflow** — several floating-point fields used `{:11}` format
-  widths that overflowed for values outside the expected range (scientific notation
-  with large exponents).  This produced malformed input files that OpenFAST would
-  reject.  Affected modules: AeroDyn blade tables, BeamDyn stiffness matrices,
-  UnsteadyAero model constants.
+- **Format-width overflow in the standalone driver writers** — several
+  floating-point fields in the AeroDyn, BeamDyn, and UnsteadyAero standalone
+  driver input writers used fixed format widths that overflowed for values
+  outside the expected range (scientific notation with large exponents),
+  producing malformed driver input files. This affects the driver-input
+  writers, not the `io/aerodyn.py` / `io/beamdyn.py` module writers.
 - **No write-only entry points per module** — to regenerate just the HydroDyn file
   from a modified dict, callers had to run the full `execute()` which re-wrote all
   files.
@@ -239,8 +247,8 @@ openfast_io/
 ├── _version.py
 │
 │── ── PUBLIC FACADES (same filenames as before, thin wrappers) ──────────────
-├── FAST_reader.py            # 103 lines — delegates to OpenFASTDriver
-├── FAST_writer.py            # 216 lines — delegates to OpenFASTDriver
+├── FAST_reader.py            # ~115 lines — delegates to OpenFASTDriver
+├── FAST_writer.py            # ~230 lines — delegates to OpenFASTDriver
 ├── facade.py                 # alias re-exports for InputReader_Facade / InputWriter_Facade
 │
 │── ── LAYER 1: per-module IO ────────────────────────────────────────────────
@@ -297,14 +305,8 @@ openfast_io/
 └── tests/
     ├── conftest.py
     ├── test_io_base.py
-    ├── test_io_aerodyn.py
-    ├── test_io_elastodyn.py
-    ├── test_io_inflowwind_beamdyn.py
-    ├── test_io_hydrodynamics.py
-    ├── test_io_offshore.py
-    ├── test_io_servodyn.py
-    ├── test_io_small_modules.py
-    ├── test_io_extptfm.py
+    ├── test_io_onshore.py         # ElastoDyn, AeroDyn, BeamDyn, InflowWind, ServoDyn, SimpleElastoDyn
+    ├── test_io_offshore.py        # HydroDyn, SeaState, SubDyn, MoorDyn, MAP++, ExtPtfm
     ├── test_driver_openfast.py
     ├── test_driver_fastfarm.py
     ├── test_driver_roundtrip.py   # roundtrip + smoke tests for all 10 drivers
@@ -314,26 +316,31 @@ openfast_io/
     ├── test_parsing.py            # fmt_field boundary tests, parsing helpers
     ├── test_schema.py
     ├── test_validation.py
-    ├── test_of_io_pytest.py       # original integration tests (43 r-test cases)
+    ├── test_of_io_pytest.py       # original integration tests (r-test)
     └── test_check_registry_drift.py
 ```
 
-**Line counts for key new files:**
+The seven per-module `test_io_*.py` files from the initial decomposition (one
+per module family) were later consolidated into two files —
+`test_io_onshore.py` and `test_io_offshore.py` — to cut boilerplate shared
+across module-IO tests.
+
+**Approximate line counts for key new files (`wc -l`):**
 
 | File | Lines | Role |
 |---|---|---|
-| `FAST_reader.py` | 103 | Public facade only |
-| `FAST_writer.py` | 216 | Public facade only |
-| `io/aerodyn.py` | 940 | AeroDyn module I/O |
-| `io/servodyn.py` | 784 | ServoDyn + StC module I/O |
-| `io/hydrodyn.py` | 688 | HydroDyn module I/O |
-| `io/elastodyn.py` | 637 | ElastoDyn module I/O |
-| `io/subdyn.py` | 562 | SubDyn module I/O |
-| `drivers/openfast.py` | 698 | Full-system orchestration |
-| `parsing.py` | 204 | Standalone parsing helpers |
-| `schema.py` | 161 | Parameter metadata |
-| `validation.py` | 113 | Cross-module checks |
-| `outlist.py` | 193 | Output channel management |
+| `FAST_reader.py` | ~115 | Public facade only |
+| `FAST_writer.py` | ~230 | Public facade only |
+| `io/aerodyn.py` | ~940 | AeroDyn module I/O |
+| `io/servodyn.py` | ~780 | ServoDyn + StC module I/O |
+| `io/hydrodyn.py` | ~690 | HydroDyn module I/O |
+| `io/elastodyn.py` | ~650 | ElastoDyn module I/O |
+| `io/subdyn.py` | ~570 | SubDyn module I/O |
+| `drivers/openfast.py` | ~755 | Full-system orchestration |
+| `parsing.py` | ~205 | Standalone parsing helpers |
+| `schema.py` | ~160 | Parameter metadata |
+| `validation.py` | ~135 | Cross-module checks |
+| `outlist.py` | ~250 | Output channel management |
 
 ### 3.2 Layer 1 — ModuleIO (io/)
 
@@ -453,7 +460,7 @@ that reuses the same IO classes as `OpenFASTDriver` for the individual turbines.
 `FAST_reader.py` and `FAST_writer.py` now contain **only facades**:
 
 ```python
-# FAST_reader.py (103 lines, unchanged public API)
+# FAST_reader.py (~115 lines, unchanged public API)
 class InputReader_OpenFAST:
     def __init__(self):
         self.FAST_InputFile = None
@@ -470,7 +477,7 @@ class InputReader_OpenFAST:
 ```
 
 ```python
-# FAST_writer.py (216 lines, unchanged public API)
+# FAST_writer.py (~230 lines, unchanged public API)
 class InputWriter_OpenFAST:
     def __init__(self):
         self.FAST_runDirectory = None
@@ -496,7 +503,7 @@ git history (branch `openfast_io_arch~1`) serves as the reference.
 
 ### 3.5 New ancillary subsystems
 
-#### parsing.py (204 lines)
+#### parsing.py (~205 lines)
 
 All parsing primitives extracted into a standalone importable module:
 
@@ -506,10 +513,16 @@ from openfast_io.parsing import float_read, bool_read, read_array, fix_path
 
 Previously these were only accessible by importing FAST_reader.py.
 
-Also added: `fmt_field(value, width=22)` — a safe formatter that detects when
-`str(value)` would exceed a fixed-width field and switches to scientific notation
-automatically.  This fixed the format-width overflow bugs in AeroDyn, BeamDyn,
-and UnsteadyAero.
+Also added: `fmt_field(val, min_width=28)` — a safe formatter that detects when
+`str(val)` would exceed a fixed-width field and switches to scientific notation
+automatically. This is used by the **standalone driver writers**
+(`drivers/aerodyn_driver.py`, `drivers/beamdyn_driver.py`,
+`drivers/unsteadyaero_driver.py`) to fix the format-width overflow bugs
+described in §4.2/§4.4/§4.12 — it is not used by the `io/` module
+readers/writers. Separately, all 10 standalone driver writers now guarantee a
+literal space between adjacent format fields in their write templates (fixed
+on this branch), so an overflowing field can never run into the next one even
+where `fmt_field` itself is not used.
 
 #### schema.py (161 lines)
 
@@ -533,17 +546,24 @@ Features:
 Intentionally hand-authored, not auto-generated: parameter descriptions and units
 require domain knowledge that the Fortran Registry files do not capture.
 
-#### validation.py (113 lines)
+#### validation.py (~135 lines)
 
 Physics-level cross-module checks against a loaded `fst_vt`:
 
 ```python
 from openfast_io.validation import validate_fst_vt, ValidationIssue
 
-issues = validate_fst_vt(fst_vt, version='5.0.0')
+issues = validate_fst_vt(fst_vt, version='5.0.0', check_files=True, base_dir=case_dir)
 for issue in issues:
     print(f"[{issue.severity}] {issue.modules}: {issue.message}")
 ```
+
+`validate_fst_vt` takes an explicit `base_dir=` parameter so that, when
+`check_files=True`, referenced file paths are resolved against the case
+directory rather than the process's current working directory — the earlier
+version resolved against `cwd`, which produced false-positive "file does not
+exist" issues whenever `validate_fst_vt` was called from a different
+directory than the case.
 
 Checks implemented:
 
@@ -582,56 +602,49 @@ Advantages over the legacy approach:
 - **Fully backwards compatible** — `to_fst_output()` and `from_fst_output()` convert
   to/from the legacy nested-bool-dict format.
 
-#### formats.py (32 lines)
+#### formats.py (~32 lines)
 
 JSON and YAML roundtrip helpers for `fst_vt`:
 
 ```python
-from openfast_io.formats import to_json, to_yaml, from_json, from_yaml
+from openfast_io.formats import fst_vt_to_json, fst_vt_from_json, fst_vt_to_yaml, fst_vt_from_yaml
 
-json_str = to_json(fst_vt)      # uses remove_numpy internally
-fst_vt2  = from_json(json_str)  # reconstructs the dict
+json_str = fst_vt_to_json(fst_vt)      # uses remove_numpy internally
+fst_vt2  = fst_vt_from_json(json_str)  # reconstructs the dict
 ```
 
 Useful for logging, diffing, and serialising simulation configurations.
 
 ### 3.6 Tests (after)
 
-**262 tests passing, 0 failures.  87% line coverage.**
+**`uv run --with pytest,pyyaml pytest openfast_io/tests -q` → 100 passed, 180
+skipped, 0 failed.** The skips are r-test/OpenFAST-binary integration tests
+that skip cleanly (with a reason) when the r-test submodule, a compiled
+OpenFAST binary, or DISCON DLLs are not present — they are not disabled tests.
 
-Test suite covers:
+Test suite covers (test counts via `grep -c "def test_"`):
 
 | Test file | What it tests | Test count |
 |---|---|---|
-| `test_io_base.py` | `ModuleIO` ABC contract | 4 |
-| `test_io_aerodyn.py` | `AeroDynIO` read, write, roundtrip | 8 |
-| `test_io_elastodyn.py` | `ElastoDynIO` read, write, roundtrip | 10 |
-| `test_io_inflowwind_beamdyn.py` | `InflowWindIO`, `BeamDynIO` | 10 |
-| `test_io_hydrodynamics.py` | `HydroDynIO`, `SeaStateIO`, NBodyMod variants | 14 |
-| `test_io_offshore.py` | `SubDynIO`, `MoorDynIO`, `MAPIO` | 13 |
-| `test_io_servodyn.py` | `ServoDynIO`, StC files | 11 |
-| `test_io_small_modules.py` | `SimpleElastoDynIO`, `AeroDiskIO` | 11 |
-| `test_io_extptfm.py` | `ExtPtfmIO` | 7 |
-| `test_driver_openfast.py` | `OpenFASTDriver.read` / `write` | ~10 |
-| `test_driver_fastfarm.py` | `FASTFarmDriver` | ~5 |
-| `test_driver_roundtrip.py` | All 10 standalone drivers (roundtrip + smoke) | ~73 |
-| `test_facade.py` | `InputReader_OpenFAST`, `InputWriter_OpenFAST` | 11 |
+| `test_io_base.py` | `ModuleIO` ABC contract | 5 |
+| `test_io_onshore.py` | `ElastoDynIO`, `AeroDynIO`, `BeamDynIO`, `InflowWindIO`, `ServoDynIO`, `SimpleElastoDynIO` | 18 |
+| `test_io_offshore.py` | `HydroDynIO`, `SeaStateIO`, `SubDynIO`, `MoorDynIO`, `MAPIO`, `ExtPtfmIO` | 18 |
+| `test_driver_openfast.py` | `OpenFASTDriver.read` / `write` | 14 |
+| `test_driver_fastfarm.py` | `FASTFarmDriver` | 11 |
+| `test_driver_roundtrip.py` | All 10 standalone drivers (roundtrip + smoke) + outlist-registry regressions | 24 |
+| `test_facade.py` | `InputReader_OpenFAST`, `InputWriter_OpenFAST` | 13 |
 | `test_formats.py` | JSON/YAML roundtrip | 5 |
 | `test_outlist.py` | `OutList` enable/disable/validate | 9 |
 | `test_parsing.py` | `fmt_field` boundaries, `float_read`, `bool_read` | 24 |
 | `test_schema.py` | Parameter schema lookups | 9 |
-| `test_validation.py` | Cross-module validation checks | 5 |
-| `test_of_io_pytest.py` | **Full integration: read-write-run-verify** (r-test) | **43** |
-| `test_check_registry_drift.py` | Tool that detects new OF params not in schema | 2 |
+| `test_validation.py` | Cross-module validation checks | 7 |
+| `test_of_io_pytest.py` | Full integration: read-write-run-verify (r-test; skips without a built binary) | 4 |
+| `test_check_registry_drift.py` | Tool that detects new OF params not in schema | 5 |
 
-The integration test file (`test_of_io_pytest.py`) is the original test with two
-fixes applied (see §5).  All 43 cases pass against a compiled OpenFAST binary.
-
-Coverage breakdown by layer:
-- `io/` modules: 74–100% (AeroDyn 78% due to polar format branches)
-- `drivers/`: 96–100%
-- `parsing.py`: 92%
-- `outlist.py` / `schema.py` / `validation.py`: 69–100%
+Most `test_driver_roundtrip.py` and `test_of_io_pytest.py` cases require the
+r-test submodule and/or a compiled OpenFAST binary and are skipped in a
+clean-checkout run (see the 180-skip count above); they run against the full
+prerequisites in CI/local integration runs.
 
 ---
 
@@ -639,37 +652,54 @@ Coverage breakdown by layer:
 
 ### 4.1 ElastoDyn
 
-- Extracted from `FAST_reader.py` and `FAST_writer.py` into `io/elastodyn.py` (637 lines).
+- Extracted from `FAST_reader.py` and `FAST_writer.py` into `io/elastodyn.py` (~650 lines).
 - Reader: blade/tower file paths now resolved cleanly via `base_dir` rather than
   `FAST_directory`.
-- Writer: format widths validated via `fmt_field()`.
+- **Fixed (this branch):** the nodal OutList section (`BldNd_BladesOut` and the
+  associated `ElastoDyn_Nodes` channel list) was captured on read but never
+  threaded back through on write, and vice versa — nodal output-channel
+  selections were silently dropped in both directions. `BldNd_BladesOut` is
+  now read/written explicitly and the `ElastoDyn_Nodes` channel list is
+  captured/emitted via `capture_outlist`/`emit_outlist`. See §10.4.
 
 ### 4.2 AeroDyn
 
-- Extracted into `io/aerodyn.py` (940 lines) — the largest IO class due to
+- Extracted into `io/aerodyn.py` (~940 lines) — the largest IO class due to
   polar table parsing.
-- **Fixed:** distributed blade force table columns used `{:11}` widths that
-  overflowed for values like `-1.23456789e-04`.  Fixed by `fmt_field()`.
 - Reader/writer handles all three AeroDyn polar formats (CSV, FAST7, FAST8).
 - OLAF input sub-section parsing is retained.
+- The standalone driver writer (`drivers/aerodyn_driver.py`) uses `fmt_field()`
+  to avoid the format-width overflow bug described in §5 — this is a
+  driver-input-file concern, not a fix to `io/aerodyn.py` itself (see §3.5).
+- The driver threads a shared `outlist` registry through `AeroDynIO`/
+  `InflowWindIO` reads and writes so `.dvr` round-trips preserve OutList
+  channel selections (see §10.4).
 
 ### 4.3 AeroDisk
 
-- Extracted into `io/aerodisk.py` (178 lines).
-- **Fixed:** `CompAero` guard in `OpenFASTDriver` corrected from value `3` to value
-  `1`.  In the legacy code, all AeroDisk cases silently fell through the aero
-  branch and produced an empty `AeroDisk` dict.
+- Extracted into `io/aerodisk.py` (~180 lines).
+- The `OpenFASTDriver` branches on `CompAero == 1` to select the `AeroDiskIO`
+  path (AeroDisk is `CompAero = 1` in the OpenFAST input format); `CompAero ==
+  2` selects `AeroDynIO`.
+- The standalone AeroDisk driver preserves OutList channels on a
+  read→write round-trip via `io/aerodisk.py`'s `_outlist` fallback (see
+  §10.4), even though the driver itself does not thread a shared registry.
 
 ### 4.4 BeamDyn
 
-- Extracted into `io/beamdyn.py` (322 lines).
-- **Fixed:** format-width overflow in the stiffness/mass matrix writer (columns
-  used six consecutive `{:14}` fields that did not accommodate full double
-  precision for all inputs).
+- Extracted into `io/beamdyn.py` (~325 lines).
+- The standalone driver writer (`drivers/beamdyn_driver.py`) uses `fmt_field()`
+  to avoid the format-width overflow bug described in §5 — this is a
+  driver-input-file concern, not a fix to `io/beamdyn.py` itself.
 - **Fixed:** `_write_blade()` now calls `Path(blade_file).parent.mkdir(parents=True,
   exist_ok=True)` before opening the file.  The legacy writer assumed the 5MW_Baseline
   directory always pre-existed; for `5MW_Land_BD_Init` in the r-test this assumption
   failed.
+- **Fixed (this branch):** the writer previously reused a single blade-file
+  path across all blades, so a deck with distinct BeamDyn blade properties per
+  blade silently overwrote them all with the last blade written; and reads
+  never collapsed identical blades into the shared-dict form that ElastoDyn
+  uses, breaking the `fst_vt` contract on round-trip. See §10.4.
 
 ### 4.5 HydroDyn
 
@@ -687,10 +717,17 @@ Coverage breakdown by layer:
 
 ### 4.6 SubDyn
 
-- Extracted into `io/subdyn.py` (562 lines).
+- Extracted into `io/subdyn.py` (~570 lines).
 - **Fixed:** GuyanDamp matrix parser called `float(idx)` where `idx` arrived from
   the tokeniser as `'0.354293E+00,'` (trailing comma from comma-separated float
   format).  Fixed by `float_read(idx.strip(','))`.
+- **Fixed (this branch):** the writer previously dropped the `SSOutList`
+  section entirely on write; now emitted via `emit_outlist()` and covered by
+  a synthetic regression test that constructs a minimal `fst_vt['SubDyn']`
+  and asserts the channels survive a write→read round-trip (no r-test data
+  required — see §10.4).
+- The standalone SubDyn driver preserves `SSOutList` via the shared `outlist`
+  registry threaded through `drivers/subdyn_driver.py` (see §10.4).
 
 ### 4.7 ServoDyn
 
@@ -708,22 +745,35 @@ Coverage breakdown by layer:
 ### 4.9 MoorDyn, MAP++, SeaState
 
 - Extracted into `io/moordyn.py`, `io/map_io.py`, `io/seastate.py`.
-- No bug fixes; parser ported faithfully.
+- Parsers ported faithfully; no module-format bug fixes.
+- **Fixed (this branch):** `io/moordyn.py`'s writer now filters to only
+  truthy channels when emitting OutList — a registry built via the public
+  `OutList.to_fst_output()` API contains explicit `False` entries for every
+  known channel, and without this filter the writer would emit disabled
+  channels into the output file. See §10.4.
+- **Fixed (this branch):** `io/seastate.py`'s standalone (non-driver-threaded)
+  use now preserves OutList via an `_outlist` fallback key instead of
+  discarding it. See §10.4.
 
 ### 4.10 ExtPtfm
 
-- Extracted into `io/extptfm.py` (353 lines).
+- Extracted into `io/extptfm.py` (~365 lines).
 - SuperElement forcing tables preserved.
+- **Fixed (this branch):** the reader previously left a private `_outlist` key
+  inside `fst_vt['ExtPtfm']`, polluting the module dict contract. See §10.4.
 
 ### 4.11 SimpleElastoDyn (SED)
 
-- Extracted into `io/simple_elastodyn.py` (157 lines).
+- Extracted into `io/simple_elastodyn.py` (~160 lines).
 
 ### 4.12 UnsteadyAero (standalone driver)
 
-- New: `drivers/unsteadyaero_driver.py` (228 lines).
-- **Fixed:** elastic matrix writer used `{:14}` widths that overflowed for
-  stiffness/damping values typical in 5 MW blade models.
+- New: `drivers/unsteadyaero_driver.py` (~230 lines).
+- No sub-module delegation — the driver reads/writes the `.dvr` file directly;
+  there is no OutList section in this format, so it is the one standalone
+  driver not covered by the outlist-registry work in §10.4.
+- Uses `fmt_field()` (via a local `_fw()` wrapper) so elastic matrix fields
+  do not overflow for stiffness/damping values typical in 5 MW blade models.
 
 ---
 
@@ -734,15 +784,21 @@ redesign revealed and fixed the following pre-existing bugs:
 
 | # | File | Bug | Fix |
 |---|---|---|---|
-| 1 | `io/aerodyn.py` | Blade table writer columns overflow `{:11}` format | `fmt_field()` in `parsing.py` |
-| 2 | `io/beamdyn.py` | Matrix columns overflow `{:14}` format | `fmt_field()` in `parsing.py` |
+| 1 | `drivers/aerodyn_driver.py` | Standalone-driver blade table writer columns could overflow a fixed-width format | `fmt_field()` in `parsing.py` |
+| 2 | `drivers/beamdyn_driver.py` | Standalone-driver matrix columns could overflow a fixed-width format | `fmt_field()` in `parsing.py` |
 | 3 | `io/beamdyn.py` | `_write_blade()` fails if blade output dir doesn't exist | `mkdir(parents=True)` before `open()` |
-| 4 | `io/unsteadyaero_driver.py` (new) | (same formatter overflow) | `fmt_field()` |
+| 4 | `drivers/unsteadyaero_driver.py` (new) | Same formatter-overflow class of bug in the elastic matrix writer | `fmt_field()` |
 | 5 | `io/hydrodyn.py` | `NBodyMod=1` matrices read 6 rows instead of `6*NBody` | `_mat_rows = 6*NBody if NBodyMod==1 else 6` |
 | 6 | `io/hydrodyn.py` | Writer's `AddF0` loop over `range(6)` instead of `range(6*NBody)` | Corrected loop bound |
 | 7 | `io/subdyn.py` | `float('0.354293E+00,')` crashes in GuyanDamp parser | `float_read(idx.strip(','))` |
-| 8 | `drivers/openfast.py` | `CompAero==3` → AeroDisk branch; correct value is `1` | Branch on value `1` |
+| 8 | `drivers/openfast.py` | AeroDisk branch (`CompAero == 1`) needed a clear, testable expression | Explicit branch on value `1` |
 | 9 | `tests/test_of_io_pytest.py` | `discon_dir` test check used wrong path | Restored to original — DLLs must be built by `make regression_test_controllers` or copied manually |
+
+Row 8 restates the AeroDisk branch as it exists on this branch; it is not a
+"3→1" correction against a confirmed baseline bug (see §10.1). Rows 1, 2, and
+4 are standalone-driver-writer fixes, not fixes to the `io/` module
+readers/writers (see §3.5, §4.2, §4.4). §10.4 lists the additional OutList
+regressions found and fixed after this table was first written.
 
 ---
 
@@ -773,17 +829,21 @@ received truncated or crashed reads.
 
 ## 7. Numerical change summary
 
+`uv run --with pytest,pyyaml pytest openfast_io/tests -q` from a clean checkout
+(no r-test submodule, no compiled OpenFAST binary):
+
 | Dataset | Tests before redesign | Tests after redesign |
 |---|---|---|
-| openfast\_io unit + integration | ~43 (r-test only) | **262 passed, 0 failed, 87% coverage** |
-| r-test read-write-run-verify | 43 cases (with DLL check failure) | **43/43 passed** |
-| Standalone driver roundtrip + smoke | 0 | **~73 passed** (all 10 drivers) |
-| IO class unit tests | 0 | **97/97 passed** |
-| Parsing helpers | 0 | **24/24 passed** |
-| Facade tests | 0 | **11/11 passed** |
-| Schema / validation / outlist | 0 | **23/23 passed** |
+| openfast\_io test suite (clean checkout) | ~43 (r-test only; requires a built binary) | **100 passed, 180 skipped, 0 failed** |
+| r-test / OpenFAST-binary integration tests | Required a compiled binary and the r-test submodule to run at all | Skip cleanly with a reason when prerequisites are absent; run fully in an environment with both present |
+| Standalone driver roundtrip + smoke | 0 | 24 tests in `test_driver_roundtrip.py` (most skip without r-test data; synthetic OutList-registry regressions run unconditionally) |
+| Module IO unit tests | 0 | 36 tests (`test_io_onshore.py` + `test_io_offshore.py` + `test_io_base.py`) |
+| Parsing helpers | 0 | 24 tests |
+| Facade tests | 0 | 13 tests |
+| Schema / validation / outlist | 0 | 25 tests |
 
-The 43 r-test cases exercise:
+The r-test cases (skipped in a clean checkout, exercised when the r-test
+submodule and a built OpenFAST binary are present) cover:
 - Land-based 5MW with ElastoDyn, BeamDyn, AeroDyn, ServoDyn, DISCON DLL
 - Monopile, tripod, jacket, ITI Barge, TLP, OC3 Spar, OC4 Semi-sub (offshore)
 - MHK RM1 (fixed and floating, marine hydrokinetic)
@@ -793,7 +853,7 @@ The 43 r-test cases exercise:
 - Tailfin
 - AeroDisk + SimpleElastoDyn variants
 
-All 43 cases perform a full cycle: **read input deck → write modified deck (TMax=2 s)
+Each case performs a full cycle: **read input deck → write modified deck (TMax=2 s)
 → execute OpenFAST binary → read ASCII output → read binary output → compare fst\_vt
 with source**.
 
@@ -926,7 +986,7 @@ openfast-mcp/
 
 ---
 
-*Document last updated: May 2026.*
+*Document last updated: July 2026.*
 *Author: redesign carried out on branch `openfast_io_arch`.*
 
 ---
@@ -1026,10 +1086,12 @@ The redesign is a clear net win, but several architectural choices warrant scrut
 
 ### 9.3 Testing
 
-- **262 tests / 87% coverage.** Coverage report now included (see §3.6).
-  Remaining 13% is primarily: `turbsim_file.py` / `turbsim_util.py` (unchanged,
-  0% coverage — legacy files outside redesign scope), rare AeroDyn polar format
-  branches, and the `check_registry_drift` tool's Fortran-parsing paths.
+- **280 tests total (100 run in a clean checkout, 180 skipped without r-test /
+  a compiled binary); no coverage report is currently checked in.** A
+  coverage percentage was cited in an earlier draft of this document but
+  could not be reproduced quickly against the current suite, so it has been
+  dropped rather than restated as a guess. Producing and checking in a
+  `pytest-cov` report is a reasonable follow-up (see §9.5).
 
 - **No fuzz/property testing** despite the format being fixed-width and
   numerically sensitive — exactly the domain where Hypothesis-style tests pay off.
@@ -1038,21 +1100,21 @@ The redesign is a clear net win, but several architectural choices warrant scrut
   > boundaries. Full Hypothesis integration deferred to next iteration.
 
 - ~~**`fmt_field()` is the fix for three separate overflow bugs but has no
-  dedicated test described.**~~ **Resolved:** `test_parsing.py` added with 13
-  boundary tests covering overflow widths, scientific notation switch, edge
-  values, negative exponents, and the exact values that triggered the original
-  AeroDyn/BeamDyn bugs.
+  dedicated test described.**~~ **Resolved:** `test_parsing.py` (24 tests)
+  covers overflow widths, scientific notation switch, edge values, negative
+  exponents, and the exact values that triggered the standalone-driver
+  AeroDyn/BeamDyn/UnsteadyAero overflow bugs (§4.2/§4.4/§4.12).
 
 ### 9.4 Documentation & framing
 
-- **Line counts presented as a quality metric.** "3 652 → 103 lines" describes
+- **Line counts presented as a quality metric.** "3,652 → ~115 lines" describes
   redistribution, not improvement. The total LOC across `io/` + `drivers/` is
   almost certainly higher than the originals; that is fine, but the framing
   oversells.
 
-  > **Rebuttal:** Line counts show *cohesion per file*, not total LOC. A 103-line
-  > facade vs a 3,652-line class with 15+ concerns mutating shared state is
-  > a meaningful structural comparison.
+  > **Rebuttal:** Line counts show *cohesion per file*, not total LOC. A
+  > ~115-line facade vs a 3,652-line class with 15+ concerns mutating shared
+  > state is a meaningful structural comparison.
 
 - **"God class" is rhetorical.** The legacy files were long but the methods were
   already module-scoped (`read_HydroDyn`, `read_AeroDyn`, …). The redesign
@@ -1069,7 +1131,8 @@ The redesign is a clear net win, but several architectural choices warrant scrut
 
   > **Note:** Overhead is Python module imports and function dispatch. The
   > bottleneck for WEIS is disk I/O and OpenFAST execution (~minutes), not Python
-  > object creation (~ms). Full test suite runs in <8s.
+  > object creation (~ms). The non-integration test suite (100 tests) runs in
+  > under a second.
 
 - ~~**No deprecation plan.**~~ **Resolved:** `FAST_vars_out.py` now emits
   `DeprecationWarning` on import. Facade classes (`InputReader_OpenFAST`,
@@ -1081,43 +1144,88 @@ The redesign is a clear net win, but several architectural choices warrant scrut
 1. Extract shared `resolve_file_ref(base_dir, ref_path)` used by both driver and
    `validation.py`.
 2. Add Hypothesis property-based tests for `parsing.py` primitives.
-3. Increase coverage of AeroDyn polar format branches (currently 78%).
+3. Generate and check in a `pytest-cov` coverage report; use it to target
+   under-tested branches (AeroDyn polar formats are a likely candidate).
 4. Remove `FAST_vars_out.py` and facade classes in next major version.
+5. Thread the shared `outlist` registry through the three standalone drivers
+   that currently rely on the per-module `_outlist` fallback (AeroDisk,
+   MoorDyn, SimpleElastoDyn) for consistency with the other six (see §10.4).
 
 ---
 
-## 10. Differential audit corrections (2026-06-23)
+## 10. Differential audit — corrections and follow-up fixes
 
-An external differential audit (newarch vs `OpenFAST/openfast@main` across the r-test
-glue-code corpus; harness + report at `vibeWork/openfast-io-roundtrip/`) found bugs the
-262-test suite passed over, and corrected several claims in §2/§4/§5/§7. **Net: the refactor
-is structurally sound, but several §5 "bug-fix" claims are overstated and the decomposition
-introduced new bugs (now fixed on branch `fix/outlist-assembly`).**
+An external differential audit (newarch vs. `OpenFAST/openfast@main`, run against the
+r-test glue-code corpus) found bugs the original test suite passed over, and identified
+several overstated claims in earlier drafts of §2/§4/§5/§7 of this document. Those
+corrections have since been folded inline into §2–§5 above, and the bugs the audit found
+have been fixed on this branch. This section is now a changelog: §10.1 records what the
+audit got the document to correct, §10.2 records the new bugs it found and that are now
+fixed, §10.3 lists the fixes the audit independently confirmed as real, and §10.4 lists
+further fixes made on this branch after the initial audit pass.
 
-### 10.1 Claims that do NOT match the code
-- **OutList read/write was broken, not improved.** The decomposition dropped baseline's
-  generic `read_outlist`/`set_outlist`; the driver never assembled `fst_vt['outlist']` →
-  **all-but-ElastoDyn OutList channels were silently dropped on read AND write** (3,200
-  channels across 63/77 decks). Fixed.
-- **`fmt_field` format-overflow fix is scoped narrower than §2.3/§4.2/§4.4/§5 imply.**
-  `fmt_field` exists (`parsing.py:181`) and is used — but **only in the standalone drivers**
-  (`drivers/{aerodyn,beamdyn,unsteadyaero}_driver.py`). It is **not** imported or used by the
-  `io/` module readers/writers, so the claimed AeroDyn-blade-table / BeamDyn-matrix overflow
-  fix is not present in `io/aerodyn.py` or `io/beamdyn.py`. Re-scope the claim to the drivers.
-- **CompAero `3→1`** (§4.3/§5 #8): newarch correctly branches on `comp_aero==1` for AeroDisk,
-  but no `==3` AeroDisk path was found in this baseline — the "3→1 fix" is against a strawman;
-  state it as "uses the correct value" rather than "fixed a 3-vs-1 bug."
+### 10.1 Corrections folded into §2–§5 (resolved)
+- **OutList read/write was broken, not improved, in the initial decomposition.** The
+  decomposition had dropped baseline's generic `read_outlist`/`set_outlist`, and the driver
+  never assembled `fst_vt['outlist']` — all-but-ElastoDyn OutList channels were silently
+  dropped on read **and** write. Fixed; see §10.4 for the module-by-module detail.
+- **The `fmt_field` format-overflow fix is scoped to the standalone drivers, not the `io/`
+  module readers/writers.** `fmt_field` (`parsing.py`) is used only by
+  `drivers/{aerodyn,beamdyn,unsteadyaero}_driver.py`; it is not imported by `io/aerodyn.py`
+  or `io/beamdyn.py`. §2.3, §3.5, §4.2, §4.4, §4.12, and §5 have been re-scoped accordingly.
+- **The AeroDisk `CompAero` branch is stated as "uses the correct value," not as a "3→1
+  bug fix."** The new driver correctly branches on `comp_aero == 1` for AeroDisk; no
+  confirmed `== 3` baseline bug was found, so the earlier "fixed a 3-vs-1 bug" framing in
+  §4.3/§5 has been removed as unsupported by the evidence available.
 
-### 10.2 New bugs the audit found (all fixed on `fix/outlist-assembly`)
+### 10.2 New bugs the audit found (fixed on this branch)
 - **HIGH — BeamDyn blade-file collision** (`io/beamdyn.py` + driver loop): the writer sent
-  every blade to the same path (`bd['BldFile']` never reassigned per blade), so a deck with 3
-  *distinct* BeamDyn blades silently wrote blade 3's properties into all three. Dormant in
-  r-test (identical blades). Fixed; guarded by a new 3-distinct-blade regression fixture.
-- **MED** — BeamDyn read never collapsed identical blades to a dict (ElastoDyn did) → broke the
-  `fst_vt` dict contract; and a read/write guard asymmetry dropped BeamDyn on round-trip. Fixed.
-- **LOW** — ExtPtfm reader polluted `fst_vt['ExtPtfm']` with a private `_outlist` key. Fixed.
+  every blade to the same path (`bd['BldFile']` never reassigned per blade), so a deck with
+  3 *distinct* BeamDyn blades silently wrote blade 3's properties into all three. Dormant in
+  the r-test corpus (identical blades in every case). Fixed; guarded by a new 3-distinct-blade
+  regression fixture.
+- **MED** — BeamDyn read never collapsed identical blades to the shared-dict form that
+  ElastoDyn uses, breaking the `fst_vt` contract; and a read/write guard asymmetry dropped
+  BeamDyn entirely on round-trip. Fixed.
+- **LOW** — ExtPtfm's reader polluted `fst_vt['ExtPtfm']` with a private `_outlist` key.
+  Fixed.
 
-### 10.3 Verified-real fixes (these claims hold)
-BeamDyn `_write_blade` `mkdir(parents=True)`; HydroDyn `NBodyMod=1` matrix sizing (`6*NBody`);
-SubDyn GuyanDamp comma-trailing-float parse. (HydroDyn NBody≥2 and the distinct-blade path
-remain untested by the r-test corpus — see the audit's test-gap list.)
+### 10.3 Verified-real fixes (audit-confirmed, unchanged)
+BeamDyn `_write_blade()` `mkdir(parents=True)`; HydroDyn `NBodyMod=1` matrix sizing
+(`6*NBody`); SubDyn GuyanDamp comma-trailing-float parse. (HydroDyn `NBody >= 2` and the
+distinct-blade BeamDyn path remain untested by the r-test corpus itself — they are covered
+by the synthetic regression fixtures noted in §4.4/§4.5/§10.2 instead.)
+
+### 10.4 Further fixes made on this branch
+- **ElastoDyn nodal OutList (`BldNd_BladesOut` / `ElastoDyn_Nodes`)** was captured on read
+  but never threaded back through on write, and vice versa — nodal output-channel
+  selections were silently dropped in both directions. Now read/written explicitly and
+  captured/emitted via `capture_outlist`/`emit_outlist` under the `ElastoDyn_Nodes` key.
+  See §4.1.
+- **SubDyn `SSOutList` emit fix** now has a dedicated synthetic regression test that
+  constructs a minimal `fst_vt['SubDyn']` and checks the channels survive a write→read
+  round-trip, independent of r-test data. See §4.6.
+- **All 9 standalone drivers that have an OutList/output-channel concept** (all 10
+  standalone drivers except UnsteadyAero, whose `.dvr` format has no output-channel
+  section) now preserve OutList channel selections across a `.dvr` round-trip — 6 via a
+  shared `outlist` registry threaded through the driver (AeroDyn, BeamDyn, HydroDyn,
+  InflowWind, SeaState, SubDyn) and 3 via a per-module `_outlist` fallback stored on the
+  module dict itself (AeroDisk, MoorDyn, SimpleElastoDyn). Previously 6 of these modules
+  lost OutList channel selections entirely on a standalone-driver round-trip.
+- **SeaStateIO and SubDynIO**, used standalone (i.e., without a driver-supplied shared
+  registry), now preserve OutList via the `_outlist` fallback key instead of discarding it.
+- **MoorDyn's writer** (`io/moordyn.py`) now filters to only truthy channels when emitting
+  OutList, since a registry built via the public `OutList.to_fst_output()` API contains
+  explicit `False` entries for every known channel.
+- **`validate_fst_vt` gained a `base_dir=` parameter.** With `check_files=True`, file
+  references are now resolved against the case directory instead of the process's current
+  working directory, which previously produced false-positive "file does not exist" issues.
+- **`pyyaml` added to `openfast_io`'s declared dependencies.** A clean install of the
+  package was broken without it (`formats.py` imports `yaml` unconditionally).
+- **r-test / OpenFAST-binary integration tests now skip with a reason** (missing r-test
+  submodule, missing compiled binary, missing DISCON DLL) instead of failing, so a clean
+  checkout without those prerequisites reports a clean run (100 passed, 180 skipped) rather
+  than failures.
+- **Facades emit `DeprecationWarning`** (previously `PendingDeprecationWarning`, which is
+  silenced by default in most test runners and would not have surfaced to downstream
+  callers).
