@@ -7,12 +7,14 @@ external differential harness; only unique edge cases survive here.
 Modules: ElastoDyn, SimpleElastoDyn, BeamDyn, AeroDyn, AeroDisk,
 InflowWind, ServoDyn.
 """
+import copy
 import os
 import tempfile
 
 import pytest
 from pathlib import Path
 
+from openfast_io.FAST_vars_out import FstOutput
 from openfast_io.io.aerodyn import AeroDynIO
 from openfast_io.io.elastodyn import ElastoDynIO
 from openfast_io.io.simple_elastodyn import SimpleElastoDynIO
@@ -159,6 +161,58 @@ def test_elastodyn_tower_data(sample_ed_file, tmp_path):
     tower = result['ElastoDynTower']
     assert tower['NTwInpSt'] == 3
     assert len(tower['HtFract']) == 3
+
+
+def _new_outlist_registry() -> dict:
+    """A fresh registry pre-populated with the ElastoDyn + ElastoDyn_Nodes schema
+    (all channels False), matching how OpenFASTDriver.init_fst_vt seeds fst_vt['outlist']
+    before handing it to capture_outlist."""
+    return {
+        'ElastoDyn': copy.deepcopy(FstOutput['ElastoDyn']),
+        'ElastoDyn_Nodes': copy.deepcopy(FstOutput['ElastoDyn_Nodes']),
+    }
+
+
+def test_elastodyn_nodal_outlist_roundtrip(sample_ed_file_with_nodal, tmp_path):
+    """Regression: ElastoDyn's optional nodal OutList section (BldNd_BladesOut > 0)
+    was captured under the wrong registry key ('ElastoDyn' instead of
+    'ElastoDyn_Nodes') on read, and never emitted at all on write — silently
+    dropping every nodal channel on a read->write->read roundtrip.
+    """
+    io = ElastoDynIO()
+
+    registry = _new_outlist_registry()
+    pristine_main = copy.deepcopy(registry['ElastoDyn'])
+    result = io.read(sample_ed_file_with_nodal, tmp_path, outlist=registry)
+    ed = result['ElastoDyn']
+    assert ed['BldNd_BladesOut'] == 1
+
+    nodal_true = {k for k, v in registry['ElastoDyn_Nodes'].items() if v is True}
+    assert nodal_true == {'TDx', 'TDy', 'RDx'}, (
+        f"nodal channels not captured under ElastoDyn_Nodes: {nodal_true}"
+    )
+    # The main OutList section in the fixture is empty (no channels listed), so
+    # the main 'ElastoDyn' registry entry must be untouched by the nodal read —
+    # guards against the nodal channels being captured under the wrong ('ElastoDyn')
+    # key, which is the bug being fixed here.
+    assert registry['ElastoDyn'] == pristine_main, (
+        "nodal read leaked channels into the main ElastoDyn registry entry"
+    )
+
+    out_file = tmp_path / "ElastoDyn_written.dat"
+    io.write(result, out_file, tmp_path, outlist=registry)
+
+    written = out_file.read_text()
+    for ch in ('TDx', 'TDy', 'RDx'):
+        assert f'"{ch}"' in written, f'{ch} was not emitted into the written nodal OutList'
+
+    registry2 = _new_outlist_registry()
+    result2 = io.read(out_file, tmp_path, outlist=registry2)
+    assert result2['ElastoDyn']['BldNd_BladesOut'] == 1
+    nodal_true2 = {k for k, v in registry2['ElastoDyn_Nodes'].items() if v is True}
+    assert nodal_true2 == {'TDx', 'TDy', 'RDx'}, (
+        f"nodal channels did not survive roundtrip: {nodal_true2}"
+    )
 
 
 # ── BeamDyn edge cases ───────────────────────────────────────────────────────
