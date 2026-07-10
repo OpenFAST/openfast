@@ -303,3 +303,27 @@ END of OutList section (the word "END" must appear in the first 3 columns of the
     p.write_text(ed_content)
     return p
 
+
+@pytest.fixture
+def sample_ed_file_with_nodal(sample_ed_file):
+    """sample_ed_file with a populated optional nodal OutList section
+    (BldNd_BladesOut > 0 plus nodal channels) inserted before the closing
+    dashed line — regression fixture for the ElastoDyn nodal-OutList
+    read/write bug (channels captured under the wrong registry key and never
+    emitted on write)."""
+    nodal_section = (
+        '====== Outputs for all blade stations =========================== [optional section]\n'
+        '          1            BldNd_BladesOut - Number of blades to output all node information at (-)\n'
+        '"ALL"                  BldNd_BlOutNd - Future feature will allow selecting a portion of the nodes to output (-)\n'
+        '                   OutList     - The next line(s) contains a list of output parameters.\n'
+        '"TDx"\n'
+        '"TDy"\n'
+        '"RDx"\n'
+        'END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)\n'
+    )
+    footer = '---------------------------------------------------------------------------------------\n'
+    content = sample_ed_file.read_text()
+    assert content.count(footer) == 1
+    sample_ed_file.write_text(content.replace(footer, nodal_section + footer))
+    return sample_ed_file
+

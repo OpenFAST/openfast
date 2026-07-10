@@ -53,6 +53,7 @@ dependencies = [
     "numpy>1.0",
     "pandas>2.0",
     "ruamel_yaml>0.18",
+    "pyyaml>6.0",
     "deepdiff>8.0",
     ]
     

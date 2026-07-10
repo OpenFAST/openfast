@@ -251,7 +251,10 @@ class MoorDynIO(ModuleIO):
                     dl = readline_filterComments(f)
                 if outlist is not None:
                     outlist['MoorDyn'] = outlist_md
-                md['_outlist'] = outlist_md
+                else:
+                    # standalone path only (no shared registry) — avoid polluting
+                    # fst_vt['MoorDyn'] with a private key when the driver supplies outlist.
+                    md['_outlist'] = outlist_md
                 f.close()
                 break
 
@@ -378,8 +381,12 @@ class MoorDynIO(ModuleIO):
             out = md.get('_outlist', {})
             if outlist and 'MoorDyn' in outlist:
                 out = outlist['MoorDyn']
-            for ch in out:
-                f.write(f'"{ch}"\n')
+            # Only emit truthy channels — registries built via the public
+            # OutList.to_fst_output() contain explicit False entries for every
+            # known channel, which must not be written out as enabled.
+            for ch, enabled in out.items():
+                if enabled:
+                    f.write(f'"{ch}"\n')
             f.write('END\n')
             f.write('----------------------- need this line ------------------\n')
 

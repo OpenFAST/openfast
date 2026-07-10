@@ -79,7 +79,7 @@ class InputWriter_OpenFAST:
         warnings.warn(
             "InputWriter_OpenFAST is deprecated. "
             "Use openfast_io.drivers.openfast.OpenFASTDriver directly.",
-            PendingDeprecationWarning,
+            DeprecationWarning,
             stacklevel=2,
         )
         self.FAST_namingOut = None     # Base name for output files

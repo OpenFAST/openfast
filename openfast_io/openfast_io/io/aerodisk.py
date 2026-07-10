@@ -11,6 +11,7 @@ import os
 from typing import Any, Callable, Dict, Optional
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import bool_read, float_read, quoted_read
 
 try:
@@ -90,31 +91,34 @@ class AeroDiskIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list
-        ad['_outlist'] = {}
-        data_line = f.readline()
-        while data_line.split().__len__() == 0:
+        # Read output list — route into the shared registry (mirrors legacy openfast_io)
+        if read_outlist_fn is not None and outlist is not None:
+            read_outlist_fn(f, 'AeroDisk')
+        else:
+            ad['_outlist'] = {}
             data_line = f.readline()
-        while data_line.split()[0] != 'END':
-            if data_line.find('"') >= 0:
-                channels = data_line.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data_line.split(',')
-                if len(row_string) == 1:
-                    channel_list = row_string[0].split('\n')[0]
+            while data_line.split().__len__() == 0:
+                data_line = f.readline()
+            while data_line.split()[0] != 'END':
+                if data_line.find('"') >= 0:
+                    channels = data_line.split('"')
+                    channel_list = channels[1].split(',')
                 else:
-                    channel_list = row_string
-            if isinstance(channel_list, list):
-                for ch in channel_list:
-                    ch = ch.strip()
+                    row_string = data_line.split(',')
+                    if len(row_string) == 1:
+                        channel_list = row_string[0].split('\n')[0]
+                    else:
+                        channel_list = row_string
+                if isinstance(channel_list, list):
+                    for ch in channel_list:
+                        ch = ch.strip()
+                        if ch:
+                            ad['_outlist'][ch] = True
+                else:
+                    ch = channel_list.strip()
                     if ch:
                         ad['_outlist'][ch] = True
-            else:
-                ch = channel_list.strip()
-                if ch:
-                    ad['_outlist'][ch] = True
-            data_line = f.readline()
+                data_line = f.readline()
 
         f.close()
         return {'AeroDisk': ad}
@@ -169,10 +173,10 @@ class AeroDiskIO(ModuleIO):
             f.write('@{}\n'.format(csv_name))
             f.write('--- OUTPUTS --------------------\n')
             f.write('{:<22} {:<11} {:}'.format('OutList', 'OutList', '- The next line(s) contains a list of output parameters.\n'))
-            out_channels = ad.get('_outlist', {})
-            if outlist and 'AeroDisk' in outlist:
-                out_channels = outlist['AeroDisk']
-            for ch in out_channels:
-                f.write('"' + ch + '"\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'AeroDisk')
+            else:
+                for ch in ad.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
             f.write('---------------------------------------------------------------------------------------\n')

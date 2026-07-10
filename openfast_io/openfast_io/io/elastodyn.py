@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from .base import ModuleIO
+from ..outlist import capture_outlist, emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -36,7 +37,7 @@ class ElastoDynIO(ModuleIO):
     # READ
     # ------------------------------------------------------------------
 
-    def read(self, file_path: Path, base_dir: Path) -> dict:
+    def read(self, file_path: Path, base_dir: Path, outlist: dict = None) -> dict:
         ed = {}
         file_path = Path(file_path)
         base_dir = Path(base_dir)
@@ -218,19 +219,28 @@ class ElastoDynIO(ModuleIO):
         else:
             ed['BldGagNd'] = 0
 
-        # OutList — skip (handled by driver)
+        # OutList — capture into the shared registry (mirrors legacy openfast_io read_outlist)
         f.readline()
-        self._read_outlist(f)
-
-        # Optional nodal output
-        try:
-            f.readline()
-            ed['BldNd_BladesOut'] = int(f.readline().split()[0])
-            ed['BldNd_BlOutNd'] = f.readline().split()[0]
-            f.readline()
+        if outlist is not None:
+            capture_outlist(f, outlist, 'ElastoDyn')
+        else:
             self._read_outlist(f)
-        except:
-            None
+
+        # Optional nodal output — peek to check whether the section exists (EOF means it
+        # doesn't), then only swallow the specific parse errors a malformed/absent
+        # section would raise, so unrelated bugs aren't hidden.
+        section_header = f.readline()
+        if section_header:
+            try:
+                ed['BldNd_BladesOut'] = int(f.readline().split()[0])
+                ed['BldNd_BlOutNd'] = f.readline().split()[0]
+                f.readline()
+                if outlist is not None:
+                    capture_outlist(f, outlist, 'ElastoDyn_Nodes')
+                else:
+                    self._read_outlist(f)
+            except (ValueError, IndexError):
+                pass
 
         f.close()
 
@@ -390,7 +400,7 @@ class ElastoDynIO(ModuleIO):
     # WRITE
     # ------------------------------------------------------------------
 
-    def write(self, data: dict, file_path: Path, base_dir: Path) -> None:
+    def write(self, data: dict, file_path: Path, base_dir: Path, outlist: dict = None) -> None:
         file_path = Path(file_path)
         base_dir = Path(base_dir)
 
@@ -521,8 +531,10 @@ class ElastoDynIO(ModuleIO):
         else:
             f.write('{:<22} {:<11} {:}'.format('', 'BldGagNd', '- List of blade nodes that have strain gages\n'))
 
-        # OutList placeholder
+        # OutList — emit the captured channels (mirrors legacy openfast_io write)
         f.write('                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
+        if outlist is not None:
+            emit_outlist(f, outlist, 'ElastoDyn')
         f.write('END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)\n')
 
         # Optional nodal output
@@ -531,6 +543,8 @@ class ElastoDynIO(ModuleIO):
             f.write('{:<22d} {:<11} {:}'.format(ed['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at (-)\n'))
             f.write('{!s:<22} {:<11} {:}'.format(ed['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output (-)\n'))
             f.write('                   OutList     - The next line(s) contains a list of output parameters.\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'ElastoDyn_Nodes')
             f.write('END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)\n')
 
         f.write('---------------------------------------------------------------------------------------\n')

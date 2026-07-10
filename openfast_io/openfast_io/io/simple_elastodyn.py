@@ -9,6 +9,7 @@ import os
 from typing import Any, Callable, Dict, Optional
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import bool_read, float_read, int_read
 
 
@@ -74,31 +75,34 @@ class SimpleElastoDynIO(ModuleIO):
         f.readline()
         f.readline()
 
-        # Read output list
-        sed['_outlist'] = {}
-        data = f.readline()
-        while data.split().__len__() == 0:
+        # Read output list — route into the shared registry (mirrors legacy openfast_io)
+        if read_outlist_fn is not None and outlist is not None:
+            read_outlist_fn(f, 'SimpleElastoDyn')
+        else:
+            sed['_outlist'] = {}
             data = f.readline()
-        while data.split()[0] != 'END':
-            if data.find('"') >= 0:
-                channels = data.split('"')
-                channel_list = channels[1].split(',')
-            else:
-                row_string = data.split(',')
-                if len(row_string) == 1:
-                    channel_list = row_string[0].split('\n')[0]
+            while data.split().__len__() == 0:
+                data = f.readline()
+            while data.split()[0] != 'END':
+                if data.find('"') >= 0:
+                    channels = data.split('"')
+                    channel_list = channels[1].split(',')
                 else:
-                    channel_list = row_string
-            if isinstance(channel_list, list):
-                for ch in channel_list:
-                    ch = ch.strip()
+                    row_string = data.split(',')
+                    if len(row_string) == 1:
+                        channel_list = row_string[0].split('\n')[0]
+                    else:
+                        channel_list = row_string
+                if isinstance(channel_list, list):
+                    for ch in channel_list:
+                        ch = ch.strip()
+                        if ch:
+                            sed['_outlist'][ch] = True
+                else:
+                    ch = channel_list.strip()
                     if ch:
                         sed['_outlist'][ch] = True
-            else:
-                ch = channel_list.strip()
-                if ch:
-                    sed['_outlist'][ch] = True
-            data = f.readline()
+                data = f.readline()
 
         f.close()
         return {'SimpleElastoDyn': sed}
@@ -148,10 +152,10 @@ class SimpleElastoDynIO(ModuleIO):
             f.write('{:<22} {:<11} {:}'.format(sed['GBoxRatio'], 'GBoxRatio', '- Gearbox ratio (-)\n'))
             f.write('---------------------- OUTPUT --------------------------------------------------\n')
             f.write('                   OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
-            out_channels = sed.get('_outlist', {})
-            if outlist and 'SimpleElastoDyn' in outlist:
-                out_channels = outlist['SimpleElastoDyn']
-            for ch in out_channels:
-                f.write('"' + ch + '"\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'SimpleElastoDyn')
+            else:
+                for ch in sed.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
             f.write('---------------------------------------------------------------------------------------\n')

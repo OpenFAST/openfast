@@ -5,12 +5,19 @@ points, input modes, steady-state 6-DOF vectors, and applied loads table.
 """
 from __future__ import annotations
 
+import copy
 import os
 from pathlib import Path
 from typing import Any, Dict, List
 
 from ..io.subdyn import SubDynIO
+from ..outlist import capture_outlist
 from ..parsing import bool_read, float_read, int_read, quoted_read
+
+try:
+    from ..FAST_vars_out import FstOutput
+except ImportError:
+    FstOutput = {}
 
 
 class SubDynStandaloneDriver:
@@ -89,13 +96,25 @@ class SubDynStandaloneDriver:
 
         result: Dict[str, Any] = {'SubDynDriver': dvr}
 
+        # Shared OutList registry (mirrors OpenFASTDriver.read) so the SubDyn
+        # SSOutList section survives a standalone read → write roundtrip.
+        outlist: Dict[str, Any] = copy.deepcopy(FstOutput) if FstOutput else {}
+
+        def _cap(f, module, freeform=False):
+            return capture_outlist(f, outlist, module, freeform=freeform)
+
         # --- Delegate to SubDynIO ---
         sd_file = dvr.get('SDInputFile', '')
         sd_path = os.path.normpath(os.path.join(str(base_dir), sd_file))
         if sd_file and os.path.isfile(sd_path):
-            sd_data = self._subdyn.read(Path(sd_path), base_dir)
+            sd_data = self._subdyn.read(
+                Path(sd_path), base_dir,
+                outlist=outlist,
+                read_outlist_fn=lambda f, module: _cap(f, module, freeform=True),
+            )
             result.update(sd_data)
 
+        result['outlist'] = outlist
         return result
 
     # ------------------------------------------------------------------
@@ -110,31 +129,31 @@ class SubDynStandaloneDriver:
         with open(dvr_path, 'w') as f:
             f.write('SubDyn Driver file for stand-alone applications\n')
             f.write('Compatible with SubDyn v1.xx.x\n')
-            f.write('{!s:<19}{:<15}{:}\n'.format(dvr['Echo'], 'Echo', '- Echo the input file data (flag).'))
+            f.write('{!s:<19} {:<15} {:}\n'.format(dvr['Echo'], 'Echo', '- Echo the input file data (flag).'))
             f.write('---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------\n')
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['Gravity'], 'Gravity', '- Gravity (m/s^2).'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['WtrDpth'], 'WtrDpth', '- Water Depth (m) positive value.'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['Gravity'], 'Gravity', '- Gravity (m/s^2).'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['WtrDpth'], 'WtrDpth', '- Water Depth (m) positive value.'))
             f.write('---------------------- SubDyn -------------------------------------------------------------------\n')
 
             sd_name = dvr.get('SDInputFile', 'SubDyn.dat')
-            f.write('{:<19}{:<15}{:}\n'.format('"' + sd_name + '"', 'SDInputFile', '- SubDyn input file.'))
-            f.write('{:<19}{:<15}{:}\n'.format('"' + dvr.get('OutRootName', 'SubDyn') + '"', 'OutRootName', '- All the output files will have this name.'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['NSteps'], 'NSteps', '- Number of time steps in the simulations (-).'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['TimeInterval'], 'TimeInterval', '- TimeInterval for the simulation (sec).'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['NTPs'], 'NTPs', '- Number of transition pieces'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['TP_RefPoint_X'], 'TP_RefPoint_X', '- X location of the TP reference points in global coordinates (m)'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['TP_RefPoint_Y'], 'TP_RefPoint_Y', '- Y location of the TP reference points in global coordinates (m)'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['TP_RefPoint_Z'], 'TP_RefPoint_Z', '- Z location of the TP reference points in global coordinates (m)'))
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['SubRotateZ'], 'SubRotateZ', '- Rotation angle of the structure geometry in [deg] about the global Z axis.'))
+            f.write('{:<19} {:<15} {:}\n'.format('"' + sd_name + '"', 'SDInputFile', '- SubDyn input file.'))
+            f.write('{:<19} {:<15} {:}\n'.format('"' + dvr.get('OutRootName', 'SubDyn') + '"', 'OutRootName', '- All the output files will have this name.'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['NSteps'], 'NSteps', '- Number of time steps in the simulations (-).'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['TimeInterval'], 'TimeInterval', '- TimeInterval for the simulation (sec).'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['NTPs'], 'NTPs', '- Number of transition pieces'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['TP_RefPoint_X'], 'TP_RefPoint_X', '- X location of the TP reference points in global coordinates (m)'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['TP_RefPoint_Y'], 'TP_RefPoint_Y', '- Y location of the TP reference points in global coordinates (m)'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['TP_RefPoint_Z'], 'TP_RefPoint_Z', '- Z location of the TP reference points in global coordinates (m)'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['SubRotateZ'], 'SubRotateZ', '- Rotation angle of the structure geometry in [deg] about the global Z axis.'))
             f.write('---------------------- INPUTS -------------------------------------------------------------------\n')
-            f.write('{:<19}{:<15}{:}\n'.format(dvr['InputsMod'], 'InputsMod', '- Inputs model {0: zero, 1: steady state, 2: from file} (switch)'))
-            f.write('{:<19}{:<15}{:}\n'.format('"' + dvr.get('InputsFile', '') + '"', 'InputsFile', '- Name of the inputs file if InputsMod = 2.'))
+            f.write('{:<19} {:<15} {:}\n'.format(dvr['InputsMod'], 'InputsMod', '- Inputs model {0: zero, 1: steady state, 2: from file} (switch)'))
+            f.write('{:<19} {:<15} {:}\n'.format('"' + dvr.get('InputsFile', '') + '"', 'InputsFile', '- Name of the inputs file if InputsMod = 2.'))
             f.write('---------------------- STEADY INPUTS (for InputsMod = 1) ----------------------------------------\n')
             f.write('{}   {}\n'.format('   '.join('{}'.format(v) for v in dvr['uTPInSteady']), 'uTPInSteady     - input displacements and rotations ([m], [rad])'))
             f.write('{}   {}\n'.format('   '.join('{}'.format(v) for v in dvr['uDotTPInSteady']), 'uDotTPInSteady  - input translational and rotational velocities ([m/s], [rad/s])'))
             f.write('{}   {}\n'.format('   '.join('{}'.format(v) for v in dvr['uDotDotTPInSteady']), 'uDotTPInSteady  - input translational and rotational accelerations([m/s^2], [rad/s^2])'))
             f.write('---------------------- LOADS --------------------------------------------------------------------\n')
-            f.write('{:<5}{:<15}{:}\n'.format(dvr['nAppliedLoads'], 'nAppliedLoads', '- Number of applied loads at given nodes'))
+            f.write('{:<5} {:<15} {:}\n'.format(dvr['nAppliedLoads'], 'nAppliedLoads', '- Number of applied loads at given nodes'))
             f.write('ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile\n')
             f.write('   (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)\n')
             for load in dvr.get('AppliedLoads', []):
@@ -146,7 +165,8 @@ class SubDynStandaloneDriver:
         # --- Delegate to SubDynIO ---
         if 'SubDyn' in data:
             sd_path = os.path.normpath(os.path.join(str(base_dir), sd_name))
-            self._subdyn.write({'SubDyn': data['SubDyn']}, sd_path, str(base_dir))
+            outlist = data.get('outlist') or (copy.deepcopy(FstOutput) if FstOutput else {})
+            self._subdyn.write({'SubDyn': data['SubDyn']}, sd_path, str(base_dir), outlist=outlist)
 
 
 def _read_6dof_vec(line: str) -> list:

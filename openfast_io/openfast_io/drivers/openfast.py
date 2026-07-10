@@ -34,6 +34,8 @@ try:
 except ImportError:
     FstOutput = {}
 
+from openfast_io.outlist import OutList, capture_outlist, emit_outlist
+
 
 def init_fst_vt() -> dict:
     """Initialize the fst_vt structure.
@@ -50,6 +52,11 @@ def init_fst_vt() -> dict:
     """
     return {
         'Fst': {},
+        # Mirror the legacy openfast_io reader exactly: start from FstOutput (its
+        # built-in defaults) and ADD the deck's channels during read() via
+        # capture_outlist. The legacy reader does deepcopy(FstOutput) + set_outlist
+        # per module; reproducing that init is required for behavior parity (the prior
+        # bug was skipping the per-module capture entirely, leaving ONLY the defaults).
         'outlist': copy.deepcopy(FstOutput) if FstOutput else {},
         'description': '',
         'ElastoDyn': {},
@@ -109,6 +116,15 @@ class OpenFASTDriver:
         fst_vt = init_fst_vt()
         base_dir = fst_path.parent
 
+        # Callback that captures a module's OutList section into fst_vt['outlist'],
+        # mirroring legacy openfast_io read_outlist/set_outlist. Modules that take a
+        # read_outlist_fn use this; freeform modules (SubDyn/SeaState) pass freeform=True.
+        def _cap(f, module, freeform=False):
+            return capture_outlist(f, fst_vt['outlist'], module, freeform=freeform)
+
+        def _cap_ff(f, module):
+            return capture_outlist(f, fst_vt['outlist'], module, freeform=True)
+
         fst_vt['Fst'] = self._read_main_input(fst_path, base_dir)
 
         n_rotors = fst_vt['Fst'].get('NRotors', 1)
@@ -127,12 +143,12 @@ class OpenFASTDriver:
             sed_rel = fst_vt['Fst'].get('EDFile', '')
             sed_file = os.path.normpath(os.path.join(fastdir, sed_rel))
             if os.path.isfile(sed_file):
-                sed_data = self._simple_elastodyn.read(sed_file)
+                sed_data = self._simple_elastodyn.read(sed_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['SimpleElastoDyn'] = sed_data.get('SimpleElastoDyn', {})
         elif comp_elast in (1, 2):
             if os.path.isfile(ed_file):
                 fst_vt['Fst']['EDFile_path'] = os.path.split(fst_vt['Fst']['EDFile'])[0]
-                ed_data = self._elastodyn.read(Path(ed_file), Path(os.path.dirname(ed_file)))
+                ed_data = self._elastodyn.read(Path(ed_file), Path(os.path.dirname(ed_file)), outlist=fst_vt['outlist'])
 
                 fst_vt['ElastoDyn'] = ed_data.get('ElastoDyn', {})
                 fst_vt['ElastoDynTower'] = ed_data.get('ElastoDynTower', {})
@@ -154,7 +170,11 @@ class OpenFASTDriver:
                     fst_vt['ElastoDynBlade'] = blades
 
         # ------- BeamDyn (per-blade) -------
-        if comp_elast == 2:
+        # Match the legacy openfast_io FAST_reader: read BeamDyn whenever BDBldFile(1)
+        # exists on disk, regardless of CompElast. The legacy reader reads (and captures
+        # the OutList of) an inactive BeamDyn when its blade file is present; reproduce that.
+        _bd1 = os.path.normpath(os.path.join(fastdir, fst_vt['Fst'].get('BDBldFile(1)', '')))
+        if comp_elast == 2 or os.path.isfile(_bd1):
             num_bl = fst_vt['ElastoDyn'].get('NumBl', 3)
             bd_blades = []
             bd_blade_data = []
@@ -163,14 +183,23 @@ class OpenFASTDriver:
                 bd_rel = fst_vt['Fst'].get(bd_file_key, '')
                 bd_file = os.path.normpath(os.path.join(fastdir, bd_rel))
                 if os.path.isfile(bd_file):
-                    bd_data = self._beamdyn.read(bd_file, base_dir=os.path.dirname(bd_file))
+                    bd_data = self._beamdyn.read(bd_file, base_dir=os.path.dirname(bd_file), outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                     bd_blades.append(bd_data.get('BeamDyn', {}))
                     bd_blade_data.append(bd_data.get('BeamDynBlade', {}))
                 else:
                     bd_blades.append({})
                     bd_blade_data.append({})
-            fst_vt['BeamDyn'] = bd_blades
-            fst_vt['BeamDynBlade'] = bd_blade_data
+            # Blade dedup — match legacy (FAST_reader): collapse to a single dict when
+            # the BeamDyn blade files are identical. Mirrors the ElastoDyn block above.
+            bd1 = fst_vt['Fst'].get('BDBldFile(1)', '')
+            bd2 = fst_vt['Fst'].get('BDBldFile(2)', '')
+            bd3 = fst_vt['Fst'].get('BDBldFile(3)', '')
+            if (bd1 == bd2 == bd3) or num_bl == 1 or (num_bl == 2 and bd1 == bd2):
+                fst_vt['BeamDyn'] = bd_blades[0] if bd_blades else {}
+                fst_vt['BeamDynBlade'] = bd_blade_data[0] if bd_blade_data else {}
+            else:
+                fst_vt['BeamDyn'] = bd_blades
+                fst_vt['BeamDynBlade'] = bd_blade_data
 
         # ------- InflowWind -------
         comp_inflow = fst_vt['Fst'].get('CompInflow', 0)
@@ -178,7 +207,7 @@ class OpenFASTDriver:
             ifw_rel = fst_vt['Fst'].get('InflowFile', '')
             ifw_file = os.path.normpath(os.path.join(fastdir, ifw_rel))
             if os.path.isfile(ifw_file):
-                ifw_data = self._inflowwind.read(ifw_file, base_dir=os.path.dirname(ifw_file))
+                ifw_data = self._inflowwind.read(ifw_file, base_dir=os.path.dirname(ifw_file), outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['InflowWind'] = ifw_data.get('InflowWind', {})
 
         # ------- AeroDyn -------
@@ -193,6 +222,8 @@ class OpenFASTDriver:
                     base_dir=os.path.dirname(aero_file),
                     num_blades=num_bl,
                     aero_file_path=fst_vt['Fst'].get('AeroFile_path', ''),
+                    outlist=fst_vt['outlist'],
+                    read_outlist_fn=_cap,
                 )
                 fst_vt['AeroDyn'] = ad_data.get('AeroDyn', {})
 
@@ -208,7 +239,7 @@ class OpenFASTDriver:
             aero_rel = fst_vt['Fst'].get('AeroFile', '')
             aero_file = os.path.normpath(os.path.join(fastdir, aero_rel))
             if os.path.isfile(aero_file):
-                adsk_data = self._aerodisk.read(aero_file)
+                adsk_data = self._aerodisk.read(aero_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['AeroDisk'] = adsk_data.get('AeroDisk', {})
 
         # ------- ServoDyn -------
@@ -221,6 +252,8 @@ class OpenFASTDriver:
                     sd_file,
                     base_dir=fastdir,
                     servo_file_rel=sd_rel,
+                    outlist=fst_vt['outlist'],
+                    read_outlist_fn=_cap,
                 )
                 fst_vt['ServoDyn'] = sd_data.get('ServoDyn', {})
                 fst_vt['BStC'] = sd_data.get('BStC', [])
@@ -239,7 +272,7 @@ class OpenFASTDriver:
             hd_file = os.path.normpath(os.path.join(fastdir, hd_rel))
             if os.path.isfile(hd_file):
                 fst_vt['Fst']['HydroFile_path'] = os.path.split(hd_rel)[0]
-                hd_data = self._hydrodynamics.read(hd_file)
+                hd_data = self._hydrodynamics.read(hd_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['HydroDyn'] = hd_data.get('HydroDyn', {})
 
         # ------- SeaState -------
@@ -248,7 +281,7 @@ class OpenFASTDriver:
             ss_rel = fst_vt['Fst'].get('SeaStFile', '')
             ss_file = os.path.normpath(os.path.join(fastdir, ss_rel))
             if os.path.isfile(ss_file):
-                ss_data = self._seastate.read(ss_file)
+                ss_data = self._seastate.read(ss_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap_ff)
                 fst_vt['SeaState'] = ss_data.get('SeaState', {})
 
         # ------- SubDyn / ExtPtfm -------
@@ -258,14 +291,14 @@ class OpenFASTDriver:
             sub_file = os.path.normpath(os.path.join(fastdir, sub_rel))
             if os.path.isfile(sub_file):
                 fst_vt['Fst']['SubFile_path'] = os.path.split(sub_rel)[0]
-                sub_data = self._subdyn.read(sub_file)
+                sub_data = self._subdyn.read(sub_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap_ff)
                 fst_vt['SubDyn'] = sub_data.get('SubDyn', {})
         elif comp_sub == 2:
             sub_rel = fst_vt['Fst'].get('SubFile', '')
             sub_file = os.path.normpath(os.path.join(fastdir, sub_rel))
             if os.path.isfile(sub_file):
                 fst_vt['Fst']['SubFile_path'] = os.path.split(sub_rel)[0]
-                ep_data = self._extptfm.read(sub_file)
+                ep_data = self._extptfm.read(sub_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['ExtPtfm'] = ep_data.get('ExtPtfm', {})
 
         # ------- MoorDyn / MAP -------
@@ -282,7 +315,7 @@ class OpenFASTDriver:
             moor_file = os.path.normpath(os.path.join(fastdir, moor_rel))
             if os.path.isfile(moor_file):
                 fst_vt['Fst']['MooringFile_path'] = os.path.split(moor_rel)[0]
-                md_data = self._moordyn.read(moor_file)
+                md_data = self._moordyn.read(moor_file, outlist=fst_vt['outlist'], read_outlist_fn=_cap)
                 fst_vt['MoorDyn'] = md_data.get('MoorDyn', {})
 
         return fst_vt
@@ -312,7 +345,7 @@ class OpenFASTDriver:
             sed_name = case_name + '_SimpleElastoDyn.dat'
             fst['EDFile'] = sed_name
             sed_path = str(output_dir / sed_name)
-            self._simple_elastodyn.write({'SimpleElastoDyn': fst_vt.get('SimpleElastoDyn', {})}, sed_path, base_dir=str(output_dir))
+            self._simple_elastodyn.write({'SimpleElastoDyn': fst_vt.get('SimpleElastoDyn', {})}, sed_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(sed_path)
         elif comp_elast in (1, 2):
             # ElastoDyn blade(s)
@@ -350,32 +383,52 @@ class OpenFASTDriver:
                  'ElastoDynBlade': fst_vt.get('ElastoDynBlade', {})},
                 ed_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(ed_path)
 
         # ------- BeamDyn -------
-        if comp_elast == 2:
-            bd_list = fst_vt.get('BeamDyn', [])
-            if isinstance(bd_list, list):
-                for i, bd in enumerate(bd_list):
-                    if bd:
-                        bd_name = case_name + '_BeamDyn_{}.dat'.format(i + 1)
-                        fst['BDBldFile({})'.format(i + 1)] = bd_name
-                        bd_path = str(output_dir / bd_name)
-                        self._beamdyn.write(
-                            {'BeamDyn': bd,
-                             'BeamDynBlade': fst_vt.get('BeamDynBlade', [{}])[i] if isinstance(fst_vt.get('BeamDynBlade'), list) else {}},
-                            bd_path,
-                            base_dir=str(output_dir),
-                        )
-                        written.append(bd_path)
+        # Write whenever fst_vt['BeamDyn'] is populated (symmetric with the read guard,
+        # which reads BeamDyn whenever the blade file exists) — not gated on CompElast.
+        # Handle both the collapsed-dict shape (identical blades) and the list shape
+        # (distinct blades), and assign a UNIQUE per-blade BldFile so the writer does not
+        # send every blade to the same path (silent blade-property collision).
+        bd_data = fst_vt.get('BeamDyn')
+        bd_blade_all = fst_vt.get('BeamDynBlade')
+        num_bl_w = fst_vt.get('ElastoDyn', {}).get('NumBl', 3)
+
+        def _write_bd_blade(idx, bd_src, blade, main_name, blade_name):
+            bd = dict(bd_src)
+            bd['BldFile'] = blade_name
+            bd_path = str(output_dir / main_name)
+            self._beamdyn.write(
+                {'BeamDyn': bd, 'BeamDynBlade': blade},
+                bd_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'),
+            )
+            written.append(bd_path)
+
+        if isinstance(bd_data, dict) and bd_data:
+            # Collapsed identical blades: one file, all BDBldFile(i) point at it.
+            blade = bd_blade_all if isinstance(bd_blade_all, dict) else \
+                (bd_blade_all[0] if isinstance(bd_blade_all, list) and bd_blade_all else {})
+            main_name = case_name + '_BeamDyn.dat'
+            _write_bd_blade(0, bd_data, blade, main_name, case_name + '_BeamDyn_Blade.dat')
+            for k in range(num_bl_w):
+                fst['BDBldFile({})'.format(k + 1)] = main_name
+        elif isinstance(bd_data, list):
+            for i, bd in enumerate(bd_data):
+                if bd:
+                    main_name = case_name + '_BeamDyn_{}.dat'.format(i + 1)
+                    fst['BDBldFile({})'.format(i + 1)] = main_name
+                    blade = bd_blade_all[i] if isinstance(bd_blade_all, list) and i < len(bd_blade_all) else {}
+                    _write_bd_blade(i, bd, blade, main_name, case_name + '_BeamDyn_Blade_{}.dat'.format(i + 1))
 
         # ------- InflowWind -------
         if fst.get('CompInflow', 0) == 1:
             ifw_name = case_name + '_InflowWind.dat'
             fst['InflowFile'] = ifw_name
             ifw_path = str(output_dir / ifw_name)
-            self._inflowwind.write({'InflowWind': fst_vt.get('InflowWind', {})}, ifw_path, base_dir=str(output_dir))
+            self._inflowwind.write({'InflowWind': fst_vt.get('InflowWind', {})}, ifw_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ifw_path)
 
         # ------- AeroDyn / AeroDisk -------
@@ -390,13 +443,14 @@ class OpenFASTDriver:
                  'AeroDynPolar': fst_vt.get('AeroDynPolar', [])},
                 ad_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(ad_path)
         elif comp_aero == 1:  # AeroDisk {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
             adsk_name = case_name + '_AeroDisk.dat'
             fst['AeroFile'] = adsk_name
             adsk_path = str(output_dir / adsk_name)
-            self._aerodisk.write({'AeroDisk': fst_vt.get('AeroDisk', {})}, adsk_path, base_dir=str(output_dir))
+            self._aerodisk.write({'AeroDisk': fst_vt.get('AeroDisk', {})}, adsk_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(adsk_path)
 
         # ------- ServoDyn -------
@@ -409,9 +463,11 @@ class OpenFASTDriver:
                  'BStC': fst_vt.get('BStC', []),
                  'NStC': fst_vt.get('NStC', []),
                  'TStC': fst_vt.get('TStC', []),
-                 'SStC': fst_vt.get('SStC', [])},
+                 'SStC': fst_vt.get('SStC', []),
+                 'spd_trq': fst_vt.get('spd_trq')},
                 sd_path,
                 base_dir=str(output_dir),
+                outlist=fst_vt.get('outlist'),
             )
             written.append(sd_path)
 
@@ -420,7 +476,7 @@ class OpenFASTDriver:
             ss_name = case_name + '_SeaState.dat'
             fst['SeaStFile'] = ss_name
             ss_path = str(output_dir / ss_name)
-            self._seastate.write({'SeaState': fst_vt.get('SeaState', {})}, ss_path, base_dir=str(output_dir))
+            self._seastate.write({'SeaState': fst_vt.get('SeaState', {})}, ss_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ss_path)
 
         # ------- HydroDyn -------
@@ -428,7 +484,7 @@ class OpenFASTDriver:
             hd_name = case_name + '_HydroDyn.dat'
             fst['HydroFile'] = hd_name
             hd_path = str(output_dir / hd_name)
-            self._hydrodynamics.write({'HydroDyn': fst_vt.get('HydroDyn', {})}, hd_path, base_dir=str(output_dir))
+            self._hydrodynamics.write({'HydroDyn': fst_vt.get('HydroDyn', {})}, hd_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(hd_path)
 
         # ------- SubDyn / ExtPtfm -------
@@ -437,13 +493,13 @@ class OpenFASTDriver:
             sub_name = case_name + '_SubDyn.dat'
             fst['SubFile'] = sub_name
             sub_path = str(output_dir / sub_name)
-            self._subdyn.write({'SubDyn': fst_vt.get('SubDyn', {})}, sub_path, base_dir=str(output_dir))
+            self._subdyn.write({'SubDyn': fst_vt.get('SubDyn', {})}, sub_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(sub_path)
         elif comp_sub == 2:
             ep_name = case_name + '_ExtPtfm.dat'
             fst['SubFile'] = ep_name
             ep_path = str(output_dir / ep_name)
-            self._extptfm.write({'ExtPtfm': fst_vt.get('ExtPtfm', {})}, ep_path, base_dir=str(output_dir))
+            self._extptfm.write({'ExtPtfm': fst_vt.get('ExtPtfm', {})}, ep_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(ep_path)
 
         # ------- MoorDyn / MAP -------
@@ -458,7 +514,7 @@ class OpenFASTDriver:
             md_name = case_name + '_MoorDyn.dat'
             fst['MooringFile'] = md_name
             md_path = str(output_dir / md_name)
-            self._moordyn.write({'MoorDyn': fst_vt.get('MoorDyn', {})}, md_path, base_dir=str(output_dir))
+            self._moordyn.write({'MoorDyn': fst_vt.get('MoorDyn', {})}, md_path, base_dir=str(output_dir), outlist=fst_vt.get('outlist'))
             written.append(md_path)
 
         # ------- Main .fst file -------

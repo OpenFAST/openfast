@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Callable
 import numpy as np
 
 from .base import ModuleIO
+from ..outlist import emit_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -681,8 +682,5 @@ class HydroDynIO(ModuleIO):
 
             f.write('---------------------- OUTPUT CHANNELS -----------------------------------------\n')
             if outlist is not None:
-                ol = _get_outlist(outlist, ['HydroDyn'])
-                for channel_list in ol:
-                    for ch in channel_list:
-                        f.write('"' + ch + '"\n')
+                emit_outlist(f, outlist, 'HydroDyn')
             f.write('END of output channels and end of file.\n')

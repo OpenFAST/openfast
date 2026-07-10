@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict, Optional, Callable
 
 from .base import ModuleIO
+from ..outlist import emit_outlist, capture_outlist
 from ..parsing import (
     bool_read,
     float_read,
@@ -138,8 +139,14 @@ class SeaStateIO(ModuleIO):
 
         # Outlist  (legacy uses read_outlist_freeForm)
         f.readline()
-        if read_outlist_fn is not None:
+        if read_outlist_fn is not None and outlist is not None:
             read_outlist_fn(f, 'SeaState')
+        else:
+            # Standalone use with no shared registry — consume the section
+            # safely and stash the found channels so write() can still emit
+            # them (mirrors the aerodisk.py fallback pattern).
+            channels = capture_outlist(f, None, 'SeaState', freeform=True)
+            ss['_outlist'] = {ch: True for ch in channels}
 
         f.close()
         return {'SeaState': ss}
@@ -252,8 +259,8 @@ class SeaStateIO(ModuleIO):
 
             f.write('---------------------- OUTPUT CHANNELS -----------------------------------------\n')
             if outlist is not None:
-                ol = _get_outlist(outlist, ['SeaState'])
-                for channel_list in ol:
-                    for ch in channel_list:
-                        f.write('"' + ch + '"\n')
+                emit_outlist(f, outlist, 'SeaState')
+            else:
+                for ch in ss.get('_outlist', {}):  # standalone fallback (no shared registry)
+                    f.write('"' + ch + '"\n')
             f.write('END of output channels and end of file.\n')
