@@ -1053,6 +1053,7 @@ SUBROUTINE WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, E
                                ') of the volume grid at t='//TRIM(Num2LStr(REAL(Time,ReKi)))//' s ('// &
                                TRIM(Num2LStr(MBytes))//' MB; '//TRIM(Num2LStr(nResident))//' block(s) resident).' )
                   Blk%LastAccess = Time    ! stamp before any sweep so the fresh block is never a victim
+                  Blk%EverPopulated = .TRUE.
                   Blk%Populated = .TRUE.   ! publish last
                   ! This population raised resident memory — free any now-idle blocks while the lock is held.
                   IF ( WaveField%WvKinBlockFreeT > 0.0_DbKi ) CALL WaveField_SweepBlocks( WaveField, Time )

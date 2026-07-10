@@ -45,6 +45,7 @@ typedef     ^                 ^                 SiKi                 WaveAcc    
 typedef     ^                 ^                 SiKi                 WaveAccMCF      {:}{:}{:}{:}{:}  -        -        "Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3]" (m/s^2)
 typedef     ^                 ^                 DbKi                 LastAccess      -                0        -        "Simulation time of the most recent access to this block" (s)
 typedef     ^                 ^                 LOGICAL              Populated       -             .false.     -        "True when the block arrays are allocated and filled" -
+typedef     ^                 ^                 LOGICAL              EverPopulated   -             .false.     -        "True if this block has ever been populated (never cleared by eviction)" -
 typedef     ^                 ^                 INTEGER              iPtX0           -                0        -        "Global x-index of this block's first grid point" -
 typedef     ^                 ^                 INTEGER              iPtY0           -                0        -        "Global y-index of this block's first grid point" -
 typedef     ^                 ^                 INTEGER              iPtZ0           -                0        -        "Global z-index of this block's first grid point" -

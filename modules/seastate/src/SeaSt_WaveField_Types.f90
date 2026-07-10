@@ -70,6 +70,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAccMCF      !< Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s^2)]
     REAL(DbKi)  :: LastAccess = 0      !< Simulation time of the most recent access to this block [(s)]
     LOGICAL  :: Populated = .false.      !< True when the block arrays are allocated and filled [-]
+    LOGICAL  :: EverPopulated = .false.      !< True if this block has ever been populated (never cleared by eviction) [-]
     INTEGER(IntKi)  :: iPtX0 = 0      !< Global x-index of this block's first grid point [-]
     INTEGER(IntKi)  :: iPtY0 = 0      !< Global y-index of this block's first grid point [-]
     INTEGER(IntKi)  :: iPtZ0 = 0      !< Global z-index of this block's first grid point [-]
@@ -273,6 +274,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveBlockType(SrcSeaSt_WaveBlockTypeData, D
    end if
    DstSeaSt_WaveBlockTypeData%LastAccess = SrcSeaSt_WaveBlockTypeData%LastAccess
    DstSeaSt_WaveBlockTypeData%Populated = SrcSeaSt_WaveBlockTypeData%Populated
+   DstSeaSt_WaveBlockTypeData%EverPopulated = SrcSeaSt_WaveBlockTypeData%EverPopulated
    DstSeaSt_WaveBlockTypeData%iPtX0 = SrcSeaSt_WaveBlockTypeData%iPtX0
    DstSeaSt_WaveBlockTypeData%iPtY0 = SrcSeaSt_WaveBlockTypeData%iPtY0
    DstSeaSt_WaveBlockTypeData%iPtZ0 = SrcSeaSt_WaveBlockTypeData%iPtZ0
@@ -313,6 +315,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveBlockType(RF, Indata)
    call RegPackAlloc(RF, InData%WaveAccMCF)
    call RegPack(RF, InData%LastAccess)
    call RegPack(RF, InData%Populated)
+   call RegPack(RF, InData%EverPopulated)
    call RegPack(RF, InData%iPtX0)
    call RegPack(RF, InData%iPtY0)
    call RegPack(RF, InData%iPtZ0)
@@ -336,6 +339,7 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WaveAccMCF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastAccess); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Populated); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EverPopulated); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iPtX0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iPtY0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iPtZ0); if (RegCheckErr(RF, RoutineName)) return
