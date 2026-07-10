@@ -6272,6 +6272,7 @@ END SUBROUTINE WrVTK_BasicMeshes
 !! returning an error code.
 SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, SeaSt, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD)
    use FVW_IO, only: WrVTK_FVW
+   use SeaSt_WaveField, only: WaveField_WriteBlockVTK
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -6306,6 +6307,12 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInf
 
    ! Wave elevation
    if (allocated(p_FAST%VTK_Surface%WaveElevVisGrid)) call WrVTK_WaveElevVisGrid(t_global, p_FAST, y_FAST, SeaSt)
+
+   ! SeaState on-demand wave-kinematics block partition (no-op unless WvKinBlockMod=1)
+   if (associated(SeaSt%p%WaveField)) then
+      call WaveField_WriteBlockVTK( t_global, SeaSt%p%WaveField, p_FAST%VTK_OutFileRoot, &
+                                    y_FAST%VTK_count, p_FAST%VTK_tWidth, ErrStat2, ErrMsg2 )
+   end if
 
    if (allocated(ED%Input)) then
       do iRot = 1, p_FAST%NRotors
