@@ -6,6 +6,8 @@ USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
 USE GridInterp_Types
 USE Waves,  ONLY: WaveKinKernel_ComputeColumns          ! shared first-order per-column generation kernel (on-demand block population)
 USE Waves2, ONLY: WaveKinKernel_AddSecondOrderColumns   ! shared second-order per-column kernel (on-demand block population)
+USE VTK, ONLY: VTK_Misc, vtk_misc_init, vtk_new_ascii_file, vtk_dataset_rectilinear, &
+               vtk_cell_data_init, vtk_cell_data_scalar, vtk_close_file   ! block VTK export
 
 IMPLICIT NONE
 
@@ -23,6 +25,7 @@ PUBLIC WaveField_GetWaveVelAcc_AD
 PUBLIC WaveField_GetMeanDynSurfCurr
 PUBLIC WaveField_GetDynP
 PUBLIC WaveField_BlockStore_Init
+PUBLIC WaveField_WriteBlockVTK
 
 CONTAINS
 
@@ -1131,6 +1134,104 @@ SUBROUTINE WaveField_SweepBlocks( WaveField, Time )
    END ASSOCIATE
 
 END SUBROUTINE WaveField_SweepBlocks
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Write the on-demand block partition as a legacy-VTK rectilinear grid: one cell per block,
+!> one CELL_DATA scalar "BlockLife" (-1 = never populated, 0 = evicted, (0,1] = active,
+!> normalized time remaining before eviction; pinned at 1 when eviction is disabled).
+!> Silent no-op unless WvKinBlockMod=1 with an allocated block store. Errors are warnings only.
+SUBROUTINE WaveField_WriteBlockVTK ( Time, WaveField, OutRootName, FrameNo, TWidth, ErrStat, ErrMsg )
+   REAL(DbKi),                INTENT(IN   ) :: Time
+   TYPE(SeaSt_WaveFieldType), INTENT(IN   ) :: WaveField
+   CHARACTER(*),              INTENT(IN   ) :: OutRootName
+   INTEGER(IntKi),            INTENT(IN   ) :: FrameNo
+   INTEGER(IntKi),            INTENT(IN   ) :: TWidth
+   INTEGER(IntKi),            INTENT(  OUT) :: ErrStat
+   CHARACTER(*),              INTENT(  OUT) :: ErrMsg
+
+   TYPE(SeaSt_WaveBlockStoreType), POINTER :: Store
+   TYPE(VTK_Misc)                          :: mvtk
+   REAL(ReKi), ALLOCATABLE                 :: xE(:), yE(:), zE(:), Life(:)
+   INTEGER(IntKi)                          :: k, nBlk, ErrStatTmp
+   CHARACTER(64)                           :: Tstr
+   CHARACTER(1024)                         :: FileName
+   CHARACTER(64)                           :: Descr
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'WaveField_WriteBlockVTK'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( WaveField%WvKinBlockMod /= 1_IntKi ) RETURN
+   IF ( .NOT. ASSOCIATED(WaveField%BlockStore) ) RETURN
+   Store => WaveField%BlockStore
+   IF ( .NOT. ALLOCATED(Store%Blocks) ) RETURN
+
+   nBlk = Store%nBlkX * Store%nBlkY * Store%nBlkZ
+
+   ALLOCATE ( xE(Store%nBlkX+1), yE(Store%nBlkY+1), zE(Store%nBlkZ+1), Life(nBlk), STAT=ErrStatTmp )
+   IF ( ErrStatTmp /= 0 ) THEN
+      CALL SetErrStat( ErrID_Warn, 'Could not allocate block VTK work arrays.', ErrStat, ErrMsg, RoutineName )
+      RETURN
+   END IF
+
+   CALL BlockEdgeCoords( Store%xGrid, Store%nBlkX, Store%BlkCellsX, xE )
+   CALL BlockEdgeCoords( Store%yGrid, Store%nBlkY, Store%BlkCellsY, yE )
+   CALL BlockEdgeCoords( Store%zGrid, Store%nBlkZ, Store%BlkCellsZ, zE )
+
+   ! Blocks(k) ordering (x fastest, then y, then z) matches VTK rectilinear cell ordering.
+   DO k = 1, nBlk
+      IF ( .NOT. Store%Blocks(k)%EverPopulated ) THEN
+         Life(k) = -1.0_ReKi
+      ELSE IF ( .NOT. Store%Blocks(k)%Populated ) THEN
+         Life(k) = 0.0_ReKi
+      ELSE IF ( WaveField%WvKinBlockFreeT > 0.0_DbKi ) THEN
+         ! floor keeps an overdue-but-unswept active block from displaying as evicted
+         Life(k) = REAL( MAX( ( WaveField%WvKinBlockFreeT - (Time - Store%Blocks(k)%LastAccess) ) &
+                              / WaveField%WvKinBlockFreeT, 0.001_DbKi ), ReKi )
+      ELSE
+         Life(k) = 1.0_ReKi   ! eviction disabled: alive forever
+      END IF
+   END DO
+
+   WRITE (Tstr,'(I'//TRIM(Num2LStr(TWidth))//'.'//TRIM(Num2LStr(TWidth))//')') FrameNo
+   FileName = TRIM(OutRootName)//'.SeaSt.WaveBlocks.'//TRIM(Tstr)//'.vtk'
+   WRITE (Descr,'(A,F0.4,A)') 'SeaState wave-kinematics blocks, t=', Time, ' s'
+
+   CALL vtk_misc_init( mvtk )
+   IF ( .NOT. vtk_new_ascii_file( TRIM(FileName), TRIM(Descr), mvtk ) ) THEN
+      CALL SetErrStat( ErrID_Warn, 'Could not open block VTK file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, RoutineName )
+      RETURN
+   END IF
+   CALL vtk_dataset_rectilinear( xE, yE, zE, mvtk )
+   mvtk%nData = nBlk   ! the VTK module never sets nData for rectilinear datasets; CELL_DATA needs the cell count
+   CALL vtk_cell_data_init( mvtk )
+   CALL vtk_cell_data_scalar( Life, 'BlockLife', mvtk )
+   CALL vtk_close_file( mvtk )
+
+CONTAINS
+
+   !> Physical coordinates of the nBlkAxis+1 block-boundary planes along one axis.
+   !> Boundary i (0-based) sits at grid point i*BlkCells+1 (1-based), clamped to the last point.
+   !> A degenerate axis (a single grid point) gets an arbitrary 1 m slab so cells stay renderable.
+   SUBROUTINE BlockEdgeCoords ( Grid, nBlkAxis, BlkCells, Edges )
+      REAL(SiKi),     INTENT(IN   ) :: Grid(:)
+      INTEGER(IntKi), INTENT(IN   ) :: nBlkAxis
+      INTEGER(IntKi), INTENT(IN   ) :: BlkCells
+      REAL(ReKi),     INTENT(  OUT) :: Edges(:)
+      INTEGER(IntKi)                :: i, nPt
+      nPt = SIZE(Grid)
+      IF ( nPt <= 1_IntKi ) THEN
+         Edges(1) = REAL(Grid(1),ReKi) - 0.5_ReKi
+         Edges(2) = REAL(Grid(1),ReKi) + 0.5_ReKi
+         RETURN
+      END IF
+      DO i = 0, nBlkAxis
+         Edges(i+1) = REAL( Grid( MIN( i*BlkCells + 1_IntKi, nPt ) ), ReKi )
+      END DO
+   END SUBROUTINE BlockEdgeCoords
+
+END SUBROUTINE WaveField_WriteBlockVTK
 
 
 !> Interpolate the wave-kinematics volume quantities for the point/time previously set up through
