@@ -192,6 +192,20 @@ Practical guidance:
   **WaveDT**, **NX**/**NY**) as described below — those act on the full
   domain regardless of **WvKinBlockMod**.
 
+Visualizing the block partition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When ``WvKinBlockMod = 1`` and OpenFAST is run with ``WrVTK = 2``, a
+``<root>.SeaSt.WaveBlocks.<frame>.vtk`` series is written alongside the other
+VTK animation output: a rectilinear grid with one cell per block whose
+``BlockLife`` cell scalar encodes the block state — ``-1`` never populated,
+``0`` evicted, and values in ``(0, 1]`` for resident blocks (the normalized
+time remaining before eviction, pinned at ``1`` when ``WvKinBlockFreeT <= 0``).
+Load the series in ParaView with a fixed color range of ``[-1, 1]`` and the
+"Surface With Edges" representation: the cell edges are the block boundaries.
+The standalone SeaState driver writes the same series when the optional
+trailing driver-file input ``WrBlockVTK`` is set to a positive step interval.
+
 When setting up the wave grid, it is necessary to make sure the wave grid is large enough in all three directions, so that no part of the structure defined in HydroDyn moves out of the wave grid during the simulation. At the same time, the grid should also be fine enough to resolve the shortest wave of interest.
 
 OpenFAST precomputes and saves the wave-field velocity, acceleration, dynamic pressure, and wave elevation at the start of the simulation. Generating and maintaining the wave grid can be memory intensive for long simulations. Users should set the wave grid to be no larger or finer than necessary to reduce memory use. Reducing **WaveTMax** or increasing **WaveDT** (see WAVES section below) also reduces memory use. For long crested waves (no directional spreading) aligned with the *X*-direction (or *Y*-direction), **NY** (or **NX**) can be reduced to the minimum allowed value of 2 to save memory.
