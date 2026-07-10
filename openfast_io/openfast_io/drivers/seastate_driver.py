@@ -5,12 +5,19 @@ SeaState file reference, wave output options, and simulation timing.
 """
 from __future__ import annotations
 
+import copy
 import os
 from pathlib import Path
 from typing import Any, Dict
 
 from ..io.seastate import SeaStateIO
+from ..outlist import capture_outlist
 from ..parsing import bool_read, float_read, int_read, quoted_read
+
+try:
+    from ..FAST_vars_out import FstOutput
+except ImportError:
+    FstOutput = {}
 
 
 class SeaStateStandaloneDriver:
@@ -60,13 +67,25 @@ class SeaStateStandaloneDriver:
 
         result: Dict[str, Any] = {'SeaStateDriver': dvr}
 
+        # Shared OutList registry (mirrors OpenFASTDriver.read) so the SeaState
+        # output channel section survives a standalone read → write roundtrip.
+        outlist: Dict[str, Any] = copy.deepcopy(FstOutput) if FstOutput else {}
+
+        def _cap(f, module, freeform=False):
+            return capture_outlist(f, outlist, module, freeform=freeform)
+
         # --- Delegate to SeaStateIO ---
         ss_file = dvr.get('SeaStateInputFile', '')
         ss_path = os.path.normpath(os.path.join(str(base_dir), ss_file))
         if ss_file and os.path.isfile(ss_path):
-            ss_data = self._seastate.read(Path(ss_path), base_dir)
+            ss_data = self._seastate.read(
+                Path(ss_path), base_dir,
+                outlist=outlist,
+                read_outlist_fn=lambda f, module: _cap(f, module, freeform=True),
+            )
             result.update(ss_data)
 
+        result['outlist'] = outlist
         return result
 
     # ------------------------------------------------------------------
@@ -81,25 +100,26 @@ class SeaStateStandaloneDriver:
         with open(inp_path, 'w') as f:
             f.write('Seastate driver file for stand-alone applications.\n')
             f.write('Compatible with SeaState v1.00\n')
-            f.write('{!s:<17}{:<19}{:}\n'.format(dvr['Echo'], 'Echo', '- Echo the input file data (flag)'))
+            f.write('{!s:<17} {:<19} {:}\n'.format(dvr['Echo'], 'Echo', '- Echo the input file data (flag)'))
             f.write('---------------------- ENVIRONMENTAL CONDITIONS -------------------------------\n')
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['Gravity'], 'Gravity', '- Gravity (m/s^2)'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['WtrDens'], 'WtrDens', '- Water density (kg/m^3)'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['WtrDpth'], 'WtrDpth', '- Water depth (m)'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['MSL2SWL'], 'MSL2SWL', '- Offset between still-water level and mean sea level (m) [positive upward]'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['Gravity'], 'Gravity', '- Gravity (m/s^2)'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['WtrDens'], 'WtrDens', '- Water density (kg/m^3)'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['WtrDpth'], 'WtrDpth', '- Water depth (m)'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['MSL2SWL'], 'MSL2SWL', '- Offset between still-water level and mean sea level (m) [positive upward]'))
             f.write('---------------------- SEASTATE -----------------------------------------------\n')
 
             ss_name = dvr.get('SeaStateInputFile', 'SeaState.dat')
-            f.write('{:<17}{:<19}{:}\n'.format('"' + ss_name + '"', 'SeaStateInputFile', '- Primary SeaState input file name (quoted string)'))
-            f.write('{:<17}{:<19}{:}\n'.format('"' + dvr.get('OutRootName', './seastate') + '"', 'OutRootName', '- The name which prefixes all SeaState generated files (quoted string)'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['WrWvKinMod'], 'WrWvKinMod', '- Write Wave Kinematics? [0: none, 1: (0,0) elevations, 2: complete]'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['NSteps'], 'NSteps', '- Number of time steps in the simulations (-)'))
-            f.write('{:<17}{:<19}{:}\n'.format(dvr['TimeInterval'], 'TimeInterval', '- TimeInterval for the simulation (sec)'))
+            f.write('{:<17} {:<19} {:}\n'.format('"' + ss_name + '"', 'SeaStateInputFile', '- Primary SeaState input file name (quoted string)'))
+            f.write('{:<17} {:<19} {:}\n'.format('"' + dvr.get('OutRootName', './seastate') + '"', 'OutRootName', '- The name which prefixes all SeaState generated files (quoted string)'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['WrWvKinMod'], 'WrWvKinMod', '- Write Wave Kinematics? [0: none, 1: (0,0) elevations, 2: complete]'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['NSteps'], 'NSteps', '- Number of time steps in the simulations (-)'))
+            f.write('{:<17} {:<19} {:}\n'.format(dvr['TimeInterval'], 'TimeInterval', '- TimeInterval for the simulation (sec)'))
             f.write('---------------------- Waves multipoint elevation output ----------------------\n')
-            f.write('{!s:<17}{:<19}{:}\n'.format(dvr['WaveElevSeriesFlag'], 'WaveElevSeriesFlag', '- T/F flag to output the wave elevation field (for movies)'))
+            f.write('{!s:<17} {:<19} {:}\n'.format(dvr['WaveElevSeriesFlag'], 'WaveElevSeriesFlag', '- T/F flag to output the wave elevation field (for movies)'))
             f.write('END of driver input file\n')
 
         # --- Delegate to SeaStateIO ---
         if 'SeaState' in data:
             ss_path = os.path.normpath(os.path.join(str(base_dir), ss_name))
-            self._seastate.write({'SeaState': data['SeaState']}, ss_path, str(base_dir))
+            outlist = data.get('outlist') or (copy.deepcopy(FstOutput) if FstOutput else {})
+            self._seastate.write({'SeaState': data['SeaState']}, ss_path, str(base_dir), outlist=outlist)

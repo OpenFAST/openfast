@@ -381,8 +381,12 @@ class MoorDynIO(ModuleIO):
             out = md.get('_outlist', {})
             if outlist and 'MoorDyn' in outlist:
                 out = outlist['MoorDyn']
-            for ch in out:
-                f.write(f'"{ch}"\n')
+            # Only emit truthy channels — registries built via the public
+            # OutList.to_fst_output() contain explicit False entries for every
+            # known channel, which must not be written out as enabled.
+            for ch, enabled in out.items():
+                if enabled:
+                    f.write(f'"{ch}"\n')
             f.write('END\n')
             f.write('----------------------- need this line ------------------\n')
 

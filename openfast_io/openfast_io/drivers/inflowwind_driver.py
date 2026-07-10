@@ -6,12 +6,19 @@ file input, output grid, and VTK slice output.
 """
 from __future__ import annotations
 
+import copy
 import os
 from pathlib import Path
 from typing import Any, Dict
 
 from ..io.inflowwind import InflowWindIO
+from ..outlist import capture_outlist
 from ..parsing import bool_read, float_read, int_read, quoted_read
+
+try:
+    from ..FAST_vars_out import FstOutput
+except ImportError:
+    FstOutput = {}
 
 
 class InflowWindStandaloneDriver:
@@ -80,13 +87,23 @@ class InflowWindStandaloneDriver:
 
         result: Dict[str, Any] = {'InflowWindDriver': dvr}
 
+        # Shared OutList registry (mirrors OpenFASTDriver.read) so the
+        # InflowWind OutList section survives a standalone read → write
+        # roundtrip.
+        outlist: Dict[str, Any] = copy.deepcopy(FstOutput) if FstOutput else {}
+
+        def _cap(f, module, freeform=False):
+            return capture_outlist(f, outlist, module, freeform=freeform)
+
         # --- Delegate to InflowWindIO ---
         ifw_file = dvr.get('IfWFileName', '')
         ifw_path = os.path.normpath(os.path.join(str(base_dir), ifw_file))
         if ifw_file and os.path.isfile(ifw_path):
-            ifw_data = self._inflowwind.read(Path(ifw_path), base_dir)
+            ifw_data = self._inflowwind.read(Path(ifw_path), base_dir,
+                                              outlist=outlist, read_outlist_fn=_cap)
             result.update(ifw_data)
 
+        result['outlist'] = outlist
         return result
 
     # ------------------------------------------------------------------
@@ -101,35 +118,35 @@ class InflowWindStandaloneDriver:
         with open(inp_path, 'w') as f:
             f.write('InflowWind driver input file\n')
             f.write('InflowWind driver input file. V1.00\n')
-            f.write('{!s:<8}{:}\n'.format(dvr['Echo'], 'echo (flag)'))
+            f.write('{!s:<8} {:}\n'.format(dvr['Echo'], 'echo (flag)'))
             f.write('===============================================================================\n')
 
             ifw_name = dvr.get('IfWFileName', 'InflowWind.dat')
-            f.write('{:<16}{:}\n'.format('"' + ifw_name + '"', 'IfWFileName -- IfW input filename (-)'))
+            f.write('{:<16} {:}\n'.format('"' + ifw_name + '"', 'IfWFileName -- IfW input filename (-)'))
             f.write('===================== File Conversion Options =================================\n')
-            f.write(' {!s:<14}{:<15}{:}\n'.format(dvr['WrHAWC'], 'WrHAWC', '-- Convert all data to HAWC2 format? (flag)'))
-            f.write(' {!s:<14}{:<15}{:}\n'.format(dvr['WrBladed'], 'WrBladed', '-- Convert all data to Bladed format? (flag)'))
-            f.write(' {!s:<14}{:<15}{:}\n'.format(dvr['WrVTK'], 'WrVTK', '-- Convert all data to VTK format? (flag)'))
-            f.write(' {!s:<14}{:<15}{:}\n'.format(dvr.get('WrUniform', False), 'WrUniform', '-- Convert data to Uniform wind format? (flag)'))
+            f.write(' {!s:<14} {:<15} {:}\n'.format(dvr['WrHAWC'], 'WrHAWC', '-- Convert all data to HAWC2 format? (flag)'))
+            f.write(' {!s:<14} {:<15} {:}\n'.format(dvr['WrBladed'], 'WrBladed', '-- Convert all data to Bladed format? (flag)'))
+            f.write(' {!s:<14} {:<15} {:}\n'.format(dvr['WrVTK'], 'WrVTK', '-- Convert all data to VTK format? (flag)'))
+            f.write(' {!s:<14} {:<15} {:}\n'.format(dvr.get('WrUniform', False), 'WrUniform', '-- Convert data to Uniform wind format? (flag)'))
             f.write('=====================  Tests of Interpolation Options =========================\n')
-            f.write('{:<15} {:<15}{:}\n'.format(dvr['NumTSteps'], 'NumTSteps', '-- number of timesteps to run (DEFAULT for all) (-)'))
-            f.write('{:<15} {:<15}{:}\n'.format(dvr['TStart'], 'TStart', '-- Start time (s)'))
-            f.write('{:<15} {:<15}{:}\n'.format(dvr['DT'], 'DT', '-- timestep size for driver to take (s, or DEFAULT for what the file contains)'))
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr['Summary'], 'Summary', '-- Summarize the data extents in the windfile (flag)'))
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr['SummaryFile'], 'SummaryFile', '-- Write summary to file .dvr.sum (flag)'))
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr.get('BoxExceedAllow', False), 'BoxExceedAllow', '-- Allow point sampling outside grid'))
+            f.write('{:<15} {:<15} {:}\n'.format(dvr['NumTSteps'], 'NumTSteps', '-- number of timesteps to run (DEFAULT for all) (-)'))
+            f.write('{:<15} {:<15} {:}\n'.format(dvr['TStart'], 'TStart', '-- Start time (s)'))
+            f.write('{:<15} {:<15} {:}\n'.format(dvr['DT'], 'DT', '-- timestep size for driver to take (s, or DEFAULT for what the file contains)'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr['Summary'], 'Summary', '-- Summarize the data extents in the windfile (flag)'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr['SummaryFile'], 'SummaryFile', '-- Write summary to file .dvr.sum (flag)'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr.get('BoxExceedAllow', False), 'BoxExceedAllow', '-- Allow point sampling outside grid'))
             f.write('---- Points file input (output given as PointsFileName.Velocity.dat) --------\n')
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr['PointsFlag'], 'PointsFileName', '-- read in a list of points from a file (flag)'))
-            f.write('{:<15} {:<15}{:}\n'.format('"' + dvr['PointsFileName'] + '"', 'PointsFileName', '-- name of points file (-)'))
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr.get('CalcAccel', False), 'CalcAccel', '-- calculate and output acceleration at points'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr['PointsFlag'], 'PointsFileName', '-- read in a list of points from a file (flag)'))
+            f.write('{:<15} {:<15} {:}\n'.format('"' + dvr['PointsFileName'] + '"', 'PointsFileName', '-- name of points file (-)'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr.get('CalcAccel', False), 'CalcAccel', '-- calculate and output acceleration at points'))
             f.write('---- Output grid (Points below ground will simply be ignored) ---------------\n')
-            f.write('{!s:<15} {:<15}{:}\n'.format(dvr['WindGrid'], 'WindGrid', '-- report wind data at set of Y,Z coordinates (flag)'))
-            f.write('{:<15} {:<15}{:}\n'.format(','.join(str(v) for v in dvr['GridCtrCoord']), 'GridCtrCoord', '-- coordinates of center of grid (m)'))
-            f.write('{:<15} {:<15}{:}\n'.format(','.join(str(v) for v in dvr['GridDXYZ']), 'GridDX,GridDY,GridDZ', '-- Stepsize of grid (m)'))
-            f.write('{:<15} {:<15}{:}\n'.format(','.join(str(v) for v in dvr['GridNXYZ']), 'GridNX,GridNY,GridNZ', '-- number of grid points in X, Y and Z directions (-)'))
+            f.write('{!s:<15} {:<15} {:}\n'.format(dvr['WindGrid'], 'WindGrid', '-- report wind data at set of Y,Z coordinates (flag)'))
+            f.write('{:<15} {:<15} {:}\n'.format(','.join(str(v) for v in dvr['GridCtrCoord']), 'GridCtrCoord', '-- coordinates of center of grid (m)'))
+            f.write('{:<15} {:<15} {:}\n'.format(','.join(str(v) for v in dvr['GridDXYZ']), 'GridDX,GridDY,GridDZ', '-- Stepsize of grid (m)'))
+            f.write('{:<15} {:<15} {:}\n'.format(','.join(str(v) for v in dvr['GridNXYZ']), 'GridNX,GridNY,GridNZ', '-- number of grid points in X, Y and Z directions (-)'))
             f.write('----  Output VTK slices  ------------------------------------------------------\n')
-            f.write('{:>4}            {:<14}{:}\n'.format(dvr['NOutWindXY'], 'NOutWindXY', '-- Number of XY planes for output (-) [0 to 9]'))
-            f.write('{:>4}           {:<14}{:}\n'.format(dvr['OutWindZ'], 'OutWindZ', '-- Z coordinates of XY planes for output (m)'))
+            f.write('{:>4}            {:<14} {:}\n'.format(dvr['NOutWindXY'], 'NOutWindXY', '-- Number of XY planes for output (-) [0 to 9]'))
+            f.write('{:>4}           {:<14} {:}\n'.format(dvr['OutWindZ'], 'OutWindZ', '-- Z coordinates of XY planes for output (m)'))
             f.write('END of driver input file\n')
 
         # --- Copy referenced data files (Points.inp, wind files, etc.) ---
@@ -138,7 +155,8 @@ class InflowWindStandaloneDriver:
         # --- Delegate to InflowWindIO ---
         if 'InflowWind' in data:
             ifw_path = os.path.normpath(os.path.join(str(base_dir), ifw_name))
-            self._inflowwind.write({'InflowWind': data['InflowWind']}, Path(ifw_path), base_dir)
+            outlist = data.get('outlist') or (copy.deepcopy(FstOutput) if FstOutput else {})
+            self._inflowwind.write({'InflowWind': data['InflowWind']}, Path(ifw_path), base_dir, outlist=outlist)
 
 
 def _read_csv_vec(line: str) -> list:

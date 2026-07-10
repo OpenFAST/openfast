@@ -55,7 +55,7 @@ class InputReader_OpenFAST:
         warnings.warn(
             "InputReader_OpenFAST is deprecated. "
             "Use openfast_io.drivers.openfast.OpenFASTDriver directly.",
-            PendingDeprecationWarning,
+            DeprecationWarning,
             stacklevel=2,
         )
         self.FAST_InputFile = None   # FAST input file (ext=.fst)

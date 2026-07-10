@@ -18,6 +18,7 @@ from openfast_io.io.subdyn import SubDynIO
 from openfast_io.io.moordyn import MoorDynIO
 from openfast_io.io.map_io import MAPIO
 from openfast_io.io.extptfm import ExtPtfmIO
+from openfast_io.outlist import capture_outlist
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -143,6 +144,59 @@ def test_subdyn_prop_sets():
     io = SubDynIO()
     sd = io.read(_SD_FILE)['SubDyn']
     assert len(sd['PropSetID1']) == sd['NPropSetsCyl']
+
+
+def _make_minimal_sd() -> dict:
+    """Construct a minimal SubDyn data dict for writing — every table section is
+    empty except a single member-node output request, so io/subdyn.py's write()
+    reaches the SSOutList section without needing real geometry/property data."""
+    sd = {
+        'Echo': False, 'SDdeltaT': 'default', 'IntMethod': 3, 'SttcSolve': False,
+        'FEMMod': 3, 'NDiv': 1, 'Nmodes': 0, 'JDampings': 1.0, 'GuyanDampMod': 0,
+        'RayleighDamp': [0.0, 0.0], 'GuyanDampSize': 0, 'GuyanDamp': np.zeros((0, 0)),
+        'RBSurge': 0.0, 'RBSway': 0.0, 'RBHeave': 0.0,
+        'RBRoll': 0.0, 'RBPitch': 0.0, 'RBYaw': 0.0,
+        'NJoints': 0, 'NReact': 0, 'NInterf': 0, 'NMembers': 0,
+        'NPropSetsCyl': 0, 'NPropSetsRec': 0, 'NXPropSets': 0,
+        'NCablePropSets': 0, 'NRigidPropSets': 0, 'NSpringPropSets': 0,
+        'NCOSMs': 0, 'NCmass': 0,
+        'SumPrint': False, 'OutCOSM': False, 'OutAll': False, 'OutSwtch': 1,
+        'TabDelim': True, 'OutDec': 1, 'OutFmt': '"ES10.3E2"', 'OutSFmt': '"A11"',
+        'NMOutputs': 1, 'MemberID_out': [1], 'NOutCnt': [1], 'NodeCnt': [[1]],
+    }
+    return sd
+
+
+def test_subdyn_ssoutlist_emit_and_roundtrip(tmp_path):
+    """Regression for commit 7eff56947 (fix(subdyn): emit SSOutList via emit_outlist).
+
+    That fix had zero test coverage — no test greps SSOutList. Exercise
+    io/subdyn.py's own read+write path directly (not the driver) with a registry
+    holding SubDyn member-node channels (e.g. M1N1FKxe), and assert they are
+    actually written into the file and survive a read-back roundtrip.
+    """
+    io = SubDynIO()
+    sd = _make_minimal_sd()
+    channels = {'M1N1FKxe', 'M1N1MKxe'}
+    write_registry = {'SubDyn': {ch: True for ch in channels}}
+
+    out_file = tmp_path / 'subdyn_test.dat'
+    io.write({'SubDyn': sd}, str(out_file), outlist=write_registry)
+
+    written = out_file.read_text()
+    for ch in channels:
+        assert f'"{ch}"' in written, f'{ch} was not emitted into the written SSOutList'
+
+    read_registry: dict = {}
+
+    def _cap_ff(f, module):
+        return capture_outlist(f, read_registry, module, freeform=True)
+
+    result = io.read(str(out_file), outlist=read_registry, read_outlist_fn=_cap_ff)
+    assert result['SubDyn']['NMOutputs'] == 1
+
+    survived = {ch for ch, v in read_registry.get('SubDyn', {}).items() if v is True}
+    assert survived == channels, f'SSOutList channels did not survive roundtrip: {survived}'
 
 
 # ===================================================================

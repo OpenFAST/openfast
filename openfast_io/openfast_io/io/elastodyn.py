@@ -226,18 +226,21 @@ class ElastoDynIO(ModuleIO):
         else:
             self._read_outlist(f)
 
-        # Optional nodal output
-        try:
-            f.readline()
-            ed['BldNd_BladesOut'] = int(f.readline().split()[0])
-            ed['BldNd_BlOutNd'] = f.readline().split()[0]
-            f.readline()
-            if outlist is not None:
-                capture_outlist(f, outlist, 'ElastoDyn')
-            else:
-                self._read_outlist(f)
-        except:
-            None
+        # Optional nodal output — peek to check whether the section exists (EOF means it
+        # doesn't), then only swallow the specific parse errors a malformed/absent
+        # section would raise, so unrelated bugs aren't hidden.
+        section_header = f.readline()
+        if section_header:
+            try:
+                ed['BldNd_BladesOut'] = int(f.readline().split()[0])
+                ed['BldNd_BlOutNd'] = f.readline().split()[0]
+                f.readline()
+                if outlist is not None:
+                    capture_outlist(f, outlist, 'ElastoDyn_Nodes')
+                else:
+                    self._read_outlist(f)
+            except (ValueError, IndexError):
+                pass
 
         f.close()
 
@@ -540,6 +543,8 @@ class ElastoDynIO(ModuleIO):
             f.write('{:<22d} {:<11} {:}'.format(ed['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at (-)\n'))
             f.write('{!s:<22} {:<11} {:}'.format(ed['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output (-)\n'))
             f.write('                   OutList     - The next line(s) contains a list of output parameters.\n')
+            if outlist is not None:
+                emit_outlist(f, outlist, 'ElastoDyn_Nodes')
             f.write('END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)\n')
 
         f.write('---------------------------------------------------------------------------------------\n')

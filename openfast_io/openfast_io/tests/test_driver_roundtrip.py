@@ -54,6 +54,8 @@ from openfast_io.drivers.aerodisk_driver import AeroDiskStandaloneDriver
 from openfast_io.drivers.simple_elastodyn_driver import SimpleElastoDynStandaloneDriver
 from openfast_io.drivers.unsteadyaero_driver import UnsteadyAeroStandaloneDriver
 from openfast_io.FileTools import compare_fst_vt
+from openfast_io.io.moordyn import MoorDynIO
+from openfast_io.tests.test_io_offshore import _make_minimal_sd
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,23 @@ def _roundtrip(driver, dvr_path: Path, case_dir: Path) -> dict:
         removeArrayProps=True,
         print_diff=False,
     )
+
+    # --- OutList channel preservation ---
+    # Standalone drivers now thread an explicit 'outlist' registry through
+    # read()/write() (see drivers/*_driver.py). Whatever channels were
+    # enabled in the original read must still be enabled after a
+    # write → re-read cycle.
+    orig_outlist = data_orig.get('outlist')
+    reread_outlist = data_reread.get('outlist')
+    if orig_outlist is not None and reread_outlist is not None:
+        for module, channels in orig_outlist.items():
+            if not isinstance(channels, dict):
+                continue
+            orig_true = {ch for ch, v in channels.items() if v}
+            reread_true = {ch for ch, v in reread_outlist.get(module, {}).items() if v}
+            if orig_true != reread_true:
+                diff[f'outlist.{module}'] = (sorted(orig_true), sorted(reread_true))
+
     return diff
 
 
@@ -508,4 +527,171 @@ class TestDriverReadSmoke:
         assert dvr['UAMod'] == 2
         assert dvr['Chord'] == 3.5
         assert len(dvr['MassMatrix']) == 3
+
+
+# ===========================================================================
+# OutList threading — synthetic (no r-test data required).
+#
+# These exercise the standalone-driver → module-IO OutList registry wiring
+# fixed in this review: SubDyn/SeaState drivers previously never passed
+# outlist/read_outlist_fn to SubDynIO/SeaStateIO, so an OutList section
+# would silently vanish on a .dvr roundtrip. Building minimal synthetic
+# decks (rather than depending on reg_tests/r-test, which is not checked
+# out in this environment) lets the fix be verified directly.
+# ===========================================================================
+
+def _make_minimal_subdyn_driver_dict() -> dict:
+    return {
+        'Echo': False, 'Gravity': 9.81, 'WtrDpth': 0.0,
+        'SDInputFile': 'SubDyn.dat', 'OutRootName': 'sd_test',
+        'NSteps': 10, 'TimeInterval': 0.01, 'NTPs': 1,
+        'TP_RefPoint_X': 0.0, 'TP_RefPoint_Y': 0.0, 'TP_RefPoint_Z': 0.0,
+        'SubRotateZ': 0.0, 'InputsMod': 1, 'InputsFile': '',
+        'uTPInSteady': [0, 0, 0, 0, 0, 0],
+        'uDotTPInSteady': [0, 0, 0, 0, 0, 0],
+        'uDotDotTPInSteady': [0, 0, 0, 0, 0, 0],
+        'nAppliedLoads': 0, 'AppliedLoads': [],
+    }
+
+
+def test_subdyn_driver_outlist_roundtrip(tmp_path):
+    """SubDynStandaloneDriver must thread an OutList registry end-to-end.
+
+    Regression for the finding that subdyn_driver.py never passed
+    outlist/read_outlist_fn to SubDynIO, silently dropping the SSOutList
+    section on a .dvr roundtrip.
+    """
+    driver = SubDynStandaloneDriver()
+    channels = {'M1N1FKxe', 'M1N1MKxe'}
+    data = {
+        'SubDynDriver': _make_minimal_subdyn_driver_dict(),
+        'SubDyn': _make_minimal_sd(),
+        'outlist': {'SubDyn': {ch: True for ch in channels}},
+    }
+
+    dvr_path = tmp_path / 'sd_driver.dvr'
+    driver.write(data, dvr_path)
+
+    sd_dat = (tmp_path / 'SubDyn.dat').read_text()
+    for ch in channels:
+        assert f'"{ch}"' in sd_dat, f'{ch} was not written into SubDyn.dat SSOutList'
+
+    reread = driver.read(dvr_path)
+    survived = {ch for ch, v in reread['outlist'].get('SubDyn', {}).items() if v}
+    assert survived == channels, f'SubDyn OutList channels did not survive driver roundtrip: {survived}'
+
+
+def _make_minimal_seastate_dict() -> dict:
+    return {
+        'Echo': False, 'WtrDens': 1025.0, 'WtrDpth': 200.0, 'MSL2SWL': 0.0,
+        'X_HalfWidth': 100.0, 'Y_HalfWidth': 100.0, 'Z_Depth': 200.0,
+        'NX': 2, 'NY': 2, 'NZ': 2,
+        'WaveMod': 0, 'WaveStMod': 0, 'WvCrntMod': 0, 'WaveTMax': 0.0,
+        'WaveDT': 0.25, 'WaveHs': 0.0, 'WaveTp': 0.0, 'WavePkShp': 0.0,
+        'WvLowCOff': 0.0, 'WvHiCOff': 3.14, 'WaveDir': 0.0, 'WaveDirMod': 0,
+        'WaveDirSpread': 1.0, 'WaveNDir': 1, 'WaveDirRange': 180.0,
+        'WaveSeed1': 123, 'WaveSeed2': 456, 'WaveNDAmp': False, 'WvKinFile': '',
+        'WvDiffQTF': False, 'WvSumQTF': False,
+        'WvLowCOffD': 0.0, 'WvHiCOffD': 3.14, 'WvLowCOffS': 0.0, 'WvHiCOffS': 3.14,
+        'ConstWaveMod': 0, 'CrestHmax': 0.0, 'CrestTime': 0.0, 'CrestXi': 0.0, 'CrestYi': 0.0,
+        'CurrMod': 0, 'CurrSSV0': 0.0, 'CurrSSDir': 0.0, 'CurrNSRef': 0.0,
+        'CurrNSV0': 0.0, 'CurrNSDir': 0.0, 'CurrDIV': 0.0, 'CurrDIDir': 0.0,
+        'MCFD': 0.0,
+        'SeaStSum': False, 'OutSwtch': 1, 'OutFmt': '"ES10.3E2"', 'OutSFmt': '"A11"',
+        'NWaveElev': 0, 'WaveElevxi': [0.0], 'WaveElevyi': [0.0],
+        'NWaveKin': 0, 'WaveKinxi': [0], 'WaveKinyi': [0], 'WaveKinzi': [0],
+    }
+
+
+def _make_minimal_seastate_driver_dict() -> dict:
+    return {
+        'Echo': False, 'Gravity': 9.80665, 'WtrDens': 1025.0, 'WtrDpth': 200.0,
+        'MSL2SWL': 0.0, 'SeaStateInputFile': 'SeaState.dat', 'OutRootName': 'ss_test',
+        'WrWvKinMod': 0, 'NSteps': 10, 'TimeInterval': 0.25, 'WaveElevSeriesFlag': False,
+    }
+
+
+def test_seastate_driver_outlist_roundtrip(tmp_path):
+    """SeaStateStandaloneDriver must thread an OutList registry end-to-end.
+
+    Regression for the finding that seastate_driver.py never passed
+    outlist/read_outlist_fn to SeaStateIO.
+    """
+    driver = SeaStateStandaloneDriver()
+    channels = {'Wave1Elev', 'WavesF1yi'}
+    data = {
+        'SeaStateDriver': _make_minimal_seastate_driver_dict(),
+        'SeaState': _make_minimal_seastate_dict(),
+        'outlist': {'SeaState': {ch: True for ch in channels}},
+    }
+
+    inp_path = tmp_path / 'ss_driver.inp'
+    driver.write(data, inp_path)
+
+    ss_dat = (tmp_path / 'SeaState.dat').read_text()
+    for ch in channels:
+        assert f'"{ch}"' in ss_dat, f'{ch} was not written into SeaState.dat OUTPUT CHANNELS'
+
+    reread = driver.read(inp_path)
+    survived = {ch for ch, v in reread['outlist'].get('SeaState', {}).items() if v}
+    assert survived == channels, f'SeaState OutList channels did not survive driver roundtrip: {survived}'
+
+
+@pytest.mark.parametrize('module_name,driver_path', [
+    ('AeroDyn', 'openfast_io.drivers.aerodyn_driver'),
+    ('BeamDyn', 'openfast_io.drivers.beamdyn_driver'),
+    ('InflowWind', 'openfast_io.drivers.inflowwind_driver'),
+    ('HydroDyn', 'openfast_io.drivers.hydrodyn_driver'),
+    ('SeaState', 'openfast_io.drivers.seastate_driver'),
+    ('SubDyn', 'openfast_io.drivers.subdyn_driver'),
+])
+def test_driver_outlist_registry_seeded_with_known_channels(module_name, driver_path):
+    """Guard against the outlist registry silently becoming an empty dict.
+
+    capture_outlist()'s non-freeform path (used by AeroDyn/BeamDyn/InflowWind/
+    HydroDyn) only marks a channel True if it already exists as a key in
+    registry[module] — i.e. the registry must be seeded from FstOutput (as
+    OpenFASTDriver.init_fst_vt does), not initialized as a bare {}. If a
+    future edit swaps the seeding for `{}`, every captured channel would be
+    silently dropped with no error. SeaState/SubDyn are freeform (any channel
+    name is accepted) but are included here too since they share the same
+    seeding call in each driver.
+    """
+    import importlib
+    mod = importlib.import_module(driver_path)
+    assert mod.FstOutput, f'{driver_path} has no FstOutput registry available'
+    assert module_name in mod.FstOutput, f'{module_name} missing from {driver_path}.FstOutput'
+    assert len(mod.FstOutput[module_name]) > 0
+
+
+# ===========================================================================
+# MoorDyn OutList truthy filtering (fix for io/moordyn.py write()).
+# ===========================================================================
+
+def test_moordyn_write_filters_false_channels(tmp_path):
+    """io/moordyn.py write() must only emit truthy channels.
+
+    A registry built via the public OutList.to_fst_output() API contains an
+    explicit False entry for every known channel (not just the enabled
+    ones). Before this fix, MoorDynIO.write() emitted every key in
+    outlist['MoorDyn'] regardless of its value, which would write disabled
+    channels into the driver file as if they were enabled.
+    """
+    io = MoorDynIO()
+    md: dict = {'Rod_Name': [], 'Body_ID': [], 'Rod_ID': []}
+    registry = {
+        'MoorDyn': {
+            'FairTen1': True,
+            'AnchTen1': False,   # must NOT be written
+            'FairTen2': False,   # must NOT be written
+        }
+    }
+
+    out_file = tmp_path / 'moordyn_test.dat'
+    io.write({'MoorDyn': md}, str(out_file), outlist=registry)
+
+    written = out_file.read_text()
+    assert '"FairTen1"' in written
+    assert 'AnchTen1' not in written
+    assert 'FairTen2' not in written
 
