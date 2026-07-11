@@ -50,7 +50,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NY = 0_IntKi      !< Number of nodes in half of the Y-direction domain [-]
     INTEGER(IntKi)  :: NZ = 0_IntKi      !< Number of nodes in half of the Z-direction domain [-]
     INTEGER(IntKi)  :: WvKinBlockMod = 0_IntKi      !< Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch) [-]
-    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target XY edge length of an on-demand block, snapped to whole grid cells [used only when WvKinBlockMod=1] [(m)]
+    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target edge length of an on-demand cube block, snapped to whole grid cells [used only when WvKinBlockMod=1] [(m)]
     REAL(DbKi)  :: WvKinBlockFreeT = 0.0_R8Ki      !< Free a block after this much simulation time without an access; <=0 disables freeing [used only when WvKinBlockMod=1] [(s)]
     TYPE(Waves_InitInputType)  :: Waves      !< Initialization data for Waves module [-]
     TYPE(Waves2_InitInputType)  :: Waves2      !< Initialization data for Waves2 module [-]

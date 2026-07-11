@@ -22,7 +22,7 @@ structure::
                   10   NY             – Number of nodes in half of the Y-direction domain (-) [>=2]
                   10   NZ             – Number of nodes in the Z direction (-) [>=2]
                    0   WvKinBlockMod  - Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch)
-           "DEFAULT"   WvKinBlockSize - Target XY edge length of an on-demand block (m) [used only when WvKinBlockMod=1; DEFAULT=100]
+           "DEFAULT"   WvKinBlockSize - Target edge length of an on-demand cube block (m) [used only when WvKinBlockMod=1; DEFAULT=100]
            "DEFAULT"   WvKinBlockFreeT - Free a block after this much simulation time without an access (s) [used only when WvKinBlockMod=1; <=0 disables freeing; DEFAULT=600]
       ---------------------- WAVES ---------------------------------------------------
                    2   WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0], 7: User-defined wave frequency components} (switch)

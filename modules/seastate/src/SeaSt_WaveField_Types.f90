@@ -154,7 +154,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: GridDepth = 0.0_R4Ki      !< Depth (>0) of wave grid below SWL [m]
     REAL(DbKi)  :: WaveTimeShift = 0      !< Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time) [(s)]
     INTEGER(IntKi)  :: WvKinBlockMod = 0      !< Wave kinematics volume-data mode {0: full-domain precompute, 1: on-demand blocks} [-]
-    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target XY edge length of an on-demand block [(m)]
+    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target edge length of an on-demand cube block [(m)]
     REAL(DbKi)  :: WvKinBlockFreeT = 0.0_R8Ki      !< Idle simulation time after which a block is freed; <=0 never [(s)]
     TYPE(SeaSt_WaveBlockStoreType) , POINTER :: BlockStore => NULL()      !< Non-owning pointer to the on-demand wave-kinematics block store (owned by SeaState MiscVarType) [associated only when WvKinBlockMod=1] [-]
     TYPE(Current_InitInputType)  :: Current_InitInput      !< InitInputs in the Current Module. For coupling with MD. [-]

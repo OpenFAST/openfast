@@ -141,7 +141,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call ParseVar( FileInfo_In, CurLine, 'WvKinBlockMod', InputFileData%WvKinBlockMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-      ! WvKinBlockSize - Target XY edge length of an on-demand block.
+      ! WvKinBlockSize - Target edge length of an on-demand cube block.
    call ParseVarWDefault ( FileInfo_In, CurLine, 'WvKinBlockSize', InputFileData%WvKinBlockSize, 100.0_ReKi, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 

@@ -2020,7 +2020,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NY'], 'NY', '– Number of nodes in half of the Y-direction domain (-) [>=2]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NZ'], 'NZ', '– Number of nodes in the Z direction (-) [>=2]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockMod'], 'WvKinBlockMod', '- Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockSize'], 'WvKinBlockSize', '- Target XY edge length of an on-demand block (m) [used only when WvKinBlockMod=1; DEFAULT=100]\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockSize'], 'WvKinBlockSize', '- Target edge length of an on-demand cube block (m) [used only when WvKinBlockMod=1; DEFAULT=100]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockFreeT'], 'WvKinBlockFreeT', '- Free a block after this much simulation time without an access (s) [used only when WvKinBlockMod=1; <=0 disables freeing; DEFAULT=600]\n'))
 
         f.write('---------------------- WAVES ---------------------------------------------------\n')
