@@ -36,6 +36,9 @@ MODULE AWAE_IO
     
    public :: AWAE_IO_InitGridInfo
    public :: ReadLowResWindVTK, ReadWindAMReX
+   public :: WriteVTK_PolyData
+   public :: WriteVTK_StructuredGrid_2D
+   public :: VTK_Series_Open, VTK_Series_Append, VTK_Series_Close
 
    interface
       subroutine ReadVTK_inflow_info(FileName, Desc, dims, origin, gridSpacing, vecLabel, values, read_values, err_stat, err_msg) BIND(C,name='ReadVTK_inflow_info')     
@@ -105,6 +108,233 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
 
 
 end subroutine WriteDisWindFiles
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Write a single-piece VTK XML `PolyData` (.vtp) file containing an unstructured
+!! point cloud with one vertex cell per point plus a 3-component `Vec` field on
+!! the points. NaN values in `Vec` are written as the literal text "nan" (VTK
+!! ASCII readers accept this and ParaView masks it automatically).
+!!
+!! Used by `NumTerrainSlices` (Feature 1, terrain-following point cloud).
+subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrMsg )
+   character(*),  intent(in   ) :: FileName    !< output filename (usually "<root>.<slicename>.<step>.vtp")
+   character(*),  intent(in   ) :: descr       !< short descriptor written as an XML comment
+   real(ReKi),    intent(in   ) :: Pts(:,:)    !< (3, N) point coordinates in the FAST.Farm global frame
+   real(SiKi),    intent(in   ) :: Vec(:,:)    !< (3, N) vector values at each point; NaN is permitted
+   character(*),  intent(in   ) :: vecLabel    !< name of the vector array in the VTK file
+   integer(IntKi),intent(  out) :: ErrStat     !< error status
+   character(*),  intent(  out) :: ErrMsg      !< error message
+
+   integer(IntKi)               :: Un, ErrStat2, i, N
+   character(ErrMsgLen)         :: ErrMsg2
+   character(*), parameter      :: RoutineName = 'WriteVTK_PolyData'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   N = size(Pts,2)
+   if (N <= 0) return
+   if (size(Vec,2) /= N) then
+      call SetErrStat(ErrID_Fatal, 'Pts and Vec must have matching second dimension', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+   call OpenFOutFile( Un, trim(FileName), ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopenNWTCio_critical)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   write(Un,'(A)') '<?xml version="1.0"?>'
+   write(Un,'(A)') '<!-- '//trim(descr)//' -->'
+   write(Un,'(A)') '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'
+   write(Un,'(A)') '  <PolyData>'
+   write(Un,'(A,I0,A)') '    <Piece NumberOfPoints="', N, '" NumberOfVerts="1" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">'
+
+   write(Un,'(A)') '      <Points>'
+   write(Un,'(A)') '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+   do i = 1, N
+      write(Un,'(3(1X,ES14.6))') real(Pts(1,i),SiKi), real(Pts(2,i),SiKi), real(Pts(3,i),SiKi)
+   end do
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '      </Points>'
+
+   write(Un,'(A)') '      <Verts>'
+   write(Un,'(A)') '        <DataArray type="Int64" Name="connectivity" format="ascii">'
+   write(Un,'(*(1X,I0))') (i-1, i=1,N)
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '        <DataArray type="Int64" Name="offsets" format="ascii">'
+   write(Un,'(1X,I0)') N
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '      </Verts>'
+
+   write(Un,'(A)') '      <PointData Vectors="'//trim(vecLabel)//'">'
+   write(Un,'(A)') '        <DataArray type="Float32" Name="'//trim(vecLabel)//'" NumberOfComponents="3" format="ascii">'
+   do i = 1, N
+      write(Un,'(3(1X,ES14.6))') Vec(1,i), Vec(2,i), Vec(3,i)
+   end do
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '      </PointData>'
+
+   write(Un,'(A)') '    </Piece>'
+   write(Un,'(A)') '  </PolyData>'
+   write(Un,'(A)') '</VTKFile>'
+
+   !$OMP critical(fileopenNWTCio_critical)
+   close(Un)
+   !$OMP end critical(fileopenNWTCio_critical)
+
+end subroutine WriteVTK_PolyData
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Write a 2-D `StructuredGrid` (.vts) VTK XML file: an n1 x n2 x 1 mesh with
+!! explicit point coordinates plus a 3-component `Vec` field. NaN values are
+!! written as the literal text "nan"; ParaView masks these automatically.
+!! Node ordering is (i-fastest, then j) matching VTK's Fortran-friendly linear
+!! layout.
+!!
+!! Used by `NumPlaneSlices` (Feature 2, axis-aligned planar sampling) when
+!! `VTKFormat=xml`.
+subroutine WriteVTK_StructuredGrid_2D( FileName, descr, n1, n2, Pts, Vec, vecLabel, ErrStat, ErrMsg )
+   character(*),  intent(in   ) :: FileName    !< output filename
+   character(*),  intent(in   ) :: descr       !< short descriptor written as an XML comment
+   integer(IntKi),intent(in   ) :: n1, n2      !< dimensions of the 2-D grid
+   real(ReKi),    intent(in   ) :: Pts(:,:,:)  !< (3, n1, n2) point coordinates in the global frame
+   real(SiKi),    intent(in   ) :: Vec(:,:,:)  !< (3, n1, n2) vector values at each node; NaN is permitted
+   character(*),  intent(in   ) :: vecLabel    !< name of the vector array
+   integer(IntKi),intent(  out) :: ErrStat
+   character(*),  intent(  out) :: ErrMsg
+
+   integer(IntKi)               :: Un, ErrStat2, i, j
+   character(ErrMsgLen)         :: ErrMsg2
+   character(*), parameter      :: RoutineName = 'WriteVTK_StructuredGrid_2D'
+   character(64)                :: extentStr
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   if (n1 < 1 .or. n2 < 1) return
+
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+   call OpenFOutFile( Un, trim(FileName), ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopenNWTCio_critical)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   write(extentStr,'(A,I0,A,I0,A)') '0 ', n1-1, ' 0 ', n2-1, ' 0 0'
+
+   write(Un,'(A)') '<?xml version="1.0"?>'
+   write(Un,'(A)') '<!-- '//trim(descr)//' -->'
+   write(Un,'(A)') '<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian">'
+   write(Un,'(A)') '  <StructuredGrid WholeExtent="'//trim(adjustl(extentStr))//'">'
+   write(Un,'(A)') '    <Piece Extent="'//trim(adjustl(extentStr))//'">'
+
+   write(Un,'(A)') '      <Points>'
+   write(Un,'(A)') '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+   do j = 1, n2
+      do i = 1, n1
+         write(Un,'(3(1X,ES14.6))') real(Pts(1,i,j),SiKi), real(Pts(2,i,j),SiKi), real(Pts(3,i,j),SiKi)
+      end do
+   end do
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '      </Points>'
+
+   write(Un,'(A)') '      <PointData Vectors="'//trim(vecLabel)//'">'
+   write(Un,'(A)') '        <DataArray type="Float32" Name="'//trim(vecLabel)//'" NumberOfComponents="3" format="ascii">'
+   do j = 1, n2
+      do i = 1, n1
+         write(Un,'(3(1X,ES14.6))') Vec(1,i,j), Vec(2,i,j), Vec(3,i,j)
+      end do
+   end do
+   write(Un,'(A)') '        </DataArray>'
+   write(Un,'(A)') '      </PointData>'
+
+   write(Un,'(A)') '    </Piece>'
+   write(Un,'(A)') '  </StructuredGrid>'
+   write(Un,'(A)') '</VTKFile>'
+
+   !$OMP critical(fileopenNWTCio_critical)
+   close(Un)
+   !$OMP end critical(fileopenNWTCio_critical)
+
+end subroutine WriteVTK_StructuredGrid_2D
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Open a ParaView `.series` JSON sidecar and write its header. The caller is
+!! responsible for appending one entry per output step via `VTK_Series_Append`
+!! and closing the file via `VTK_Series_Close`. Used by both `NumPlaneSlices`
+!! and `NumTerrainSlices`.
+subroutine VTK_Series_Open( FileName, Un, ErrStat, ErrMsg )
+   character(*),  intent(in   ) :: FileName    !< output filename (usually ends in ".vts.series" or ".vtp.series")
+   integer(IntKi),intent(  out) :: Un          !< Fortran unit number (must be passed unchanged to Append/Close)
+   integer(IntKi),intent(  out) :: ErrStat
+   character(*),  intent(  out) :: ErrMsg
+
+   integer(IntKi)               :: ErrStat2
+   character(ErrMsgLen)         :: ErrMsg2
+   character(*), parameter      :: RoutineName = 'VTK_Series_Open'
+
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+   call OpenFOutFile( Un, trim(FileName), ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopenNWTCio_critical)
+   ErrStat = ErrID_None; ErrMsg = ''
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   write(Un,'(A)') '{'
+   write(Un,'(A)') '  "file-series-version" : "1.0",'
+   write(Un,'(A)') '  "files" : ['
+
+end subroutine VTK_Series_Open
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Append one file entry to an open `.series` sidecar. `isFirst` must be
+!! `.true.` on the very first call and `.false.` thereafter so that the JSON
+!! comma placement is valid.
+subroutine VTK_Series_Append( Un, fileName, t, isFirst, ErrStat, ErrMsg )
+   integer(IntKi),intent(in   ) :: Un          !< unit returned by VTK_Series_Open
+   character(*),  intent(in   ) :: fileName    !< name of the VTK file to record (without path)
+   real(DbKi),    intent(in   ) :: t           !< time in seconds
+   logical,       intent(in   ) :: isFirst     !< true on the first append, false otherwise
+   integer(IntKi),intent(  out) :: ErrStat
+   character(*),  intent(  out) :: ErrMsg
+
+   character(:), allocatable    :: prefix
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   if (isFirst) then
+      prefix = '    '
+   else
+      prefix = '   ,'
+   end if
+
+   write(Un,'(A,A,A,ES14.6,A)') prefix, '{ "name" : "'//trim(fileName)//'", "time" : ', t, ' }'
+
+end subroutine VTK_Series_Append
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Close an open `.series` sidecar. Writes the terminating `]}` and closes
+!! the Fortran unit.
+subroutine VTK_Series_Close( Un, ErrStat, ErrMsg )
+   integer(IntKi),intent(inout) :: Un          !< unit returned by VTK_Series_Open; set to -1 on exit
+   integer(IntKi),intent(  out) :: ErrStat
+   character(*),  intent(  out) :: ErrMsg
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   if (Un <= 0) return
+
+   write(Un,'(A)') '  ]'
+   write(Un,'(A)') '}'
+
+   !$OMP critical(fileopenNWTCio_critical)
+   close(Un)
+   !$OMP end critical(fileopenNWTCio_critical)
+   Un = -1
+
+end subroutine VTK_Series_Close
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine read the low res wind file (VTK) at a given time step `n`

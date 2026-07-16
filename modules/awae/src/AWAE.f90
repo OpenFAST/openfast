@@ -113,6 +113,60 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
 
 end subroutine ExtractSlice
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Bounded variant of ExtractSlice. Interpolates a single axis-aligned slice of the
+!! 3-D low-resolution field V at coordinate `s` (metres, along the "thin" axis
+!! implied by sliceType), then copies only the subregion
+!! [i_lo:i_hi, j_lo:j_hi] into the output array. Any in-plane node whose
+!! interpolated velocity comes from a grid location outside `[0,szs-1]` along
+!! the thin axis is silently clamped (identical behaviour to ExtractSlice for
+!! that axis). Nodes whose *in-plane* index falls outside the parent low-res
+!! grid must be masked with NaN by the caller before calling this routine \u2014
+!! this routine trusts the (i_lo:i_hi, j_lo:j_hi) window and does not enforce
+!! it against the low-res domain.
+!!
+!! Used by the axis-aligned planar sampling feature (`NumPlaneSlices`).
+subroutine ExtractSliceSub( sliceType, s, s0, szs, sz1, sz2, i_lo, i_hi, j_lo, j_hi, ds, V, slice)
+
+   integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
+   real(ReKi),          intent(in   ) :: s          !< data value in meters of the interpolant along the thin axis
+   real(ReKi),          intent(in   ) :: s0         !< origin value in meters of the interpolant along the thin axis
+   integer(IntKi),      intent(in   ) :: szs        !< number of grid points along the thin axis of V
+   integer(IntKi),      intent(in   ) :: sz1        !< 1st in-plane dimension of the parent low-res grid
+   integer(IntKi),      intent(in   ) :: sz2        !< 2nd in-plane dimension of the parent low-res grid
+   integer(IntKi),      intent(in   ) :: i_lo, i_hi !< 0-based inclusive index bounds along the parent's 1st in-plane axis; must satisfy 0 <= i_lo <= i_hi <= sz1-1
+   integer(IntKi),      intent(in   ) :: j_lo, j_hi !< 0-based inclusive index bounds along the parent's 2nd in-plane axis; must satisfy 0 <= j_lo <= j_hi <= sz2-1
+   real(ReKi),          intent(in   ) :: ds         !< grid spacing along the thin axis
+   real(SiKi),          intent(in   ) :: V(:,0:,0:,0:)              !< parent low-res field (3, 0:nX-1, 0:nY-1, 0:nZ-1)
+   real(SiKi),          intent(inout) :: slice(:,0:,0:)             !< output subregion; must be sized (3, 0:i_hi-i_lo, 0:j_hi-j_lo)
+
+   integer(IntKi)   :: s_grid0,s_grid1,i,j
+   real(SiKi)       :: s_grid, sd
+
+   ! Compute the interpolation cell along the thin axis (identical to ExtractSlice)
+   s_grid  = real((s-s0)/ds,SiKi)
+   s_grid0 = floor(s_grid)
+   s_grid1 = s_grid0 + 1
+   sd = (s_grid-real(s_grid0,SiKi))
+   if (s_grid0 == (szs-1)) s_grid1 = s_grid0
+
+   ! Silently no-op if the bounds are inverted (allows callers to pass fully-out-of-domain slices)
+   if (i_hi < i_lo .or. j_hi < j_lo) return
+
+   do j = j_lo, j_hi
+      do i = i_lo, i_hi
+         select case (sliceType)
+         case (XYSlice)
+            slice(:,i-i_lo,j-j_lo) = V(:,i,j,s_grid0)*(1.0_SiKi-sd) + V(:,i,j,s_grid1)*sd
+         case (YZSlice)
+            slice(:,i-i_lo,j-j_lo) = V(:,s_grid0,i,j)*(1.0_SiKi-sd) + V(:,s_grid1,i,j)*sd
+         case (XZSlice)
+            slice(:,i-i_lo,j-j_lo) = V(:,i,s_grid0,j)*(1.0_SiKi-sd) + V(:,i,s_grid1,j)*sd
+         end select
+      end do
+   end do
+
+end subroutine ExtractSliceSub
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Precompute, for every pair of adjacent wake planes (np, np+1) of every turbine, the geometric quantities that
 !! describe the relative orientation of the two planes. For each pair, this routine evaluates the cosine and sine of
 !! the angle between the plane normals `u%xhat_plane(:,np,nt)` and `u%xhat_plane(:,np+1,nt)` and uses them, together
