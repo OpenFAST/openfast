@@ -1377,18 +1377,18 @@ contains
 
    !> Extract the first quoted-or-unquoted name from a line and blank it out
    !! so subsequent list-directed reads see only numeric tokens.
-   subroutine ExtractQuotedName( s, name )
+   subroutine ExtractQuotedName( s, nameOut )
       character(*), intent(inout) :: s
-      character(*), intent(  out) :: name
+      character(*), intent(  out) :: nameOut
       integer :: q1, q2, ns, ne
 
-      name = ''
+      nameOut = ''
 
       q1 = index(s, '"')
       if (q1 > 0) then
          q2 = index(s(q1+1:), '"')
          if (q2 > 0) then
-            name = adjustl(s(q1+1:q1+q2-1))
+            nameOut = adjustl(s(q1+1:q1+q2-1))
             s(q1:q1+q2) = repeat(' ', q2+1)
             return
          end if
@@ -1403,7 +1403,7 @@ contains
          if (s(ne:ne) == ' ' .or. s(ne:ne) == char(9)) exit
          ne = ne + 1
       end do
-      name = adjustl(s(ns:ne-1))
+      nameOut = adjustl(s(ns:ne-1))
       s(ns:ne-1) = repeat(' ', ne-ns)
    end subroutine
 
@@ -1682,16 +1682,16 @@ contains
 
    end subroutine
 
-   subroutine ExtractQuoted( s, name )
+   subroutine ExtractQuoted( s, nameOut )
       character(*), intent(inout) :: s
-      character(*), intent(  out) :: name
+      character(*), intent(  out) :: nameOut
       integer :: q1, q2
-      name = ''
+      nameOut = ''
       q1 = index(s, '"')
       if (q1 == 0) return
       q2 = index(s(q1+1:), '"')
       if (q2 == 0) return
-      name = adjustl(s(q1+1:q1+q2-1))
+      nameOut = adjustl(s(q1+1:q1+q2-1))
       s(q1:q1+q2) = repeat(' ', q2+1)
    end subroutine
 

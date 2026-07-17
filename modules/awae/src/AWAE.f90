@@ -293,7 +293,7 @@ subroutine EmitPlaneSlices( t, n, p, m, errStat, errMsg )
    real(ReKi)              :: o(3), d1, d2, dThin, s0Thin, sVal, xyz(3)
    real(SiKi), allocatable :: buf(:,:,:), sub(:,:,:)
    real(ReKi), allocatable :: pts(:,:,:)
-   real(SiKi)              :: nan
+   real(SiKi)              :: nan_val
    character(1024)         :: fileName, seriesDir, seriesEntry
    character(20)           :: Tstr
    integer(IntKi)          :: ErrStat2
@@ -303,7 +303,7 @@ subroutine EmitPlaneSlices( t, n, p, m, errStat, errMsg )
 
    errStat = ErrID_None
    errMsg  = ''
-   nan     = ieee_value( 0.0_SiKi, ieee_quiet_nan )
+   nan_val = ieee_value( 0.0_SiKi, ieee_quiet_nan )
 
    if (p%NumPlaneSlices <= 0) return
 
@@ -366,7 +366,7 @@ subroutine EmitPlaneSlices( t, n, p, m, errStat, errMsg )
          if (allocated(pts)) deallocate(pts)
          return
       end if
-      buf = nan
+      buf = nan_val
 
       ! Effective (in-domain) subregion
       iLoE = max( 0, iLoR )
@@ -868,7 +868,7 @@ subroutine EmitTerrainSlices( t, n, p, m, ErrStat, ErrMsg )
    integer(IntKi)              :: k, i, iStart, iEnd, nPts, ErrStat2
    real(SiKi), allocatable     :: vel(:,:)
    real(ReKi), allocatable     :: ptsK(:,:)
-   real(SiKi)                  :: nan, u, v, w
+   real(SiKi)                  :: nan_val, u, v, w
    real(ReKi)                  :: xr, yr, zr, fx, fy, fz
    integer(IntKi)              :: ix, iy, iz
    character(ErrMsgLen)        :: ErrMsg2
@@ -886,7 +886,7 @@ subroutine EmitTerrainSlices( t, n, p, m, ErrStat, ErrMsg )
    if ( m%LastTerrainSliceN == n ) return
    m%LastTerrainSliceN = n
 
-   nan = ieee_value( 0.0_SiKi, ieee_quiet_nan )
+   nan_val = ieee_value( 0.0_SiKi, ieee_quiet_nan )
 
    write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n/p%WrDisSkp1
 
@@ -914,7 +914,7 @@ subroutine EmitTerrainSlices( t, n, p, m, ErrStat, ErrMsg )
          if ( xr < 0.0_ReKi .or. xr > real(p%LowRes%nXYZ(1)-1,ReKi) .or. &
               yr < 0.0_ReKi .or. yr > real(p%LowRes%nXYZ(2)-1,ReKi) .or. &
               zr < 0.0_ReKi .or. zr > real(p%LowRes%nXYZ(3)-1,ReKi) ) then
-            vel(:,i) = nan
+            vel(:,i) = nan_val
             cycle
          end if
 
