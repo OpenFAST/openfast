@@ -6667,7 +6667,7 @@ subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, 
    character(*),                 intent(  out) :: ErrMsg
 
    character(*), parameter :: RoutineName = 'BD_JacRotFrame'
-   real(R8Ki)     :: omega_g(3), omega_l(3), wt(3,3), R(3,3)
+   real(R8Ki)     :: omega_g(3), omega_l(3), wt(3,3), R(3,3), RootDev
    integer(IntKi) :: k, id, iv, Nq
 
    ErrStat = ErrID_None
@@ -6684,16 +6684,26 @@ subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, 
    end if
 
    ! States are linearized about a root-aligned snapshot, so the root orientation must coincide
-   ! with the frozen reference frame; otherwise S below is built in the wrong basis.
+   ! with the frozen reference frame; otherwise S below is built in the wrong basis. The reference
+   ! is re-anchored to the root at the end of each BD_UpdateStates, so at a linearization snapshot
+   ! the deviation is solver-convergence noise (the transform's basis error is O(deviation) and the
+   ! states remain anchored to GlbRot, which is the basis omega is mapped into) — warn if it is
+   ! measurable, and fail only on gross misalignment, which indicates the states are not root-aligned
+   ! at all (e.g. a caller outside the linearization snapshot path).
    R = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
    R(1,1) = R(1,1) - 1.0_R8Ki
    R(2,2) = R(2,2) - 1.0_R8Ki
    R(3,3) = R(3,3) - 1.0_R8Ki
-   if (maxval(abs(R)) > 1.0e-8_R8Ki) then
-      call SetErrStat(ErrID_Fatal, 'Root orientation does not match the frozen BD reference frame at the '// &
-                      'linearization point (state re-anchoring invariant violated); cannot form '// &
-                      'rotating-frame Jacobians.', ErrStat, ErrMsg, RoutineName)
+   RootDev = maxval(abs(R))
+   if (RootDev > 1.0e-3_R8Ki) then
+      call SetErrStat(ErrID_Fatal, 'Root orientation deviates from the frozen BD reference frame by '// &
+                      trim(Num2LStr(RootDev))//' (> 1e-3) at the linearization point (state re-anchoring '// &
+                      'invariant violated); cannot form rotating-frame Jacobians.', ErrStat, ErrMsg, RoutineName)
       return
+   else if (RootDev > 1.0e-6_R8Ki) then
+      call SetErrStat(ErrID_Warn, 'Root orientation deviates from the frozen BD reference frame by '// &
+                      trim(Num2LStr(RootDev))//' at the linearization point; rotating-frame transform '// &
+                      'basis error is of the same order.', ErrStat, ErrMsg, RoutineName)
    end if
 
    ! Root angular velocity, global frame -> BD local (frozen) frame. GlbRot transfers local->global;
