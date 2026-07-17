@@ -167,6 +167,245 @@ subroutine ExtractSliceSub( sliceType, s, s0, szs, sz1, sz2, i_lo, i_hi, j_lo, j
 
 end subroutine ExtractSliceSub
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Validate the Feature 2 (axis-aligned planar sampling) input records, derive
+!! per-slice `NormalAxis` / `Axis1` / `Axis2` / `N1` / `N2` and the requested
+!! parent-grid index window `(ILoReq, IHiReq, JLoReq, JHiReq)`. Off-axis normals
+!! are fatal per plan §3.7. Out-of-domain windows are warnings only \u2014 the emit
+!! step will fill any node whose parent index is outside `[0, n-1]` with NaN.
+!! Also opens each valid slice's `.vts.series` sidecar for lifetime of the run.
+subroutine ValidatePlaneSlices( p, InputFileData, errStat, errMsg )
+   type(AWAE_ParameterType), intent(inout) :: p
+   type(AWAE_InputFileType), intent(in   ) :: InputFileData
+   integer(IntKi),           intent(inout) :: errStat
+   character(*),             intent(inout) :: errMsg
+
+   integer(IntKi)         :: k, iaxis, n1, n2, iLo, iHi, jLo, jHi
+   real(ReKi)             :: nrm(3), o(3), e1, e2, d1, d2
+   real(ReKi), parameter  :: nrmTol = 1.0e-6_ReKi
+   character(1024)        :: seriesFile
+   integer(IntKi)         :: seriesUn, ErrStat2
+   character(ErrMsgLen)   :: ErrMsg2
+   character(*), parameter :: RoutineName = 'ValidatePlaneSlices'
+
+   if (p%NumPlaneSlices <= 0) return
+
+   do k = 1, p%NumPlaneSlices
+      nrm = InputFileData%PlaneSliceNormal(:,k)
+      o   = InputFileData%PlaneSliceOrigin(:,k)
+      e1  = InputFileData%PlaneSliceExtent1(k)
+      e2  = InputFileData%PlaneSliceExtent2(k)
+
+      ! Axis-aligned normal check (fatal per plan §3.7)
+      if      ( abs(nrm(1)-1.0_ReKi) < nrmTol .and. abs(nrm(2)) < nrmTol .and. abs(nrm(3)) < nrmTol ) then
+         iaxis = 1
+      else if ( abs(nrm(2)-1.0_ReKi) < nrmTol .and. abs(nrm(1)) < nrmTol .and. abs(nrm(3)) < nrmTol ) then
+         iaxis = 2
+      else if ( abs(nrm(3)-1.0_ReKi) < nrmTol .and. abs(nrm(1)) < nrmTol .and. abs(nrm(2)) < nrmTol ) then
+         iaxis = 3
+      else
+         call SetErrStat( ErrID_Fatal, 'In slice "'//trim(InputFileData%PlaneSliceName(k))// &
+              '", the plane normal ('//trim(Num2LStr(nrm(1)))//', '// &
+              trim(Num2LStr(nrm(2)))//', '//trim(Num2LStr(nrm(3)))// &
+              ') is not axis-aligned. Only (1 0 0), (0 1 0), and (0 0 1) are supported.  '// &
+              'A future feature may allow point-cloud sampling at arbitrary locations.', &
+              errStat, errMsg, RoutineName )
+         cycle
+      end if
+
+      if ( e1 <= 0.0_ReKi .or. e2 <= 0.0_ReKi ) then
+         call SetErrStat( ErrID_Fatal, 'In slice "'//trim(InputFileData%PlaneSliceName(k))// &
+              '", both extent1 and extent2 must be positive.', errStat, errMsg, RoutineName )
+         cycle
+      end if
+
+      ! Axis-1 = first non-normal axis in cyclic (X,Y,Z) order; Axis-2 = second.
+      select case (iaxis)
+      case (1); p%PlaneSliceAxis1(k) = 2; p%PlaneSliceAxis2(k) = 3
+      case (2); p%PlaneSliceAxis1(k) = 1; p%PlaneSliceAxis2(k) = 3
+      case (3); p%PlaneSliceAxis1(k) = 1; p%PlaneSliceAxis2(k) = 2
+      end select
+      p%PlaneSliceNormalAxis(k) = iaxis
+
+      d1 = p%LowRes%dXYZ( p%PlaneSliceAxis1(k) )
+      d2 = p%LowRes%dXYZ( p%PlaneSliceAxis2(k) )
+      n1 = nint( e1 / d1 ) + 1
+      n2 = nint( e2 / d2 ) + 1
+      p%PlaneSliceN1(k) = n1
+      p%PlaneSliceN2(k) = n2
+
+      ! Requested in-plane index window (0-based) into the parent low-res grid
+      iLo = nint( ( o(p%PlaneSliceAxis1(k)) - p%LowRes%oXYZ(p%PlaneSliceAxis1(k)) ) / d1 )
+      iHi = iLo + n1 - 1
+      jLo = nint( ( o(p%PlaneSliceAxis2(k)) - p%LowRes%oXYZ(p%PlaneSliceAxis2(k)) ) / d2 )
+      jHi = jLo + n2 - 1
+      p%PlaneSliceILoReq(k) = iLo
+      p%PlaneSliceIHiReq(k) = iHi
+      p%PlaneSliceJLoReq(k) = jLo
+      p%PlaneSliceJHiReq(k) = jHi
+
+      ! Check the plane's thin-axis location falls inside the domain
+      if ( o(iaxis) < p%LowRes%oXYZ(iaxis) .or. &
+           o(iaxis) > p%LowRes%oXYZ(iaxis) + real(p%LowRes%nXYZ(iaxis)-1, ReKi) * p%LowRes%dXYZ(iaxis) ) then
+         call SetErrStat( ErrID_Warn, 'In slice "'//trim(InputFileData%PlaneSliceName(k))// &
+              '", the plane location along the normal axis is outside the low-resolution domain. '// &
+              'This slice will be skipped.', errStat, errMsg, RoutineName )
+         p%PlaneSliceValid(k) = .false.
+         cycle
+      end if
+
+      ! In-plane out-of-domain warning (still valid, just NaN-filled)
+      if ( iLo < 0 .or. iHi > p%LowRes%nXYZ(p%PlaneSliceAxis1(k))-1 .or. &
+           jLo < 0 .or. jHi > p%LowRes%nXYZ(p%PlaneSliceAxis2(k))-1 ) then
+         call SetErrStat( ErrID_Warn, 'In slice "'//trim(InputFileData%PlaneSliceName(k))// &
+              '", the requested plane extents straddle the low-resolution domain boundary.  '// &
+              'Nodes outside the domain will be written as NaN.', errStat, errMsg, RoutineName )
+      end if
+
+      ! Open the per-slice .vts.series sidecar
+      seriesFile = trim(p%OutFileFFvtkRoot)//".Plane."//trim(InputFileData%PlaneSliceName(k))//".vts.series"
+      call VTK_Series_Open( seriesFile, seriesUn, ErrStat2, ErrMsg2 )
+      if (ErrStat2 < AbortErrLev) then
+         p%PlaneSliceSeriesUn(k) = seriesUn
+      else
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         p%PlaneSliceValid(k) = .false.
+      end if
+   end do
+
+end subroutine ValidatePlaneSlices
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Emit VTK output for every Feature 2 plane slice at the current low-res step.
+!! Called from `AWAE_CalcOutput` whenever `mod(n, p%WrPlaneSkp) == 0`.
+!! Out-of-domain nodes are pre-filled with IEEE quiet NaN so ParaView masks
+!! them automatically.
+subroutine EmitPlaneSlices( t, n, p, m, errStat, errMsg )
+   use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
+   real(DbKi),                     intent(in   ) :: t
+   integer(IntKi),                 intent(in   ) :: n
+   type(AWAE_ParameterType),       intent(in   ) :: p
+   type(AWAE_MiscVarType),         intent(inout) :: m
+   integer(IntKi),                 intent(  out) :: errStat
+   character(*),                   intent(  out) :: errMsg
+
+   integer(IntKi)          :: k, iaxis, ax1, ax2, n1, n2
+   integer(IntKi)          :: iLoR, iHiR, jLoR, jHiR, iLoE, iHiE, jLoE, jHiE
+   integer(IntKi)          :: i, j, sType, szThin, sz1, sz2
+   real(ReKi)              :: o(3), d1, d2, dThin, s0Thin, sVal, xyz(3)
+   real(SiKi), allocatable :: buf(:,:,:), sub(:,:,:)
+   real(ReKi), allocatable :: pts(:,:,:)
+   real(SiKi)              :: nan
+   character(1024)         :: fileName, seriesDir, seriesEntry
+   character(20)           :: Tstr
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'EmitPlaneSlices'
+   logical                 :: isFirst
+
+   errStat = ErrID_None
+   errMsg  = ''
+   nan     = ieee_value( 0.0_SiKi, ieee_quiet_nan )
+
+   if (p%NumPlaneSlices <= 0) return
+
+   ! Skip duplicate emit at the same low-res step. FARM_InitialCO calls
+   ! AWAE_CalcOutput twice at t=0 (once for validation and once for the actual
+   ! initial output); a second call would overwrite the identical .vts file
+   ! and add a duplicate entry to the .vts.series sidecar.
+   if ( m%LastPlaneSliceN == n ) return
+   m%LastPlaneSliceN = n
+
+   write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n/p%WrDisSkp1
+
+   do k = 1, p%NumPlaneSlices
+      if (.not. p%PlaneSliceValid(k)) cycle
+
+      iaxis = p%PlaneSliceNormalAxis(k)
+      ax1   = p%PlaneSliceAxis1(k)
+      ax2   = p%PlaneSliceAxis2(k)
+      n1    = p%PlaneSliceN1(k)
+      n2    = p%PlaneSliceN2(k)
+      iLoR  = p%PlaneSliceILoReq(k)
+      iHiR  = p%PlaneSliceIHiReq(k)
+      jLoR  = p%PlaneSliceJLoReq(k)
+      jHiR  = p%PlaneSliceJHiReq(k)
+      o     = p%PlaneSliceOrigin(:,k)
+
+      d1     = p%LowRes%dXYZ(ax1)
+      d2     = p%LowRes%dXYZ(ax2)
+      dThin  = p%LowRes%dXYZ(iaxis)
+      s0Thin = p%LowRes%oXYZ(iaxis)
+      sVal   = o(iaxis)
+      szThin = p%LowRes%nXYZ(iaxis)
+      sz1    = p%LowRes%nXYZ(ax1)
+      sz2    = p%LowRes%nXYZ(ax2)
+
+      select case (iaxis)
+      case (1); sType = YZSlice
+      case (2); sType = XZSlice
+      case (3); sType = XYSlice
+      end select
+
+      ! Build the point cloud in the FAST.Farm global frame
+      allocate( pts(3, n1, n2), stat=ErrStat2 )
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Alloc pts failed', errStat, errMsg, RoutineName ); return
+      end if
+      do j = 1, n2
+         do i = 1, n1
+            xyz         = o
+            xyz(ax1)    = o(ax1) + real(i-1, ReKi) * d1
+            xyz(ax2)    = o(ax2) + real(j-1, ReKi) * d2
+            pts(:,i,j)  = xyz
+         end do
+      end do
+
+      ! Allocate + NaN-fill the sample buffer
+      allocate( buf(3, 0:n1-1, 0:n2-1), stat=ErrStat2 )
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Alloc buf failed', errStat, errMsg, RoutineName )
+         if (allocated(pts)) deallocate(pts)
+         return
+      end if
+      buf = nan
+
+      ! Effective (in-domain) subregion
+      iLoE = max( 0, iLoR )
+      iHiE = min( sz1-1, iHiR )
+      jLoE = max( 0, jLoR )
+      jHiE = min( sz2-1, jHiR )
+
+      if ( iHiE >= iLoE .and. jHiE >= jLoE ) then
+         allocate( sub(3, 0:iHiE-iLoE, 0:jHiE-jLoE), stat=ErrStat2 )
+         if (ErrStat2 == 0) then
+            call ExtractSliceSub( sType, sVal, s0Thin, szThin, sz1, sz2, &
+                                  iLoE, iHiE, jLoE, jHiE, dThin, m%Vdist_low_full, sub )
+            buf(:, iLoE-iLoR:iHiE-iLoR, jLoE-jLoR:jHiE-jLoR) = sub
+            deallocate(sub)
+         end if
+      end if
+
+      ! Write .vts + append to .vts.series
+      fileName = trim(p%OutFileFFvtkRoot)//".Plane."//trim(p%PlaneSliceName(k))//"."//trim(Tstr)//".vts"
+      call WriteVTK_StructuredGrid_2D( fileName, &
+             "Plane slice "//trim(p%PlaneSliceName(k))//" at t="//trim(num2lstr(t))//"s", &
+             n1, n2, pts, reshape(buf, [3,n1,n2]), "Velocity", ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+
+      if ( p%PlaneSliceSeriesUn(k) > 0 ) then
+         isFirst = ( m%PlaneSliceStepCount(k) == 0 )
+         ! The series sidecar records file names relative to its own directory,
+         ! so strip the leading path component from fileName before appending.
+         call GetPath( fileName, seriesDir, seriesEntry )
+         call VTK_Series_Append( p%PlaneSliceSeriesUn(k), trim(seriesEntry), t, isFirst, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         m%PlaneSliceStepCount(k) = m%PlaneSliceStepCount(k) + 1
+      end if
+
+      deallocate(pts, buf)
+   end do
+
+end subroutine EmitPlaneSlices
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Precompute, for every pair of adjacent wake planes (np, np+1) of every turbine, the geometric quantities that
 !! describe the relative orientation of the two planes. For each pair, this routine evaluates the cosine and sine of
 !! the angle between the plane normals `u%xhat_plane(:,np,nt)` and `u%xhat_plane(:,np+1,nt)` and uses them, together
@@ -1295,6 +1534,29 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%OutDisWindX = InitInp%InputFileData%OutDisWindX
    p%OutDisWindY = InitInp%InputFileData%OutDisWindY
 
+   ! --- Feature 2: axis-aligned planar sampling (extent-controlled)
+   p%NumPlaneSlices = InitInp%InputFileData%NumPlaneSlices
+   p%WrPlaneSkp     = max( 1_IntKi, nint( InitInp%InputFileData%WrPlaneDT / p%dt_low ) )
+   if (p%NumPlaneSlices > 0) then
+      call AllocAry( p%PlaneSliceName,       p%NumPlaneSlices, 'p%PlaneSliceName',       ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceOrigin,  3, p%NumPlaneSlices, 'p%PlaneSliceOrigin',     ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceNormalAxis, p%NumPlaneSlices, 'p%PlaneSliceNormalAxis', ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceAxis1,      p%NumPlaneSlices, 'p%PlaneSliceAxis1',      ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceAxis2,      p%NumPlaneSlices, 'p%PlaneSliceAxis2',      ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceN1,         p%NumPlaneSlices, 'p%PlaneSliceN1',         ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceN2,         p%NumPlaneSlices, 'p%PlaneSliceN2',         ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceILoReq,     p%NumPlaneSlices, 'p%PlaneSliceILoReq',     ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceIHiReq,     p%NumPlaneSlices, 'p%PlaneSliceIHiReq',     ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceJLoReq,     p%NumPlaneSlices, 'p%PlaneSliceJLoReq',     ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceJHiReq,     p%NumPlaneSlices, 'p%PlaneSliceJHiReq',     ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceValid,      p%NumPlaneSlices, 'p%PlaneSliceValid',      ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( p%PlaneSliceSeriesUn,   p%NumPlaneSlices, 'p%PlaneSliceSeriesUn',   ErrStat2, ErrMsg2 ); if (Failed()) return
+      p%PlaneSliceName       = InitInp%InputFileData%PlaneSliceName
+      p%PlaneSliceOrigin     = InitInp%InputFileData%PlaneSliceOrigin
+      p%PlaneSliceValid      = .true.
+      p%PlaneSliceSeriesUn   = -1
+   end if
+
    ! --- Vtk Outputs
    call GetPath( p%OutFileRoot, rootDir, baseName ) 
    OutFileVTKDir      = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
@@ -1304,6 +1566,10 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call MKDIR(OutFileVTKDir)
       ! placeholder for writing planes -- this will eventually be an input (revise logic here then)
       p%WrPlanes = .true.
+   else if (p%NumPlaneSlices>0) then
+      ! Feature 2 (NumPlaneSlices) is independent of the wake-plane / disturbed-wind
+      ! output; still needs the vtk_ff directory but must NOT enable WrPlanes.
+      call MKDIR(OutFileVTKDir)
    end if
 
    ! Setup wake plane writing
@@ -1478,6 +1744,15 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    end do
    if (errStat >= AbortErrLev) return
 
+      ! Feature 2: axis-aligned planar sampling
+      ! Validate each slice's normal (fatal on off-axis), derive its NormalAxis/Axis1/Axis2
+      ! and (N1, N2) grid dimensions from the low-res spacing, and pre-compute the
+      ! requested (i_lo, i_hi, j_lo, j_hi) index window into the parent low-res grid.
+      ! Warn if the requested window straddles the domain boundary (out-of-domain
+      ! nodes will be written as NaN at emit time).
+   call ValidatePlaneSlices( p, InitInp%InputFileData, errStat, errMsg )
+   if (errStat >= AbortErrLev) return
+
 
    !----------------------------------------------------------------------------
    ! Initialize inputs 
@@ -1549,6 +1824,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ALLOCATE ( m%OutVizXZPlane(3,p%LowRes%nXYZ(1), p%LowRes%nXYZ(3),1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXZPlane arrays.')) return;
       m%OutVizXZPlane = 0.0_SiKi
    end if
+   if ( p%NumPlaneSlices > 0 ) then
+      call AllocAry( m%PlaneSliceStepCount, p%NumPlaneSlices, 'm%PlaneSliceStepCount', ErrStat2, ErrMsg2 ); if (Failed()) return
+      m%PlaneSliceStepCount = 0
+   end if
+   m%LastPlaneSliceN = -1
 
    ! miscvars to avoid the allocation per timestep
    allocate(m%Vamb_lowpol(    3, 0:p%n_rp_max*8 ),                             STAT=errStat2);  if (Failed0('m%Vamb_lowpol.'  )) return;
@@ -1755,6 +2035,15 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          call Write_WakePlane_Series(p, m)
          call Write_WireFrame_Series(p)
       endif
+
+      ! Feature 2: close any open .vts.series sidecars
+      if (allocated(p%PlaneSliceSeriesUn)) then
+         do nt = 1, size(p%PlaneSliceSeriesUn)
+            if ( p%PlaneSliceSeriesUn(nt) > 0 ) then
+               call VTK_Series_Close( p%PlaneSliceSeriesUn(nt), errStat, errMsg )
+            end if
+         end do
+      end if
 
       ! Destroy InflowWind data
       select case(p%Mod_AmbWind)
@@ -2158,6 +2447,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call Write_Planes_Data(p, u, m, n, t, Tstr)
       endif
 
+   end if
+
+   ! Feature 2: axis-aligned planar sampling (extent-controlled, own sampling rate)
+   if ( p%NumPlaneSlices > 0 .and. mod(n, p%WrPlaneSkp) == 0 ) then
+      call EmitPlaneSlices( t, n, p, m, ErrStat2, ErrMsg2 )
+      if (Failed()) return
    end if
 
 contains

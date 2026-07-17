@@ -65,6 +65,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NOutDisWindXZ = 0_IntKi      !< Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     REAL(DbKi)  :: WrDisDT = 0.0_R8Ki      !< The time between vtk outputs [must be a multiple of the low resolution time step] [s]
+    REAL(DbKi)  :: WrPlaneDT = 0.0_R8Ki      !< Feature 2 sampling period (s); DEFAULT falls back to WrDisDT [s]
+    INTEGER(IntKi)  :: NumPlaneSlices = 0_IntKi      !< Number of axis-aligned extent-controlled planar slices (Feature 2) [-]
+    CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceName      !< user-provided slice name (used in output filenames) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceOrigin      !< plane corner (x0,y0,z0) in the global farm frame; column k is slice k [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceNormal      !< plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent1      !< in-plane extent along the first non-normal axis, per slice [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent2      !< in-plane extent along the second non-normal axis, per slice [m]
     LOGICAL  :: ChkWndFiles = .false.      !< Check all the ambient wind files for data consistency (flag) [-]
     INTEGER(IntKi)  :: Mod_Meander = 0_IntKi      !< Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2] [-]
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
@@ -162,6 +169,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_cs      !< Closest point on the plane-plane intersection line to the start wake-plane center, p_plane(:,np,nt) - r_s*rhat_s; dims: (XYZ component, plane-pair index np, turbine index nt) [m]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !< Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane      !< An array holding the output data for a 2D visualization slice [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceStepCount      !< Feature 2: number of steps written per slice (drives isFirst flag in the .vts.series writer) [-]
+    INTEGER(IntKi)  :: LastPlaneSliceN = 0_IntKi      !< Feature 2: last low-res step index at which planar slices were emitted; -1 initially. Guards the duplicate-emit at t=0 triggered by FARM_InitialCO calling AWAE_CalcOutput twice. [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane      !< An array holding the output data for a 2D visualization slice [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane      !< An array holding the output data for a 2D visualization slice [-]
     TYPE(InflowWind_InputType)  :: u_IfW_Low      !< InflowWind module inputs for the low-resolution grid [-]
@@ -250,6 +259,21 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NOutDisWindXZ = 0_IntKi      !< Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: OutDisWindYvalid      !< Valid XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [-]
+    INTEGER(IntKi)  :: WrPlaneSkp = 0_IntKi      !< Feature 2: number of low-res time steps between planar sampling emits (WrPlaneDT/dt_low) [-]
+    INTEGER(IntKi)  :: NumPlaneSlices = 0_IntKi      !< Feature 2: number of axis-aligned extent-controlled slices [-]
+    CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceName      !< Feature 2: per-slice user name [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceOrigin      !< Feature 2: (3, NumPlaneSlices) plane corner in the global farm frame [m]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceNormalAxis      !< Feature 2: 1=X, 2=Y, 3=Z; derived from Normal at init [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceAxis1      !< Feature 2: index (1..3) of first in-plane global axis [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceAxis2      !< Feature 2: index (1..3) of second in-plane global axis [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceN1      !< Feature 2: number of in-plane nodes along Axis1 [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceN2      !< Feature 2: number of in-plane nodes along Axis2 [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceILoReq      !< Feature 2: 0-based lo-index along Axis1 in parent low-res grid (may be negative) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceIHiReq      !< Feature 2: 0-based hi-index along Axis1 (may exceed nAxis1-1) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceJLoReq      !< Feature 2: 0-based lo-index along Axis2 [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceJHiReq      !< Feature 2: 0-based hi-index along Axis2 [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: PlaneSliceValid      !< Feature 2: true if the slice intersects the low-res domain [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceSeriesUn      !< Feature 2: open .vts.series unit per slice; -1 = closed [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
     CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
@@ -462,6 +486,68 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%OutDisWindY = SrcInputFileTypeData%OutDisWindY
    end if
    DstInputFileTypeData%WrDisDT = SrcInputFileTypeData%WrDisDT
+   DstInputFileTypeData%WrPlaneDT = SrcInputFileTypeData%WrPlaneDT
+   DstInputFileTypeData%NumPlaneSlices = SrcInputFileTypeData%NumPlaneSlices
+   if (allocated(SrcInputFileTypeData%PlaneSliceName)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%PlaneSliceName)
+      UB(1:1) = ubound(SrcInputFileTypeData%PlaneSliceName)
+      if (.not. allocated(DstInputFileTypeData%PlaneSliceName)) then
+         allocate(DstInputFileTypeData%PlaneSliceName(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%PlaneSliceName.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%PlaneSliceName = SrcInputFileTypeData%PlaneSliceName
+   end if
+   if (allocated(SrcInputFileTypeData%PlaneSliceOrigin)) then
+      LB(1:2) = lbound(SrcInputFileTypeData%PlaneSliceOrigin)
+      UB(1:2) = ubound(SrcInputFileTypeData%PlaneSliceOrigin)
+      if (.not. allocated(DstInputFileTypeData%PlaneSliceOrigin)) then
+         allocate(DstInputFileTypeData%PlaneSliceOrigin(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%PlaneSliceOrigin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%PlaneSliceOrigin = SrcInputFileTypeData%PlaneSliceOrigin
+   end if
+   if (allocated(SrcInputFileTypeData%PlaneSliceNormal)) then
+      LB(1:2) = lbound(SrcInputFileTypeData%PlaneSliceNormal)
+      UB(1:2) = ubound(SrcInputFileTypeData%PlaneSliceNormal)
+      if (.not. allocated(DstInputFileTypeData%PlaneSliceNormal)) then
+         allocate(DstInputFileTypeData%PlaneSliceNormal(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%PlaneSliceNormal.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%PlaneSliceNormal = SrcInputFileTypeData%PlaneSliceNormal
+   end if
+   if (allocated(SrcInputFileTypeData%PlaneSliceExtent1)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%PlaneSliceExtent1)
+      UB(1:1) = ubound(SrcInputFileTypeData%PlaneSliceExtent1)
+      if (.not. allocated(DstInputFileTypeData%PlaneSliceExtent1)) then
+         allocate(DstInputFileTypeData%PlaneSliceExtent1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%PlaneSliceExtent1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%PlaneSliceExtent1 = SrcInputFileTypeData%PlaneSliceExtent1
+   end if
+   if (allocated(SrcInputFileTypeData%PlaneSliceExtent2)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%PlaneSliceExtent2)
+      UB(1:1) = ubound(SrcInputFileTypeData%PlaneSliceExtent2)
+      if (.not. allocated(DstInputFileTypeData%PlaneSliceExtent2)) then
+         allocate(DstInputFileTypeData%PlaneSliceExtent2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%PlaneSliceExtent2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%PlaneSliceExtent2 = SrcInputFileTypeData%PlaneSliceExtent2
+   end if
    DstInputFileTypeData%ChkWndFiles = SrcInputFileTypeData%ChkWndFiles
    DstInputFileTypeData%Mod_Meander = SrcInputFileTypeData%Mod_Meander
    DstInputFileTypeData%C_Meander = SrcInputFileTypeData%C_Meander
@@ -584,6 +670,21 @@ subroutine AWAE_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
    if (allocated(InputFileTypeData%OutDisWindY)) then
       deallocate(InputFileTypeData%OutDisWindY)
    end if
+   if (allocated(InputFileTypeData%PlaneSliceName)) then
+      deallocate(InputFileTypeData%PlaneSliceName)
+   end if
+   if (allocated(InputFileTypeData%PlaneSliceOrigin)) then
+      deallocate(InputFileTypeData%PlaneSliceOrigin)
+   end if
+   if (allocated(InputFileTypeData%PlaneSliceNormal)) then
+      deallocate(InputFileTypeData%PlaneSliceNormal)
+   end if
+   if (allocated(InputFileTypeData%PlaneSliceExtent1)) then
+      deallocate(InputFileTypeData%PlaneSliceExtent1)
+   end if
+   if (allocated(InputFileTypeData%PlaneSliceExtent2)) then
+      deallocate(InputFileTypeData%PlaneSliceExtent2)
+   end if
    if (allocated(InputFileTypeData%X0_high)) then
       deallocate(InputFileTypeData%X0_high)
    end if
@@ -625,6 +726,13 @@ subroutine AWAE_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%NOutDisWindXZ)
    call RegPackAlloc(RF, InData%OutDisWindY)
    call RegPack(RF, InData%WrDisDT)
+   call RegPack(RF, InData%WrPlaneDT)
+   call RegPack(RF, InData%NumPlaneSlices)
+   call RegPackAlloc(RF, InData%PlaneSliceName)
+   call RegPackAlloc(RF, InData%PlaneSliceOrigin)
+   call RegPackAlloc(RF, InData%PlaneSliceNormal)
+   call RegPackAlloc(RF, InData%PlaneSliceExtent1)
+   call RegPackAlloc(RF, InData%PlaneSliceExtent2)
    call RegPack(RF, InData%ChkWndFiles)
    call RegPack(RF, InData%Mod_Meander)
    call RegPack(RF, InData%C_Meander)
@@ -676,6 +784,13 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%NOutDisWindXZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrDisDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrPlaneDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumPlaneSlices); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceOrigin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceNormal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceExtent1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceExtent2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ChkWndFiles); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
@@ -1370,6 +1485,19 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%outVizXYPlane = SrcMiscData%outVizXYPlane
    end if
+   if (allocated(SrcMiscData%PlaneSliceStepCount)) then
+      LB(1:1) = lbound(SrcMiscData%PlaneSliceStepCount)
+      UB(1:1) = ubound(SrcMiscData%PlaneSliceStepCount)
+      if (.not. allocated(DstMiscData%PlaneSliceStepCount)) then
+         allocate(DstMiscData%PlaneSliceStepCount(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PlaneSliceStepCount.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%PlaneSliceStepCount = SrcMiscData%PlaneSliceStepCount
+   end if
+   DstMiscData%LastPlaneSliceN = SrcMiscData%LastPlaneSliceN
    if (allocated(SrcMiscData%outVizYZPlane)) then
       LB(1:4) = lbound(SrcMiscData%outVizYZPlane)
       UB(1:4) = ubound(SrcMiscData%outVizYZPlane)
@@ -1546,6 +1674,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%outVizXYPlane)) then
       deallocate(MiscData%outVizXYPlane)
    end if
+   if (allocated(MiscData%PlaneSliceStepCount)) then
+      deallocate(MiscData%PlaneSliceStepCount)
+   end if
    if (allocated(MiscData%outVizYZPlane)) then
       deallocate(MiscData%outVizYZPlane)
    end if
@@ -1621,6 +1752,8 @@ subroutine AWAE_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%pvec_cs)
    call RegPackAlloc(RF, InData%pvec_ce)
    call RegPackAlloc(RF, InData%outVizXYPlane)
+   call RegPackAlloc(RF, InData%PlaneSliceStepCount)
+   call RegPack(RF, InData%LastPlaneSliceN)
    call RegPackAlloc(RF, InData%outVizYZPlane)
    call RegPackAlloc(RF, InData%outVizXZPlane)
    call InflowWind_PackInput(RF, InData%u_IfW_Low) 
@@ -1691,6 +1824,8 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%pvec_cs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%pvec_ce); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizXYPlane); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceStepCount); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastPlaneSliceN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizYZPlane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizXZPlane); if (RegCheckErr(RF, RoutineName)) return
    call InflowWind_UnpackInput(RF, OutData%u_IfW_Low) ! u_IfW_Low 
@@ -2025,8 +2160,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyParam'
@@ -2189,6 +2324,164 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%OutDisWindYvalid = SrcParamData%OutDisWindYvalid
    end if
+   DstParamData%WrPlaneSkp = SrcParamData%WrPlaneSkp
+   DstParamData%NumPlaneSlices = SrcParamData%NumPlaneSlices
+   if (allocated(SrcParamData%PlaneSliceName)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceName)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceName)
+      if (.not. allocated(DstParamData%PlaneSliceName)) then
+         allocate(DstParamData%PlaneSliceName(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceName.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceName = SrcParamData%PlaneSliceName
+   end if
+   if (allocated(SrcParamData%PlaneSliceOrigin)) then
+      LB(1:2) = lbound(SrcParamData%PlaneSliceOrigin)
+      UB(1:2) = ubound(SrcParamData%PlaneSliceOrigin)
+      if (.not. allocated(DstParamData%PlaneSliceOrigin)) then
+         allocate(DstParamData%PlaneSliceOrigin(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceOrigin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceOrigin = SrcParamData%PlaneSliceOrigin
+   end if
+   if (allocated(SrcParamData%PlaneSliceNormalAxis)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceNormalAxis)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceNormalAxis)
+      if (.not. allocated(DstParamData%PlaneSliceNormalAxis)) then
+         allocate(DstParamData%PlaneSliceNormalAxis(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceNormalAxis.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceNormalAxis = SrcParamData%PlaneSliceNormalAxis
+   end if
+   if (allocated(SrcParamData%PlaneSliceAxis1)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceAxis1)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceAxis1)
+      if (.not. allocated(DstParamData%PlaneSliceAxis1)) then
+         allocate(DstParamData%PlaneSliceAxis1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceAxis1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceAxis1 = SrcParamData%PlaneSliceAxis1
+   end if
+   if (allocated(SrcParamData%PlaneSliceAxis2)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceAxis2)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceAxis2)
+      if (.not. allocated(DstParamData%PlaneSliceAxis2)) then
+         allocate(DstParamData%PlaneSliceAxis2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceAxis2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceAxis2 = SrcParamData%PlaneSliceAxis2
+   end if
+   if (allocated(SrcParamData%PlaneSliceN1)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceN1)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceN1)
+      if (.not. allocated(DstParamData%PlaneSliceN1)) then
+         allocate(DstParamData%PlaneSliceN1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceN1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceN1 = SrcParamData%PlaneSliceN1
+   end if
+   if (allocated(SrcParamData%PlaneSliceN2)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceN2)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceN2)
+      if (.not. allocated(DstParamData%PlaneSliceN2)) then
+         allocate(DstParamData%PlaneSliceN2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceN2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceN2 = SrcParamData%PlaneSliceN2
+   end if
+   if (allocated(SrcParamData%PlaneSliceILoReq)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceILoReq)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceILoReq)
+      if (.not. allocated(DstParamData%PlaneSliceILoReq)) then
+         allocate(DstParamData%PlaneSliceILoReq(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceILoReq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceILoReq = SrcParamData%PlaneSliceILoReq
+   end if
+   if (allocated(SrcParamData%PlaneSliceIHiReq)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceIHiReq)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceIHiReq)
+      if (.not. allocated(DstParamData%PlaneSliceIHiReq)) then
+         allocate(DstParamData%PlaneSliceIHiReq(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceIHiReq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceIHiReq = SrcParamData%PlaneSliceIHiReq
+   end if
+   if (allocated(SrcParamData%PlaneSliceJLoReq)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceJLoReq)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceJLoReq)
+      if (.not. allocated(DstParamData%PlaneSliceJLoReq)) then
+         allocate(DstParamData%PlaneSliceJLoReq(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceJLoReq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceJLoReq = SrcParamData%PlaneSliceJLoReq
+   end if
+   if (allocated(SrcParamData%PlaneSliceJHiReq)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceJHiReq)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceJHiReq)
+      if (.not. allocated(DstParamData%PlaneSliceJHiReq)) then
+         allocate(DstParamData%PlaneSliceJHiReq(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceJHiReq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceJHiReq = SrcParamData%PlaneSliceJHiReq
+   end if
+   if (allocated(SrcParamData%PlaneSliceValid)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceValid)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceValid)
+      if (.not. allocated(DstParamData%PlaneSliceValid)) then
+         allocate(DstParamData%PlaneSliceValid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceValid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceValid = SrcParamData%PlaneSliceValid
+   end if
+   if (allocated(SrcParamData%PlaneSliceSeriesUn)) then
+      LB(1:1) = lbound(SrcParamData%PlaneSliceSeriesUn)
+      UB(1:1) = ubound(SrcParamData%PlaneSliceSeriesUn)
+      if (.not. allocated(DstParamData%PlaneSliceSeriesUn)) then
+         allocate(DstParamData%PlaneSliceSeriesUn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PlaneSliceSeriesUn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PlaneSliceSeriesUn = SrcParamData%PlaneSliceSeriesUn
+   end if
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
    DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
@@ -2204,8 +2497,8 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(AWAE_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyParam'
@@ -2255,6 +2548,45 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%OutDisWindYvalid)) then
       deallocate(ParamData%OutDisWindYvalid)
    end if
+   if (allocated(ParamData%PlaneSliceName)) then
+      deallocate(ParamData%PlaneSliceName)
+   end if
+   if (allocated(ParamData%PlaneSliceOrigin)) then
+      deallocate(ParamData%PlaneSliceOrigin)
+   end if
+   if (allocated(ParamData%PlaneSliceNormalAxis)) then
+      deallocate(ParamData%PlaneSliceNormalAxis)
+   end if
+   if (allocated(ParamData%PlaneSliceAxis1)) then
+      deallocate(ParamData%PlaneSliceAxis1)
+   end if
+   if (allocated(ParamData%PlaneSliceAxis2)) then
+      deallocate(ParamData%PlaneSliceAxis2)
+   end if
+   if (allocated(ParamData%PlaneSliceN1)) then
+      deallocate(ParamData%PlaneSliceN1)
+   end if
+   if (allocated(ParamData%PlaneSliceN2)) then
+      deallocate(ParamData%PlaneSliceN2)
+   end if
+   if (allocated(ParamData%PlaneSliceILoReq)) then
+      deallocate(ParamData%PlaneSliceILoReq)
+   end if
+   if (allocated(ParamData%PlaneSliceIHiReq)) then
+      deallocate(ParamData%PlaneSliceIHiReq)
+   end if
+   if (allocated(ParamData%PlaneSliceJLoReq)) then
+      deallocate(ParamData%PlaneSliceJLoReq)
+   end if
+   if (allocated(ParamData%PlaneSliceJHiReq)) then
+      deallocate(ParamData%PlaneSliceJHiReq)
+   end if
+   if (allocated(ParamData%PlaneSliceValid)) then
+      deallocate(ParamData%PlaneSliceValid)
+   end if
+   if (allocated(ParamData%PlaneSliceSeriesUn)) then
+      deallocate(ParamData%PlaneSliceSeriesUn)
+   end if
    nullify(ParamData%WAT_FlowField)
 end subroutine
 
@@ -2262,8 +2594,8 @@ subroutine AWAE_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackParam'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%WindFilePath)
@@ -2319,6 +2651,21 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%NOutDisWindXZ)
    call RegPackAlloc(RF, InData%OutDisWindY)
    call RegPackAlloc(RF, InData%OutDisWindYvalid)
+   call RegPack(RF, InData%WrPlaneSkp)
+   call RegPack(RF, InData%NumPlaneSlices)
+   call RegPackAlloc(RF, InData%PlaneSliceName)
+   call RegPackAlloc(RF, InData%PlaneSliceOrigin)
+   call RegPackAlloc(RF, InData%PlaneSliceNormalAxis)
+   call RegPackAlloc(RF, InData%PlaneSliceAxis1)
+   call RegPackAlloc(RF, InData%PlaneSliceAxis2)
+   call RegPackAlloc(RF, InData%PlaneSliceN1)
+   call RegPackAlloc(RF, InData%PlaneSliceN2)
+   call RegPackAlloc(RF, InData%PlaneSliceILoReq)
+   call RegPackAlloc(RF, InData%PlaneSliceIHiReq)
+   call RegPackAlloc(RF, InData%PlaneSliceJLoReq)
+   call RegPackAlloc(RF, InData%PlaneSliceJHiReq)
+   call RegPackAlloc(RF, InData%PlaneSliceValid)
+   call RegPackAlloc(RF, InData%PlaneSliceSeriesUn)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%OutFileFFvtkRoot)
    call RegPack(RF, InData%OutFileFFvtkWakeRoot)
@@ -2341,8 +2688,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackParam'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -2409,6 +2756,21 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NOutDisWindXZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindYvalid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrPlaneSkp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumPlaneSlices); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceOrigin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceNormalAxis); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceAxis1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceAxis2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceN1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceN2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceILoReq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceIHiReq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceJLoReq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceJHiReq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceValid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PlaneSliceSeriesUn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return

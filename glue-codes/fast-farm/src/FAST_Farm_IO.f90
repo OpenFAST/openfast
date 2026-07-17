@@ -938,6 +938,11 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
 
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", "The time between vtk outputs [must be a multiple of the low resolution time step]", p%DT_low, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
+   !---------------------- AXIS-ALIGNED PLANE SLICES (extent-controlled) [Feature 2] ---
+   ! Optional block. If the section header is absent (e.g. legacy decks) we silently
+   ! default NumPlaneSlices to 0 and rewind so the next section reads correctly.
+   call ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, p%DT_low, UnEc, ErrStat2, ErrMsg2 ); if (Failed()) return
+
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
@@ -1211,6 +1216,194 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
 
 
 END SUBROUTINE Farm_ValidateInput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read the optional '--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---'
+!! block introduced for Feature 2 (axis-aligned planar sampling via user-
+!! specified origin/normal/extents).  The block layout is:
+!!
+!!     --- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---
+!!     <NumPlaneSlices>          NumPlaneSlices
+!!     <WrPlaneDT | "DEFAULT">   WrPlaneDT
+!!     SliceName  Origin(m)     Normal   Extent1(m)  Extent2(m)      ! column names
+!!     (-)        (m,m,m)       (-)      (m)         (m)             ! column units
+!!     "T1_0D"    (0 -300 0)    (1 0 0)  600         400
+!!     "hubXY"    (-500 -300 0) (0 0 1)  2000        800
+!!
+!! If the block header is absent from the primary input file (legacy deck),
+!! we silently BACKSPACE so the OUTPUT section reader picks up where it left
+!! off; NumPlaneSlices then remains 0 and the whole feature is inert.
+subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, ErrStat, ErrMsg )
+   integer(IntKi),                 intent(in   ) :: UnIn
+   character(*),                   intent(in   ) :: InputFile
+   type(AWAE_InputFileType),       intent(inout) :: AWAE_InitInp
+   real(DbKi),                     intent(in   ) :: DT_low
+   integer(IntKi),                 intent(in   ) :: UnEc
+   integer(IntKi),                 intent(  out) :: ErrStat
+   character(*),                   intent(  out) :: ErrMsg
+
+   integer(IntKi)                                :: ErrStat2, k, ios, lineLen
+   character(ErrMsgLen)                          :: ErrMsg2
+   character(1024)                               :: line
+   character(64)                                 :: name
+   real(ReKi)                                    :: origin(3), normal(3), extent1, extent2
+   integer(IntKi), parameter                     :: maxSlices = 99
+   character(*), parameter                       :: RoutineName = 'ReadPlaneSlicesBlock'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Default: feature disabled
+   AWAE_InitInp%NumPlaneSlices = 0
+   AWAE_InitInp%WrPlaneDT      = AWAE_InitInp%WrDisDT
+
+   ! Peek at the next line to decide whether the block is present.
+   call ReadLine( UnIn, '', line, lineLen, ios )
+   if (ios /= 0) then
+      ! EOF (or read error) with no block present is fine when the block is
+      ! optional; the caller's next section reader will fail on its own if
+      ! something else is really wrong.
+      return
+   end if
+
+   if ( index( line, 'AXIS-ALIGNED PLANE SLICES' ) == 0 ) then
+      ! Not our block. Restore file position for the OUTPUT reader.
+      backspace( UnIn )
+      return
+   end if
+
+   ! We have the section header. Read the two scalars.
+   call ReadVar( UnIn, InputFile, AWAE_InitInp%NumPlaneSlices, "NumPlaneSlices", &
+                 "Number of axis-aligned extent-controlled planar slices (-) [0 to 99]", &
+                 ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   if ( AWAE_InitInp%NumPlaneSlices < 0 .or. AWAE_InitInp%NumPlaneSlices > maxSlices ) then
+      call SetErrStat( ErrID_Fatal, 'NumPlaneSlices must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   call ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrPlaneDT, "WrPlaneDT", &
+                         "Feature 2 sampling period (s); DEFAULT falls back to WrDisDT", &
+                         AWAE_InitInp%WrDisDT, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   if ( AWAE_InitInp%NumPlaneSlices == 0 ) return
+
+   ! Allocate flat arrays
+   call AllocAry( AWAE_InitInp%PlaneSliceName,    AWAE_InitInp%NumPlaneSlices, 'PlaneSliceName',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%PlaneSliceOrigin,  3, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceOrigin',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%PlaneSliceNormal,  3, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceNormal',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%PlaneSliceExtent1, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceExtent1', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%PlaneSliceExtent2, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceExtent2', ErrStat2, ErrMsg2 ); if (Failed()) return
+
+   ! Two column-header lines
+   call ReadCom( UnIn, InputFile, 'Plane slices column names', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+   call ReadCom( UnIn, InputFile, 'Plane slices column units', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   do k = 1, AWAE_InitInp%NumPlaneSlices
+      call ReadLine( UnIn, '', line, lineLen, ios )
+      if (ios /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Failed to read plane slice line '//trim(Num2LStr(k))//'.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if (UnEc > 0) write(UnEc,'(A)') trim(line)
+
+      ! Strip parentheses and commas so parenthesized vectors "(1 0 0)" parse
+      ! as space-separated tokens.
+      call StripDelims( line )
+
+      call ParsePlaneSliceLine( line, name, origin, normal, extent1, extent2, ErrStat2, ErrMsg2 )
+      if (ErrStat2 /= ErrID_None) then
+         call SetErrStat( ErrID_Fatal, 'Slice '//trim(Num2LStr(k))//': '//trim(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+
+      AWAE_InitInp%PlaneSliceName(k)      = name
+      AWAE_InitInp%PlaneSliceOrigin(:,k)  = origin
+      AWAE_InitInp%PlaneSliceNormal(:,k)  = normal
+      AWAE_InitInp%PlaneSliceExtent1(k)   = extent1
+      AWAE_InitInp%PlaneSliceExtent2(k)   = extent2
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+
+   !> Replace '(', ')', and ',' with spaces so parenthesised vectors parse
+   !! as space-separated tokens.
+   subroutine StripDelims( s )
+      character(*), intent(inout) :: s
+      integer :: i
+      do i = 1, len_trim(s)
+         if ( s(i:i) == '(' .or. s(i:i) == ')' .or. s(i:i) == ',' ) s(i:i) = ' '
+      end do
+   end subroutine
+
+   !> Parse a de-delimited slice row: NAME  O_X O_Y O_Z  N_X N_Y N_Z  E1 E2
+   !! (plus trailing comment). Name may be quoted with double quotes.
+   subroutine ParsePlaneSliceLine( raw, sliceName, o, n, e1, e2, err, msg )
+      character(*), intent(in   ) :: raw
+      character(*), intent(  out) :: sliceName
+      real(ReKi),   intent(  out) :: o(3), n(3)
+      real(ReKi),   intent(  out) :: e1, e2
+      integer(IntKi), intent(  out) :: err
+      character(*), intent(  out) :: msg
+
+      character(len(raw)) :: work
+      integer :: i, iosLocal
+
+      work = raw
+      msg = ''
+      err = ErrID_None
+
+      ! Trim inline comments after '!' or '#'
+      i = scan(work, '!#')
+      if (i > 0) work(i:) = ' '
+
+      ! Extract the quoted-or-unquoted name and blank it out
+      call ExtractQuotedName( work, sliceName )
+
+      read(work, *, iostat=iosLocal) o(1), o(2), o(3), n(1), n(2), n(3), e1, e2
+      if (iosLocal /= 0) then
+         err = ErrID_Fatal
+         msg = 'Failed to parse Origin (3), Normal (3), Extent1, Extent2 columns.'
+      end if
+   end subroutine
+
+   !> Extract the first quoted-or-unquoted name from a line and blank it out
+   !! so subsequent list-directed reads see only numeric tokens.
+   subroutine ExtractQuotedName( s, name )
+      character(*), intent(inout) :: s
+      character(*), intent(  out) :: name
+      integer :: q1, q2, ns, ne
+
+      name = ''
+
+      q1 = index(s, '"')
+      if (q1 > 0) then
+         q2 = index(s(q1+1:), '"')
+         if (q2 > 0) then
+            name = adjustl(s(q1+1:q1+q2-1))
+            s(q1:q1+q2) = repeat(' ', q2+1)
+            return
+         end if
+      end if
+
+      ! Unquoted: first whitespace-delimited token
+      ns = verify(s, ' '//char(9))
+      if (ns == 0) return
+      ne = ns
+      do
+         if (ne > len(s)) exit
+         if (s(ne:ne) == ' ' .or. s(ne:ne) == char(9)) exit
+         ne = ne + 1
+      end do
+      name = adjustl(s(ns:ne-1))
+      s(ns:ne-1) = repeat(' ', ne-ns)
+   end subroutine
+
+end subroutine ReadPlaneSlicesBlock
 
 
 end module FAST_Farm_IO

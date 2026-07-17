@@ -310,7 +310,7 @@ subroutine VTK_Series_Append( Un, fileName, t, isFirst, ErrStat, ErrMsg )
       prefix = '   ,'
    end if
 
-   write(Un,'(A,A,A,ES14.6,A)') prefix, '{ "name" : "'//trim(fileName)//'", "time" : ', t, ' }'
+   write(Un,'(A,A,ES14.6,A)') prefix, '{ "name" : "'//trim(fileName)//'", "time" : ', t, ' }'
 
 end subroutine VTK_Series_Append
 !----------------------------------------------------------------------------------------------------------------------------------

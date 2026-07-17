@@ -40,6 +40,22 @@ typedef  ^            ^                   ReKi            OutDisWindX       {:} 
 typedef  ^            ^                   IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            ^                   ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            ^                   DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
+
+# ..... Axis-aligned planar sampling (Feature 2, Snippet 6 grammar) .......................................................
+# Feature 2 uses flat arrays (rather than a derived slice type) so that the
+# generated pack/unpack routines stay small enough to compile under 8 GB of
+# container RAM.  Populated by the FAST.Farm input reader from the
+# '--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---' block, then consumed
+# by AWAE_Init to compute derived indices and by AWAE_CalcOutput to emit
+# per-step VTK output.  See modules/awae/src/AWAE.f90 for the semantics of the
+# derived NormalAxis / N1 / N2 / bounds fields.
+typedef  ^          AWAE_InputFileType   DbKi                WrPlaneDT             -    - -  "Feature 2 sampling period (s); DEFAULT falls back to WrDisDT" s
+typedef  ^          AWAE_InputFileType   IntKi               NumPlaneSlices        -    - -  "Number of axis-aligned extent-controlled planar slices (Feature 2)" -
+typedef  ^          AWAE_InputFileType   CHARACTER(64)       PlaneSliceName       {:}   - -  "user-provided slice name (used in output filenames)" -
+typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceOrigin    {3}{:} - -  "plane corner (x0,y0,z0) in the global farm frame; column k is slice k" m
+typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceNormal    {3}{:} - -  "plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k" -
+typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent1    {:}   - -  "in-plane extent along the first non-normal axis, per slice" m
+typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent2    {:}   - -  "in-plane extent along the second non-normal axis, per slice" m
 typedef  ^            ^                   LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
 typedef  ^            ^                   IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2]" -
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
@@ -136,6 +152,8 @@ typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "Closest point o
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt)" m
 #
 typedef   ^ MiscVarType    SiKi     outVizXYPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
+typedef   ^ MiscVarType    IntKi    PlaneSliceStepCount   {:}  - -  "Feature 2: number of steps written per slice (drives isFirst flag in the .vts.series writer)" -
+typedef   ^ MiscVarType    IntKi    LastPlaneSliceN        -   - -  "Feature 2: last low-res step index at which planar slices were emitted; -1 initially. Guards the duplicate-emit at t=0 triggered by FARM_InitialCO calling AWAE_CalcOutput twice." -
 typedef   ^ MiscVarType    SiKi     outVizYZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizXZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_Low   - - -  "InflowWind module inputs for the low-resolution grid" -
@@ -226,6 +244,22 @@ typedef  ^  ParameterType  LOGICAL          OutDisWindXvalid  {:}   - - "Valid Y
 typedef  ^  ParameterType  IntKi            NOutDisWindXZ      -  - -   "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^  ParameterType  ReKi             OutDisWindY       {:} - -   "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^  ParameterType  LOGICAL          OutDisWindYvalid  {:}   - - "Valid XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" -
+# Feature 2 runtime state (flat arrays, indexed by slice number 1..NumPlaneSlices).
+typedef  ^  ParameterType  IntKi            WrPlaneSkp             -  - -   "Feature 2: number of low-res time steps between planar sampling emits (WrPlaneDT/dt_low)" -
+typedef  ^  ParameterType  IntKi            NumPlaneSlices         -  - -   "Feature 2: number of axis-aligned extent-controlled slices" -
+typedef  ^  ParameterType  CHARACTER(64)    PlaneSliceName        {:}  - -  "Feature 2: per-slice user name" -
+typedef  ^  ParameterType  ReKi             PlaneSliceOrigin  {3}{:}   - -  "Feature 2: (3, NumPlaneSlices) plane corner in the global farm frame" m
+typedef  ^  ParameterType  IntKi            PlaneSliceNormalAxis  {:}  - -  "Feature 2: 1=X, 2=Y, 3=Z; derived from Normal at init" -
+typedef  ^  ParameterType  IntKi            PlaneSliceAxis1       {:}  - -  "Feature 2: index (1..3) of first in-plane global axis" -
+typedef  ^  ParameterType  IntKi            PlaneSliceAxis2       {:}  - -  "Feature 2: index (1..3) of second in-plane global axis" -
+typedef  ^  ParameterType  IntKi            PlaneSliceN1          {:}  - -  "Feature 2: number of in-plane nodes along Axis1" -
+typedef  ^  ParameterType  IntKi            PlaneSliceN2          {:}  - -  "Feature 2: number of in-plane nodes along Axis2" -
+typedef  ^  ParameterType  IntKi            PlaneSliceILoReq      {:}  - -  "Feature 2: 0-based lo-index along Axis1 in parent low-res grid (may be negative)" -
+typedef  ^  ParameterType  IntKi            PlaneSliceIHiReq      {:}  - -  "Feature 2: 0-based hi-index along Axis1 (may exceed nAxis1-1)" -
+typedef  ^  ParameterType  IntKi            PlaneSliceJLoReq      {:}  - -  "Feature 2: 0-based lo-index along Axis2" -
+typedef  ^  ParameterType  IntKi            PlaneSliceJHiReq      {:}  - -  "Feature 2: 0-based hi-index along Axis2" -
+typedef  ^  ParameterType  LOGICAL          PlaneSliceValid       {:}  - -  "Feature 2: true if the slice intersects the low-res domain" -
+typedef  ^  ParameterType  IntKi            PlaneSliceSeriesUn    {:}  - -  "Feature 2: open .vts.series unit per slice; -1 = closed" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkRoot   -  - -   "The root name for VTK outputs" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeRoot -  - -   "The root name for VTK outputs for wake planes" -
