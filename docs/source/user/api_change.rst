@@ -9,6 +9,31 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v5.0.x to next release
+-------------------------------
+
+Two new optional VISUALIZATION sub-sections were added to the FAST.Farm
+primary input file to give users finer control over what gets written
+as VTK output.  Legacy decks that do not include either block continue
+to work unchanged.
+
+The first block, ``--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---``,
+lets the user specify axis-aligned uniform-grid slices with explicit
+2-D extents anywhere in the low-resolution domain (Feature 2, plan
+§3). Output is XML VTK ``.vts`` + ``.vts.series``. The block header
+is optional and, when present, sits between the existing VISUALIZATION
+block and the OUTPUT block.
+
+The second block, ``--- TERRAIN-FOLLOWING SAMPLING ---``, lets the user
+emit point clouds sampled from STL surfaces or plain-text/CSV files,
+lifted to one or more offset sheets along either an explicit normal
+or the STL per-facet normal (Feature 3, plan §2). Output is XML VTK
+``.vtp`` + ``.vtp.series``.
+
+See :numref:`FF:Input:PlaneSlices` and :numref:`FF:Input:TerrainSlices`
+for the full grammar, and :numref:`FF:sec:SliceOutputs` for guidance
+on which slice path to pick.
+
 OpenFAST v4.2.x to OpenFAST  v5.0.0
 -----------------------------------
 

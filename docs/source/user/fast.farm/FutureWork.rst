@@ -116,3 +116,12 @@ releases:
 -  Adopt the capability to support undersea marine turbine arrays (which
    may require supporting direct feedthrough of input to output to
    handle the added-mass effects).
+
+-  Extend the terrain-following sampling
+   (:numref:`FF:Input:TerrainSlices`) to also accept arbitrary
+   non-axis-aligned planar samples. Today the extent-controlled plane
+   slice feature (:numref:`FF:Input:PlaneSlices`) rejects any normal
+   other than :math:`(1,0,0)`, :math:`(0,1,0)`, :math:`(0,0,1)` with a
+   fatal init error whose message explicitly points here. See GitHub
+   issue `#2383 <https://github.com/OpenFAST/openfast/issues/2383>`__
+   for the motivating discussion and one proposed grammar.

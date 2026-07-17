@@ -463,6 +463,53 @@ error universally across all aeroelastic software that use Mann boxes is
 needed `future
 work <https://github.com/OpenFAST/openfast/issues/256>`__.
 
+.. _FF:sec:SliceOutputs:
+
+Choosing a Visualization Slice Output
+-------------------------------------
+
+FAST.Farm ships three different slice-output paths, each with its own
+place. Choose based on how much of the domain you need and how you plan
+to load the output in ParaView.
+
+**Classic slices** (**NOutDisWindXY** / **NOutDisWindYZ** /
+**NOutDisWindXZ**, see :numref:`FF:Input:VTK`). These always span the
+entire low-res domain and write legacy ASCII ``.vtk`` files with
+``STRUCTURED_POINTS`` topology. Cheap to hand-author, but on a large
+farm each XY hub-height slice is potentially the full farm cross
+section — hundreds of megabytes per step, mostly of empty space.
+Recommended: small farms; quick debugging; existing decks that already
+use them.
+
+**Extent-controlled axis-aligned slices** (**NumPlaneSlices**, see
+:numref:`FF:Input:PlaneSlices`). Same axis-aligned uniform grid as
+the classic slices, but each slice carries its own explicit 2-D extent
+so a hub-height sheet can be kept to just the region of interest.
+Output is XML ``.vts`` with a ParaView ``.vts.series`` sidecar for
+straightforward time-series playback. Recommended for large-farm
+runs where you know the region of interest, and for any new deck
+that needs axis-aligned slices; use it in place of the classic
+**NOutDisWindXY** / **YZ** / **XZ** blocks when disk-footprint or
+per-slice extent control matters.
+
+**Terrain-following point clouds** (**NumTerrainSlices**, see
+:numref:`FF:Input:TerrainSlices`). Reads a surface (STL) or a bare
+point list from disk and samples along user-provided offset sheets.
+This is the only path that supports non-axis-aligned sampling
+today — its typical uses are (i) sampling above a real mountain
+surface at rotor-tip heights, (ii) sampling at hub height across an
+irregular farm footprint, and (iii) validating that arbitrary
+points in the domain carry the expected disturbed velocity. Output
+is XML ``.vtp`` with a ``.vtp.series`` sidecar.
+
+All three paths write into the ``vtk_ff/`` subdirectory of the deck
+and are throttled independently: **WrDisDT** for the classic path,
+**WrPlaneDT** for **NumPlaneSlices**, **WrTerrainDT** for
+**NumTerrainSlices**. Each defaults to **WrDisDT** if omitted, but
+having independent knobs lets you (say) emit a heavy full-domain
+slice once per minute while sampling a small hub-height sheet every
+second.
+
 .. _FF:sec:DiscRecs:
 
 Low- and High-Resolution Domain Discretization

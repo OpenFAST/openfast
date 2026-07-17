@@ -846,6 +846,184 @@ Therefore, disabling visualization is recommended when running many
 FAST.Farm simulations. See :numref:`FF:Output:Vis` for
 visualization output file details.
 
+.. _FF:Input:PlaneSlices:
+
+Axis-Aligned Plane Slices (extent-controlled)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This optional block lets the user emit an arbitrary number of
+axis-aligned uniform-grid VTK slices, each with a user-controlled 2D
+extent placed anywhere in the low-resolution domain. Unlike the classic
+**NOutDisWindXY** / **YZ** / **XZ** slices above (which always span the
+entire low-res domain), each slice here is bounded by an explicit
+2-D extent, so a single hub-height cut through a large farm can be
+kept to just the region of interest.
+
+The block is optional. Legacy decks omit it entirely; older files still
+parse without modification.
+
+The block begins with the section header
+``--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---`` and is
+followed by:
+
+-  **NumPlaneSlices** [integer] specifies the number of
+   extent-controlled axis-aligned planar slices to output
+   (:math:`0` to :math:`99`). Set to :math:`0` to disable the feature.
+
+-  **WrPlaneDT** [sec] specifies the sampling period for this
+   feature. **DEFAULT** falls back to **WrDisDT**. Internally rounded
+   to the nearest multiple of **DT_Low**. Independent of the classic
+   **WrDisDT** so that (for example) a small hub-height sheet can be
+   sampled frequently while heavier full-domain outputs sample rarely.
+
+-  A two-line column header followed by **NumPlaneSlices** slice rows
+   with the following columns:
+
+   **SliceName** — quoted string. Free-form slice name; appears in the
+   output file names.  Example: ``"T1_0D"``.
+
+   **origin(m)** — 3-vector, in metres.  Plane corner (not centre)
+   in the farm-global frame.  Example: ``(0 -300 0)``.
+
+   **normal** — 3-vector.  Plane normal.  Must equal ``(1 0 0)``,
+   ``(0 1 0)``, or ``(0 0 1)``; off-axis values are a fatal init
+   error, and the error message points to
+   :numref:`FF:sec:SliceOutputs` and this feature's future work
+   (arbitrary orientations are tracked as a planned extension).
+
+   **extent1(m)** — positive scalar, in metres.  In-plane extent
+   along the first non-normal global axis.  Example: ``600``.
+
+   **extent2(m)** — positive scalar, in metres.  In-plane extent
+   along the second non-normal global axis.  Example: ``400``.
+
+The (extent1, extent2) axes are ordered by cyclic global-axis order
+excluding the normal: :math:`(1\,0\,0) \Rightarrow (Y, Z)`,
+:math:`(0\,1\,0) \Rightarrow (X, Z)`,
+:math:`(0\,0\,1) \Rightarrow (X, Y)`.
+
+Grid resolution is fixed to the low-resolution spacing
+(``dX_Low``, ``dY_Low``, ``dZ_Low``); no ``npoints`` column is
+required. Both parenthesised and bare numeric vectors parse — the
+parser strips ``(``, ``)``, and ``,`` before tokenising.
+
+Output is written as VTK XML ``StructuredGrid`` (``.vts``) plus a
+matching ParaView ``.vts.series`` sidecar so time-series playback
+works out of the box. Any node whose global-frame position falls
+outside the low-resolution domain is written as IEEE quiet NaN;
+ParaView automatically masks these.
+
+Example row (three slices — one XY at hub height, one YZ through a
+turbine, one XZ through the farm centre):
+
+.. code-block:: none
+
+  --- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---
+  3          NumPlaneSlices  - Number of axis-aligned planar slices (-)
+  DEFAULT    WrPlaneDT       - Sampling period (s) or DEFAULT (=WrDisDT)
+  SliceName  origin(m)      normal   extent1(m)  extent2(m)
+  (-)        (m,m,m)        (-)      (m)         (m)
+  "hubXY"    (700 700 95)   (0 0 1)  1200        600
+  "crossYZ"  (1000 700 5)   (1 0 0)  600         300
+  "crossXZ"  (700 1000 5)   (0 1 0)  1200        300
+
+Output naming follows the pattern
+``<RootName>.Plane.<SliceName>.<n>.vts`` with a companion
+``<RootName>.Plane.<SliceName>.vts.series``, all under ``vtk_ff/``.
+
+.. _FF:Input:TerrainSlices:
+
+Terrain-Following Sampling
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This optional block lets the user emit an arbitrary number of point
+clouds sampled from an STL surface or a plain-text/CSV point list.
+Each source can be lifted to multiple offset "sheets" along a
+user-provided normal, or along the per-facet normal read from an STL
+file. Typical use cases: a mountain surface sampled at three
+rotor-tip heights, or a hand-authored hub-height sample grid over an
+irregular farm layout.
+
+The block is optional. Legacy decks omit it entirely.
+
+The block begins with the section header
+``--- TERRAIN-FOLLOWING SAMPLING ---`` and is followed by:
+
+-  **NumTerrainSlices** [integer] specifies the number of
+   terrain-following slices (:math:`0` to :math:`99`).
+
+-  **WrTerrainDT** [sec] specifies the sampling period for this
+   feature. **DEFAULT** falls back to **WrDisDT**. Independent of
+   both **WrDisDT** and **WrPlaneDT** so that heavy terrain samples
+   can be emitted less often than lighter axis-aligned slices.
+
+-  A two-line column header followed by **NumTerrainSlices** slice
+   rows with the following columns:
+
+   **SliceName** — quoted string.  Free-form slice name; appears in
+   output file names.
+
+   **Offsets(m)** — comma- or whitespace-separated list of scalar
+   displacements (metres) along the **OffsetNormal**.  Each value
+   spawns a separate sheet sharing the source geometry.  An empty
+   list is equivalent to a single ``0``.
+
+   **OffsetNormal** — 3-vector, or the keyword ``default``.  Unit
+   vector along which the offsets are applied.  When ``default`` and
+   **SourceType** is ``STL``, the per-facet normal from the STL is
+   used instead.  An explicit vector is required when **SourceType**
+   is ``Point``.
+
+   **SourceType** — keyword.  ``STL`` reads an ASCII or binary STL
+   file and uses each facet's three vertices as sample points (no
+   de-duplication).  ``Point`` reads a plain-text or CSV point cloud
+   file (see the point-cloud file format description below).
+
+   **FileName** — quoted string.  Path to the STL or point-cloud
+   file.  Relative paths are resolved against the FAST.Farm primary
+   input file directory.
+
+Example row (two slices — a mountain lifted to three offset sheets
+and a nine-point hub-height cloud):
+
+.. code-block:: none
+
+  --- TERRAIN-FOLLOWING SAMPLING ---
+  2           NumTerrainSlices  - Number of terrain-following slices (-)
+  DEFAULT     WrTerrainDT       - Sampling period (s) or DEFAULT (=WrDisDT)
+  SliceName   Offsets(m)     OffsetNormal   SourceType   FileName
+  (-)         (m,list)       (-,-,-|dflt)   (STL|Point)  (quoted)
+  "terr"      50 100 150     default        STL          "mountain.stl"
+  "hub"       0.0            (0 0 1)        Point        "hub_points.txt"
+
+**Point-cloud file format.** Plain ASCII, one point per line, three
+floating-point columns ``x y z`` in metres in the FAST.Farm global
+coordinate frame. Delimiter is whitespace or comma (both ``.txt`` and
+``.csv`` are handled by the same parser). Comments are lines whose
+first non-blank character is ``#`` or ``!``; trailing comments are
+also allowed. Blank lines are ignored. An optional header row is
+tolerated as long as it fails numeric parsing (this lets ``.csv``
+exports with an ``x,y,z`` header row load unchanged). Column order is
+fixed to ``x y z``. Point count is derived from the file — no
+``NumPoints`` header is required. Duplicate points are not
+de-duplicated (unlike STL vertices).
+
+Output is written as VTK XML ``PolyData`` (``.vtp``) plus a matching
+``.vtp.series`` sidecar. Any sample point falling outside the
+low-resolution domain is written as IEEE quiet NaN, and an
+``ErrID_Warn`` line is emitted at init reporting the count and
+fraction. When a slice's total sample-location count
+(``NPts × N_offsets``) is unusually large (currently
+:math:`\ge 10\,000\,000`), an ``ErrID_Info`` size advisory is emitted
+reporting the estimated RAM cost. No hard cap is imposed — the
+NWTC-library allocator already fails cleanly with a byte-count message
+if the OS refuses.
+
+Output naming follows the pattern
+``<RootName>.TerrSlice.<SliceName>.<n>.vtp`` with a companion
+``<RootName>.TerrSlice.<SliceName>.vtp.series``, all under
+``vtk_ff/``.
+
 Output
 ~~~~~~
 

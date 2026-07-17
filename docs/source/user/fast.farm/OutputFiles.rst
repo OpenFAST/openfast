@@ -81,6 +81,55 @@ Each visualization output file follows the same VTK format used for the
 ambient wind data files for the high-fidelity precursor simulations. See
 :numref:`FF:AmbWindIfW` for details on the file format.
 
+.. _FF:Output:PlaneSlices:
+
+Extent-Controlled Axis-Aligned Plane Slices (Feature 2)
+-------------------------------------------------------
+
+If **NumPlaneSlices** is greater than zero in the FAST.Farm primary
+input file (see :numref:`FF:Input:PlaneSlices`), one file per slice per
+sampled step is written to *vtk_ff/* with naming
+*<RootName>.Plane.<SliceName>.<n*\ :sub:`out`\ *>.vts* where
+*<SliceName>* is the user-provided free-form name from the deck and
+*<n*\ :sub:`out`\ *>* is a zero-padded step counter.
+
+Each slice also has a companion ParaView time-series sidecar named
+*<RootName>.Plane.<SliceName>.vts.series* — a small JSON file listing
+every ``.vts`` step and its simulation time. Loading the ``.series``
+file in ParaView plays the whole slice as an animation.
+
+The ``.vts`` format is VTK XML *StructuredGrid* with explicit point
+coordinates and a 3-component ``Velocity`` field. Nodes whose
+global-frame position falls outside the low-resolution domain carry
+IEEE quiet NaN in the ``Velocity`` field; ParaView masks these
+automatically without any extra filter.
+
+The sampling period is set by **WrPlaneDT** in the deck (defaults to
+**WrDisDT**). It is independent of the classic **WrDisDT** so that
+lightweight hub-height sheets can be emitted at a much higher rate
+than heavier full-domain outputs.
+
+.. _FF:Output:TerrainSlices:
+
+Terrain-Following Point Cloud Slices (Feature 3)
+------------------------------------------------
+
+If **NumTerrainSlices** is greater than zero in the FAST.Farm primary
+input file (see :numref:`FF:Input:TerrainSlices`), one file per slice
+per sampled step is written to *vtk_ff/* with naming
+*<RootName>.TerrSlice.<SliceName>.<n*\ :sub:`out`\ *>.vtp* and a
+companion *<RootName>.TerrSlice.<SliceName>.vtp.series* sidecar.
+
+The ``.vtp`` format is VTK XML *PolyData* with per-point coordinates
+and a 3-component ``Velocity`` field. Each source vertex is
+replicated once per offset sheet, so a slice with :math:`N` source
+points and :math:`M` offsets writes :math:`N \cdot M` points per
+step. Nodes whose sample location falls outside the low-resolution
+domain are set to IEEE quiet NaN and masked by ParaView.
+
+The sampling period is set by **WrTerrainDT** in the deck (defaults to
+**WrDisDT**).
+
 Visualizing the ambient wind and wake interactions can be useful for
 interpreting results and debugging problems. However, FAST.Farm will
 generate many files per output option when **WrDisWind** = TRUE and/or
