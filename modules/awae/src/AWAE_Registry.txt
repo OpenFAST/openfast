@@ -56,6 +56,22 @@ typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceOrigin   
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceNormal    {3}{:} - -  "plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k" -
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent1    {:}   - -  "in-plane extent along the first non-normal axis, per slice" m
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent2    {:}   - -  "in-plane extent along the second non-normal axis, per slice" m
+
+# ..... Terrain-following point-cloud sampling (Feature 3) .......................................................
+# Feature 3 stores the raw config (name, source flag, filename, offsets, normal) in the input file type.
+# Offsets are ragged (each slice can have a different number of offsets) but stored via a flat/packed
+# layout: OffsetsPacked contains all offsets concatenated, OffsetIdx(k) marks the start of slice k in
+# the packed array with the convention that slice k occupies indices [OffsetIdx(k)+1 .. OffsetIdx(k+1)].
+# See modules/awae/src/AWAE.f90 for the parser and the point-cloud/STL readers.
+typedef  ^          AWAE_InputFileType   DbKi                WrTerrainDT            -    - -  "Feature 3 sampling period (s); DEFAULT falls back to WrDisDT" s
+typedef  ^          AWAE_InputFileType   IntKi               NumTerrainSlices       -    - -  "Number of terrain-following point-cloud slices (Feature 3)" -
+typedef  ^          AWAE_InputFileType   CHARACTER(64)       TerrainSliceName      {:}   - -  "user-provided slice name (used in output filenames)" -
+typedef  ^          AWAE_InputFileType   IntKi               TerrainSliceSourceType {:}  - -  "1 = STL, 2 = plain-text point cloud" -
+typedef  ^          AWAE_InputFileType   CHARACTER(1024)     TerrainSliceFileName  {:}   - -  "STL or point-cloud file name; resolved relative to the primary input file" -
+typedef  ^          AWAE_InputFileType   ReKi                TerrainSliceOffsetNormal   {3}{:}  - -  "unit vector along which each slice's Offsets are applied; if all zero, per-facet normal from STL is used" -
+typedef  ^          AWAE_InputFileType   ReKi                TerrainSliceOffsetsPacked  {:}     - -  "packed per-slice offsets (m); slice k occupies TerrainSliceOffsetIdx(k)+1 .. TerrainSliceOffsetIdx(k+1)" m
+typedef  ^          AWAE_InputFileType   IntKi               TerrainSliceOffsetIdx     {:}     - -  "prefix-sum indices into OffsetsPacked; size = NumTerrainSlices+1" -
+
 typedef  ^            ^                   LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
 typedef  ^            ^                   IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2]" -
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
@@ -153,7 +169,9 @@ typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "Closest point o
 #
 typedef   ^ MiscVarType    SiKi     outVizXYPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    IntKi    PlaneSliceStepCount   {:}  - -  "Feature 2: number of steps written per slice (drives isFirst flag in the .vts.series writer)" -
+typedef   ^ MiscVarType    IntKi    TerrainSliceStepCount {:}  - -  "Feature 3: number of steps written per slice (drives isFirst flag in the .vtp.series writer)" -
 typedef   ^ MiscVarType    IntKi    LastPlaneSliceN        -   - -  "Feature 2: last low-res step index at which planar slices were emitted; -1 initially. Guards the duplicate-emit at t=0 triggered by FARM_InitialCO calling AWAE_CalcOutput twice." -
+typedef   ^ MiscVarType    IntKi    LastTerrainSliceN      -   - -  "Feature 3: last low-res step index at which terrain slices were emitted; -1 initially. Same guard purpose as LastPlaneSliceN." -
 typedef   ^ MiscVarType    SiKi     outVizYZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizXZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_Low   - - -  "InflowWind module inputs for the low-resolution grid" -
@@ -260,6 +278,15 @@ typedef  ^  ParameterType  IntKi            PlaneSliceJLoReq      {:}  - -  "Fea
 typedef  ^  ParameterType  IntKi            PlaneSliceJHiReq      {:}  - -  "Feature 2: 0-based hi-index along Axis2" -
 typedef  ^  ParameterType  LOGICAL          PlaneSliceValid       {:}  - -  "Feature 2: true if the slice intersects the low-res domain" -
 typedef  ^  ParameterType  IntKi            PlaneSliceSeriesUn    {:}  - -  "Feature 2: open .vts.series unit per slice; -1 = closed" -
+# Feature 3 runtime state (flat arrays, indexed by slice number 1..NumTerrainSlices).
+typedef  ^  ParameterType  IntKi            WrTerrainSkp             -  - -   "Feature 3: number of low-res time steps between terrain sampling emits (WrTerrainDT/dt_low)" -
+typedef  ^  ParameterType  IntKi            NumTerrainSlices         -  - -   "Feature 3: number of terrain-following point-cloud slices" -
+typedef  ^  ParameterType  CHARACTER(64)    TerrainSliceName        {:}  - -  "Feature 3: per-slice user name" -
+typedef  ^  ParameterType  LOGICAL          TerrainSliceValid       {:}  - -  "Feature 3: true if the slice was read successfully and has at least one in-domain point" -
+typedef  ^  ParameterType  IntKi            TerrainSliceSeriesUn    {:}  - -  "Feature 3: open .vtp.series unit per slice; -1 = closed" -
+typedef  ^  ParameterType  IntKi            TerrainSliceNPtsTotal   {:}  - -  "Feature 3: total number of output points per slice (base NPts x N_offsets)" -
+typedef  ^  ParameterType  IntKi            TerrainSlicePtsIdx      {:}  - -  "Feature 3: prefix-sum indices into TerrainSlicePtsFlat; size = NumTerrainSlices+1" -
+typedef  ^  ParameterType  ReKi             TerrainSlicePtsFlat {3}{:}   - -  "Feature 3: concatenated per-slice point coordinates in the farm-global frame; slice k occupies TerrainSlicePtsIdx(k)+1 .. TerrainSlicePtsIdx(k+1)" m
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkRoot   -  - -   "The root name for VTK outputs" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeRoot -  - -   "The root name for VTK outputs for wake planes" -

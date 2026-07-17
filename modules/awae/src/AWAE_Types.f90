@@ -72,6 +72,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceNormal      !< plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent1      !< in-plane extent along the first non-normal axis, per slice [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent2      !< in-plane extent along the second non-normal axis, per slice [m]
+    REAL(DbKi)  :: WrTerrainDT = 0.0_R8Ki      !< Feature 3 sampling period (s); DEFAULT falls back to WrDisDT [s]
+    INTEGER(IntKi)  :: NumTerrainSlices = 0_IntKi      !< Number of terrain-following point-cloud slices (Feature 3) [-]
+    CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceName      !< user-provided slice name (used in output filenames) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceSourceType      !< 1 = STL, 2 = plain-text point cloud [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceFileName      !< STL or point-cloud file name; resolved relative to the primary input file [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TerrainSliceOffsetNormal      !< unit vector along which each slice's Offsets are applied; if all zero, per-facet normal from STL is used [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceOffsetsPacked      !< packed per-slice offsets (m); slice k occupies TerrainSliceOffsetIdx(k)+1 .. TerrainSliceOffsetIdx(k+1) [m]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceOffsetIdx      !< prefix-sum indices into OffsetsPacked; size = NumTerrainSlices+1 [-]
     LOGICAL  :: ChkWndFiles = .false.      !< Check all the ambient wind files for data consistency (flag) [-]
     INTEGER(IntKi)  :: Mod_Meander = 0_IntKi      !< Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2] [-]
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
@@ -170,7 +178,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !< Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane      !< An array holding the output data for a 2D visualization slice [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceStepCount      !< Feature 2: number of steps written per slice (drives isFirst flag in the .vts.series writer) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceStepCount      !< Feature 3: number of steps written per slice (drives isFirst flag in the .vtp.series writer) [-]
     INTEGER(IntKi)  :: LastPlaneSliceN = 0_IntKi      !< Feature 2: last low-res step index at which planar slices were emitted; -1 initially. Guards the duplicate-emit at t=0 triggered by FARM_InitialCO calling AWAE_CalcOutput twice. [-]
+    INTEGER(IntKi)  :: LastTerrainSliceN = 0_IntKi      !< Feature 3: last low-res step index at which terrain slices were emitted; -1 initially. Same guard purpose as LastPlaneSliceN. [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane      !< An array holding the output data for a 2D visualization slice [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane      !< An array holding the output data for a 2D visualization slice [-]
     TYPE(InflowWind_InputType)  :: u_IfW_Low      !< InflowWind module inputs for the low-resolution grid [-]
@@ -274,6 +284,14 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceJHiReq      !< Feature 2: 0-based hi-index along Axis2 [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: PlaneSliceValid      !< Feature 2: true if the slice intersects the low-res domain [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceSeriesUn      !< Feature 2: open .vts.series unit per slice; -1 = closed [-]
+    INTEGER(IntKi)  :: WrTerrainSkp = 0_IntKi      !< Feature 3: number of low-res time steps between terrain sampling emits (WrTerrainDT/dt_low) [-]
+    INTEGER(IntKi)  :: NumTerrainSlices = 0_IntKi      !< Feature 3: number of terrain-following point-cloud slices [-]
+    CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceName      !< Feature 3: per-slice user name [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: TerrainSliceValid      !< Feature 3: true if the slice was read successfully and has at least one in-domain point [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceSeriesUn      !< Feature 3: open .vtp.series unit per slice; -1 = closed [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSliceNPtsTotal      !< Feature 3: total number of output points per slice (base NPts x N_offsets) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TerrainSlicePtsIdx      !< Feature 3: prefix-sum indices into TerrainSlicePtsFlat; size = NumTerrainSlices+1 [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TerrainSlicePtsFlat      !< Feature 3: concatenated per-slice point coordinates in the farm-global frame; slice k occupies TerrainSlicePtsIdx(k)+1 .. TerrainSlicePtsIdx(k+1) [m]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
     CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
@@ -548,6 +566,80 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       end if
       DstInputFileTypeData%PlaneSliceExtent2 = SrcInputFileTypeData%PlaneSliceExtent2
    end if
+   DstInputFileTypeData%WrTerrainDT = SrcInputFileTypeData%WrTerrainDT
+   DstInputFileTypeData%NumTerrainSlices = SrcInputFileTypeData%NumTerrainSlices
+   if (allocated(SrcInputFileTypeData%TerrainSliceName)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%TerrainSliceName)
+      UB(1:1) = ubound(SrcInputFileTypeData%TerrainSliceName)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceName)) then
+         allocate(DstInputFileTypeData%TerrainSliceName(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceName.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceName = SrcInputFileTypeData%TerrainSliceName
+   end if
+   if (allocated(SrcInputFileTypeData%TerrainSliceSourceType)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%TerrainSliceSourceType)
+      UB(1:1) = ubound(SrcInputFileTypeData%TerrainSliceSourceType)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceSourceType)) then
+         allocate(DstInputFileTypeData%TerrainSliceSourceType(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceSourceType.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceSourceType = SrcInputFileTypeData%TerrainSliceSourceType
+   end if
+   if (allocated(SrcInputFileTypeData%TerrainSliceFileName)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%TerrainSliceFileName)
+      UB(1:1) = ubound(SrcInputFileTypeData%TerrainSliceFileName)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceFileName)) then
+         allocate(DstInputFileTypeData%TerrainSliceFileName(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceFileName.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceFileName = SrcInputFileTypeData%TerrainSliceFileName
+   end if
+   if (allocated(SrcInputFileTypeData%TerrainSliceOffsetNormal)) then
+      LB(1:2) = lbound(SrcInputFileTypeData%TerrainSliceOffsetNormal)
+      UB(1:2) = ubound(SrcInputFileTypeData%TerrainSliceOffsetNormal)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceOffsetNormal)) then
+         allocate(DstInputFileTypeData%TerrainSliceOffsetNormal(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceOffsetNormal.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceOffsetNormal = SrcInputFileTypeData%TerrainSliceOffsetNormal
+   end if
+   if (allocated(SrcInputFileTypeData%TerrainSliceOffsetsPacked)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%TerrainSliceOffsetsPacked)
+      UB(1:1) = ubound(SrcInputFileTypeData%TerrainSliceOffsetsPacked)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceOffsetsPacked)) then
+         allocate(DstInputFileTypeData%TerrainSliceOffsetsPacked(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceOffsetsPacked.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceOffsetsPacked = SrcInputFileTypeData%TerrainSliceOffsetsPacked
+   end if
+   if (allocated(SrcInputFileTypeData%TerrainSliceOffsetIdx)) then
+      LB(1:1) = lbound(SrcInputFileTypeData%TerrainSliceOffsetIdx)
+      UB(1:1) = ubound(SrcInputFileTypeData%TerrainSliceOffsetIdx)
+      if (.not. allocated(DstInputFileTypeData%TerrainSliceOffsetIdx)) then
+         allocate(DstInputFileTypeData%TerrainSliceOffsetIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileTypeData%TerrainSliceOffsetIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileTypeData%TerrainSliceOffsetIdx = SrcInputFileTypeData%TerrainSliceOffsetIdx
+   end if
    DstInputFileTypeData%ChkWndFiles = SrcInputFileTypeData%ChkWndFiles
    DstInputFileTypeData%Mod_Meander = SrcInputFileTypeData%Mod_Meander
    DstInputFileTypeData%C_Meander = SrcInputFileTypeData%C_Meander
@@ -685,6 +777,24 @@ subroutine AWAE_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
    if (allocated(InputFileTypeData%PlaneSliceExtent2)) then
       deallocate(InputFileTypeData%PlaneSliceExtent2)
    end if
+   if (allocated(InputFileTypeData%TerrainSliceName)) then
+      deallocate(InputFileTypeData%TerrainSliceName)
+   end if
+   if (allocated(InputFileTypeData%TerrainSliceSourceType)) then
+      deallocate(InputFileTypeData%TerrainSliceSourceType)
+   end if
+   if (allocated(InputFileTypeData%TerrainSliceFileName)) then
+      deallocate(InputFileTypeData%TerrainSliceFileName)
+   end if
+   if (allocated(InputFileTypeData%TerrainSliceOffsetNormal)) then
+      deallocate(InputFileTypeData%TerrainSliceOffsetNormal)
+   end if
+   if (allocated(InputFileTypeData%TerrainSliceOffsetsPacked)) then
+      deallocate(InputFileTypeData%TerrainSliceOffsetsPacked)
+   end if
+   if (allocated(InputFileTypeData%TerrainSliceOffsetIdx)) then
+      deallocate(InputFileTypeData%TerrainSliceOffsetIdx)
+   end if
    if (allocated(InputFileTypeData%X0_high)) then
       deallocate(InputFileTypeData%X0_high)
    end if
@@ -733,6 +843,14 @@ subroutine AWAE_PackInputFileType(RF, Indata)
    call RegPackAlloc(RF, InData%PlaneSliceNormal)
    call RegPackAlloc(RF, InData%PlaneSliceExtent1)
    call RegPackAlloc(RF, InData%PlaneSliceExtent2)
+   call RegPack(RF, InData%WrTerrainDT)
+   call RegPack(RF, InData%NumTerrainSlices)
+   call RegPackAlloc(RF, InData%TerrainSliceName)
+   call RegPackAlloc(RF, InData%TerrainSliceSourceType)
+   call RegPackAlloc(RF, InData%TerrainSliceFileName)
+   call RegPackAlloc(RF, InData%TerrainSliceOffsetNormal)
+   call RegPackAlloc(RF, InData%TerrainSliceOffsetsPacked)
+   call RegPackAlloc(RF, InData%TerrainSliceOffsetIdx)
    call RegPack(RF, InData%ChkWndFiles)
    call RegPack(RF, InData%Mod_Meander)
    call RegPack(RF, InData%C_Meander)
@@ -791,6 +909,14 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PlaneSliceNormal); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PlaneSliceExtent1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PlaneSliceExtent2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrTerrainDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumTerrainSlices); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceSourceType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceOffsetNormal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceOffsetsPacked); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceOffsetIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ChkWndFiles); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
@@ -1497,7 +1623,20 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%PlaneSliceStepCount = SrcMiscData%PlaneSliceStepCount
    end if
+   if (allocated(SrcMiscData%TerrainSliceStepCount)) then
+      LB(1:1) = lbound(SrcMiscData%TerrainSliceStepCount)
+      UB(1:1) = ubound(SrcMiscData%TerrainSliceStepCount)
+      if (.not. allocated(DstMiscData%TerrainSliceStepCount)) then
+         allocate(DstMiscData%TerrainSliceStepCount(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%TerrainSliceStepCount.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%TerrainSliceStepCount = SrcMiscData%TerrainSliceStepCount
+   end if
    DstMiscData%LastPlaneSliceN = SrcMiscData%LastPlaneSliceN
+   DstMiscData%LastTerrainSliceN = SrcMiscData%LastTerrainSliceN
    if (allocated(SrcMiscData%outVizYZPlane)) then
       LB(1:4) = lbound(SrcMiscData%outVizYZPlane)
       UB(1:4) = ubound(SrcMiscData%outVizYZPlane)
@@ -1677,6 +1816,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%PlaneSliceStepCount)) then
       deallocate(MiscData%PlaneSliceStepCount)
    end if
+   if (allocated(MiscData%TerrainSliceStepCount)) then
+      deallocate(MiscData%TerrainSliceStepCount)
+   end if
    if (allocated(MiscData%outVizYZPlane)) then
       deallocate(MiscData%outVizYZPlane)
    end if
@@ -1753,7 +1895,9 @@ subroutine AWAE_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%pvec_ce)
    call RegPackAlloc(RF, InData%outVizXYPlane)
    call RegPackAlloc(RF, InData%PlaneSliceStepCount)
+   call RegPackAlloc(RF, InData%TerrainSliceStepCount)
    call RegPack(RF, InData%LastPlaneSliceN)
+   call RegPack(RF, InData%LastTerrainSliceN)
    call RegPackAlloc(RF, InData%outVizYZPlane)
    call RegPackAlloc(RF, InData%outVizXZPlane)
    call InflowWind_PackInput(RF, InData%u_IfW_Low) 
@@ -1825,7 +1969,9 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%pvec_ce); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizXYPlane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PlaneSliceStepCount); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceStepCount); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastPlaneSliceN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastTerrainSliceN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizYZPlane); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%outVizXZPlane); if (RegCheckErr(RF, RoutineName)) return
    call InflowWind_UnpackInput(RF, OutData%u_IfW_Low) ! u_IfW_Low 
@@ -2482,6 +2628,80 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%PlaneSliceSeriesUn = SrcParamData%PlaneSliceSeriesUn
    end if
+   DstParamData%WrTerrainSkp = SrcParamData%WrTerrainSkp
+   DstParamData%NumTerrainSlices = SrcParamData%NumTerrainSlices
+   if (allocated(SrcParamData%TerrainSliceName)) then
+      LB(1:1) = lbound(SrcParamData%TerrainSliceName)
+      UB(1:1) = ubound(SrcParamData%TerrainSliceName)
+      if (.not. allocated(DstParamData%TerrainSliceName)) then
+         allocate(DstParamData%TerrainSliceName(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSliceName.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSliceName = SrcParamData%TerrainSliceName
+   end if
+   if (allocated(SrcParamData%TerrainSliceValid)) then
+      LB(1:1) = lbound(SrcParamData%TerrainSliceValid)
+      UB(1:1) = ubound(SrcParamData%TerrainSliceValid)
+      if (.not. allocated(DstParamData%TerrainSliceValid)) then
+         allocate(DstParamData%TerrainSliceValid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSliceValid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSliceValid = SrcParamData%TerrainSliceValid
+   end if
+   if (allocated(SrcParamData%TerrainSliceSeriesUn)) then
+      LB(1:1) = lbound(SrcParamData%TerrainSliceSeriesUn)
+      UB(1:1) = ubound(SrcParamData%TerrainSliceSeriesUn)
+      if (.not. allocated(DstParamData%TerrainSliceSeriesUn)) then
+         allocate(DstParamData%TerrainSliceSeriesUn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSliceSeriesUn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSliceSeriesUn = SrcParamData%TerrainSliceSeriesUn
+   end if
+   if (allocated(SrcParamData%TerrainSliceNPtsTotal)) then
+      LB(1:1) = lbound(SrcParamData%TerrainSliceNPtsTotal)
+      UB(1:1) = ubound(SrcParamData%TerrainSliceNPtsTotal)
+      if (.not. allocated(DstParamData%TerrainSliceNPtsTotal)) then
+         allocate(DstParamData%TerrainSliceNPtsTotal(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSliceNPtsTotal.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSliceNPtsTotal = SrcParamData%TerrainSliceNPtsTotal
+   end if
+   if (allocated(SrcParamData%TerrainSlicePtsIdx)) then
+      LB(1:1) = lbound(SrcParamData%TerrainSlicePtsIdx)
+      UB(1:1) = ubound(SrcParamData%TerrainSlicePtsIdx)
+      if (.not. allocated(DstParamData%TerrainSlicePtsIdx)) then
+         allocate(DstParamData%TerrainSlicePtsIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSlicePtsIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSlicePtsIdx = SrcParamData%TerrainSlicePtsIdx
+   end if
+   if (allocated(SrcParamData%TerrainSlicePtsFlat)) then
+      LB(1:2) = lbound(SrcParamData%TerrainSlicePtsFlat)
+      UB(1:2) = ubound(SrcParamData%TerrainSlicePtsFlat)
+      if (.not. allocated(DstParamData%TerrainSlicePtsFlat)) then
+         allocate(DstParamData%TerrainSlicePtsFlat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TerrainSlicePtsFlat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TerrainSlicePtsFlat = SrcParamData%TerrainSlicePtsFlat
+   end if
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
    DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
@@ -2587,6 +2807,24 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%PlaneSliceSeriesUn)) then
       deallocate(ParamData%PlaneSliceSeriesUn)
    end if
+   if (allocated(ParamData%TerrainSliceName)) then
+      deallocate(ParamData%TerrainSliceName)
+   end if
+   if (allocated(ParamData%TerrainSliceValid)) then
+      deallocate(ParamData%TerrainSliceValid)
+   end if
+   if (allocated(ParamData%TerrainSliceSeriesUn)) then
+      deallocate(ParamData%TerrainSliceSeriesUn)
+   end if
+   if (allocated(ParamData%TerrainSliceNPtsTotal)) then
+      deallocate(ParamData%TerrainSliceNPtsTotal)
+   end if
+   if (allocated(ParamData%TerrainSlicePtsIdx)) then
+      deallocate(ParamData%TerrainSlicePtsIdx)
+   end if
+   if (allocated(ParamData%TerrainSlicePtsFlat)) then
+      deallocate(ParamData%TerrainSlicePtsFlat)
+   end if
    nullify(ParamData%WAT_FlowField)
 end subroutine
 
@@ -2666,6 +2904,14 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%PlaneSliceJHiReq)
    call RegPackAlloc(RF, InData%PlaneSliceValid)
    call RegPackAlloc(RF, InData%PlaneSliceSeriesUn)
+   call RegPack(RF, InData%WrTerrainSkp)
+   call RegPack(RF, InData%NumTerrainSlices)
+   call RegPackAlloc(RF, InData%TerrainSliceName)
+   call RegPackAlloc(RF, InData%TerrainSliceValid)
+   call RegPackAlloc(RF, InData%TerrainSliceSeriesUn)
+   call RegPackAlloc(RF, InData%TerrainSliceNPtsTotal)
+   call RegPackAlloc(RF, InData%TerrainSlicePtsIdx)
+   call RegPackAlloc(RF, InData%TerrainSlicePtsFlat)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%OutFileFFvtkRoot)
    call RegPack(RF, InData%OutFileFFvtkWakeRoot)
@@ -2771,6 +3017,14 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PlaneSliceJHiReq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PlaneSliceValid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PlaneSliceSeriesUn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrTerrainSkp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumTerrainSlices); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceValid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceSeriesUn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSliceNPtsTotal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSlicePtsIdx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TerrainSlicePtsFlat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return

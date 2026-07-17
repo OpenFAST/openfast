@@ -943,6 +943,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    ! default NumPlaneSlices to 0 and rewind so the next section reads correctly.
    call ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, p%DT_low, UnEc, ErrStat2, ErrMsg2 ); if (Failed()) return
 
+   !---------------------- TERRAIN-FOLLOWING SAMPLING [Feature 3] ---
+   ! Optional block. Same backspace-and-return behavior as ReadPlaneSlicesBlock.
+   call ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, p%DT_low, UnEc, ErrStat2, ErrMsg2 ); if (Failed()) return
+
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
    CALL ReadVar( UnIn, InputFile, p%SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
@@ -1404,6 +1408,361 @@ contains
    end subroutine
 
 end subroutine ReadPlaneSlicesBlock
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read the optional '--- TERRAIN-FOLLOWING SAMPLING ---' block introduced for
+!! Feature 3 (terrain-following point-cloud sampling).  The block layout is:
+!!
+!!     --- TERRAIN-FOLLOWING SAMPLING ---
+!!     <NumTerrainSlices>          NumTerrainSlices    [0 to 99]
+!!     <WrTerrainDT | "DEFAULT">   WrTerrainDT
+!!     SliceName   Offsets(m)    OffsetNormal   SourceType   FileName
+!!     (-)         (m,list)      (-,-,-|dflt)   (STL|Point)  (quoted)
+!!     "terr"      100 200 300   default        STL          "terrain.stl"
+!!     "hubHt"     140.0         (0 0 1)        Point        "hub_points.txt"
+!!
+!! If the block header is absent from the primary input file (legacy deck),
+!! we silently BACKSPACE so the OUTPUT reader picks up where it left off.
+subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, ErrStat, ErrMsg )
+   integer(IntKi),                 intent(in   ) :: UnIn
+   character(*),                   intent(in   ) :: InputFile
+   type(AWAE_InputFileType),       intent(inout) :: AWAE_InitInp
+   real(DbKi),                     intent(in   ) :: DT_low
+   integer(IntKi),                 intent(in   ) :: UnEc
+   integer(IntKi),                 intent(  out) :: ErrStat
+   character(*),                   intent(  out) :: ErrMsg
+
+   integer(IntKi)                                :: ErrStat2, k, ios, lineLen, nOff, totOff
+   character(ErrMsgLen)                          :: ErrMsg2
+   character(1024)                               :: line
+   character(64)                                 :: name, srcTag
+   character(1024)                               :: fileName
+   real(ReKi)                                    :: normal(3), offsets(64)
+   integer(IntKi), parameter                     :: maxSlices  = 99
+   integer(IntKi), parameter                     :: maxOffsets = 64
+   integer(IntKi)                                :: perSliceNOff(maxSlices)
+   real(ReKi)                                    :: perSliceOffsets(maxOffsets, maxSlices)
+   real(ReKi)                                    :: perSliceNormal(3, maxSlices)
+   character(64)                                 :: perSliceName(maxSlices)
+   character(1024)                               :: perSliceFile(maxSlices)
+   integer(IntKi)                                :: perSliceSrc (maxSlices)
+   character(*), parameter                       :: RoutineName = 'ReadTerrainSlicesBlock'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Default: feature disabled
+   AWAE_InitInp%NumTerrainSlices = 0
+   AWAE_InitInp%WrTerrainDT      = AWAE_InitInp%WrDisDT
+
+   ! Peek at the next line to decide whether the block is present.
+   call ReadLine( UnIn, '', line, lineLen, ios )
+   if (ios /= 0) return
+
+   if ( index( line, 'TERRAIN-FOLLOWING SAMPLING' ) == 0 ) then
+      backspace( UnIn )
+      return
+   end if
+
+   call ReadVar( UnIn, InputFile, AWAE_InitInp%NumTerrainSlices, "NumTerrainSlices", &
+                 "Number of terrain-following point-cloud slices (-) [0 to 99]", &
+                 ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   if ( AWAE_InitInp%NumTerrainSlices < 0 .or. AWAE_InitInp%NumTerrainSlices > maxSlices ) then
+      call SetErrStat( ErrID_Fatal, 'NumTerrainSlices must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   call ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrTerrainDT, "WrTerrainDT", &
+                         "Feature 3 sampling period (s); DEFAULT falls back to WrDisDT", &
+                         AWAE_InitInp%WrDisDT, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   if ( AWAE_InitInp%NumTerrainSlices == 0 ) return
+
+   ! Two column-header lines
+   call ReadCom( UnIn, InputFile, 'Terrain slices column names', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+   call ReadCom( UnIn, InputFile, 'Terrain slices column units', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   perSliceNOff = 0
+   totOff = 0
+   do k = 1, AWAE_InitInp%NumTerrainSlices
+      call ReadLine( UnIn, '', line, lineLen, ios )
+      if (ios /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Failed to read terrain slice line '//trim(Num2LStr(k))//'.', &
+                          ErrStat, ErrMsg, RoutineName ); return
+      end if
+      if (UnEc > 0) write(UnEc,'(A)') trim(line)
+
+      call ParseTerrainSliceLine( line, name, offsets, nOff, normal, srcTag, fileName, ErrStat2, ErrMsg2 )
+      if (ErrStat2 /= ErrID_None) then
+         call SetErrStat( ErrID_Fatal, 'Slice '//trim(Num2LStr(k))//': '//trim(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+
+      perSliceName(k)            = name
+      perSliceNOff(k)            = nOff
+      perSliceOffsets(1:nOff, k) = offsets(1:nOff)
+      perSliceNormal(:,k)        = normal
+      perSliceFile(k)            = fileName
+      totOff                     = totOff + nOff
+
+      ! Classify SourceType
+      call ToLower(srcTag)
+      select case (trim(srcTag))
+      case ('stl')
+         perSliceSrc(k) = 1
+      case ('point','points','pointcloud','point-cloud','point_cloud')
+         perSliceSrc(k) = 2
+      case default
+         call SetErrStat( ErrID_Fatal, 'Slice '//trim(Num2LStr(k))// &
+              ': SourceType must be "STL" or "Point"; got "'//trim(srcTag)//'".', &
+              ErrStat, ErrMsg, RoutineName )
+         return
+      end select
+   end do
+
+   ! Allocate flat arrays now that we know sizes.
+   call AllocAry( AWAE_InitInp%TerrainSliceName,       AWAE_InitInp%NumTerrainSlices, 'TerrainSliceName',       ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%TerrainSliceSourceType, AWAE_InitInp%NumTerrainSlices, 'TerrainSliceSourceType', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%TerrainSliceFileName,   AWAE_InitInp%NumTerrainSlices, 'TerrainSliceFileName',   ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%TerrainSliceOffsetNormal, 3, AWAE_InitInp%NumTerrainSlices, 'TerrainSliceOffsetNormal', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%TerrainSliceOffsetsPacked, totOff, 'TerrainSliceOffsetsPacked', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( AWAE_InitInp%TerrainSliceOffsetIdx,   AWAE_InitInp%NumTerrainSlices+1, 'TerrainSliceOffsetIdx', ErrStat2, ErrMsg2 ); if (Failed()) return
+
+   AWAE_InitInp%TerrainSliceOffsetIdx(1) = 0
+   do k = 1, AWAE_InitInp%NumTerrainSlices
+      AWAE_InitInp%TerrainSliceName(k)         = perSliceName(k)
+      AWAE_InitInp%TerrainSliceSourceType(k)   = perSliceSrc(k)
+      AWAE_InitInp%TerrainSliceFileName(k)     = perSliceFile(k)
+      AWAE_InitInp%TerrainSliceOffsetNormal(:,k) = perSliceNormal(:,k)
+      AWAE_InitInp%TerrainSliceOffsetIdx(k+1)  = AWAE_InitInp%TerrainSliceOffsetIdx(k) + perSliceNOff(k)
+      if (perSliceNOff(k) > 0) then
+         AWAE_InitInp%TerrainSliceOffsetsPacked( AWAE_InitInp%TerrainSliceOffsetIdx(k)+1 : AWAE_InitInp%TerrainSliceOffsetIdx(k+1) ) = &
+            perSliceOffsets(1:perSliceNOff(k), k)
+      end if
+
+      ! Resolve relative filename against the primary input file's path
+      if ( PathIsRelative(AWAE_InitInp%TerrainSliceFileName(k)) ) then
+         AWAE_InitInp%TerrainSliceFileName(k) = trim(GetPathFromInput(InputFile))//trim(AWAE_InitInp%TerrainSliceFileName(k))
+      end if
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+
+   function GetPathFromInput(fname) result(pathStr)
+      character(*), intent(in) :: fname
+      character(1024)          :: pathStr
+      character(1024)          :: dummyBase
+      call GetPath( fname, pathStr, dummyBase )
+   end function
+
+   subroutine ToLower(s)
+      character(*), intent(inout) :: s
+      integer :: i, c
+      do i = 1, len_trim(s)
+         c = iachar(s(i:i))
+         if (c >= iachar('A') .and. c <= iachar('Z')) s(i:i) = achar(c + 32)
+      end do
+   end subroutine
+
+   !> Parse a single terrain slice row after de-delimiting parens/commas.
+   !! Row format: NAME  Offset1 [Offset2 ...]  (Nx Ny Nz | default)  SourceType  "FileName"
+   !! The row is read once into a de-delimited string; we scan tokens with a
+   !! small state machine (tokens between the name and the (normal) group are
+   !! offsets; then 3 more numeric tokens are the normal or the 'default'
+   !! keyword; then SourceType keyword; then quoted filename).
+   subroutine ParseTerrainSliceLine( raw, sliceName, offList, nOffLocal, nrm, srcTagLocal, fnameLocal, err, msg )
+      character(*), intent(in   ) :: raw
+      character(*), intent(  out) :: sliceName
+      real(ReKi),   intent(  out) :: offList(:)
+      integer(IntKi), intent(  out) :: nOffLocal
+      real(ReKi),   intent(  out) :: nrm(3)
+      character(*), intent(  out) :: srcTagLocal
+      character(*), intent(  out) :: fnameLocal
+      integer(IntKi), intent(  out) :: err
+      character(*), intent(  out) :: msg
+
+      character(len(raw))    :: work
+      character(1024)        :: tok
+      integer                :: tokCount, i, defPos, iosLocal
+      real(ReKi)             :: rval
+      logical                :: normalIsDefault
+
+      err  = ErrID_None
+      msg  = ''
+      nrm  = 0.0_ReKi
+      offList = 0.0_ReKi
+      nOffLocal = 0
+      normalIsDefault = .false.
+
+      work = raw
+      i = scan(work, '!#')
+      if (i > 0) work(i:) = ' '
+
+      ! The row has (up to) TWO double-quoted strings: the slice name (first)
+      ! and the filename (second/last). Extract in order.
+      call ExtractQuoted( work, sliceName )
+      if (len_trim(sliceName) == 0) then
+         call ExtractBareToken( work, sliceName )
+      end if
+      if (len_trim(sliceName) == 0) then
+         err = ErrID_Fatal; msg = 'Missing slice name.'
+         return
+      end if
+
+      call ExtractQuoted( work, fnameLocal )
+      if (len_trim(fnameLocal) == 0) then
+         err = ErrID_Fatal; msg = 'Missing quoted FileName in terrain slice row.'
+         return
+      end if
+
+      ! Strip parens/commas so vectors "(1 0 0)" parse as space-separated tokens
+      do i = 1, len_trim(work)
+         if ( work(i:i) == '(' .or. work(i:i) == ')' .or. work(i:i) == ',' ) work(i:i) = ' '
+      end do
+
+      ! Locate the case-insensitive "default" keyword if present. It replaces
+      ! the three normal tokens with an implicit signal that we should defer to
+      ! the STL per-facet normal. Blank out those chars so numeric scanning is
+      ! simpler afterwards.
+      defPos = FindKeywordCI( work, 'default' )
+      if (defPos > 0) then
+         normalIsDefault = .true.
+         work(defPos:defPos+6) = '       '
+      end if
+
+      ! Now tokenise remaining words. Numeric tokens fill offList (variable
+      ! count). Non-numeric tokens are the SourceType keyword. If normal isn't
+      ! default, the last 3 numeric tokens before the SourceType keyword are
+      ! the normal vector.
+      tokCount = 0
+      srcTagLocal = ''
+      do
+         call PopToken( work, tok )
+         if (len_trim(tok) == 0) exit
+
+         read(tok, *, iostat=iosLocal) rval
+         if (iosLocal == 0) then
+            ! Numeric: offset or normal component
+            tokCount = tokCount + 1
+            offList(tokCount) = rval
+            if (tokCount > size(offList)) then
+               err = ErrID_Fatal; msg = 'Too many offsets on a single line.'
+               return
+            end if
+         else
+            ! Non-numeric: SourceType keyword
+            srcTagLocal = adjustl(tok)
+            exit
+         end if
+      end do
+
+      if (len_trim(srcTagLocal) == 0) then
+         err = ErrID_Fatal; msg = 'Missing SourceType (STL or Point).'
+         return
+      end if
+
+      if (normalIsDefault) then
+         nOffLocal = tokCount
+         nrm       = 0.0_ReKi  ! sentinel: use per-facet normal from STL
+      else
+         if (tokCount < 3) then
+            err = ErrID_Fatal; msg = 'Need at least the (Nx Ny Nz) normal or the keyword "default".'
+            return
+         end if
+         nrm(1) = offList(tokCount-2)
+         nrm(2) = offList(tokCount-1)
+         nrm(3) = offList(tokCount  )
+         nOffLocal = tokCount - 3
+      end if
+
+   end subroutine
+
+   subroutine ExtractQuoted( s, name )
+      character(*), intent(inout) :: s
+      character(*), intent(  out) :: name
+      integer :: q1, q2
+      name = ''
+      q1 = index(s, '"')
+      if (q1 == 0) return
+      q2 = index(s(q1+1:), '"')
+      if (q2 == 0) return
+      name = adjustl(s(q1+1:q1+q2-1))
+      s(q1:q1+q2) = repeat(' ', q2+1)
+   end subroutine
+
+   subroutine ExtractBareToken( s, tokOut )
+      character(*), intent(inout) :: s
+      character(*), intent(  out) :: tokOut
+      integer :: ns, ne
+      tokOut = ''
+      ns = verify(s, ' '//char(9))
+      if (ns == 0) return
+      ne = ns
+      do
+         if (ne > len(s)) exit
+         if (s(ne:ne) == ' ' .or. s(ne:ne) == char(9)) exit
+         ne = ne + 1
+      end do
+      tokOut = adjustl(s(ns:ne-1))
+      s(ns:ne-1) = repeat(' ', ne-ns)
+   end subroutine
+
+   subroutine PopToken( s, tokOut )
+      character(*), intent(inout) :: s
+      character(*), intent(  out) :: tokOut
+      integer :: ns, ne
+      tokOut = ''
+      ns = verify(s, ' '//char(9))
+      if (ns == 0) return
+      ne = ns
+      do
+         if (ne > len(s)) exit
+         if (s(ne:ne) == ' ' .or. s(ne:ne) == char(9)) exit
+         ne = ne + 1
+      end do
+      tokOut = adjustl(s(ns:ne-1))
+      s(ns:ne-1) = repeat(' ', ne-ns)
+   end subroutine
+
+   integer function FindKeywordCI( s, kw )
+      character(*), intent(in) :: s, kw
+      integer :: i, ls, lk
+      character(len(kw)) :: sub
+      FindKeywordCI = 0
+      ls = len_trim(s); lk = len_trim(kw)
+      if (lk == 0 .or. ls < lk) return
+      do i = 1, ls - lk + 1
+         sub = s(i:i+lk-1)
+         call ToLowerInner(sub)
+         if (sub == kw) then
+            ! word boundary check
+            if (i > 1) then
+               if (s(i-1:i-1) /= ' ' .and. s(i-1:i-1) /= char(9)) cycle
+            end if
+            if (i+lk <= ls) then
+               if (s(i+lk:i+lk) /= ' ' .and. s(i+lk:i+lk) /= char(9)) cycle
+            end if
+            FindKeywordCI = i
+            return
+         end if
+      end do
+   end function
+
+   subroutine ToLowerInner(s)
+      character(*), intent(inout) :: s
+      integer :: i, c
+      do i = 1, len_trim(s)
+         c = iachar(s(i:i))
+         if (c >= iachar('A') .and. c <= iachar('Z')) s(i:i) = achar(c + 32)
+      end do
+   end subroutine
+
+end subroutine ReadTerrainSlicesBlock
 
 
 end module FAST_Farm_IO

@@ -406,6 +406,569 @@ subroutine EmitPlaneSlices( t, n, p, m, errStat, errMsg )
 
 end subroutine EmitPlaneSlices
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Read an ASCII or binary STL file and return the union of all vertex
+!! coordinates plus a matching per-vertex facet normal (each vertex inherits
+!! the normal of its owning facet; duplicate vertices are kept, so the point
+!! count equals 3 * NumFacets).  If the file cannot be opened the routine
+!! returns ErrID_Fatal.  The binary/ascii selection is inferred from the
+!! first line: ASCII STL begins with the keyword "solid " followed by
+!! printable text (binary STL headers may start with the byte pattern that
+!! looks like "solid" too, so we cross-check by reading a few facet lines).
+subroutine ReadSTLFile( fileName, Pts, Nrm, ErrStat, ErrMsg )
+   character(*),           intent(in   ) :: fileName
+   real(ReKi), allocatable, intent(  out) :: Pts(:,:)    !< (3, 3*NumFacets)
+   real(ReKi), allocatable, intent(  out) :: Nrm(:,:)    !< (3, 3*NumFacets) - facet normal, per vertex
+   integer(IntKi),          intent(  out) :: ErrStat
+   character(*),            intent(  out) :: ErrMsg
+
+   integer(IntKi)              :: Un, ios, ErrStat2, i, npts, nFacets, iface
+   character(ErrMsgLen)        :: ErrMsg2
+   character(1024)             :: line
+   character(80)               :: hdr
+   integer(kind=B4Ki)          :: nFacets32
+   real(SiKi)                  :: nrm32(3), v32(3)
+   integer(kind=B2Ki)          :: attrByteCount
+   character(6)                :: word6
+   logical                     :: isAscii
+   character(*), parameter     :: RoutineName = 'ReadSTLFile'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit(Un, ErrStat2, ErrMsg2)
+   ! Open as unformatted stream so we can inspect the header regardless of
+   ! whether the file is ASCII or binary.
+   open( unit=Un, file=trim(fileName), status='old', access='stream', &
+         form='unformatted', action='read', iostat=ios )
+   !$OMP end critical(fileopenNWTCio_critical)
+   if (ios /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Cannot open STL file "'//trim(fileName)//'"', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! Read the first 6 characters. ASCII STLs start with "solid " and are
+   ! followed by a printable name + newline (\n or \r\n). Binary STLs also
+   ! typically start with "solid " in their 80-byte header but have no
+   ! newline in the first ~200 bytes. Test: read the first line; if it fits
+   ! neatly under 1024 chars and contains "facet " in the file's second
+   ! non-empty line, treat as ASCII.
+   read(Un, iostat=ios) word6
+   close(Un)
+   isAscii = ( word6(1:5) == 'solid' .or. word6(1:5) == 'SOLID' )
+
+   if (isAscii) then
+      ! Reopen as text and probe for "facet" to distinguish from binary "solid" false positives.
+      !$OMP critical(fileopenNWTCio_critical)
+      open( unit=Un, file=trim(fileName), status='old', action='read', iostat=ios )
+      !$OMP end critical(fileopenNWTCio_critical)
+      if (ios /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Cannot reopen STL file "'//trim(fileName)//'"', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+
+      ! Count facets first
+      nFacets = 0
+      do
+         read(Un, '(A)', iostat=ios) line
+         if (ios /= 0) exit
+         line = adjustl(line)
+         call SToLower(line)
+         if (index(line, 'facet normal') == 1) nFacets = nFacets + 1
+      end do
+
+      if (nFacets == 0) then
+         ! No "facet normal" found: the file was misidentified as ASCII or is empty.
+         !$OMP critical(fileopenNWTCio_critical)
+         close(Un)
+         !$OMP end critical(fileopenNWTCio_critical)
+         call ReadSTL_Binary( fileName, Pts, Nrm, ErrStat, ErrMsg )
+         return
+      end if
+
+      npts = 3 * nFacets
+      allocate(Pts(3, npts), Nrm(3, npts), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Alloc Pts/Nrm for '//trim(Num2LStr(npts))//' STL vertices failed', &
+                          ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+
+      rewind(Un)
+      iface = 0
+      npts  = 0
+      do
+         read(Un, '(A)', iostat=ios) line
+         if (ios /= 0) exit
+         line = adjustl(line)
+         call SToLower(line)
+         if (index(line, 'facet normal') == 1) then
+            iface = iface + 1
+            read(line(len('facet normal')+1:), *, iostat=ios) nrm32(1), nrm32(2), nrm32(3)
+            if (ios /= 0) then
+               call SetErrStat( ErrID_Fatal, 'Failed to parse normal for facet '//trim(Num2LStr(iface))//' in "'//trim(fileName)//'".', ErrStat, ErrMsg, RoutineName )
+               close(Un); return
+            end if
+         else if (index(line, 'vertex') == 1) then
+            read(line(len('vertex')+1:), *, iostat=ios) v32(1), v32(2), v32(3)
+            if (ios /= 0) then
+               call SetErrStat( ErrID_Fatal, 'Failed to parse vertex in "'//trim(fileName)//'".', ErrStat, ErrMsg, RoutineName )
+               close(Un); return
+            end if
+            npts = npts + 1
+            Pts(:, npts) = real(v32, ReKi)
+            Nrm(:, npts) = real(nrm32, ReKi)
+         end if
+      end do
+      close(Un)
+
+   else
+      call ReadSTL_Binary( fileName, Pts, Nrm, ErrStat, ErrMsg )
+   end if
+
+contains
+   subroutine SToLower(s)
+      character(*), intent(inout) :: s
+      integer :: kk, cc
+      do kk = 1, len_trim(s)
+         cc = iachar(s(kk:kk))
+         if (cc >= iachar('A') .and. cc <= iachar('Z')) s(kk:kk) = achar(cc + 32)
+      end do
+   end subroutine
+
+   subroutine ReadSTL_Binary( fname, Pts_, Nrm_, es, em )
+      character(*), intent(in   ) :: fname
+      real(ReKi), allocatable, intent(out) :: Pts_(:,:), Nrm_(:,:)
+      integer(IntKi), intent(out) :: es
+      character(*),   intent(out) :: em
+      integer :: Un2, iosB, iB, jB, kB
+      integer(kind=B4Ki) :: nFB
+      real(SiKi)         :: nrmB(3), vB(3)
+      integer(kind=B2Ki) :: attrB
+
+      es = ErrID_None; em = ''
+
+      !$OMP critical(fileopenNWTCio_critical)
+      call GetNewUnit(Un2, es, em)
+      open( unit=Un2, file=trim(fname), status='old', access='stream', &
+            form='unformatted', action='read', iostat=iosB )
+      !$OMP end critical(fileopenNWTCio_critical)
+      if (iosB /= 0) then
+         es = ErrID_Fatal
+         em = 'Cannot open binary STL "'//trim(fname)//'"'
+         return
+      end if
+
+      read(Un2, iostat=iosB) hdr
+      read(Un2, iostat=iosB) nFB
+      if (iosB /= 0 .or. nFB <= 0) then
+         close(Un2)
+         es = ErrID_Fatal
+         em = 'Failed to read binary STL header/facet count from "'//trim(fname)//'"'
+         return
+      end if
+
+      allocate(Pts_(3, 3*int(nFB,IntKi)), Nrm_(3, 3*int(nFB,IntKi)), stat=iosB)
+      if (iosB /= 0) then
+         close(Un2)
+         es = ErrID_Fatal
+         em = 'Alloc for binary STL vertices failed'
+         return
+      end if
+
+      kB = 0
+      do iB = 1, int(nFB, IntKi)
+         read(Un2, iostat=iosB) nrmB
+         if (iosB /= 0) exit
+         do jB = 1, 3
+            read(Un2, iostat=iosB) vB
+            if (iosB /= 0) exit
+            kB = kB + 1
+            Pts_(:, kB) = real(vB, ReKi)
+            Nrm_(:, kB) = real(nrmB, ReKi)
+         end do
+         read(Un2, iostat=iosB) attrB
+      end do
+      close(Un2)
+   end subroutine
+
+end subroutine ReadSTLFile
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read a plain-text or CSV point-cloud file: one point per line, three
+!! numeric columns `x y z` in the FAST.Farm global coordinate frame.  White
+!! space OR comma delimiters; leading '!' or '#' lines are comments; an
+!! optional header row is accepted as long as it fails numeric parsing and
+!! appears before the first data row.  Point count is derived from the file.
+subroutine ReadPointCloudFile( fileName, Pts, ErrStat, ErrMsg )
+   character(*),             intent(in   ) :: fileName
+   real(ReKi), allocatable,  intent(  out) :: Pts(:,:)
+   integer(IntKi),           intent(  out) :: ErrStat
+   character(*),             intent(  out) :: ErrMsg
+
+   integer(IntKi)              :: Un, ios, ErrStat2, npts, k
+   character(ErrMsgLen)        :: ErrMsg2
+   character(1024)             :: line
+   real(ReKi)                  :: x, y, z
+   logical                     :: sawFirstData
+   character(*), parameter     :: RoutineName = 'ReadPointCloudFile'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit(Un, ErrStat2, ErrMsg2)
+   open( unit=Un, file=trim(fileName), status='old', action='read', iostat=ios )
+   !$OMP end critical(fileopenNWTCio_critical)
+   if (ios /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Cannot open point-cloud file "'//trim(fileName)//'"', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! First pass: count data lines
+   npts         = 0
+   sawFirstData = .false.
+   do
+      read(Un, '(A)', iostat=ios) line
+      if (ios /= 0) exit
+      call NormalizeLine( line )
+      if (len_trim(line) == 0) cycle
+      read(line, *, iostat=ios) x, y, z
+      if (ios == 0) then
+         npts = npts + 1
+         sawFirstData = .true.
+      else
+         if (sawFirstData) then
+            call SetErrStat( ErrID_Fatal, 'Malformed row in point cloud "'//trim(fileName)//'": '//trim(line), &
+                             ErrStat, ErrMsg, RoutineName )
+            close(Un); return
+         end if
+         ! Header row before any data: silently skip
+      end if
+   end do
+
+   if (npts == 0) then
+      close(Un)
+      call SetErrStat( ErrID_Warn, 'Point-cloud file "'//trim(fileName)//'" contained zero data rows.', &
+                       ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   allocate(Pts(3, npts), stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      close(Un)
+      call SetErrStat( ErrID_Fatal, 'Alloc Pts for '//trim(Num2LStr(npts))//' point-cloud vertices failed', &
+                       ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! Second pass: fill
+   rewind(Un)
+   k = 0
+   do
+      read(Un, '(A)', iostat=ios) line
+      if (ios /= 0) exit
+      call NormalizeLine( line )
+      if (len_trim(line) == 0) cycle
+      read(line, *, iostat=ios) x, y, z
+      if (ios /= 0) cycle
+      k = k + 1
+      Pts(1,k) = x
+      Pts(2,k) = y
+      Pts(3,k) = z
+   end do
+   close(Un)
+
+contains
+   !> Strip inline comments, replace commas with spaces so both plain-text
+   !! and CSV files parse under list-directed reads.
+   subroutine NormalizeLine( s )
+      character(*), intent(inout) :: s
+      integer :: kk
+      kk = scan(s, '!#')
+      if (kk > 0) s(kk:) = ' '
+      do kk = 1, len_trim(s)
+         if (s(kk:kk) == ',') s(kk:kk) = ' '
+      end do
+   end subroutine
+
+end subroutine ReadPointCloudFile
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read every terrain slice's source file, expand each source with its list of
+!! offsets, and pack the resulting point coordinates into `p%TerrainSlicePtsFlat`.
+!! Emits an `ErrID_Info` size advisory (per plan §2.2.2) when a slice exceeds
+!! ~10 M sample locations.  Opens each slice's `.vtp.series` sidecar for the
+!! lifetime of the run.  Also emits an `ErrID_Warn` at init when part of the
+!! slice sits outside the low-res domain (out-of-domain points are NaN-filled
+!! at emit time).
+subroutine ValidateTerrainSlices( p, InputFileData, ErrStat, ErrMsg )
+   type(AWAE_ParameterType), intent(inout) :: p
+   type(AWAE_InputFileType), intent(in   ) :: InputFileData
+   integer(IntKi),           intent(inout) :: ErrStat
+   character(*),             intent(inout) :: ErrMsg
+
+   integer(IntKi)              :: k, oStart, oEnd, nOff, iOff, iSrc, iOut, totOut
+   integer(IntKi)              :: ErrStat2
+   character(ErrMsgLen)        :: ErrMsg2
+   real(ReKi), allocatable     :: srcPts(:,:), srcNrm(:,:)
+   real(ReKi)                  :: gNrm(3), o
+   character(1024)             :: seriesFile
+   integer(IntKi)              :: seriesUn
+   integer(IntKi)              :: nSrc, nOutside
+   real(ReKi)                  :: xyz(3)
+   character(*), parameter     :: RoutineName = 'ValidateTerrainSlices'
+   integer(IntKi), parameter   :: sizeAdvisoryThreshold = 10000000
+
+   if (p%NumTerrainSlices <= 0) return
+
+   ! Pass 1: read each source file, compute total point count per slice
+   call AllocAry( p%TerrainSliceNPtsTotal, p%NumTerrainSlices, 'p%TerrainSliceNPtsTotal', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( p%TerrainSlicePtsIdx,    p%NumTerrainSlices+1, 'p%TerrainSlicePtsIdx', ErrStat2, ErrMsg2 ); if (Failed()) return
+
+   p%TerrainSlicePtsIdx(1) = 0
+   totOut = 0
+   do k = 1, p%NumTerrainSlices
+      oStart = InputFileData%TerrainSliceOffsetIdx(k)
+      oEnd   = InputFileData%TerrainSliceOffsetIdx(k+1)
+      nOff   = oEnd - oStart
+      if (nOff <= 0) then
+         call SetErrStat( ErrID_Warn, 'Terrain slice "'//trim(InputFileData%TerrainSliceName(k))// &
+              '" has zero offsets; a single sheet at offset=0 will be produced.', ErrStat, ErrMsg, RoutineName )
+         nOff = 1  ! implicit offset 0
+      end if
+
+      ! Read source file to count vertices
+      if (InputFileData%TerrainSliceSourceType(k) == 1) then
+         call ReadSTLFile( InputFileData%TerrainSliceFileName(k), srcPts, srcNrm, ErrStat2, ErrMsg2 )
+      else
+         call ReadPointCloudFile( InputFileData%TerrainSliceFileName(k), srcPts, ErrStat2, ErrMsg2 )
+      end if
+      if (Failed()) return
+
+      nSrc = 0
+      if (allocated(srcPts)) nSrc = size(srcPts, 2)
+
+      p%TerrainSliceNPtsTotal(k) = nSrc * nOff
+      p%TerrainSlicePtsIdx(k+1)  = p%TerrainSlicePtsIdx(k) + p%TerrainSliceNPtsTotal(k)
+      totOut = totOut + p%TerrainSliceNPtsTotal(k)
+
+      if ( p%TerrainSliceNPtsTotal(k) >= sizeAdvisoryThreshold ) then
+         call SetErrStat( ErrID_Info, 'Terrain slice "'//trim(InputFileData%TerrainSliceName(k))// &
+              '" has '//trim(Num2LStr(p%TerrainSliceNPtsTotal(k)))// &
+              ' sample locations (~'//trim(Num2LStr(real(p%TerrainSliceNPtsTotal(k)*28)/1e6))// &
+              ' MB persistent RAM).', ErrStat, ErrMsg, RoutineName )
+      end if
+
+      if (allocated(srcPts)) deallocate(srcPts)
+      if (allocated(srcNrm)) deallocate(srcNrm)
+   end do
+
+   ! Pass 2: allocate the flat coordinate array
+   call AllocAry( p%TerrainSlicePtsFlat, 3, max(totOut,1_IntKi), 'p%TerrainSlicePtsFlat', ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( p%TerrainSliceName,     p%NumTerrainSlices, 'p%TerrainSliceName',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( p%TerrainSliceValid,    p%NumTerrainSlices, 'p%TerrainSliceValid',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   call AllocAry( p%TerrainSliceSeriesUn, p%NumTerrainSlices, 'p%TerrainSliceSeriesUn', ErrStat2, ErrMsg2 ); if (Failed()) return
+   p%TerrainSliceValid    = .true.
+   p%TerrainSliceSeriesUn = -1
+
+   ! Pass 3: re-read each file, expand with offsets, write into the flat array
+   do k = 1, p%NumTerrainSlices
+      p%TerrainSliceName(k) = InputFileData%TerrainSliceName(k)
+
+      oStart = InputFileData%TerrainSliceOffsetIdx(k)
+      oEnd   = InputFileData%TerrainSliceOffsetIdx(k+1)
+      nOff   = max(1, oEnd - oStart)
+
+      if (InputFileData%TerrainSliceSourceType(k) == 1) then
+         call ReadSTLFile( InputFileData%TerrainSliceFileName(k), srcPts, srcNrm, ErrStat2, ErrMsg2 )
+      else
+         call ReadPointCloudFile( InputFileData%TerrainSliceFileName(k), srcPts, ErrStat2, ErrMsg2 )
+      end if
+      if (Failed()) return
+      if (.not. allocated(srcPts)) cycle
+      nSrc = size(srcPts, 2)
+      if (nSrc == 0) cycle
+
+      gNrm = InputFileData%TerrainSliceOffsetNormal(:,k)
+
+      iOut = p%TerrainSlicePtsIdx(k)
+      nOutside = 0
+      do iOff = 1, nOff
+         if (nOff == 1 .and. oEnd == oStart) then
+            o = 0.0_ReKi
+         else
+            o = InputFileData%TerrainSliceOffsetsPacked( oStart + iOff )
+         end if
+
+         do iSrc = 1, nSrc
+            iOut = iOut + 1
+            if (all(abs(gNrm) < 1.0e-6_ReKi) .and. allocated(srcNrm)) then
+               ! Use per-facet normal from STL
+               xyz = srcPts(:,iSrc) + o * srcNrm(:,iSrc)
+            else
+               xyz = srcPts(:,iSrc) + o * gNrm
+            end if
+            p%TerrainSlicePtsFlat(:, iOut) = xyz
+
+            if ( xyz(1) < p%LowRes%oXYZ(1) .or. xyz(1) > p%LowRes%oXYZ(1) + real(p%LowRes%nXYZ(1)-1,ReKi)*p%LowRes%dXYZ(1) .or. &
+                 xyz(2) < p%LowRes%oXYZ(2) .or. xyz(2) > p%LowRes%oXYZ(2) + real(p%LowRes%nXYZ(2)-1,ReKi)*p%LowRes%dXYZ(2) .or. &
+                 xyz(3) < p%LowRes%oXYZ(3) .or. xyz(3) > p%LowRes%oXYZ(3) + real(p%LowRes%nXYZ(3)-1,ReKi)*p%LowRes%dXYZ(3) ) then
+               nOutside = nOutside + 1
+            end if
+         end do
+      end do
+
+      if (nOutside > 0) then
+         call SetErrStat( ErrID_Warn, 'Terrain slice "'//trim(p%TerrainSliceName(k))//'": '// &
+              trim(Num2LStr(nOutside))//' of '//trim(Num2LStr(p%TerrainSliceNPtsTotal(k)))// &
+              ' sample points fall outside the low-resolution domain and will be written as NaN.', &
+              ErrStat, ErrMsg, RoutineName )
+      end if
+      if (nOutside == p%TerrainSliceNPtsTotal(k)) then
+         call SetErrStat( ErrID_Warn, 'Terrain slice "'//trim(p%TerrainSliceName(k))// &
+              '" is entirely outside the low-resolution domain; skipping.', ErrStat, ErrMsg, RoutineName )
+         p%TerrainSliceValid(k) = .false.
+      end if
+
+      ! Open .vtp.series sidecar
+      if ( p%TerrainSliceValid(k) ) then
+         seriesFile = trim(p%OutFileFFvtkRoot)//".TerrSlice."//trim(p%TerrainSliceName(k))//".vtp.series"
+         call VTK_Series_Open( seriesFile, seriesUn, ErrStat2, ErrMsg2 )
+         if (ErrStat2 < AbortErrLev) then
+            p%TerrainSliceSeriesUn(k) = seriesUn
+         else
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            p%TerrainSliceValid(k) = .false.
+         end if
+      end if
+
+      if (allocated(srcPts)) deallocate(srcPts)
+      if (allocated(srcNrm)) deallocate(srcNrm)
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function
+
+end subroutine ValidateTerrainSlices
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Emit VTK PolyData output for every Feature 3 terrain slice at the current
+!! low-res step. Trilinear-samples m%Vdist_low_full at each pre-computed point;
+!! out-of-domain points are set to IEEE quiet NaN (ParaView masks them).
+subroutine EmitTerrainSlices( t, n, p, m, ErrStat, ErrMsg )
+   use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
+   real(DbKi),                     intent(in   ) :: t
+   integer(IntKi),                 intent(in   ) :: n
+   type(AWAE_ParameterType),       intent(in   ) :: p
+   type(AWAE_MiscVarType),         intent(inout) :: m
+   integer(IntKi),                 intent(  out) :: ErrStat
+   character(*),                   intent(  out) :: ErrMsg
+
+   integer(IntKi)              :: k, i, iStart, iEnd, nPts, ErrStat2
+   real(SiKi), allocatable     :: vel(:,:)
+   real(ReKi), allocatable     :: ptsK(:,:)
+   real(SiKi)                  :: nan, u, v, w
+   real(ReKi)                  :: xr, yr, zr, fx, fy, fz
+   integer(IntKi)              :: ix, iy, iz
+   character(ErrMsgLen)        :: ErrMsg2
+   character(1024)             :: fileName, seriesDir, seriesEntry
+   character(20)               :: Tstr
+   logical                     :: isFirst
+   character(*), parameter     :: RoutineName = 'EmitTerrainSlices'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   if (p%NumTerrainSlices <= 0) return
+
+   ! Guard the duplicate-emit at t=0 (same as Feature 2)
+   if ( m%LastTerrainSliceN == n ) return
+   m%LastTerrainSliceN = n
+
+   nan = ieee_value( 0.0_SiKi, ieee_quiet_nan )
+
+   write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n/p%WrDisSkp1
+
+   do k = 1, p%NumTerrainSlices
+      if (.not. p%TerrainSliceValid(k)) cycle
+
+      iStart = p%TerrainSlicePtsIdx(k) + 1
+      iEnd   = p%TerrainSlicePtsIdx(k+1)
+      nPts   = iEnd - iStart + 1
+      if (nPts <= 0) cycle
+
+      allocate(ptsK(3, nPts), vel(3, nPts), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, 'Alloc temp Pts/Vel failed', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      ptsK = p%TerrainSlicePtsFlat(:, iStart:iEnd)
+
+      do i = 1, nPts
+         ! Convert world coord to floating grid index
+         xr = (ptsK(1,i) - p%LowRes%oXYZ(1)) / p%LowRes%dXYZ(1)
+         yr = (ptsK(2,i) - p%LowRes%oXYZ(2)) / p%LowRes%dXYZ(2)
+         zr = (ptsK(3,i) - p%LowRes%oXYZ(3)) / p%LowRes%dXYZ(3)
+
+         if ( xr < 0.0_ReKi .or. xr > real(p%LowRes%nXYZ(1)-1,ReKi) .or. &
+              yr < 0.0_ReKi .or. yr > real(p%LowRes%nXYZ(2)-1,ReKi) .or. &
+              zr < 0.0_ReKi .or. zr > real(p%LowRes%nXYZ(3)-1,ReKi) ) then
+            vel(:,i) = nan
+            cycle
+         end if
+
+         ix = floor(xr); iy = floor(yr); iz = floor(zr)
+         if (ix > p%LowRes%nXYZ(1)-2) ix = p%LowRes%nXYZ(1)-2
+         if (iy > p%LowRes%nXYZ(2)-2) iy = p%LowRes%nXYZ(2)-2
+         if (iz > p%LowRes%nXYZ(3)-2) iz = p%LowRes%nXYZ(3)-2
+         if (ix < 0) ix = 0
+         if (iy < 0) iy = 0
+         if (iz < 0) iz = 0
+         fx = xr - real(ix,ReKi); fy = yr - real(iy,ReKi); fz = zr - real(iz,ReKi)
+
+         u = trilerp_c( 1, ix, iy, iz, fx, fy, fz )
+         v = trilerp_c( 2, ix, iy, iz, fx, fy, fz )
+         w = trilerp_c( 3, ix, iy, iz, fx, fy, fz )
+         vel(1,i) = u; vel(2,i) = v; vel(3,i) = w
+      end do
+
+      fileName = trim(p%OutFileFFvtkRoot)//".TerrSlice."//trim(p%TerrainSliceName(k))//"."//trim(Tstr)//".vtp"
+      call WriteVTK_PolyData( fileName, &
+           "Terrain slice "//trim(p%TerrainSliceName(k))//" at t="//trim(num2lstr(t))//"s", &
+           ptsK, vel, "Velocity", ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      if ( p%TerrainSliceSeriesUn(k) > 0 ) then
+         isFirst = ( m%TerrainSliceStepCount(k) == 0 )
+         call GetPath( fileName, seriesDir, seriesEntry )
+         call VTK_Series_Append( p%TerrainSliceSeriesUn(k), trim(seriesEntry), t, isFirst, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         m%TerrainSliceStepCount(k) = m%TerrainSliceStepCount(k) + 1
+      end if
+
+      deallocate(ptsK, vel)
+   end do
+
+contains
+   real(SiKi) function trilerp_c( icomp, ix0, iy0, iz0, fxL, fyL, fzL ) result(val)
+      integer(IntKi), intent(in) :: icomp, ix0, iy0, iz0
+      real(ReKi),     intent(in) :: fxL, fyL, fzL
+      real(SiKi) :: c00, c01, c10, c11, c0, c1
+      c00 = m%Vdist_low_full(icomp, ix0,   iy0,   iz0)   * (1.0_ReKi - fxL) + &
+            m%Vdist_low_full(icomp, ix0+1, iy0,   iz0)   *              fxL
+      c01 = m%Vdist_low_full(icomp, ix0,   iy0,   iz0+1) * (1.0_ReKi - fxL) + &
+            m%Vdist_low_full(icomp, ix0+1, iy0,   iz0+1) *              fxL
+      c10 = m%Vdist_low_full(icomp, ix0,   iy0+1, iz0)   * (1.0_ReKi - fxL) + &
+            m%Vdist_low_full(icomp, ix0+1, iy0+1, iz0)   *              fxL
+      c11 = m%Vdist_low_full(icomp, ix0,   iy0+1, iz0+1) * (1.0_ReKi - fxL) + &
+            m%Vdist_low_full(icomp, ix0+1, iy0+1, iz0+1) *              fxL
+      c0  = c00 * (1.0_ReKi - fyL) + c10 * fyL
+      c1  = c01 * (1.0_ReKi - fyL) + c11 * fyL
+      val = c0  * (1.0_ReKi - fzL) + c1  * fzL
+   end function
+end subroutine EmitTerrainSlices
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Precompute, for every pair of adjacent wake planes (np, np+1) of every turbine, the geometric quantities that
 !! describe the relative orientation of the two planes. For each pair, this routine evaluates the cosine and sine of
 !! the angle between the plane normals `u%xhat_plane(:,np,nt)` and `u%xhat_plane(:,np+1,nt)` and uses them, together
@@ -1557,6 +2120,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%PlaneSliceSeriesUn   = -1
    end if
 
+   ! --- Feature 3: terrain-following point-cloud sampling
+   p%NumTerrainSlices = InitInp%InputFileData%NumTerrainSlices
+   p%WrTerrainSkp     = max( 1_IntKi, nint( InitInp%InputFileData%WrTerrainDT / p%dt_low ) )
+   ! The rest of the terrain-slice parameter arrays are allocated inside
+   ! ValidateTerrainSlices (see below), because their sizes depend on reading
+   ! the per-slice source files.
+
    ! --- Vtk Outputs
    call GetPath( p%OutFileRoot, rootDir, baseName ) 
    OutFileVTKDir      = trim(rootDir) // 'vtk_ff'  ! Directory for VTK outputs
@@ -1566,9 +2136,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call MKDIR(OutFileVTKDir)
       ! placeholder for writing planes -- this will eventually be an input (revise logic here then)
       p%WrPlanes = .true.
-   else if (p%NumPlaneSlices>0) then
-      ! Feature 2 (NumPlaneSlices) is independent of the wake-plane / disturbed-wind
-      ! output; still needs the vtk_ff directory but must NOT enable WrPlanes.
+   else if (p%NumPlaneSlices>0 .or. p%NumTerrainSlices>0) then
+      ! Features 2/3 (NumPlaneSlices/NumTerrainSlices) are independent of the wake-plane / disturbed-wind
+      ! output; still need the vtk_ff directory but must NOT enable WrPlanes.
       call MKDIR(OutFileVTKDir)
    end if
 
@@ -1753,6 +2323,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call ValidatePlaneSlices( p, InitInp%InputFileData, errStat, errMsg )
    if (errStat >= AbortErrLev) return
 
+      ! Feature 3: terrain-following point-cloud sampling
+      ! Read each STL/point-cloud source file, expand with the per-slice offsets,
+      ! and pack the resulting point coordinates into p%TerrainSlicePtsFlat.
+      ! Opens each slice's .vtp.series sidecar and warns about out-of-domain
+      ! points (NaN-filled at emit time).
+   call ValidateTerrainSlices( p, InitInp%InputFileData, errStat, errMsg )
+   if (errStat >= AbortErrLev) return
+
 
    !----------------------------------------------------------------------------
    ! Initialize inputs 
@@ -1829,6 +2407,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       m%PlaneSliceStepCount = 0
    end if
    m%LastPlaneSliceN = -1
+   if ( p%NumTerrainSlices > 0 ) then
+      call AllocAry( m%TerrainSliceStepCount, p%NumTerrainSlices, 'm%TerrainSliceStepCount', ErrStat2, ErrMsg2 ); if (Failed()) return
+      m%TerrainSliceStepCount = 0
+   end if
+   m%LastTerrainSliceN = -1
 
    ! miscvars to avoid the allocation per timestep
    allocate(m%Vamb_lowpol(    3, 0:p%n_rp_max*8 ),                             STAT=errStat2);  if (Failed0('m%Vamb_lowpol.'  )) return;
@@ -2041,6 +2624,15 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          do nt = 1, size(p%PlaneSliceSeriesUn)
             if ( p%PlaneSliceSeriesUn(nt) > 0 ) then
                call VTK_Series_Close( p%PlaneSliceSeriesUn(nt), errStat, errMsg )
+            end if
+         end do
+      end if
+
+      ! Feature 3: close any open .vtp.series sidecars
+      if (allocated(p%TerrainSliceSeriesUn)) then
+         do nt = 1, size(p%TerrainSliceSeriesUn)
+            if ( p%TerrainSliceSeriesUn(nt) > 0 ) then
+               call VTK_Series_Close( p%TerrainSliceSeriesUn(nt), errStat, errMsg )
             end if
          end do
       end if
@@ -2452,6 +3044,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    ! Feature 2: axis-aligned planar sampling (extent-controlled, own sampling rate)
    if ( p%NumPlaneSlices > 0 .and. mod(n, p%WrPlaneSkp) == 0 ) then
       call EmitPlaneSlices( t, n, p, m, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+   end if
+
+   ! Feature 3: terrain-following point-cloud sampling (own sampling rate)
+   if ( p%NumTerrainSlices > 0 .and. mod(n, p%WrTerrainSkp) == 0 ) then
+      call EmitTerrainSlices( t, n, p, m, ErrStat2, ErrMsg2 )
       if (Failed()) return
    end if
 
