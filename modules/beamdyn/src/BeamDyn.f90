@@ -6683,6 +6683,24 @@ subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, 
       return
    end if
 
+   ! Root angular velocity, global frame -> BD local (frozen) frame. GlbRot transfers local->global;
+   ! right-multiplication rotates a vector global->local (same idiom as gravity in BD_StaticElementMatrix).
+   omega_g = u%RootMotion%RotationVel(:,1)
+   omega_l = matmul(omega_g, OtherState%GlbRot)
+
+   ! Standstill: every operation below is an exact identity, independent of frame alignment, so
+   ! return the Jacobian unchanged before enforcing the re-anchoring invariant. Do not return
+   ! silently if the root is accelerating through zero speed — the omitted omega-dot transport
+   ! term is nonzero there and the exported Jacobian is missing it.
+   if (all(abs(omega_l) < 1.0e-12_R8Ki)) then
+      if (DoTransport .and. norm2(u%RootMotion%RotationAcc(:,1)) > 1.0e-4_R8Ki) then
+         call SetErrStat(ErrID_Warn, 'Nonzero root angular acceleration at a zero-speed linearization '// &
+                         'point; the rotating-frame state transform omits the omega-dot transport term '// &
+                         'and the Jacobian is returned unchanged.', ErrStat, ErrMsg, RoutineName)
+      end if
+      return
+   end if
+
    ! States are linearized about a root-aligned snapshot, so the root orientation must coincide
    ! with the frozen reference frame; otherwise S below is built in the wrong basis. The reference
    ! is re-anchored to the root at the end of each BD_UpdateStates, so at a linearization snapshot
@@ -6707,11 +6725,6 @@ subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, 
                       'basis error is of the same order.', ErrStat, ErrMsg, RoutineName)
    end if
 
-   ! Root angular velocity, global frame -> BD local (frozen) frame. GlbRot transfers local->global;
-   ! right-multiplication rotates a vector global->local (same idiom as gravity in BD_StaticElementMatrix).
-   omega_g = u%RootMotion%RotationVel(:,1)
-   omega_l = matmul(omega_g, OtherState%GlbRot)
-   if (all(abs(omega_l) < 1.0e-12_R8Ki)) return
    wt = SkewSymMat(omega_l)
 
    if (DoTransport) then
