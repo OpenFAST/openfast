@@ -6700,7 +6700,8 @@ subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, 
                       trim(Num2LStr(RootDev))//' (> 1e-3) at the linearization point (state re-anchoring '// &
                       'invariant violated); cannot form rotating-frame Jacobians.', ErrStat, ErrMsg, RoutineName)
       return
-   else if (RootDev > 1.0e-6_R8Ki) then
+   else if (RootDev > 1.0e-6_R8Ki .and. DoTransport) then
+      ! warn once per linearization snapshot (the dXdx call), not on every transformed block
       call SetErrStat(ErrID_Warn, 'Root orientation deviates from the frozen BD reference frame by '// &
                       trim(Num2LStr(RootDev))//' at the linearization point; rotating-frame transform '// &
                       'basis error is of the same order.', ErrStat, ErrMsg, RoutineName)
