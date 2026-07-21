@@ -1259,7 +1259,7 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
 
    ! Default: feature disabled
    AWAE_InitInp%NumPlaneSlices = 0
-   AWAE_InitInp%WrPlaneDT      = AWAE_InitInp%WrDisDT
+   AWAE_InitInp%WrPlaneDT      = DT_low
 
    ! Peek at the next line to decide whether the block is present.
    call ReadLine( UnIn, '', line, lineLen, ios )
@@ -1287,8 +1287,8 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
    end if
 
    call ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrPlaneDT, "WrPlaneDT", &
-                         "Feature 2 sampling period (s); DEFAULT falls back to WrDisDT", &
-                         AWAE_InitInp%WrDisDT, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+                         "Feature 2 sampling period (s); DEFAULT falls back to DT_Low", &
+                         DT_low, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
    if ( AWAE_InitInp%NumPlaneSlices == 0 ) return
 
@@ -1453,7 +1453,7 @@ subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, 
 
    ! Default: feature disabled
    AWAE_InitInp%NumTerrainSlices = 0
-   AWAE_InitInp%WrTerrainDT      = AWAE_InitInp%WrDisDT
+   AWAE_InitInp%WrTerrainDT      = DT_low
 
    ! Peek at the next line to decide whether the block is present.
    call ReadLine( UnIn, '', line, lineLen, ios )
@@ -1474,8 +1474,8 @@ subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, 
    end if
 
    call ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrTerrainDT, "WrTerrainDT", &
-                         "Feature 3 sampling period (s); DEFAULT falls back to WrDisDT", &
-                         AWAE_InitInp%WrDisDT, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+                         "Feature 3 sampling period (s); DEFAULT falls back to DT_Low", &
+                         DT_low, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
    if ( AWAE_InitInp%NumTerrainSlices == 0 ) return
 

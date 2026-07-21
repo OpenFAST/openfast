@@ -105,7 +105,7 @@ IEEE quiet NaN in the ``Velocity`` field; ParaView masks these
 automatically without any extra filter.
 
 The sampling period is set by **WrPlaneDT** in the deck (defaults to
-**WrDisDT**). It is independent of the classic **WrDisDT** so that
+**DT_Low**). It is independent of the classic **WrDisDT** so that
 lightweight hub-height sheets can be emitted at a much higher rate
 than heavier full-domain outputs.
 
@@ -128,7 +128,7 @@ step. Nodes whose sample location falls outside the low-resolution
 domain are set to IEEE quiet NaN and masked by ParaView.
 
 The sampling period is set by **WrTerrainDT** in the deck (defaults to
-**WrDisDT**).
+**DT_Low**).
 
 Visualizing the ambient wind and wake interactions can be useful for
 interpreting results and debugging problems. However, FAST.Farm will

@@ -505,7 +505,7 @@ is XML ``.vtp`` with a ``.vtp.series`` sidecar.
 All three paths write into the ``vtk_ff/`` subdirectory of the deck
 and are throttled independently: **WrDisDT** for the classic path,
 **WrPlaneDT** for **NumPlaneSlices**, **WrTerrainDT** for
-**NumTerrainSlices**. Each defaults to **WrDisDT** if omitted, but
+**NumTerrainSlices**. Each defaults to **DT_Low** if omitted, but
 having independent knobs lets you (say) emit a heavy full-domain
 slice once per minute while sampling a small hub-height sheet every
 second.

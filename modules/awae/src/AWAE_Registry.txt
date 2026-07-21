@@ -49,7 +49,7 @@ typedef  ^            ^                   DbKi            WrDisDT           -  -
 # by AWAE_Init to compute derived indices and by AWAE_CalcOutput to emit
 # per-step VTK output.  See modules/awae/src/AWAE.f90 for the semantics of the
 # derived NormalAxis / N1 / N2 / bounds fields.
-typedef  ^          AWAE_InputFileType   DbKi                WrPlaneDT             -    - -  "Feature 2 sampling period (s); DEFAULT falls back to WrDisDT" s
+typedef  ^          AWAE_InputFileType   DbKi                WrPlaneDT             -    - -  "Feature 2 sampling period (s); DEFAULT falls back to DT_Low" s
 typedef  ^          AWAE_InputFileType   IntKi               NumPlaneSlices        -    - -  "Number of axis-aligned extent-controlled planar slices (Feature 2)" -
 typedef  ^          AWAE_InputFileType   CHARACTER(64)       PlaneSliceName       {:}   - -  "user-provided slice name (used in output filenames)" -
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceOrigin    {3}{:} - -  "plane corner (x0,y0,z0) in the global farm frame; column k is slice k" m
@@ -63,7 +63,7 @@ typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent2  
 # layout: OffsetsPacked contains all offsets concatenated, OffsetIdx(k) marks the start of slice k in
 # the packed array with the convention that slice k occupies indices [OffsetIdx(k)+1 .. OffsetIdx(k+1)].
 # See modules/awae/src/AWAE.f90 for the parser and the point-cloud/STL readers.
-typedef  ^          AWAE_InputFileType   DbKi                WrTerrainDT            -    - -  "Feature 3 sampling period (s); DEFAULT falls back to WrDisDT" s
+typedef  ^          AWAE_InputFileType   DbKi                WrTerrainDT            -    - -  "Feature 3 sampling period (s); DEFAULT falls back to DT_Low" s
 typedef  ^          AWAE_InputFileType   IntKi               NumTerrainSlices       -    - -  "Number of terrain-following point-cloud slices (Feature 3)" -
 typedef  ^          AWAE_InputFileType   CHARACTER(64)       TerrainSliceName      {:}   - -  "user-provided slice name (used in output filenames)" -
 typedef  ^          AWAE_InputFileType   IntKi               TerrainSliceSourceType {:}  - -  "1 = STL, 2 = plain-text point cloud" -

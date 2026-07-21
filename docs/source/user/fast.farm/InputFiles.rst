@@ -871,7 +871,7 @@ followed by:
    (:math:`0` to :math:`99`). Set to :math:`0` to disable the feature.
 
 -  **WrPlaneDT** [sec] specifies the sampling period for this
-   feature. **DEFAULT** falls back to **WrDisDT**. Internally rounded
+   feature. **DEFAULT** falls back to **DT_Low**. Internally rounded
    to the nearest multiple of **DT_Low**. Independent of the classic
    **WrDisDT** so that (for example) a small hub-height sheet can be
    sampled frequently while heavier full-domain outputs sample rarely.
@@ -920,7 +920,7 @@ turbine, one XZ through the farm centre):
 
   --- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---
   3          NumPlaneSlices  - Number of axis-aligned planar slices (-)
-  DEFAULT    WrPlaneDT       - Sampling period (s) or DEFAULT (=WrDisDT)
+  DEFAULT    WrPlaneDT       - Sampling period (s) or DEFAULT (=DT_Low)
   SliceName  origin(m)      normal   extent1(m)  extent2(m)
   (-)        (m,m,m)        (-)      (m)         (m)
   "hubXY"    (700 700 95)   (0 0 1)  1200        600
@@ -953,7 +953,7 @@ The block begins with the section header
    terrain-following slices (:math:`0` to :math:`99`).
 
 -  **WrTerrainDT** [sec] specifies the sampling period for this
-   feature. **DEFAULT** falls back to **WrDisDT**. Independent of
+   feature. **DEFAULT** falls back to **DT_Low**. Independent of
    both **WrDisDT** and **WrPlaneDT** so that heavy terrain samples
    can be emitted less often than lighter axis-aligned slices.
 
@@ -990,7 +990,7 @@ and a nine-point hub-height cloud):
 
   --- TERRAIN-FOLLOWING SAMPLING ---
   2           NumTerrainSlices  - Number of terrain-following slices (-)
-  DEFAULT     WrTerrainDT       - Sampling period (s) or DEFAULT (=WrDisDT)
+  DEFAULT     WrTerrainDT       - Sampling period (s) or DEFAULT (=DT_Low)
   SliceName   Offsets(m)     OffsetNormal   SourceType   FileName
   (-)         (m,list)       (-,-,-|dflt)   (STL|Point)  (quoted)
   "terr"      50 100 150     default        STL          "mountain.stl"
