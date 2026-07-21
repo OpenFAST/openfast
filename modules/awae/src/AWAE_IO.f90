@@ -150,7 +150,7 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
    write(Un,'(A)') '<!-- '//trim(descr)//' -->'
    write(Un,'(A)') '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'
    write(Un,'(A)') '  <PolyData>'
-   write(Un,'(A,I0,A)') '    <Piece NumberOfPoints="', N, '" NumberOfVerts="1" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">'
+   write(Un,'(A,I0,A,I0,A)') '    <Piece NumberOfPoints="', N, '" NumberOfVerts="', N, '" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">'
 
    write(Un,'(A)') '      <Points>'
    write(Un,'(A)') '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
@@ -165,7 +165,7 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
    write(Un,'(*(1X,I0))') (i-1, i=1,N)
    write(Un,'(A)') '        </DataArray>'
    write(Un,'(A)') '        <DataArray type="Int64" Name="offsets" format="ascii">'
-   write(Un,'(1X,I0)') N
+   write(Un,'(*(1X,I0))') (i, i=1,N)
    write(Un,'(A)') '        </DataArray>'
    write(Un,'(A)') '      </Verts>'
 

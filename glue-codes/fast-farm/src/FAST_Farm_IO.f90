@@ -1219,21 +1219,19 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
 END SUBROUTINE Farm_ValidateInput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Read the optional '--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---'
-!! block introduced for Feature 2 (axis-aligned planar sampling via user-
-!! specified origin/normal/extents).  The block layout is:
+!> Read the required '--- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---'
+!! block for Feature 2 (axis-aligned planar sampling via user-specified
+!! origin/plane/extents).  The block layout is:
 !!
 !!     --- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---
 !!     <NumPlaneSlices>          NumPlaneSlices
 !!     <WrPlaneDT | "DEFAULT">   WrPlaneDT
-!!     SliceName  Origin(m)     Normal   Extent1(m)  Extent2(m)      ! column names
-!!     (-)        (m,m,m)       (-)      (m)         (m)             ! column units
-!!     "T1_0D"    (0 -300 0)    (1 0 0)  600         400
-!!     "hubXY"    (-500 -300 0) (0 0 1)  2000        800
+!!     SliceName  origin(m)      plane    extent1(m)  extent2(m)
+!!     (-)        (m,m,m)        (-)      (m)         (m)
+!!     "T1_0D"    (0 -300 0)     YZ       600         400
+!!     "hubXY"    (-500 -300 0)  XY       2000        800
 !!
-!! If the block header is absent from the primary input file (legacy deck),
-!! we silently BACKSPACE so the OUTPUT section reader picks up where it left
-!! off; NumPlaneSlices then remains 0 and the whole feature is inert.
+!! This section is mandatory.  Set NumPlaneSlices=0 to disable output.
 subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, ErrStat, ErrMsg )
    integer(IntKi),                 intent(in   ) :: UnIn
    character(*),                   intent(in   ) :: InputFile
@@ -1453,7 +1451,7 @@ contains
 end subroutine ReadPlaneSlicesBlock
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Read the optional '--- TERRAIN-FOLLOWING SAMPLING ---' block introduced for
+!> Read the required '--- TERRAIN-FOLLOWING SAMPLING ---' block for
 !! Feature 3 (terrain-following point-cloud sampling).  The block layout is:
 !!
 !!     --- TERRAIN-FOLLOWING SAMPLING ---
@@ -1464,8 +1462,7 @@ end subroutine ReadPlaneSlicesBlock
 !!     "terr"      100 200 300   default        STL          "terrain.stl"
 !!     "hubHt"     140.0         (0 0 1)        Point        "hub_points.txt"
 !!
-!! If the block header is absent from the primary input file (legacy deck),
-!! we silently BACKSPACE so the OUTPUT reader picks up where it left off.
+!! This section is mandatory.  Set NumTerrainSlices=0 to disable output.
 subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, ErrStat, ErrMsg )
    integer(IntKi),                 intent(in   ) :: UnIn
    character(*),                   intent(in   ) :: InputFile
@@ -1640,12 +1637,13 @@ contains
       i = scan(work, '!#')
       if (i > 0) work(i:) = ' '
 
-      ! The row has (up to) TWO double-quoted strings: the slice name (first)
-      ! and the filename (second/last). Extract in order.
-      call ExtractQuoted( work, sliceName )
-      if (len_trim(sliceName) == 0) then
-         call ExtractBareToken( work, sliceName )
+      ! SliceName must be quoted to distinguish it from the quoted FileName.
+      i = verify(work, ' '//char(9))
+      if (i == 0 .or. work(i:i) /= '"') then
+         err = ErrID_Fatal; msg = 'SliceName must be a double-quoted string.'
+         return
       end if
+      call ExtractQuoted( work, sliceName )
       if (len_trim(sliceName) == 0) then
          err = ErrID_Fatal; msg = 'Missing slice name.'
          return
@@ -1685,12 +1683,12 @@ contains
          read(tok, *, iostat=iosLocal) rval
          if (iosLocal == 0) then
             ! Numeric: offset or normal component
-            tokCount = tokCount + 1
-            offList(tokCount) = rval
-            if (tokCount > size(offList)) then
+            if (tokCount >= size(offList)) then
                err = ErrID_Fatal; msg = 'Too many offsets on a single line.'
                return
             end if
+            tokCount = tokCount + 1
+            offList(tokCount) = rval
          else
             ! Non-numeric: SourceType keyword
             srcTagLocal = adjustl(tok)
