@@ -939,12 +939,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", "The time between vtk outputs [must be a multiple of the low resolution time step]", p%DT_low, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    !---------------------- AXIS-ALIGNED PLANE SLICES (extent-controlled) [Feature 2] ---
-   ! Optional block. If the section header is absent (e.g. legacy decks) we silently
-   ! default NumPlaneSlices to 0 and rewind so the next section reads correctly.
    call ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, p%DT_low, UnEc, ErrStat2, ErrMsg2 ); if (Failed()) return
 
    !---------------------- TERRAIN-FOLLOWING SAMPLING [Feature 3] ---
-   ! Optional block. Same backspace-and-return behavior as ReadPlaneSlicesBlock.
    call ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, p%DT_low, UnEc, ErrStat2, ErrMsg2 ); if (Failed()) return
 
    !---------------------- OUTPUT --------------------------------------------------
@@ -1261,20 +1258,8 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
    AWAE_InitInp%NumPlaneSlices = 0
    AWAE_InitInp%WrPlaneDT      = DT_low
 
-   ! Peek at the next line to decide whether the block is present.
-   call ReadLine( UnIn, '', line, lineLen, ios )
-   if (ios /= 0) then
-      ! EOF (or read error) with no block present is fine when the block is
-      ! optional; the caller's next section reader will fail on its own if
-      ! something else is really wrong.
-      return
-   end if
-
-   if ( index( line, 'AXIS-ALIGNED PLANE SLICES' ) == 0 ) then
-      ! Not our block. Restore file position for the OUTPUT reader.
-      backspace( UnIn )
-      return
-   end if
+   ! Read the required section header
+   call ReadCom( UnIn, InputFile, 'Section Header: Axis-Aligned Plane Slices', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
    ! We have the section header. Read the two scalars.
    call ReadVar( UnIn, InputFile, AWAE_InitInp%NumPlaneSlices, "NumPlaneSlices", &
@@ -1290,6 +1275,10 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
                          "Feature 2 sampling period (s); DEFAULT falls back to DT_Low", &
                          DT_low, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
+   ! Two column-header lines (always present, even when NumPlaneSlices=0)
+   call ReadCom( UnIn, InputFile, 'Plane slices column names', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+   call ReadCom( UnIn, InputFile, 'Plane slices column units', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
    if ( AWAE_InitInp%NumPlaneSlices == 0 ) return
 
    ! Allocate flat arrays
@@ -1298,10 +1287,6 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
    call AllocAry( AWAE_InitInp%PlaneSliceNormal,  3, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceNormal',  ErrStat2, ErrMsg2 ); if (Failed()) return
    call AllocAry( AWAE_InitInp%PlaneSliceExtent1, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceExtent1', ErrStat2, ErrMsg2 ); if (Failed()) return
    call AllocAry( AWAE_InitInp%PlaneSliceExtent2, AWAE_InitInp%NumPlaneSlices, 'PlaneSliceExtent2', ErrStat2, ErrMsg2 ); if (Failed()) return
-
-   ! Two column-header lines
-   call ReadCom( UnIn, InputFile, 'Plane slices column names', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-   call ReadCom( UnIn, InputFile, 'Plane slices column units', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
    do k = 1, AWAE_InitInp%NumPlaneSlices
       call ReadLine( UnIn, '', line, lineLen, ios )
@@ -1513,14 +1498,8 @@ subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, 
    AWAE_InitInp%NumTerrainSlices = 0
    AWAE_InitInp%WrTerrainDT      = DT_low
 
-   ! Peek at the next line to decide whether the block is present.
-   call ReadLine( UnIn, '', line, lineLen, ios )
-   if (ios /= 0) return
-
-   if ( index( line, 'TERRAIN-FOLLOWING SAMPLING' ) == 0 ) then
-      backspace( UnIn )
-      return
-   end if
+   ! Read the required section header
+   call ReadCom( UnIn, InputFile, 'Section Header: Terrain-Following Sampling', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
    call ReadVar( UnIn, InputFile, AWAE_InitInp%NumTerrainSlices, "NumTerrainSlices", &
                  "Number of terrain-following point-cloud slices (-) [0 to 99]", &
@@ -1535,11 +1514,11 @@ subroutine ReadTerrainSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, 
                          "Feature 3 sampling period (s); DEFAULT falls back to DT_Low", &
                          DT_low, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
 
-   if ( AWAE_InitInp%NumTerrainSlices == 0 ) return
-
-   ! Two column-header lines
+   ! Two column-header lines (always present, even when NumTerrainSlices=0)
    call ReadCom( UnIn, InputFile, 'Terrain slices column names', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
    call ReadCom( UnIn, InputFile, 'Terrain slices column units', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+
+   if ( AWAE_InitInp%NumTerrainSlices == 0 ) return
 
    perSliceNOff = 0
    totOff = 0
