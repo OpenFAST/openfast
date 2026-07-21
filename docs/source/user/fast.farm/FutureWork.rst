@@ -120,8 +120,8 @@ releases:
 -  Extend the terrain-following sampling
    (:numref:`FF:Input:TerrainSlices`) to also accept arbitrary
    non-axis-aligned planar samples. Today the extent-controlled plane
-   slice feature (:numref:`FF:Input:PlaneSlices`) rejects any normal
-   other than :math:`(1,0,0)`, :math:`(0,1,0)`, :math:`(0,0,1)` with a
-   fatal init error whose message explicitly points here. See GitHub
+   slice feature (:numref:`FF:Input:PlaneSlices`) only accepts the
+   keywords ``XY``, ``YZ``, and ``XZ`` with a
+   fatal init error for any other value. See GitHub
    issue `#2383 <https://github.com/OpenFAST/openfast/issues/2383>`__
    for the motivating discussion and one proposed grammar.

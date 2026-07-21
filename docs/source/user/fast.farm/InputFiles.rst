@@ -885,22 +885,20 @@ followed by:
    **origin(m)** — 3-vector, in metres.  Plane corner (not centre)
    in the farm-global frame.  Example: ``(0 -300 0)``.
 
-   **normal** — 3-vector.  Plane normal.  Must equal ``(1 0 0)``,
-   ``(0 1 0)``, or ``(0 0 1)``; off-axis values are a fatal init
-   error, and the error message points to
-   :numref:`FF:sec:SliceOutputs` and this feature's future work
-   (arbitrary orientations are tracked as a planned extension).
+   **plane** — keyword.  One of ``XY``, ``YZ``, or ``XZ``
+   (case-insensitive).  Specifies the orientation of the sampling
+   plane.  Any other value is a fatal init error.
 
    **extent1(m)** — positive scalar, in metres.  In-plane extent
-   along the first non-normal global axis.  Example: ``600``.
+   along the first axis of the named plane.  Example: ``600``.
 
    **extent2(m)** — positive scalar, in metres.  In-plane extent
-   along the second non-normal global axis.  Example: ``400``.
+   along the second axis of the named plane.  Example: ``400``.
 
-The (extent1, extent2) axes are ordered by cyclic global-axis order
-excluding the normal: :math:`(1\,0\,0) \Rightarrow (Y, Z)`,
-:math:`(0\,1\,0) \Rightarrow (X, Z)`,
-:math:`(0\,0\,1) \Rightarrow (X, Y)`.
+The (extent1, extent2) axes are ordered by the named plane:
+``XY`` :math:`\Rightarrow` (X, Y),
+``YZ`` :math:`\Rightarrow` (Y, Z),
+``XZ`` :math:`\Rightarrow` (X, Z).
 
 Grid resolution is fixed to the low-resolution spacing
 (``dX_Low``, ``dY_Low``, ``dZ_Low``); no ``npoints`` column is
@@ -921,11 +919,11 @@ turbine, one XZ through the farm centre):
   --- AXIS-ALIGNED PLANE SLICES (extent-controlled) ---
   3          NumPlaneSlices  - Number of axis-aligned planar slices (-)
   DEFAULT    WrPlaneDT       - Sampling period (s) or DEFAULT (=DT_Low)
-  SliceName  origin(m)      normal   extent1(m)  extent2(m)
+  SliceName  origin(m)      plane    extent1(m)  extent2(m)
   (-)        (m,m,m)        (-)      (m)         (m)
-  "hubXY"    (700 700 95)   (0 0 1)  1200        600
-  "crossYZ"  (1000 700 5)   (1 0 0)  600         300
-  "crossXZ"  (700 1000 5)   (0 1 0)  1200        300
+  "hubXY"    (700 700 95)   XY       1200        600
+  "crossYZ"  (1000 700 5)   YZ       600         300
+  "crossXZ"  (700 1000 5)   XZ       1200        300
 
 Output naming follows the pattern
 ``<RootName>.Plane.<SliceName>.<n>.vts`` with a companion

@@ -69,7 +69,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPlaneSlices = 0_IntKi      !< Number of axis-aligned extent-controlled planar slices (Feature 2) [-]
     CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceName      !< user-provided slice name (used in output filenames) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceOrigin      !< plane corner (x0,y0,z0) in the global farm frame; column k is slice k [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceNormal      !< plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PlaneSliceNormal      !< plane normal derived from Plane keyword (XY→001, YZ→100, XZ→010); column k is slice k [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent1      !< in-plane extent along the first non-normal axis, per slice [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PlaneSliceExtent2      !< in-plane extent along the second non-normal axis, per slice [m]
     REAL(DbKi)  :: WrTerrainDT = 0.0_R8Ki      !< Feature 3 sampling period (s); DEFAULT falls back to DT_Low [s]

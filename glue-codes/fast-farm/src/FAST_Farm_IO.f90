@@ -1311,7 +1311,7 @@ subroutine ReadPlaneSlicesBlock( UnIn, InputFile, AWAE_InitInp, DT_low, UnEc, Er
       end if
       if (UnEc > 0) write(UnEc,'(A)') trim(line)
 
-      ! Strip parentheses and commas so parenthesized vectors "(1 0 0)" parse
+      ! Strip parentheses and commas so parenthesized vectors "(700 700 95)" parse
       ! as space-separated tokens.
       call StripDelims( line )
 
@@ -1344,8 +1344,9 @@ contains
       end do
    end subroutine
 
-   !> Parse a de-delimited slice row: NAME  O_X O_Y O_Z  N_X N_Y N_Z  E1 E2
+   !> Parse a de-delimited slice row: NAME  O_X O_Y O_Z  PLANE  E1 E2
    !! (plus trailing comment). Name may be quoted with double quotes.
+   !! PLANE must be one of XY, YZ, XZ (case-insensitive).
    subroutine ParsePlaneSliceLine( raw, sliceName, o, n, e1, e2, err, msg )
       character(*), intent(in   ) :: raw
       character(*), intent(  out) :: sliceName
@@ -1355,7 +1356,9 @@ contains
       character(*), intent(  out) :: msg
 
       character(len(raw)) :: work
-      integer :: i, iosLocal
+      character(64)       :: tok(6)
+      character(8)        :: planeTok
+      integer :: i, ipos, nTok, ts, te, iosLocal
 
       work = raw
       msg = ''
@@ -1368,11 +1371,66 @@ contains
       ! Extract the quoted-or-unquoted name and blank it out
       call ExtractQuotedName( work, sliceName )
 
-      read(work, *, iostat=iosLocal) o(1), o(2), o(3), n(1), n(2), n(3), e1, e2
+      ! Tokenise remaining string by whitespace
+      nTok = 0
+      ipos = 1
+      do while (nTok < 6)
+         ! Skip blanks / tabs
+         do while (ipos <= len_trim(work))
+            if (work(ipos:ipos) /= ' ' .and. work(ipos:ipos) /= char(9)) exit
+            ipos = ipos + 1
+         end do
+         if (ipos > len_trim(work)) exit
+         ts = ipos
+         ! Advance to end of token
+         do while (ipos <= len_trim(work))
+            if (work(ipos:ipos) == ' ' .or. work(ipos:ipos) == char(9)) exit
+            ipos = ipos + 1
+         end do
+         te = ipos - 1
+         nTok = nTok + 1
+         tok(nTok) = work(ts:te)
+      end do
+
+      if (nTok < 6) then
+         err = ErrID_Fatal
+         msg = 'Expected 6 columns after SliceName: Origin_X, Origin_Y, Origin_Z, Plane, Extent1, Extent2.'
+         return
+      end if
+
+      ! Convert origin tokens to reals
+      read(tok(1), *, iostat=iosLocal) o(1)
+      if (iosLocal == 0) read(tok(2), *, iostat=iosLocal) o(2)
+      if (iosLocal == 0) read(tok(3), *, iostat=iosLocal) o(3)
       if (iosLocal /= 0) then
          err = ErrID_Fatal
-         msg = 'Failed to parse Origin (3), Normal (3), Extent1, Extent2 columns.'
+         msg = 'Failed to parse Origin (3) as numeric values.'
+         return
       end if
+
+      ! Convert extent tokens to reals
+      read(tok(5), *, iostat=iosLocal) e1
+      if (iosLocal == 0) read(tok(6), *, iostat=iosLocal) e2
+      if (iosLocal /= 0) then
+         err = ErrID_Fatal
+         msg = 'Failed to parse Extent1, Extent2 as numeric values.'
+         return
+      end if
+
+      ! Convert plane keyword to axis-aligned normal vector
+      planeTok = tok(4)
+      call Conv2UC( planeTok )
+      select case ( trim(planeTok) )
+      case ('XY')
+         n = (/ 0.0_ReKi, 0.0_ReKi, 1.0_ReKi /)
+      case ('YZ')
+         n = (/ 1.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      case ('XZ')
+         n = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
+      case default
+         err = ErrID_Fatal
+         msg = 'Plane keyword "'//trim(planeTok)//'" is invalid. Must be XY, YZ, or XZ.'
+      end select
    end subroutine
 
    !> Extract the first quoted-or-unquoted name from a line and blank it out

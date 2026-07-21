@@ -204,10 +204,9 @@ subroutine ValidatePlaneSlices( p, InputFileData, errStat, errMsg )
          iaxis = 3
       else
          call SetErrStat( ErrID_Fatal, 'In slice "'//trim(InputFileData%PlaneSliceName(k))// &
-              '", the plane normal ('//trim(Num2LStr(nrm(1)))//', '// &
+              '", the internal plane normal ('//trim(Num2LStr(nrm(1)))//', '// &
               trim(Num2LStr(nrm(2)))//', '//trim(Num2LStr(nrm(3)))// &
-              ') is not axis-aligned. Only (1 0 0), (0 1 0), and (0 0 1) are supported.  '// &
-              'A future feature may allow point-cloud sampling at arbitrary locations.', &
+              ') is not axis-aligned. Valid Plane keywords are XY, YZ, XZ.', &
               errStat, errMsg, RoutineName )
          cycle
       end if

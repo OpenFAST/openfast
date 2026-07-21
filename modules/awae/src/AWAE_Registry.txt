@@ -53,7 +53,7 @@ typedef  ^          AWAE_InputFileType   DbKi                WrPlaneDT          
 typedef  ^          AWAE_InputFileType   IntKi               NumPlaneSlices        -    - -  "Number of axis-aligned extent-controlled planar slices (Feature 2)" -
 typedef  ^          AWAE_InputFileType   CHARACTER(64)       PlaneSliceName       {:}   - -  "user-provided slice name (used in output filenames)" -
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceOrigin    {3}{:} - -  "plane corner (x0,y0,z0) in the global farm frame; column k is slice k" m
-typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceNormal    {3}{:} - -  "plane normal; must equal (1,0,0), (0,1,0), or (0,0,1); column k is slice k" -
+typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceNormal    {3}{:} - -  "plane normal derived from Plane keyword (XY→001, YZ→100, XZ→010); column k is slice k" -
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent1    {:}   - -  "in-plane extent along the first non-normal axis, per slice" m
 typedef  ^          AWAE_InputFileType   ReKi                PlaneSliceExtent2    {:}   - -  "in-plane extent along the second non-normal axis, per slice" m
 
