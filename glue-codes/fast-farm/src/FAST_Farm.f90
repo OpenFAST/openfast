@@ -80,6 +80,10 @@ type(All_FastFarm_Data)               :: farm
 
    if (ErrStat/=0) then
       call ProgAbort('', TrapErrors=.FALSE., TimeWait=3._ReKi )
+   else if ( TRIM(FlagArg) == 'CHECKINPUT' ) then ! Initialize every farm-level component + all wrapped turbines and report; no time-marching
+      ! Runs collect-and-continue initialization, writes the -CheckInput report, and ENDS the program
+      ! with a report-derived exit code; never returns.
+      call Farm_CheckInput( farm, InputFileName )
    else if ( len( trim(FlagArg) ) > 0 ) then ! Any other flag (-v,-h) end normally
       call NormStop()
    endif

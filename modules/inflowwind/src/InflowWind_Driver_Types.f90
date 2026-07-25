@@ -69,6 +69,7 @@ IMPLICIT NONE
     LOGICAL  :: WrVTK = .false.      !< Requested file output as VTK? [-]
     LOGICAL  :: WrUniform = .false.      !< Requested file output as Uniform wind format? [-]
     LOGICAL  :: XYslice = .false.      !< Take XY slice at one elevation [-]
+    LOGICAL  :: CheckInput = .false.      !< specified -CheckInput mode on the command line [-]
   END TYPE IfWDriver_Flags
 ! =======================
 ! =========  IfWDriver_Settings  =======
@@ -181,6 +182,7 @@ subroutine InflowWind_Driver_CopyIfWDriver_Flags(SrcIfWDriver_FlagsData, DstIfWD
    DstIfWDriver_FlagsData%WrVTK = SrcIfWDriver_FlagsData%WrVTK
    DstIfWDriver_FlagsData%WrUniform = SrcIfWDriver_FlagsData%WrUniform
    DstIfWDriver_FlagsData%XYslice = SrcIfWDriver_FlagsData%XYslice
+   DstIfWDriver_FlagsData%CheckInput = SrcIfWDriver_FlagsData%CheckInput
 end subroutine
 
 subroutine InflowWind_Driver_DestroyIfWDriver_Flags(IfWDriver_FlagsData, ErrStat, ErrMsg)
@@ -224,6 +226,7 @@ subroutine InflowWind_Driver_PackIfWDriver_Flags(RF, Indata)
    call RegPack(RF, InData%WrVTK)
    call RegPack(RF, InData%WrUniform)
    call RegPack(RF, InData%XYslice)
+   call RegPack(RF, InData%CheckInput)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -259,6 +262,7 @@ subroutine InflowWind_Driver_UnPackIfWDriver_Flags(RF, OutData)
    call RegUnpack(RF, OutData%WrVTK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrUniform); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%XYslice); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CheckInput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_Driver_CopyIfWDriver_Settings(SrcIfWDriver_SettingsData, DstIfWDriver_SettingsData, CtrlCode, ErrStat, ErrMsg)

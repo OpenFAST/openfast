@@ -65,6 +65,7 @@ MODULE OrcaDriver_Types
       LOGICAL                 :: PointsOutputInit     = .FALSE.      !< Is the Points output file initialized
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+      LOGICAL                 :: CheckInput           = .FALSE.      !< specified -CheckInput mode on the command line
    END TYPE    OrcaDriver_Flags
 
 

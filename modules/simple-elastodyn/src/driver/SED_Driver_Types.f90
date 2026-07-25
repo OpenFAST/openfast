@@ -48,6 +48,7 @@ module SED_Driver_Types
       logical                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
       logical                 :: Verbose              = .FALSE.      !< Verbose error reporting
       logical                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+      logical                 :: CheckInput           = .FALSE.      !< specified -CheckInput mode on the command line
    end type    SEDDriver_Flags
 
 

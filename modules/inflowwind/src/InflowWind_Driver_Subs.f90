@@ -81,6 +81,7 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("                  "//SwChar//"vtk            -- convert contents of <filename> to vtk format ")
    CALL WrScr("                  "//SwChar//"accel          -- calculate wind acceleration in addition to velocity")
    CALL WrScr("                  "//SwChar//"BoxExceedAllow -- set flag to allow FF points outside wind box")
+   CALL WrScr("                  "//SwChar//"CheckInput     -- validate the input deck, write a report, and exit")
    CALL WrScr("                  "//SwChar//"help           -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
@@ -336,6 +337,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "ACCEL"   )   THEN
             CLFlags%OutputAccel    = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "CHECKINPUT"   )   THEN
+            CLFlags%CheckInput     = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &

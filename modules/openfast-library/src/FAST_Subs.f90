@@ -25,6 +25,7 @@ MODULE FAST_Subs
    use FAST_ModTypes
    use FAST_ModGlue
    use VersionInfo
+   use NWTC_CheckInput
    use FAST_Funcs
    use FAST_Solver
    use FAST_Mapping, only: FAST_InitMappings
@@ -103,9 +104,81 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
+!> -CheckInput driver: attempt-everything initialization of every enabled module (no time stepping),
+!! console summary + <Root>.verify.yaml report, process exit code 0 (valid) / 1 (any fatal input error).
+!! Terminates the process itself via ProgExit; never returns to the caller.
+SUBROUTINE FAST_CheckInput_T( Turbine )
+
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine
+
+   TYPE(CheckInputCollectorType)           :: CkInCollector
+   INTEGER(IntKi)                          :: ErrStat, ExitCode
+   CHARACTER(ErrMsgLen)                    :: ErrMsg
+   LOGICAL                                 :: FIAHasMsgs
+
+   Turbine%TurbID = 1
+   Turbine%p_FAST%CheckInputMode = .true.   ! read by Failed() inside FAST_InitializeAll
+
+   CALL FAST_InitializeAll( 0.0_DbKi, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+               Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, &
+               Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+               Turbine%IceF, Turbine%IceD, Turbine%SlD, .false., ErrStat, ErrMsg, CkInCollector=CkInCollector )
+   IF (ErrStat >= AbortErrLev) THEN
+      ! Only failures that bypass the collect-and-continue path entirely land here -- e.g. FailedAlloc's
+      ! array-allocation checks, which call Cleanup()/return unconditionally regardless of CheckInputMode.
+      ! Every module Init failure itself takes the collect path above instead: CheckInputMode is already
+      ! set (see above) before FAST_InitializeAll is called, so Failed() routes those through CkIn_Collect
+      ! and continues rather than returning here.
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitializeAll', ErrStat, ErrMsg )
+   END IF
+   ! Flush whatever Failed() collected under this label during the call (every module's collect-and-continue
+   ! error lands here until Task 7 gives each module its own CurrentComponent) so it appears in the YAML report.
+   ! Only report when something was actually collected -- otherwise this would add a spurious
+   ! "unavailable, 0 messages" entry to a clean run's report. CkIn_ComponentStatus's own return value isn't
+   ! needed here (only the Found= side-output is); discard it inline rather than storing it in an unused
+   ! variable -- CkIn_St_* is always >= CkIn_St_Passed, so FIAHasMsgs is what actually gates this.
+   IF ( CkIn_ComponentStatus( CkInCollector, 'FAST_InitializeAll', Found=FIAHasMsgs ) >= CkIn_St_Passed .AND. FIAHasMsgs ) THEN
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitializeAll', ErrStat, ErrMsg )
+   END IF
+
+   ! Mappings + solver init require every module's meshes committed; only run when nothing failed.
+   IF ( CkIn_ExitCode(CkInCollector) == 0 ) THEN
+      CALL FAST_InitMappings(Turbine%m_Glue%Mappings, Turbine%m_Glue%ModData, Turbine, ErrStat, ErrMsg)
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+
+      IF ( CkIn_ExitCode(CkInCollector) == 0 ) THEN
+         CALL FAST_SolverInit(Turbine%p_FAST, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
+                              Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat, ErrMsg)
+         CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+         CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+      ELSE
+         CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrID_Info, &
+                            'blocked by upstream failure(s)', Status='skipped' )
+         CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+      END IF
+   ELSE
+      CALL CkIn_Collect( CkInCollector, 'FAST_InitMappings', ErrID_Info, &
+                         'blocked by upstream module failure(s)', Status='skipped' )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_InitMappings', ErrStat, ErrMsg )
+      CALL CkIn_Collect( CkInCollector, 'FAST_SolverInit', ErrID_Info, &
+                         'blocked by upstream module failure(s)', Status='skipped' )
+      CALL CkIn_ReportComponent( CkInCollector, 'FAST_SolverInit', ErrStat, ErrMsg )
+   END IF
+
+   CALL CkIn_WrSummary( CkInCollector )                    ! full self-contained stdout summary
+   CALL CkIn_CloseReport( CkInCollector, ErrStat, ErrMsg ) ! authoritative overall_status trailer
+   ExitCode = CkIn_ExitCode( CkInCollector )
+
+   ! Normal shutdown (module End + close outputs + destroy turbine) WITHOUT its stop, then our exit code:
+   CALL ExitThisProgram_T( Turbine, ErrID_None, StopTheProgram=.FALSE., SkipRunTimeMsg=.TRUE. )
+   CALL ProgExit( ExitCode )
+
+END SUBROUTINE FAST_CheckInput_T
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
 SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SED, BD, SrvD, AD, ADsk, ExtLd, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, SlD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
+                               MAPp, FEAM, MD, Orca, IceF, IceD, SlD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData, CkInCollector )
 
    use ElastoDyn_Parameters, only: Method_RK4
 
@@ -145,9 +218,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    TYPE(FAST_ExternInitType), OPTIONAL, INTENT(IN) :: ExternInitData !< Initialization input data from an external source (Simulink)
 
+   TYPE(CheckInputCollectorType), OPTIONAL, INTENT(INOUT) :: CkInCollector !< -CheckInput accumulator; when present
+                                                                            !! and p_FAST%CheckInputMode, Failed() collects and continues
+
    ! local variables
    CHARACTER(1024)                         :: InputFile           !< A CHARACTER string containing the name of the primary FAST input file
    TYPE(FAST_InitData)                     :: Init                !< Initialization data for all modules
+   CHARACTER(64)                           :: CurrentComponent    ! component label used by Failed() when collecting
 
 
    REAL(ReKi)                              :: AirDens             ! air density for initialization/normalization of ExternalInflow data
@@ -164,6 +241,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    INTEGER(IntKi)                          :: StateAryLB          ! States array lower bound
    INTEGER(IntKi)                          :: StateAryUB          ! States array upper bound
    logical                                 :: CallStart
+   logical                                 :: BDRootMotionOK      ! -CheckInput guard: ED BladeRootMotion usable this instance
+   logical                                 :: ExtInfw_OK          ! -CheckInput guard: ExtInfw preconditions satisfied
+   logical                                 :: SlD_OK              ! -CheckInput guard: SoilDyn precondition (CompSub==Module_SD) satisfied
 
    REAL(R8Ki)                              :: theta(3)            ! angles for hub orientation matrix for aeromaps
 
@@ -174,6 +254,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !..........
    ErrStat = ErrID_None
    ErrMsg  = ""
+   CurrentComponent = 'FAST_InitializeAll'
 
    p_FAST%CompAeroMaps = CompAeroMaps
 
@@ -246,6 +327,98 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
    end if
 
+   if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+      call CkIn_OpenReport(CkInCollector, trim(p_FAST%OutFileRoot), ErrStat2, ErrMsg2)
+      if (ErrStat2 >= AbortErrLev) call WrScr('Warning: could not open -CheckInput report file: '//trim(ErrMsg2))
+   end if
+
+   ! -CheckInput: mark every module the input file does not enable as 'not_used' up front, before any
+   ! module init is attempted. Modules that ARE enabled get their own passed/failed/unavailable report
+   ! after their init block completes (see the per-module CurrentComponent labels below); this sweep
+   ! covers only the disabled ones, so each component is reported exactly once.
+   if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+      if (p_FAST%CompElast /= Module_SED) then
+         call CkIn_Collect(CkInCollector, 'Simplified-ElastoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'Simplified-ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompElast == Module_SED) then
+         call CkIn_Collect(CkInCollector, 'ElastoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompElast /= Module_BD) then
+         call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'BeamDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompInflow /= Module_IfW) then
+         call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'InflowWind', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSeaSt /= Module_SeaSt) then
+         call CkIn_Collect(CkInCollector, 'SeaState', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SeaState', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompAero /= Module_AD .and. p_FAST%CompAero /= Module_ExtLd) then
+         call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompAero /= Module_ADsk) then
+         call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDisk', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSoil /= Module_SlD) then
+         call CkIn_Collect(CkInCollector, 'SoilDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SoilDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSub /= Module_SD) then
+         call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'SubDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompSub /= Module_ExtPtfm) then
+         call CkIn_Collect(CkInCollector, 'ExtPtfm', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ExtPtfm', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompHydro /= Module_HD) then
+         call CkIn_Collect(CkInCollector, 'HydroDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'HydroDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_MAP) then
+         call CkIn_Collect(CkInCollector, 'MAP', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'MAP', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_MD) then
+         call CkIn_Collect(CkInCollector, 'MoorDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'MoorDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_FEAM) then
+         call CkIn_Collect(CkInCollector, 'FEAMooring', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'FEAMooring', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompMooring /= Module_Orca) then
+         call CkIn_Collect(CkInCollector, 'OrcaFlex', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'OrcaFlex', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompIce /= Module_IceF) then
+         call CkIn_Collect(CkInCollector, 'IceFloe', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'IceFloe', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompIce /= Module_IceD) then
+         call CkIn_Collect(CkInCollector, 'IceDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'IceDyn', ErrStat2, ErrMsg2)
+      end if
+      if (p_FAST%CompServo /= Module_SrvD) then
+         call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_None, '', Status='not_used')
+         call CkIn_ReportComponent(CkInCollector, 'ServoDyn', ErrStat2, ErrMsg2)
+      end if
+
+      ! ExternalInflow/ExternalLoads require ExternInitData, which the -CheckInput CLI entry point
+      ! never supplies (see FAST_CheckInput_T's call to FAST_InitializeAll); mark both not_used
+      ! unconditionally since they can never actually be attempted here.
+      call CkIn_Collect(CkInCollector, 'ExternalInflow', ErrID_None, '', Status='not_used')
+      call CkIn_ReportComponent(CkInCollector, 'ExternalInflow', ErrStat2, ErrMsg2)
+      call CkIn_Collect(CkInCollector, 'ExternalLoads', ErrID_None, '', Status='not_used')
+      call CkIn_ReportComponent(CkInCollector, 'ExternalLoads', ErrStat2, ErrMsg2)
+   end if
+
    ! Allocate array to hold number of blades per rotor
    call AllocAry(p_FAST%RotNumBld, p_FAST%NRotors, "p_FAST%RotNumBld", ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -301,6 +474,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    case (Module_SED) ! Simplified-ElastoDyn
 
+      CurrentComponent = 'Simplified-ElastoDyn'
+
       allocate(SED%Input       (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("SED%Input")) return
       allocate(SED%InputTimes  (InputAryUB           ), stat=ErrStat2); if (FailedAlloc("SED%InputTimes")) return
       allocate(SED%x           (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("SED%x")) return
@@ -316,6 +491,41 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       dt_module = p_FAST%DT
       CALL SED_Init( Init%InData_SED, SED%Input(1), SED%p, SED%x(STATE_CURR), SED%xd(STATE_CURR), SED%z(STATE_CURR), SED%OtherSt(STATE_CURR), &
                      SED%y, SED%m, dt_module, Init%OutData_SED, ErrStat2, ErrMsg2 )
+      ! -CheckInput guard: SED_Init failing leaves its output meshes uncommitted (see StubOutputPointMesh
+      ! above for why that matters). Capture the failure here -- before Failed() collects it below -- and
+      ! synthesize neutral stand-ins so every remaining module that reads SED%y can still be attempted.
+      ! Mirrors the ElastoDyn treatment below; SED excludes BeamDyn (mutually exclusive CompElast value)
+      ! and SubDyn (rejected earlier in ValidateInputData), so neither gets a disclosure mark here.
+      if (ErrStat2 >= AbortErrLev .and. p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call StubOutputPointMesh(SED%y%HubPtMotion)
+         call StubOutputPointMesh(SED%y%NacelleMotion)
+         call StubOutputPointMesh(SED%y%PlatformPtMesh)
+         ! -CheckInput disclosure: every enabled direct consumer of SED's output data is about to be
+         ! attempted against the stubbed meshes above. Mark each one 'unavailable' now so the report
+         ! discloses that its checks (if any) ran on fabricated Simplified-ElastoDyn data rather than
+         ! silently reporting them as passed. Gated on each module's own Comp switch so disabled modules
+         ! are not marked.
+         if (p_FAST%CompAero == Module_AD .or. p_FAST%CompAero == Module_ExtLd) then
+            call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompAero == Module_ADsk) then
+            call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompInflow == Module_IfW) then
+            call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+         if (p_FAST%CompServo == Module_SrvD) then
+            call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_Info, &
+                 'Simplified-ElastoDyn initialization failed; attempted with stubbed interface data', &
+                 Status='unavailable')
+         end if
+      end if
       if (Failed()) return
 
       ! Add module to array of modules, return if errors occurred
@@ -325,9 +535,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
         
       ! Save number of blades
       p_FAST%RotNumBld(1) = Init%OutData_SED%NumBl
-      
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'Simplified-ElastoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'Simplified-ElastoDyn', ErrStat2, ErrMsg2)
+      end if
+
    case default ! ElastoDyn
-      
+
+      CurrentComponent = 'ElastoDyn'
+
       ! Allocate module data arrays
       allocate(ED%Input       (InputAryLB:InputAryUB, p_FAST%NRotors), stat=ErrStat2); if (FailedAlloc("ED%Input")) return
       allocate(ED%InputTimes  (InputAryUB, p_FAST%NRotors           ), stat=ErrStat2); if (FailedAlloc("ED%InputTimes")) return
@@ -360,8 +577,53 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          CALL ED_Init(Init%InData_ED, ED%Input(INPUT_CURR, iRot), ED%p(iRot), ED%x(iRot, STATE_CURR), &
                      ED%xd(iRot, STATE_CURR), ED%z(iRot, STATE_CURR), ED%OtherSt(iRot, STATE_CURR), &
                      ED%y(iRot), ED%m(iRot), dt_module, Init%OutData_ED(iRot), ErrStat2, ErrMsg2)
+         ! -CheckInput guard: ED_Init failing leaves its output meshes uncommitted (see StubOutputPointMesh
+         ! above for why that matters). Capture the failure here -- before Failed() collects it below -- and
+         ! synthesize neutral stand-ins so every remaining module that reads ED%y(iRot) can still be attempted.
+         if (ErrStat2 >= AbortErrLev .and. p_FAST%CheckInputMode .and. present(CkInCollector)) then
+            call StubOutputPointMesh(ED%y(iRot)%HubPtMotion)
+            call StubOutputPointMesh(ED%y(iRot)%NacelleMotion)
+            call StubOutputPointMesh(ED%y(iRot)%PlatformPtMesh)
+            ! -CheckInput disclosure: every enabled direct consumer of ED's output data is about to be
+            ! attempted against the stubbed meshes above (or, for BeamDyn, cannot be attempted at all --
+            ! with ED failed, p_FAST%NumBD is never set, so BD's per-blade init loop zero-trips and BD
+            ! never calls into the collector on its own). Mark each one 'unavailable' now so the report
+            ! discloses that its checks (if any) ran on fabricated ElastoDyn data rather than silently
+            ! reporting them as passed. Gated on each module's own Comp switch so disabled modules are
+            ! not marked.
+            if (p_FAST%CompElast == Module_BD) then
+               call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; BeamDyn instances cannot be attempted (blade count unavailable)', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompAero == Module_AD .or. p_FAST%CompAero == Module_ExtLd) then
+               call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompAero == Module_ADsk) then
+               call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompInflow == Module_IfW) then
+               call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompSub == Module_SD) then
+               call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+            if (p_FAST%CompServo == Module_SrvD) then
+               call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_Info, &
+                    'ElastoDyn initialization failed; attempted with stubbed ElastoDyn interface data', &
+                    Status='unavailable')
+            end if
+         end if
          if (Failed()) return
-      
+
          ! Add module to array of modules, return if errors occurred
          CALL MV_AddModule(m_Glue%ModData, Module_ED, 'ED', iRot, dt_module, p_FAST%DT, &
                            Init%OutData_ED(iRot)%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2, iRotor=iRot)
@@ -387,6 +649,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             end if
          end if
       end do
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ElastoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ElastoDyn', ErrStat2, ErrMsg2)
+      end if
 
    end select ! SED/ED
 
@@ -422,6 +689,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    if (p_FAST%CompElast == Module_BD) then
 
+      CurrentComponent = 'BeamDyn'
+
       ! Set initialization input
       Init%InData_BD%DynamicSolve   = .TRUE.                                    ! FAST can only couple to BeamDyn when dynamic solve is used.
       Init%InData_BD%Linearize      = p_FAST%Linearize
@@ -443,14 +712,38 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))&
                &//'.R'//TRIM(Num2LStr(iRot))//'.B'//TRIM(Num2LStr(k))
             Init%InData_BD%InputFile    = p_FAST%BDBldFile(k, iRot)
-            Init%InData_BD%GlbPos       = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)          ! {:}    - - "Initial Position Vector of the local blade coordinate system"
-            Init%InData_BD%GlbRot       = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)  ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
 
-            ! These outputs are set in ElastoDyn only when BeamDyn is used:
-            Init%InData_BD%RootDisp     = ED%y(iRot)%BladeRootMotion(k)%TranslationDisp(:,1)   ! {:}    - - "Initial root displacement"
-            Init%InData_BD%RootOri      = ED%y(iRot)%BladeRootMotion(k)%Orientation(:,:,1)     ! {:}{:} - - "Initial root orientation"
-            Init%InData_BD%RootVel(1:3) = ED%y(iRot)%BladeRootMotion(k)%TranslationVel(:,1)    ! {:}    - - "Initial root velocities and angular velocities"
-            Init%InData_BD%RootVel(4:6) = ED%y(iRot)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular velocities"
+            ! -CheckInput guard: if ED_Init failed, BladeRootMotion may be unallocated, undersized for
+            ! this blade, or uncommitted -- dereferencing its POINTER components (Position/RefOrientation/
+            ! ...) segfaults. Feed neutral geometry and mark BeamDyn tainted.
+            BDRootMotionOK = .false.
+            if (allocated(ED%y(iRot)%BladeRootMotion)) then
+               if (k <= size(ED%y(iRot)%BladeRootMotion)) then
+                  if (ED%y(iRot)%BladeRootMotion(k)%committed) then
+                     Init%InData_BD%GlbPos       = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)          ! {:}    - - "Initial Position Vector of the local blade coordinate system"
+                     Init%InData_BD%GlbRot       = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)  ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
+
+                     ! These outputs are set in ElastoDyn only when BeamDyn is used:
+                     Init%InData_BD%RootDisp     = ED%y(iRot)%BladeRootMotion(k)%TranslationDisp(:,1)   ! {:}    - - "Initial root displacement"
+                     Init%InData_BD%RootOri      = ED%y(iRot)%BladeRootMotion(k)%Orientation(:,:,1)     ! {:}{:} - - "Initial root orientation"
+                     Init%InData_BD%RootVel(1:3) = ED%y(iRot)%BladeRootMotion(k)%TranslationVel(:,1)    ! {:}    - - "Initial root velocities and angular velocities"
+                     Init%InData_BD%RootVel(4:6) = ED%y(iRot)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular velocities"
+                     BDRootMotionOK = .true.
+                  end if
+               end if
+            end if
+            if (.not. BDRootMotionOK) then
+               Init%InData_BD%GlbPos       = 0.0_ReKi
+               Init%InData_BD%GlbRot       = reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
+               Init%InData_BD%RootDisp     = 0.0_ReKi
+               Init%InData_BD%RootOri      = Init%InData_BD%GlbRot
+               Init%InData_BD%RootVel      = 0.0_ReKi
+               if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+                  call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_Info, &
+                       'blade '//trim(Num2LStr(k))//' of rotor '//trim(Num2LStr(iRot))//': ElastoDyn root motion mesh unavailable (upstream failure); attempted with neutral geometry', &
+                       Status='unavailable')
+               end if
+            end if
 
             ! Call module initialization routine
             dt_module = p_FAST%DT
@@ -469,6 +762,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             
          END DO
       end do
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'BeamDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'BeamDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF
 
    !----------------------------------------------------------------------------
@@ -485,6 +784,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    select case(p_FAST%CompInflow)
    case (Module_IfW)
+
+      CurrentComponent = 'InflowWind'
 
       Init%InData_IfW%Linearize              = p_FAST%Linearize
       Init%InData_IfW%InputFileName          = p_FAST%InflowFile
@@ -508,10 +809,33 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_IfW%HubPosition = SED%y%HubPtMotion%Position(:,1)
          Init%InData_IfW%RadAvg = Init%OutData_SED%BladeLength
       case (Module_ED)
-         Init%InData_IfW%HubPosition = ED%y(1)%HubPtMotion%Position(:,1)
+         ! -CheckInput guard: if ED_Init failed, HubPtMotion is uncommitted and its POINTER
+         ! Position component is NULL -- dereferencing segfaults. Feed a neutral hub position.
+         ! The else-branch below is unreachable when ED itself fails (its case-default block above
+         ! already stubs HubPtMotion to committed) -- kept as defense-in-depth for other uncommitted-mesh
+         ! causes.
+         if (ED%y(1)%HubPtMotion%committed) then
+            Init%InData_IfW%HubPosition = ED%y(1)%HubPtMotion%Position(:,1)
+         else
+            Init%InData_IfW%HubPosition = 0.0_ReKi
+            if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+               call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                    'ElastoDyn hub motion mesh unavailable (upstream failure); attempted with neutral hub position', &
+                    Status='unavailable')
+            end if
+         end if
          Init%InData_IfW%RadAvg = Init%OutData_ED(1)%BladeLength
       case (Module_BD)
-         Init%InData_IfW%HubPosition = ED%y(1)%HubPtMotion%Position(:,1)
+         if (ED%y(1)%HubPtMotion%committed) then
+            Init%InData_IfW%HubPosition = ED%y(1)%HubPtMotion%Position(:,1)
+         else
+            Init%InData_IfW%HubPosition = 0.0_ReKi
+            if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+               call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_Info, &
+                    'ElastoDyn hub motion mesh unavailable (upstream failure); attempted with neutral hub position', &
+                    Status='unavailable')
+            end if
+         end if
          Init%InData_IfW%RadAvg = 0.0_ReKi
          do k = 1, p_FAST%NumBD
             Init%InData_IfW%RadAvg = Init%InData_IfW%RadAvg + TwoNorm(BD%y(k)%BldMotion%Position(:,1) - BD%y(k)%BldMotion%Position(:,BD%y(k)%BldMotion%Nnodes))
@@ -553,6 +877,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_IfW%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'InflowWind', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'InflowWind', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ExtInfw)
       ! ExtInfw requires initialization of AD first, so nothing executed here
    case default
@@ -573,6 +902,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(SeaSt%OtherSt    (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("SeaSt%OtherSt")) return
 
    if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+
+      CurrentComponent = 'SeaState'
 
       Init%InData_SeaSt%TMax          = p_FAST%TMax
       Init%InData_SeaSt%Gravity       = p_FAST%Gravity
@@ -625,6 +956,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    end if
 
+   ! -CheckInput guard: Init%OutData_SeaSt%WaveField is a POINTER (NULL if SeaSt_Init failed or SeaState
+   ! is off); HydroDyn/MAP/MoorDyn dereference it below without checks. Give them a zero-valued field.
+   if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+      if (.not. associated(Init%OutData_SeaSt%WaveField)) then
+         allocate(Init%OutData_SeaSt%WaveField)   ! all scalar components carry safe default initializers
+         if (p_FAST%CompSeaSt == Module_SeaSt) then
+            call CkIn_Collect(CkInCollector, 'SeaState', ErrID_Info, &
+                 'downstream modules given a zero-valued WaveField fallback (upstream SeaState failure)')
+         end if
+      end if
+      ! Report SeaState now that its stub-fallback disclosure (if any) has been collected above.
+      if (p_FAST%CompSeaSt == Module_SeaSt) then
+         call CkIn_Collect(CkInCollector, 'SeaState', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SeaState', ErrStat2, ErrMsg2)
+      end if
+   end if
+
    !----------------------------------------------------------------------------
    ! Initialize AeroDyn / ADsk
    !----------------------------------------------------------------------------
@@ -632,6 +980,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    select case (p_FAST%CompAero)
 
    case (Module_AD, Module_ExtLd)
+
+      CurrentComponent = 'AeroDyn'
 
       ! Allocate module data arrays
       allocate(AD%Input           (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("AD%Input")) return
@@ -689,20 +1039,55 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_AD%rotors(iRot)%NacellePosition    = SED%y%NacelleMotion%Position(:,1)
             Init%InData_AD%rotors(iRot)%NacelleOrientation = SED%y%NacelleMotion%RefOrientation(:,:,1)
             do k = 1, p_FAST%RotNumBld(iRot)
-               Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
-               Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+               ! -CheckInput guard: mirrors the ED/BeamDyn root-motion guard above -- if SED_Init failed
+               ! before committing BladeRootMotion (or the array is unallocated/undersized), feed neutral
+               ! geometry instead of dereferencing a NULL/out-of-bounds mesh. In practice p_FAST%RotNumBld
+               ! is 0 for early SED failures, so this loop usually zero-trips; guarded here anyway as
+               ! defense-in-depth for late-stage failures.
+               if (allocated(SED%y%BladeRootMotion)) then
+                  if (k <= size(SED%y%BladeRootMotion)) then
+                     if (SED%y%BladeRootMotion(k)%committed) then
+                        Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
+                        Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+                        cycle
+                     end if
+                  end if
+               end if
+               Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = 0.0_ReKi
+               Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
             end do
 
          elseif (p_FAST%CompElast == Module_ED .or. p_FAST%CompElast == Module_BD) then
 
-            Init%InData_AD%rotors(iRot)%HubPosition        = ED%y(iRot)%HubPtMotion%Position(:,1)
-            Init%InData_AD%rotors(iRot)%HubOrientation     = ED%y(iRot)%HubPtMotion%RefOrientation(:,:,1)
-            Init%InData_AD%rotors(iRot)%NacellePosition    = ED%y(iRot)%NacelleMotion%Position(:,1)
-            Init%InData_AD%rotors(iRot)%NacelleOrientation = ED%y(iRot)%NacelleMotion%RefOrientation(:,:,1)
-            do k = 1, p_FAST%RotNumBld(iRot)
-               Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)
-               Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)
-            end do
+            ! -CheckInput guard: if ED_Init failed, its output meshes are uncommitted and their POINTER
+            ! components are NULL -- dereferencing segfaults. Feed neutral geometry and mark AD tainted.
+            ! The else-branch below is unreachable when ED itself fails (its case-default block above
+            ! already stubs these meshes to committed) -- kept as defense-in-depth for other
+            ! uncommitted-mesh causes.
+            if (ED%y(iRot)%HubPtMotion%committed) then
+               Init%InData_AD%rotors(iRot)%HubPosition        = ED%y(iRot)%HubPtMotion%Position(:,1)
+               Init%InData_AD%rotors(iRot)%HubOrientation     = ED%y(iRot)%HubPtMotion%RefOrientation(:,:,1)
+               Init%InData_AD%rotors(iRot)%NacellePosition    = ED%y(iRot)%NacelleMotion%Position(:,1)
+               Init%InData_AD%rotors(iRot)%NacelleOrientation = ED%y(iRot)%NacelleMotion%RefOrientation(:,:,1)
+               do k = 1, p_FAST%RotNumBld(iRot)
+                  Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)
+                  Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)
+               end do
+            else
+               Init%InData_AD%rotors(iRot)%HubPosition        = 0.0_ReKi
+               Init%InData_AD%rotors(iRot)%HubOrientation     = reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
+               Init%InData_AD%rotors(iRot)%NacellePosition    = 0.0_ReKi
+               Init%InData_AD%rotors(iRot)%NacelleOrientation = Init%InData_AD%rotors(iRot)%HubOrientation
+               do k = 1, p_FAST%RotNumBld(iRot)
+                  Init%InData_AD%rotors(iRot)%BladeRootPosition(:,k)      = 0.0_ReKi
+                  Init%InData_AD%rotors(iRot)%BladeRootOrientation(:,:,k) = Init%InData_AD%rotors(iRot)%HubOrientation
+               end do
+               if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+                  call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_Info, &
+                       'rotor '//trim(Num2LStr(iRot))//': ElastoDyn output mesh unavailable (upstream failure); attempted with neutral geometry', &
+                       Status='unavailable')
+               end if
+            end if
 
          endif
 
@@ -741,7 +1126,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       AirDens = Init%OutData_AD%rotors(1)%AirDens
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'AeroDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDyn', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ADsk)
+
+      CurrentComponent = 'AeroDisk'
 
       ! Allocate module data arrays
       allocate(ADsk%Input           (InputAryLB:InputAryUB), stat=ErrStat2); if (FailedAlloc("ADsk%Input")) return
@@ -785,6 +1177,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       ! AeroDisk may override the AirDens value.  Store this to inform other modules
       AirDens = Init%OutData_ADsk%AirDens
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'AeroDisk', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'AeroDisk', ErrStat2, ErrMsg2)
+      end if
+
    end select ! CompAero
 
    !----------------------------------------------------------------------------
@@ -824,14 +1221,30 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
    IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
 
+      ! -CheckInput: this block's own label -- without it, a failure here would still carry whatever
+      ! CurrentComponent the previous module's block left set (AeroDyn/AeroDisk), misattributing the error.
+      CurrentComponent = 'ExternalInflow'
+
+      ExtInfw_OK = .false.
       IF ( PRESENT(ExternInitData) ) THEN
          Init%InData_ExtInfw%NumActForcePtsBlade = ExternInitData%NumActForcePtsBlade
          Init%InData_ExtInfw%NumActForcePtsTower = ExternInitData%NumActForcePtsTower
+         ExtInfw_OK = .true.
       ELSE
          CALL SetErrStat( ErrID_Fatal, 'ExternalInflow integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup()
-         RETURN
+         ! -CheckInput guard: without ExternInitData, everything below dereferences an absent OPTIONAL
+         ! argument -- skip only this module's remaining init work instead of aborting the whole run.
+         if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+            call CkIn_Collect(CkInCollector, trim(CurrentComponent), ErrStat, ErrMsg)
+            ErrStat = ErrID_None
+            ErrMsg  = ''
+         else
+            CALL Cleanup()
+            RETURN
+         end if
       END IF
+
+      IF (ExtInfw_OK) THEN
       ! get blade and tower info from AD.  Assumption made that all blades have same spanwise characteristics
       Init%InData_ExtInfw%BladeLength = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds)
       if (allocated(Init%OutData_AD%rotors(1)%TwrElev)) then
@@ -853,7 +1266,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       ! Set node clustering type
       Init%InData_ExtInfw%NodeClusterType = ExternInitData%NodeClusterType
-      
+
       ! Set up the data structures for integration with ExternalInflow
       CALL Init_ExtInfw(Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -868,6 +1281,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       ! Set pointer to flowfield -- I would prefer that we did this through the AD_Init, but AD_InitOut results are required for ExtInfw_Init
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
+      END IF
    endif
 
    !----------------------------------------------------------------------------
@@ -887,12 +1301,24 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! SoilDyn
    case (Module_SlD)
 
+      CurrentComponent = 'SoilDyn'
+
       ! SoilDyn requires SubDyn
+      SlD_OK = .true.
       if (p_FAST%CompSub /= Module_SD) then
          call SetErrStat(ErrID_Fatal, "SoilDyn requires SubDyn (CompSub = 1)", ErrStat, ErrMsg, RoutineName)
-         return
+         ! -CheckInput guard: skip only SoilDyn's remaining init work instead of aborting the whole run.
+         if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+            call CkIn_Collect(CkInCollector, trim(CurrentComponent), ErrStat, ErrMsg)
+            ErrStat = ErrID_None
+            ErrMsg  = ''
+            SlD_OK = .false.
+         else
+            return
+         end if
       end if
 
+      if (SlD_OK) then
       ! Initialization input
       Init%InData_SlD%InputFile = p_FAST%SoilFile
       Init%InData_SlD%RootName = p_FAST%OutFileRoot
@@ -913,6 +1339,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_SlD, 'SlD', 1, dt_module, p_FAST%DT, &
                         Init%OutData_SlD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
+      end if
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'SoilDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SoilDyn', ErrStat2, ErrMsg2)
+      end if
 
    end select
 
@@ -939,6 +1371,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    select case (p_FAST%CompSub)
 
    case (Module_SD)
+
+      CurrentComponent = 'SubDyn'
 
       Init%InData_SD%Linearize     = p_FAST%Linearize
       Init%InData_SD%g             = p_FAST%Gravity
@@ -978,7 +1412,20 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_SD%nTP           = p_FAST%NRotors
       call AllocAry(Init%InData_SD%TP_RefPoint, 3, p_FAST%NRotors, "TP_RefPoint", ErrStat2, ErrMsg2); if (Failed()) return
       do iRot = 1, p_FAST%NRotors
-         Init%InData_SD%TP_RefPoint(:,iRot) = ED%y(iRot)%PlatformPtMesh%Position(:,1)
+         ! -CheckInput guard: ED_Init commits PlatformPtMesh before any successful return; the else-branch
+         ! below is reachable only after a collected ED failure (uncommitted mesh, NULL Position pointer).
+         ! In practice it is unreachable even then -- ED's case-default block already stubs this mesh to
+         ! committed -- kept as defense-in-depth for other uncommitted-mesh causes.
+         if (ED%y(iRot)%PlatformPtMesh%committed) then
+            Init%InData_SD%TP_RefPoint(:,iRot) = ED%y(iRot)%PlatformPtMesh%Position(:,1)
+         else
+            Init%InData_SD%TP_RefPoint(:,iRot) = 0.0_ReKi
+            if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+               call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_Info, &
+                    'rotor '//trim(Num2LStr(iRot))//': ElastoDyn platform mesh unavailable (upstream failure); attempted with zeroed position', &
+                    Status='unavailable')
+            end if
+         end if
       end do
 
       ! Call module initialization routine
@@ -1003,7 +1450,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       !    Use PlatformPosInit from ED above
       end if
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'SubDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'SubDyn', ErrStat2, ErrMsg2)
+      end if
+
    case (Module_ExtPtfm)
+
+      CurrentComponent = 'ExtPtfm'
 
       Init%InData_ExtPtfm%InputFile = p_FAST%SubFile
       Init%InData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//y_FAST%Module_Abrev(Module_ExtPtfm)
@@ -1025,6 +1479,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_ExtPtfm%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ExtPtfm', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ExtPtfm', ErrStat2, ErrMsg2)
+      end if
+
    end select
 
    !----------------------------------------------------------------------------
@@ -1040,6 +1499,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(HD%OtherSt           (StateAryUB           ), stat=ErrStat2); if (FailedAlloc("HD%OtherSt")) return
 
    IF (p_FAST%CompHydro == Module_HD) THEN
+
+      CurrentComponent = 'HydroDyn'
 
       Init%InData_HD%Gravity       = p_FAST%Gravity
       Init%InData_HD%UseInputFile  = .TRUE.
@@ -1083,6 +1544,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_HD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'HydroDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'HydroDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF   ! CompHydro
 
    !----------------------------------------------------------------------------
@@ -1123,7 +1589,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    select case (p_FAST%CompMooring)
 
-   case (Module_MAP) 
+   case (Module_MAP)
+
+      CurrentComponent = 'MAP'
 
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
 
@@ -1153,7 +1621,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_MAP%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_MD) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'MAP', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'MAP', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_MD)
+
+      CurrentComponent = 'MoorDyn'
 
       ! some new allocations needed with version that's compatible with farm-level use
       allocate(Init%InData_MD%PtfmInit     (6,1), stat=ErrStat2); if (FailedAlloc("Init%InData_MD%PtfmInit")) return
@@ -1189,7 +1664,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_MD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_FEAM) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'MoorDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'MoorDyn', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_FEAM)
+
+      CurrentComponent = 'FEAMooring'
 
       Init%InData_FEAM%InputFile   = p_FAST%MooringFile         ! This needs to be set according to what is in the FAST input file.
       Init%InData_FEAM%RootName    = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_FEAM))
@@ -1213,7 +1695,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_FEAM%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   case (Module_Orca) 
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'FEAMooring', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'FEAMooring', ErrStat2, ErrMsg2)
+      end if
+
+   case (Module_Orca)
+
+      CurrentComponent = 'OrcaFlex'
 
       Init%InData_Orca%InputFile = p_FAST%MooringFile
       Init%InData_Orca%RootName  = p_FAST%OutFileRoot
@@ -1231,6 +1720,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_Orca, 'Orca', 1, dt_module, p_FAST%DT, &
                         Init%OutData_Orca%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'OrcaFlex', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'OrcaFlex', ErrStat2, ErrMsg2)
+      end if
 
    END select
 
@@ -1252,6 +1746,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    IF (p_FAST%CompIce == Module_IceF) THEN
 
+      CurrentComponent = 'IceFloe'
+
       Init%InData_IceF%InputFile     = p_FAST%IceFile
       Init%InData_IceF%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceF))
       Init%InData_IceF%simLength     = p_FAST%TMax  !bjj: IceFloe stores this as single-precision (ReKi) TMax is DbKi
@@ -1268,6 +1764,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_IceF, 'IceF', 1, dt_module, p_FAST%DT, &
                         Init%OutData_IceF%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'IceFloe', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'IceFloe', ErrStat2, ErrMsg2)
+      end if
 
    end if
 
@@ -1292,6 +1793,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(IceD%m           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%m")) return
 
    IF (p_FAST%CompIce == Module_IceD) THEN
+
+      CurrentComponent = 'IceDyn'
 
       Init%InData_IceD%InputFile     = p_FAST%IceFile
       Init%InData_IceD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceD))//'1'
@@ -1336,7 +1839,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n IceD modules with n timesteps.
          IF (.NOT. EqualRealNos(dt_module, dt_IceD)) THEN
             CALL SetErrStat(ErrID_Fatal,"All instances of IceDyn (one per support-structure leg) must be the same",ErrStat,ErrMsg,RoutineName)
-            return
+            ! -CheckInput guard: skip only this leg's remaining init work (the MV_AddModule call below)
+            ! and continue attempting the other legs, instead of aborting the whole run.
+            if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+               call CkIn_Collect(CkInCollector, trim(CurrentComponent), ErrStat, ErrMsg)
+               ErrStat = ErrID_None
+               ErrMsg  = ''
+               cycle
+            else
+               return
+            end if
          END IF
 
          ! Add module to list of modules
@@ -1344,6 +1856,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                            Init%OutData_IceD%Vars, .false., ErrStat2, ErrMsg2)
          if (Failed()) return
       END DO
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'IceDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'IceDyn', ErrStat2, ErrMsg2)
+      end if
 
    END IF
 
@@ -1364,6 +1881,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(Init%OutData_SrvD(p_FAST%NRotors                       ), stat=ErrStat2); if (FailedAlloc("Init%OutData_SrvD")) return
 
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
+
+      CurrentComponent = 'ServoDyn'
 
       ! Loop through the number of rotors
       do iRot = 1, p_FAST%NRotors
@@ -1407,7 +1926,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_SrvD%PtfmRefOrient(1:3,1:3)= SED%y%PlatformPtMesh%RefOrientation(1:3,1:3,1) ! R8Ki
             Init%InData_SrvD%PtfmOrient(1:3,1:3)   = SED%y%PlatformPtMesh%Orientation(1:3,1:3,1)    ! R8Ki
             Init%InData_SrvD%RotSpeedRef           = Init%OutData_SED%RotSpeed
-            Init%InData_SrvD%BlPitchInit           = Init%OutData_SED%BlPitch
+            ! -CheckInput guard: mirrors the ED guard below -- if SED_Init failed, InitOutput%BlPitch
+            ! (ALLOCATABLE) was never allocated; assigning an unallocated allocatable to another
+            ! allocatable is undefined behavior and segfaults.
+            if (allocated(Init%OutData_SED%BlPitch)) then
+               Init%InData_SrvD%BlPitchInit         = Init%OutData_SED%BlPitch
+            else
+               Init%InData_SrvD%BlPitchInit         = 0.0_ReKi
+            end if
          else
             Init%InData_SrvD%NacRefPos(1:3)        = ED%y(iRot)%NacelleMotion%Position(1:3,1)
             Init%InData_SrvD%NacTransDisp(1:3)     = ED%y(iRot)%NacelleMotion%TranslationDisp(1:3,1)     ! R8Ki
@@ -1422,7 +1948,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_SrvD%PtfmRefOrient(1:3,1:3)= ED%y(iRot)%PlatformPtMesh%RefOrientation(1:3,1:3,1) ! R8Ki
             Init%InData_SrvD%PtfmOrient(1:3,1:3)   = ED%y(iRot)%PlatformPtMesh%Orientation(1:3,1:3,1)    ! R8Ki
             Init%InData_SrvD%RotSpeedRef           = Init%OutData_ED(iRot)%RotSpeed
-            Init%InData_SrvD%BlPitchInit           = Init%OutData_ED(iRot)%BlPitch
+            ! -CheckInput guard: if ED_Init failed, InitOutput%BlPitch (ALLOCATABLE) was never allocated;
+            ! assigning an unallocated allocatable to another allocatable is undefined behavior and segfaults.
+            if (allocated(Init%OutData_ED(iRot)%BlPitch)) then
+               Init%InData_SrvD%BlPitchInit         = Init%OutData_ED(iRot)%BlPitch
+            else
+               Init%InData_SrvD%BlPitchInit         = 0.0_ReKi
+            end if
          endif
 
          ! Set blade root info -- used for Blade StC.  Set from SED even though SED is not compatible -- we won't know
@@ -1430,10 +1962,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          select case (p_FAST%CompElast)
          case (Module_SED)
             do k = 1, p_FAST%RotNumBld(iRot)
-               Init%InData_SrvD%BladeRootRefPos(:,k)     = SED%y%BladeRootMotion(k)%Position(:,1)
-               Init%InData_SrvD%BladeRootTransDisp(:,k)  = SED%y%BladeRootMotion(k)%TranslationDisp(:,1)
-               Init%InData_SrvD%BladeRootRefOrient(:,:,k)= SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
-               Init%InData_SrvD%BladeRootOrient(:,:,k)   = SED%y%BladeRootMotion(k)%Orientation(:,:,1)
+               ! -CheckInput guard: mirrors the AeroDyn SED guard above -- feed neutral geometry if
+               ! BladeRootMotion is unallocated/undersized/uncommitted rather than dereferencing it.
+               if (allocated(SED%y%BladeRootMotion)) then
+                  if (k <= size(SED%y%BladeRootMotion)) then
+                     if (SED%y%BladeRootMotion(k)%committed) then
+                        Init%InData_SrvD%BladeRootRefPos(:,k)     = SED%y%BladeRootMotion(k)%Position(:,1)
+                        Init%InData_SrvD%BladeRootTransDisp(:,k)  = SED%y%BladeRootMotion(k)%TranslationDisp(:,1)
+                        Init%InData_SrvD%BladeRootRefOrient(:,:,k)= SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+                        Init%InData_SrvD%BladeRootOrient(:,:,k)   = SED%y%BladeRootMotion(k)%Orientation(:,:,1)
+                        cycle
+                     end if
+                  end if
+               end if
+               Init%InData_SrvD%BladeRootRefPos(:,k)     = 0.0_ReKi
+               Init%InData_SrvD%BladeRootTransDisp(:,k)  = 0.0_R8Ki
+               Init%InData_SrvD%BladeRootRefOrient(:,:,k)= reshape([1._R8Ki,0._R8Ki,0._R8Ki, 0._R8Ki,1._R8Ki,0._R8Ki, 0._R8Ki,0._R8Ki,1._R8Ki],[3,3])
+               Init%InData_SrvD%BladeRootOrient(:,:,k)   = Init%InData_SrvD%BladeRootRefOrient(:,:,k)
             end do
          case (Module_ED, Module_BD)
             do k = 1, p_FAST%RotNumBld(iRot)
@@ -1501,11 +2046,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          if (ErrStat >= AbortErrLev) return
 
       end do
-      
+
+      if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+         call CkIn_Collect(CkInCollector, 'ServoDyn', ErrID_None, '')
+         call CkIn_ReportComponent(CkInCollector, 'ServoDyn', ErrStat2, ErrMsg2)
+      end if
+
    END IF
 
+   ! -CheckInput: every module's own label has now been reported; restore the generic label so any
+   ! remaining failure below (FAST_InitOutput, VTK setup, ...) is attributed to FAST_InitializeAll
+   ! rather than misattributed to ServoDyn (the last per-module label set above).
+   CurrentComponent = 'FAST_InitializeAll'
+
    !----------------------------------------------------------------------------
-   ! Set up output for glue code 
+   ! Set up output for glue code
    ! (must be done after all modules are initialized so we have their WriteOutput information)
    !----------------------------------------------------------------------------
 
@@ -1529,7 +2084,18 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    m_FAST%t_global        = t_initial
 
    ! Initialize external inputs for first step
+   !
+   ! -CheckInput guard: when SrvD_Init fails, Failed() (see above) collects the error and keeps
+   ! going instead of returning -- but SrvD%Input(INPUT_CURR,1)'s allocatable members (including
+   ! ExternalBlPitchCom, indexed below) are never allocated if SrvD_Init fails before reaching its
+   ! own Init_u allocation (e.g. its input file is missing, as in the AeroMap corpus-sweep case).
+   ! In the normal (non-CheckInput) path this whole section is unreachable after a real SrvD_Init
+   ! failure because Failed() already returned above, so gate the dereferences on the array being
+   ! allocated rather than adding a redundant CheckInputMode branch; m_FAST%ExternInput's fields
+   ! already default-initialize to zero (FAST_Types.f90), so skipping this block leaves them at a
+   ! sane value and ServoDyn's own failure has already been collected/reported above.
    if ( p_FAST%CompServo == MODULE_SrvD ) then
+   if (allocated(SrvD%Input(INPUT_CURR,1)%ExternalBlPitchCom)) then
 
       m_FAST%ExternInput%GenTrq     = SrvD%Input(INPUT_CURR,1)%ExternalGenTrq !0.0_ReKi
       m_FAST%ExternInput%ElecPwr    = SrvD%Input(INPUT_CURR,1)%ExternalElecPwr
@@ -1561,6 +2127,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          m_FAST%ExternInput%CableDeltaLdot = 0.0_Reki
       endif
    end if
+   end if
 
    !----------------------------------------------------------------------------
    ! Cleanup
@@ -1573,14 +2140,53 @@ CONTAINS
 
    SUBROUTINE Cleanup()
       ! Destroy initialization data
-      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 ) 
+      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END SUBROUTINE Cleanup
+
+   SUBROUTINE StubOutputPointMesh(mesh)
+      ! -CheckInput helper: when an upstream module's Init fails, its output meshes never get committed,
+      ! so their POINTER components (Position/Orientation/...) are NULL. Every downstream module that reads
+      ! such a mesh (there are many call sites -- ED's HubPtMotion/NacelleMotion/PlatformPtMesh are read by
+      ! InflowWind/AeroDyn/BeamDyn/SubDyn/ServoDyn/HydroDyn/MAP/MoorDyn/...) would otherwise segfault.
+      ! Rather than guard every read site, build a committed, all-zero/identity stand-in mesh once, right
+      ! after the failed Init call, so the rest of FAST_InitializeAll can proceed and every remaining
+      ! module still gets attempted. Only called under CheckInputMode with a collector present.
+      TYPE(MeshType), INTENT(INOUT) :: mesh
+      INTEGER(IntKi)                :: ErrStat3
+      CHARACTER(ErrMsgLen)          :: ErrMsg3
+      call MeshCreate(mesh, COMPONENT_OUTPUT, 1, ErrStat3, ErrMsg3, &
+           Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., &
+           TranslationAcc=.true., RotationAcc=.true.)
+      if (ErrStat3 >= AbortErrLev) return
+      call MeshPositionNode(mesh, 1, [0.0_ReKi, 0.0_ReKi, 0.0_ReKi], ErrStat3, ErrMsg3)
+      if (ErrStat3 >= AbortErrLev) return
+      call MeshConstructElement(mesh, ELEMENT_POINT, ErrStat3, ErrMsg3, p1=1)
+      if (ErrStat3 >= AbortErrLev) return
+      call MeshCommit(mesh, ErrStat3, ErrMsg3)
+      if (ErrStat3 >= AbortErrLev) return
+      mesh%Orientation     = mesh%RefOrientation
+      mesh%TranslationDisp = 0.0_R8Ki
+      mesh%TranslationVel  = 0.0_ReKi
+      mesh%RotationVel     = 0.0_ReKi
+      mesh%TranslationAcc  = 0.0_ReKi
+      mesh%RotationAcc     = 0.0_ReKi
+   END SUBROUTINE StubOutputPointMesh
 
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
-      if (Failed) call Cleanup()
+      if (Failed) then
+         if (p_FAST%CheckInputMode .and. present(CkInCollector)) then
+            ! -CheckInput: record and keep going so every remaining module is still attempted.
+            call CkIn_Collect(CkInCollector, trim(CurrentComponent), ErrStat, ErrMsg)
+            ErrStat = ErrID_None
+            ErrMsg  = ''
+            Failed  = .false.
+         else
+            call Cleanup()
+         end if
+      end if
    end function Failed
 
    logical function FailedAlloc(txt)
@@ -2345,7 +2951,20 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    if (allocated(Init%OutData_Orca%WriteOutputHdr))      y_FAST%numOuts(Module_Orca)      = size(Init%OutData_Orca%WriteOutputHdr)
    if (allocated(Init%OutData_IceF%WriteOutputHdr))      y_FAST%numOuts(Module_IceF)      = size(Init%OutData_IceF%WriteOutputHdr)
    if (allocated(Init%OutData_IceD%WriteOutputHdr))      y_FAST%numOuts(Module_IceD)      = size(Init%OutData_IceD%WriteOutputHdr) * p_FAST%numIceLegs
-   IF (allocated(Init%OutData_SlD%WriteOutputHdr))       y_FAST%numOuts(Module_SlD)       = size(Init%OutData_SlD%WriteOutputHdr)
+   ! -CheckInput guard: SlD_Init (SoilDyn.f90) can leave WriteOutputHdr allocated but
+   ! WriteOutputUnt not -- when SlD_REDWINsetup() fails it sets ErrStat=Fatal without an
+   ! immediate return, so the next line's own (unrelated, successful) AllocAry(WriteOutputHdr,...)
+   ! is still followed by "if (Failed()) return" that now trips on the *stale* Fatal ErrStat,
+   ! returning before AllocAry(WriteOutputUnt,...) runs. In the normal (non-CheckInput) path this
+   ! is harmless -- SlD_Init's own Fatal return makes FAST_InitializeAll's Failed() abort the run
+   ! immediately, long before FAST_InitOutput reads either array. Under CheckInputMode, Failed()
+   ! collects and continues instead, so FAST_InitOutput below is reached with only WriteOutputHdr
+   ! allocated; require both arrays (not just WriteOutputHdr) before trusting SoilDyn has any
+   ! outputs, so the read loop over WriteOutputHdr/WriteOutputUnt is skipped rather than
+   ! dereferencing the unallocated WriteOutputUnt. SoilDyn's own failure is already collected/
+   ! reported via Failed() where SlD_Init is called, above.
+   IF (allocated(Init%OutData_SlD%WriteOutputHdr) .and. allocated(Init%OutData_SlD%WriteOutputUnt)) &
+                                                          y_FAST%numOuts(Module_SlD)       = size(Init%OutData_SlD%WriteOutputHdr)
 
    !......................................................
    ! Initialize the output channel names and units

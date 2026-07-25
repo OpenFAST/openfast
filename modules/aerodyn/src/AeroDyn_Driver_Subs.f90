@@ -91,13 +91,19 @@ contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
+subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg, CheckInputMode )
    type(Dvr_SimData),            intent(  out) :: dvr       !< driver data
    type(ADI_Data),               intent(  out) :: ADI       !< AeroDyn/InflowWind data
    type(FED_Data),               intent(  out) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
    type(SeaState_Data),          intent(  out) :: SeaSt     !< SeaState data
    integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
    character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
+   logical, optional            , intent(  out) :: CheckInputMode !< true if '-CheckInput' was given on the command line.
+                                                                   !! Dvr_SimData (dvr) is Registry-generated (AeroDyn_Driver_Types.f90),
+                                                                   !! so rather than regenerating the registry to add a field there, the
+                                                                   !! flag is read here (where CheckArgs/FlagArg already live) and threaded
+                                                                   !! back to the main program (AeroDyn_Driver.f90) via this optional
+                                                                   !! argument, which sets a program-level variable there.
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
@@ -106,13 +112,18 @@ subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
    integer              :: iWT           ! Index on wind turbines/rotors
    errStat = ErrID_None
    errMsg  = ""
+   if (present(CheckInputMode)) CheckInputMode = .FALSE.
 
    ! --- Driver initialization
    CALL NWTC_Init( ProgNameIN=version%Name )
-   
+
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop() ! stop if user set a flag argument (like '-h' or '-v')
+   IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+      IF ( PRESENT(CheckInputMode) ) CheckInputMode = .TRUE.
+   ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+      CALL NormStop() ! -h/-v were already handled inside CheckArgs
+   END IF
    
    ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
@@ -140,7 +151,7 @@ end subroutine Dvr_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
+subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg, CheckInputMode )
    integer(IntKi)                  , intent(in   ) :: iCase
    type(Dvr_SimData)               , intent(inout) :: dvr                  !< driver data
    type(ADI_Data)                  , intent(inout) :: ADI                  !< AeroDyn/InflowWind data
@@ -148,15 +159,20 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
    type(SeaState_Data)             , intent(inout) :: SeaSt                !< SeaState data
    integer(IntKi)                  , intent(  out) :: errStat              ! Status of error message
    character(*)                    , intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
+   logical, optional                , intent(in   ) :: CheckInputMode      !< true under '-CheckInput': skip the output-file and VTK-reference
+                                                                            !! writes below so a validation-only run leaves no compute artifact behind
 
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
    integer(IntKi)       :: iWT, j !<
    logical              :: needInitIW    ! Need to initialize IfW if any changes to wind in combined cases
+   logical              :: skipOutputInit ! true if CheckInputMode is present and .true.
    errStat = ErrID_None
    errMsg  = ""
    needInitIW = .false.
+   skipOutputInit = .false.
+   if (present(CheckInputMode)) skipOutputInit = CheckInputMode
 
    dvr%out%root = dvr%root
    dvr%iCase = iCase ! for output only..
@@ -283,12 +299,16 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
-   call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
+   ! -CheckInput: skip opening <Root>[.Tn].out -- a validation-only run must leave no compute-output artifact behind
+   if ( .not. skipOutputInit ) then
+      call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
+   end if
 
    call Dvr_CalcOutputDriver(dvr, ADI%y, FED, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
-   if (dvr%out%WrVTK>0) then
+   ! -CheckInput: skip creating the vtk/ directory and writing the ground-surface reference file
+   if (dvr%out%WrVTK>0 .and. .not. skipOutputInit) then
       dvr%out%n_VTKTime = 1
       dvr%out%VTKRefPoint = (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
       call SetVTKParameters(dvr%out, dvr, ADI, errStat2, errMsg2); if(Failed()) return
@@ -396,7 +416,11 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             if (dvr%out%unOutFile(iWT) > 0) close(dvr%out%unOutFile(iWT))
          enddo
       endif
-      if (dvr%out%fileFmt==idFmtBoth .or. dvr%out%fileFmt == idFmtBinary) then
+      ! dvr%out%storage is only allocated when output init actually ran (Dvr_InitOutput, skipped
+      ! entirely under -CheckInput's skipOutputInit); guard against writing an unallocated array --
+      ! without this, calling Dvr_EndCase from the check-mode case loop segfaults for any case whose
+      ! driver input requests binary output.
+      if ( (dvr%out%fileFmt==idFmtBoth .or. dvr%out%fileFmt == idFmtBinary) .and. allocated(dvr%out%storage) ) then
          do iWT=1,dvr%numTurbines
             if (dvr%numTurbines >1) then
                sWT = '.T'//trim(num2lstr(iWT))

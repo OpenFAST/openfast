@@ -54,6 +54,7 @@ typedef  ^           ^           logical                 WrVTK                - 
 typedef  ^           ^           logical                 WrUniform            - .false. -    "Requested file output as Uniform wind format?" -
 
 typedef  ^           ^           logical                 XYslice              - .false. -    "Take XY slice at one elevation" -
+typedef  ^           ^           logical                 CheckInput           - .false. -    "specified -CheckInput mode on the command line" -
 
 
 

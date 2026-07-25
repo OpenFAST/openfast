@@ -30,6 +30,7 @@ program UnsteadyAero_Driver
    use VersionInfo
 
    use LinDyn
+   use NWTC_CheckInput
 
    implicit none
     ! Variables
@@ -48,33 +49,75 @@ program UnsteadyAero_Driver
    
    CHARACTER(200)                                :: git_commit
    TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'UnsteadyAero Driver', '', '' )  ! The version number of this program.
+
+   LOGICAL                                       :: CheckInputMode       ! true if -CheckInput was given on the command line (no initializer -- set below)
+   TYPE(CheckInputCollectorType)                 :: Checker              ! -CheckInput result collector
+   CHARACTER(64)                                 :: CkStage              ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+   INTEGER(IntKi)                                :: ErrStat2             ! secondary error status, used only for -CheckInput report calls
+   CHARACTER(ErrMsgLen)                          :: ErrMsg2              ! secondary error message, used only for -CheckInput report calls
+   INTEGER(IntKi)                                :: NumArgs              ! number of command-line arguments
+   INTEGER(IntKi)                                :: ArgIdx               ! loop counter for the command-line argument scan
+   CHARACTER(1024)                               :: ArgVal               ! one command-line argument, raw
+   CHARACTER(1024)                               :: ArgUC                ! ArgVal with the switch character stripped, upper-cased for flag matching
+
       ! Initialize the NWTC library
    call NWTC_Init()
-   
+
       ! Initialize error handling variables
    ErrMsg  = ''
    ErrStat = ErrID_None
-   
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
+
       ! Display the copyright notice
    CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
    CALL WrScr(' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit))
-   
-   
-   ! --- Parse the driver file if one
-   if ( command_argument_count() > 1 ) then
-      call print_help()
-      call NormStop()
-   endif
-   call get_command_argument(1, dvrFilename)
+
+
+      ! --- Parse the driver file if one
+      ! Scan the command line: this driver only ever counted arguments (>1 -> help+exit), so
+      ! "file -checkinput" used to be miscounted as too many arguments and print help + exit 0 (a
+      ! false pass). Replace with a real scan: the first non-flag argument is the driver input file;
+      ! a flag matching CHECKINPUT (either switch character, case-insensitive) enables -CheckInput
+      ! mode; any other flag, or a second non-flag argument, preserves this driver's existing
+      ! contract for unrecognized/too-many arguments (print help, exit).
+   dvrFilename = ''
+   NumArgs = command_argument_count()
+   do ArgIdx = 1, NumArgs
+      call get_command_argument( ArgIdx, ArgVal )
+      if ( len_trim(ArgVal) > 0 .and. ( ArgVal(1:1) == SwChar .or. ArgVal(1:1) == '-' ) ) then
+         ArgUC = ArgVal(2:)
+         call Conv2UC( ArgUC )
+         if ( trim(ArgUC) == 'CHECKINPUT' ) then
+            CheckInputMode = .true.
+         else
+            call print_help()
+            call NormStop()
+         end if
+      else if ( len_trim(dvrFilename) == 0 ) then
+         dvrFilename = ArgVal
+      else
+         call print_help()
+         call NormStop()
+      end if
+   end do
+
+   CkStage = 'Driver'
    call ReadDriverInputFile( dvrFilename, dvr%p, errStat, errMsg ); call checkError()
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(dvr%p%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
 
    ! --- Driver Parameters
    call Dvr_SetParameters(dvr%p, errStat, errMsg); call checkError()
 
    ! --- Initialize Elastic Section
+   CkStage = 'LinDyn'
    if ( dvr%p%SimMod == 3 ) then
       call LD_InitInputData(3, dvr%LD_InitInData, errStat, errMsg); call checkError()
       dvr%LD_InitInData%dt        = dvr%p%dt
@@ -101,6 +144,7 @@ program UnsteadyAero_Driver
    end if
 
    ! --- Init UA input data based on driver inputs
+   CkStage = 'UnsteadyAero'
    call driverInputsToUAInitData(dvr%p, dvr%UA_InitInData, dvr%AFI_Params, dvr%AFIndx, errStat, errMsg); call checkError()
 
    ! --- Initialize UnsteadyAero (need AFI)
@@ -149,6 +193,27 @@ program UnsteadyAero_Driver
 
    ! --- Time marching loop
    call Dvr_InitializeOutputs(dvr%out, dvr%p%numSteps, errStat, errMsg)
+
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through checkError's CkIn_DriverFail interception and never returned). Record all three
+      ! stages, marking LinDyn not_used when the driver input file doesn't enable SimMod 3, then
+      ! finish -- this call never returns.
+      CALL CkIn_Collect( Checker, 'Driver', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver', ErrStat2, ErrMsg2 )
+
+      IF ( dvr%p%SimMod == 3 ) THEN
+         CALL CkIn_Collect( Checker, 'LinDyn', ErrID_None, '' )
+      ELSE
+         CALL CkIn_Collect( Checker, 'LinDyn', ErrID_None, '', Status='not_used' )
+      END IF
+      CALL CkIn_ReportComponent( Checker, 'LinDyn', ErrStat2, ErrMsg2 )
+
+      CALL CkIn_Collect( Checker, 'UnsteadyAero', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'UnsteadyAero', ErrStat2, ErrMsg2 )
+
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
    if ( dvr%p%SimMod == 3 ) then
 
@@ -286,10 +351,11 @@ contains
    subroutine checkError()
       
       if (ErrStat >= AbortErrLev) then
-         
+
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          call Cleanup()
          call ProgAbort(ErrMsg)
-            
+
       elseif ( ErrStat /= ErrID_None ) then
          
          call WrScr( trim(ErrMsg) )

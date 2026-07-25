@@ -32,6 +32,7 @@ PROGRAM InflowWind_Driver
    USE InflowWind_Driver_Subs     ! Contains subroutines for the driver program
    USE IfW_FlowField
    USE InflowWind_Subs, only: CalculateOutput
+   USE NWTC_CheckInput
 
    IMPLICIT NONE
 
@@ -93,6 +94,13 @@ PROGRAM InflowWind_Driver
    INTEGER(IntKi)                                     :: ErrStatTmp
    CHARACTER(2048)                                    :: ErrMsgTmp
    INTEGER(IntKi)                                     :: LenErrMsgTmp            ! Length of ErrMsgTmp
+   INTEGER(IntKi)                                     :: ErrStat2                ! -CheckInput: temp error status for calls
+   CHARACTER(1024)                                    :: ErrMsg2                 ! -CheckInput: temp error message for calls
+
+      ! -CheckInput support (no initializers on these -- set as early executable statements below)
+   LOGICAL                                            :: CheckInputMode          ! true if -CheckInput was given on the command line
+   TYPE(CheckInputCollectorType)                      :: Checker                 ! -CheckInput result collector
+   CHARACTER(64)                                      :: CkStage                 ! name of the -CheckInput stage/component currently executing
 
 
 
@@ -117,6 +125,10 @@ PROGRAM InflowWind_Driver
 
       ! Start the timer
    CALL CPU_TIME( Timer(1) )
+
+      ! -CheckInput: no initializers on these -- set as early executable statements
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before the InflowWind_Init call below
 
       ! Set some CLSettings to null/default values
    CLSettings%ProgInfo = ProgInfo
@@ -147,6 +159,10 @@ PROGRAM InflowWind_Driver
       CALL WrScr( NewLine//ErrMsg )
       ErrStat  =  ErrID_None
    ENDIF
+
+      ! -CheckInput is command-line only (mirrors how Verbose/VVerbose are handled below -- not
+      ! merged into SettingsFlags by UpdateSettingsWithCL, so read it straight off the CL flags).
+   CheckInputMode = CLSettingsFlags%CheckInput
 
 
       ! Check if we are doing verbose error reporting
@@ -196,6 +212,7 @@ PROGRAM InflowWind_Driver
          ! Read the driver input file
       CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -220,6 +237,7 @@ PROGRAM InflowWind_Driver
          ! was read.
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -250,6 +268,7 @@ PROGRAM InflowWind_Driver
          ! input file was not read.
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .FALSE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -272,11 +291,16 @@ PROGRAM InflowWind_Driver
 
       ! Check if the points file exists, abort if not found
       INQUIRE( file=TRIM(Settings%PointsFileName), exist=TempFileExist )
-      IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
+      IF ( TempFileExist .eqv. .FALSE. ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrID_Fatal, &
+            "Cannot find the points file "//TRIM(Settings%PointsFileName) )   ! never returns
+         CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
+      END IF
 
       ! Now read the file in and save the points
       CALL ReadPointsFile( Settings%PointsFileName, PointsXYZ, ErrStat,ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
          CALL WrScr( NewLine//ErrMsg )
@@ -420,15 +444,23 @@ PROGRAM InflowWind_Driver
       CALL GetRoot( InflowWind_InitInp%InputFileName, InflowWind_InitInp%RootName )
       !InflowWind_InitInp%RootName = ""
    END IF
+      ! -CheckInput: RootName is known now (pre-Init) -- open the report before InflowWind_Init runs so
+      ! a fatal from Init itself is caught.  Use the un-suffixed root for the driver-level report name.
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(InflowWind_InitInp%RootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
    InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
    InflowWind_InitInp%RadAvg = -1.0_ReKi ! let the IfW code guess what to use
    InflowWind_InitInp%BoxExceedAllow  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
-   
+
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
    ! Set flag to calculate accelerations if requested
    InflowWind_InitInp%OutputAccel = SettingsFlags%OutputAccel
 
+   CkStage = 'InflowWind'
    CALL InflowWind_Init( InflowWind_InitInp, InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1, InflowWind_MiscVars, Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
@@ -438,36 +470,40 @@ PROGRAM InflowWind_Driver
    end if
 
    call CheckCallErr('InflowWind_Init')
+   CkStage = 'Driver'   ! post-Init file-conversion checks below are attributed back to the Driver stage
 
 
 
       ! Convert InflowWind file to HAWC format
-   IF (SettingsFlags%WrHAWC) THEN
+      ! -CheckInput: these are file-conversion side effects requested by their own CLI flags, not
+      ! part of input validation -- skip them entirely in check mode so a passing check run leaves
+      ! no conversion artifacts behind.
+   IF (SettingsFlags%WrHAWC .AND. .NOT. CheckInputMode) THEN
       CALL IfW_WriteHAWC( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       call CheckCallErr('IfW_WriteHAWC')
    END IF
-   
+
 
       ! Convert InflowWind file to Native Bladed format
-   IF (SettingsFlags%WrBladed) THEN
+   IF (SettingsFlags%WrBladed .AND. .NOT. CheckInputMode) THEN
       CALL IfW_WriteBladed( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       call CheckCallErr('IfW_WriteBladed')
    END IF
 
 
-   IF (SettingsFlags%WrVTK) THEN
+   IF (SettingsFlags%WrVTK .AND. .NOT. CheckInputMode) THEN
       CALL IfW_WriteVTK( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       call CheckCallErr('IfW_WriteVTK')
    END IF
-   
-   
-   IF (SettingsFlags%WrUniform) THEN
+
+
+   IF (SettingsFlags%WrUniform .AND. .NOT. CheckInputMode) THEN
       CALL IfW_WriteUniform( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       call CheckCallErr('IfW_WriteUniform')
    END IF
-   
 
-   IF (Settings%NOutWindXY>0) THEN
+
+   IF (Settings%NOutWindXY>0 .AND. .NOT. CheckInputMode) THEN
       do i=1,Settings%NOutWindXY
          CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindZ(i), ErrStat, ErrMsg )
          call CheckCallErr('IfW_WriteXYslice'//trim(Num2LStr(i)))
@@ -496,6 +532,18 @@ PROGRAM InflowWind_Driver
    !-=-=- Other Setup -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
    !  Setup any additional things
+
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through CheckCallErr's CkIn_DriverFail interception, or one of the inline interceptions
+      ! above, and never returned). Record both stages as passed, in order, then finish -- this call
+      ! never returns, so the WindGrid/Points/FFT compute setup below is never reached in check mode.
+      CALL CkIn_Collect( Checker, 'Driver',     ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',     ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'InflowWind', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'InflowWind', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
 if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTcalc) then ! we can skip all of this if we haven't asked for any output
 
@@ -934,6 +982,7 @@ CONTAINS
       if (ErrStat > ErrID_None) then
          call WrScr( trim(ErrMsg) )
          if ( ErrStat >= AbortErrLev ) then
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
             call DriverCleanup()
             call ProgAbort( ErrMsg )
          elseif ( IfWDriver_Verbose >= 7_IntKi ) then

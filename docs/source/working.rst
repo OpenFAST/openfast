@@ -139,6 +139,68 @@ In general, if an error is displayed in the terminal, you can use the guidelines
    You can use relative and aboslute path to the OpenFAST executable and to the main OpenFAST input file. Input files of OpenFAST also contain filepaths that reference other input files. These filepaths are either relative to the current file, or, can be absolute paths.
 
 
+Checking an input deck without running
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``-CheckInput`` flag fully initializes every module enabled by the input file --
+reading and validating all module input files, resolving file references, building
+meshes and airfoil tables, and running the glue code's cross-module consistency checks
+-- and then exits without any time marching:
+
+.. code-block:: bash
+
+    ./openfast -CheckInput InputFile.fst
+
+Unlike a normal run, which stops at the first fatal error, ``-CheckInput`` attempts
+every module even after one fails, so a single invocation reports as many independent
+input problems as possible. Results are printed as a summary on the console and written
+to a machine-readable report ``<RootName>.verify.yaml`` next to the output files. The
+process exit code is ``0`` when the deck is valid (warnings allowed) and ``1`` when any
+fatal input error was found.
+
+The report file is append-only: readers must treat a file without a trailing
+``overall_status:`` entry as a crashed check. Runtime-only problems (large-deflection
+warnings, solver convergence, NaN blow-ups) are outside the scope of this check.
+
+.. note::
+   ``-CheckInput`` initializes modules exactly as a real run does, so it needs all
+   referenced resources present -- wind files, airfoil tables, and (if ServoDyn uses a
+   DLL controller) the controller shared library.
+
+
+Availability across executables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``-CheckInput`` flag is available on all user-facing OpenFAST executables:
+
+- **Full accumulation (attempt-everything across modules):**
+
+  - ``openfast`` — checks all enabled modules in the input file and reports cross-module consistency
+  - ``FAST.Farm`` — checks farm input, initializes all wrapped turbines with per-turbine attribution in the report (T1, T2, etc. message prefixes); skips downstream steps if any turbine fails
+
+- **Init-only check with report (single-module drivers, fail-fast semantics):**
+
+  - ``turbsim`` — validates wind input
+  - Module drivers: ``aerodyn_driver``, ``aeroacoustics_driver``, ``hydrodyn_driver``, ``seastate_driver``, ``moordyn_driver``, ``inflowwind_driver``, ``aerodisk_driver``, ``sed_driver`` (simple ElastoDyn), ``soildyn_driver``, ``orca_driver``, ``beamdyn_driver``, ``unsteadyaero_driver``
+
+Each driver reads its input file(s), initializes its module, and exits before the time loop or compute phase.
+All failures are accumulated and reported before exit.
+
+**Report files:**
+
+- ``<RootName>.verify.yaml`` — for ``openfast``, ``FAST.Farm``, and ``turbsim``
+- ``<RootName>.driver.verify.yaml`` — for single-module drivers (``*_driver`` executables)
+- ``checkinput.verify.yaml`` (in the current working directory) — fallback when the root name cannot be determined before a failure
+
+**Excluded executables:**
+
+- ``servodyn_driver`` — hardcoded module-test harness; its input deck is a code literal embedded in the executable, not CLI-driven
+
+**DLL caveat:**
+
+SoilDyn (REDWIN) and OrcaFlex load their DLLs during initialization.
+Under ``-CheckInput``, a missing DLL is reported as that component's failure.
+This is deliberate: the DLL is part of the deck/environment, and its absence is a real problem the deck cannot solve around.
 
 
 

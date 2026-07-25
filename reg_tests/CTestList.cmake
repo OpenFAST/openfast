@@ -93,6 +93,71 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
 endfunction(of_regression)
 
+# openfast -CheckInput: runs against a fixture generated at test time (copy of an r-test
+# case, optionally corrupted) -- see executeCheckInputTest.py. No baseline comparison.
+function(of_checkinput TESTNAME CASE LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeCheckInputTest.py")
+  set(EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_CASE "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${CASE}")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast/${TESTNAME}")
+
+  # Same path hygiene as regression(): normalize to the native separator, then double any
+  # backslash it introduced (Windows) so it survives CTestTestfile.cmake being re-parsed.
+  file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
+  file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${SOURCE_CASE}" SOURCE_CASE)
+  file(TO_NATIVE_PATH "${BUILD_DIRECTORY}" BUILD_DIRECTORY)
+
+  string(REPLACE "\\" "\\\\" EXECUTABLE ${EXECUTABLE})
+  string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
+  string(REPLACE "\\" "\\\\" SOURCE_CASE ${SOURCE_CASE})
+  string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
+
+  add_test(${TESTNAME} ${Python_EXECUTABLE} ${TEST_SCRIPT}
+    ${EXECUTABLE}
+    ${SOURCE_CASE}
+    ${BUILD_DIRECTORY}
+    ${ARGN})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 900 LABELS "${LABEL}")
+endfunction(of_checkinput)
+
+# -CheckInput for a module driver / FAST.Farm / TurbSim (as opposed to the openfast glue-code
+# cases of_checkinput handles): takes the executable and the case's *full* source directory
+# explicitly, since these live under reg_tests/r-test/modules/<module>/<case> or
+# reg_tests/r-test/glue-codes/fast-farm/<case>, not .../glue-codes/openfast/<case>. Also takes
+# the case-relative --input deck explicitly (executeCheckInputTest.py's *.fst glob doesn't fit
+# module driver decks -- they're named .fst/.fstf/.dvr/.inp/.ipt at the case author's discretion).
+# Kept as a separate function from of_checkinput rather than overloading it: the argument shapes
+# genuinely differ (explicit SOURCE_DIR + INPUT vs. a CASE name resolved under a fixed openfast
+# r-test root), and overloading would make both call sites harder to read for no real reuse win --
+# the two functions share everything else (path-escaping dance, TIMEOUT/LABELS) via the same
+# underlying executeCheckInputTest.py script and add_test() shape.
+function(driver_checkinput TESTNAME EXECUTABLE SOURCE_DIR INPUT LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeCheckInputTest.py")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/checkinput/${TESTNAME}")
+
+  # Same path hygiene as of_checkinput()/regression(): normalize to the native separator, then
+  # double any backslash it introduced (Windows) so it survives CTestTestfile.cmake being
+  # re-parsed.
+  file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
+  file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${SOURCE_DIR}" SOURCE_DIR)
+  file(TO_NATIVE_PATH "${BUILD_DIRECTORY}" BUILD_DIRECTORY)
+
+  string(REPLACE "\\" "\\\\" EXECUTABLE ${EXECUTABLE})
+  string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
+  string(REPLACE "\\" "\\\\" SOURCE_DIR ${SOURCE_DIR})
+  string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
+
+  add_test(${TESTNAME} ${Python_EXECUTABLE} ${TEST_SCRIPT}
+    ${EXECUTABLE}
+    ${SOURCE_DIR}
+    ${BUILD_DIRECTORY}
+    --input ${INPUT}
+    ${ARGN})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 900 LABELS "${LABEL}")
+endfunction(driver_checkinput)
+
 function(of_aeromap_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
@@ -588,3 +653,177 @@ sed_regression("sed_test_freewheel"                           "simple-elastodyn"
 
 # Wavetank library interface (MD + SS + AD)
 py_wavetank_regression("py_wavetank_test1"                    "wavetank;aerodyn;moordyn;seastate;python;scaled")
+
+# openfast -CheckInput: representative decks initialize cleanly (positive), and two
+# independent module errors are both reported in a single run (negative). Fixtures are
+# generated at test time by executeCheckInputTest.py -- nothing here touches r-test.
+#
+# NOTE on case selection: the original candidates for the two 5MW positive cases
+# (5MW_OC3Mnpl_DLL_WTurb_WavesIrr, 5MW_Land_BD_DLL_WTurb) both drive ServoDyn through the
+# Bladed-style DISCON DLL (PCMode=5, VSContrl=5). That DLL is only produced by the
+# `regression_test_controllers` custom target (reg_tests/CMakeLists.txt), which is not
+# built by the default `openfast` target and was not compiled in this build -- wiring it
+# in as a test dependency here would be a much larger change than this task's scope.
+# Substituted instead with two controller-free cases (verified via grep for
+# PCMode/VSContrl/DLL_FileName in their ServoDyn decks, and by a manual run of
+# executeCheckInputTest.py against each):
+#   - 5MW_Land_BD_Init: CompServo=0 (no ServoDyn at all) -- BeamDyn-flavored, as preferred.
+#   - AWT_YFix_WSt: PCMode=0, VSContrl=0, DLL_FileName "unused" -- ElastoDyn+AeroDyn+
+#     InflowWind+ServoDyn coverage without a DLL.
+of_checkinput(checkinput_AOC_WSt AOC_WSt "checkinput;openfast"
+  --expect-exit 0 --expect-status passed)
+of_checkinput(checkinput_5MW_BD 5MW_Land_BD_Init "checkinput;openfast;beamdyn"
+  --expect-exit 0 --expect-status passed)
+of_checkinput(checkinput_AWT AWT_YFix_WSt "checkinput;openfast"
+  --expect-exit 0 --expect-status passed)
+# negative: two independent module errors must BOTH be reported in one run
+#
+# NOTE on backslash count: add_test()'s generator re-escapes embedded '"' correctly when
+# it writes build/reg_tests/CTestTestfile.cmake, but copies embedded '\' through verbatim
+# instead of doubling it. That file is parsed again (by CMake escape rules) when ctest
+# runs, which then collapses '\\' -> '\' a second time and errors ("Invalid character
+# escape") on any leftover lone backslash-letter sequence. So every literal backslash
+# that must survive to the Python regex (i.e. anything but the already-single-escaped
+# quotes) needs 4 backslashes here, not 2, to still be '\S'/'\s'/'\d'/'\1'/'\2' once
+# CTestTestfile.cmake is itself parsed. Verified by inspecting the generated
+# CTestTestfile.cmake and confirming `ctest -N -R checkinput` parses cleanly.
+of_checkinput(checkinput_multi_error AOC_WSt "checkinput;openfast"
+  --corrupt "*ElastoDyn*.dat::\"(\\\\S+)\"(\\\\s*BldFile.?1)::\"__missing__.dat\"\\\\2"
+  --corrupt "*InflowWind*.dat::^\\\\s*\\\\d+(\\\\s*WindType)::          99\\\\1"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 2
+  --expect-component-failed ElastoDyn --expect-component-failed InflowWind)
+# negative: Simplified-ElastoDyn (SED) failure path -- guards against the segfault-on-failure gap
+# fixed alongside this test (SED's HubPtMotion/NacelleMotion/PlatformPtMesh/BladeRootMotion were read
+# downstream, unguarded, by InflowWind/AeroDyn/AeroDisk/ServoDyn). Corrupt NumBl to 0 so SED_Init fails
+# in SEDInput_ValidateInput, before any of its output meshes are committed -- exactly the case that used
+# to crash. This deck's ServoDyn uses a Bladed-style DLL controller (Windows .dll) that may also fail to
+# load on macOS/Linux; that is expected and does not affect the assertions below -- what matters is that
+# SED's own failure is attributed and the process does not crash (an overall_status line proves liveness).
+of_checkinput(checkinput_SED_error 5MW_Land_DLL_WTurb_SED "checkinput;openfast;sed"
+  --corrupt "*Simplified-ElastoDyn*.dat::^(\\\\s*)\\\\d+(\\\\s*NumBl)::\\\\g<1>0\\\\g<2>"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed Simplified-ElastoDyn)
+
+# negative: 5MW_Land_AeroMap, uncorrupted (fails as-shipped -- this deck dir has no ServoDyn input
+# file of its own). Regression case for the FAST_InitializeAll segfault found by a 173-case corpus
+# sweep: ServoDyn's Init fails here (missing NRELOffshrBsline5MW_Onshore_ServoDyn.dat), and
+# FAST_InitializeAll's -CheckInput collect-and-continue then fell through to the "Initialize
+# external inputs for first step" block after FAST_InitOutput, unconditionally indexing
+# SrvD%Input(INPUT_CURR,1)%ExternalBlPitchCom/ExternalBlAirfoilCom -- allocatable arrays that a
+# failed SrvD_Init never allocates -- and segfaulted. Fixed by gating that block on the array
+# actually being allocated.
+of_checkinput(checkinput_aeromap_srvd_missing 5MW_Land_AeroMap "checkinput;openfast"
+  --expect-exit 1 --expect-status failed
+  --expect-component-failed ServoDyn)
+
+# negative: 5MW_OC3Mnpl_Sld_REDWIN, uncorrupted (fails as-shipped): ElastoDyn fails on a bad
+# numeric input (PtfmXZIner), SeaState's input file is missing, SoilDyn's REDWIN DLL cannot be
+# loaded on this platform, and HydroDyn then fails for lack of SeaState data -- a multi-module
+# failure cascade. Regression case for the second FAST_InitializeAll segfault found by the same
+# corpus sweep: when SlD_Init's REDWIN setup fails, it leaves Init%OutData_SlD%WriteOutputHdr
+# allocated but WriteOutputUnt not (SoilDyn.f90's own bug -- a stale Fatal ErrStat trips the next,
+# otherwise-successful AllocAry's "if (Failed()) return" before WriteOutputUnt is allocated).
+# FAST_InitOutput derived y_FAST%numOuts(Module_SlD) from WriteOutputHdr alone and then indexed
+# WriteOutputUnt(i) too, segfaulting on the unallocated array. Fixed by requiring both arrays
+# allocated before trusting SoilDyn has any outputs.
+of_checkinput(checkinput_redwin_cascade 5MW_OC3Mnpl_Sld_REDWIN "checkinput;openfast;soildyn"
+  --expect-exit 1 --expect-status failed
+  --expect-component-failed ElastoDyn)
+
+# openfast -CheckInput, round 2: FAST.Farm, TurbSim, and module drivers (Plan 2, Task 9). Same
+# no-baseline-comparison contract as above, via driver_checkinput() (see its definition for why
+# it's a separate function from of_checkinput). Each case/corruption below was run by hand with
+# executeCheckInputTest.py against the built executable before being wired in here (per this
+# task's brief) to confirm the regex actually matches the copied file and the expected component
+# fails -- not just eyeballed against the source case.
+#
+# Executables NOT covered by CTest here (smoke-tested only, in their own Plan-2 task reports --
+# .superpowers/sdd/plan2-task-{4,5,7}-report.md): aeroacoustics_driver, seastate_driver,
+# hydrodyn_driver, aerodisk_driver, sed_driver, soildyn_driver, orca_driver, unsteadyaero_driver.
+# No CTest r-test case exists for aeroacoustics_driver at all; the others either have no r-test
+# case (soildyn, orca -- hand-built decks were used for their smokes) or were left for a future
+# pass to keep this task's diff bounded to the brief's explicit minimum set. Logged here per the
+# brief ("no silent caps") -- see this commit's body for the same list.
+
+# TurbSim: case has no ../<sibling> references, so copy_case_with_siblings() does a plain copy.
+driver_checkinput(checkinput_turbsim "${CTEST_TURBSIM_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/SWRT/Wind" "35m_16mps.inp"
+  "checkinput;turbsim"
+  --expect-exit 0 --expect-status passed)
+driver_checkinput(checkinput_turbsim_bad "${CTEST_TURBSIM_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/SWRT/Wind" "35m_16mps.inp"
+  "checkinput;turbsim"
+  --corrupt "*.inp::^(\\\\s*)6(\\\\s*NumGrid_Z)::\\\\g<1>-5\\\\g<2>"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed Input)
+
+# FAST.Farm: guarded by BUILD_FASTFARM exactly like the ff_regression() registrations above.
+# MD_Shared chosen over the brief's suggested TSinflow/AMReX (see plan2-task-3-report.md): those
+# use a Bladed-style DISCON DLL not buildable/available on this machine for the positive case;
+# MD_Shared is DLL-free (CompServo=0) and also exercises SharedMooring + WakeAddedTurbulence=NOT
+# USED in one case. Negative corrupts turbine 2's ElastoDyn NumBl (3->0) to prove per-turbine
+# attribution ("Turbines: FAILED", not a blanket farm-level failure).
+if(BUILD_FASTFARM)
+  driver_checkinput(checkinput_fastfarm "${CTEST_FASTFARM_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/MD_Shared" "FAST.Farm.fstf"
+    "checkinput;fastfarm"
+    --expect-exit 0 --expect-status passed)
+  driver_checkinput(checkinput_fastfarm_turbine_error "${CTEST_FASTFARM_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/MD_Shared" "FAST.Farm.fstf"
+    "checkinput;fastfarm"
+    --corrupt "*ElastoDynT2*.dat::^(\\\\s*)3(\\\\s*NumBl)::\\\\g<1>0\\\\g<2>"
+    --expect-exit 1 --expect-status failed --expect-min-fatals 1
+    --expect-component-failed Turbines)
+endif()
+
+# aerodyn_driver: single-case deck (ad_MHK_RM1_Fixed); negative points the first AFNames entry at
+# a nonexistent airfoil file.
+driver_checkinput(checkinput_addriver "${CTEST_AERODYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/aerodyn/ad_MHK_RM1_Fixed" "ad_driver.dvr"
+  "checkinput;aerodyn"
+  --expect-exit 0 --expect-status passed)
+driver_checkinput(checkinput_addriver_bad "${CTEST_AERODYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/aerodyn/ad_MHK_RM1_Fixed" "ad_driver.dvr"
+  "checkinput;aerodyn"
+  --corrupt "MHK_RM1_Fixed_AeroDyn.dat::Airfoils/NACA6_1000::Airfoils/MISSING_AIRFOIL"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed Case)
+
+# moordyn_driver: md_waterkin2 exercises SeaState-coupled water kinematics; negative corrupts
+# line 1's LineType so MD_Init can't match it to a defined line type.
+driver_checkinput(checkinput_moordyn "${CTEST_MOORDYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/moordyn/md_waterkin2" "md_driver.inp"
+  "checkinput;moordyn"
+  --expect-exit 0 --expect-status passed)
+driver_checkinput(checkinput_moordyn_bad "${CTEST_MOORDYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/moordyn/md_waterkin2" "md_driver.inp"
+  "checkinput;moordyn"
+  --corrupt "moordyn.dat::^main(\\\\s)::GARBAGE_LINE_TYPE\\\\g<1>"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed MoorDyn)
+
+# beamdyn_driver: bd_static_cantilever_beam; negative points BldFile at a nonexistent blade
+# properties file.
+driver_checkinput(checkinput_beamdyn_driver "${CTEST_BEAMDYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/beamdyn/bd_static_cantilever_beam" "bd_driver.inp"
+  "checkinput;beamdyn"
+  --expect-exit 0 --expect-status passed)
+driver_checkinput(checkinput_beamdyn_driver_bad "${CTEST_BEAMDYN_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/beamdyn/bd_static_cantilever_beam" "bd_driver.inp"
+  "checkinput;beamdyn"
+  --corrupt "bd_primary.inp::beam_props\\\\.inp::missing_beam_props.inp"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed BeamDyn)
+
+# inflowwind_driver: ifw_uniform (WindType=2); negative points the uniform wind file at a
+# nonexistent path.
+driver_checkinput(checkinput_inflowwind "${CTEST_INFLOWWIND_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/inflowwind/ifw_uniform" "ifw_driver.inp"
+  "checkinput;inflowwind"
+  --expect-exit 0 --expect-status passed)
+driver_checkinput(checkinput_inflowwind_bad "${CTEST_INFLOWWIND_EXECUTABLE}"
+  "${CMAKE_CURRENT_LIST_DIR}/r-test/modules/inflowwind/ifw_uniform" "ifw_driver.inp"
+  "checkinput;inflowwind"
+  --corrupt "ifw_primary.inp::uniform\\\\.hh::missing_uniform.hh"
+  --expect-exit 1 --expect-status failed --expect-min-fatals 1
+  --expect-component-failed InflowWind)

@@ -49,6 +49,7 @@ SUBROUTINE DispHelpText()
    CALL WrScr("                  "//SwChar//"v             -- verbose output ")
    CALL WrScr("                  "//SwChar//"vv            -- very verbose output ")
    CALL WrScr("                  "//SwChar//"NonLinear     -- only return non-linear portion of reaction force")
+   CALL WrScr("                  "//SwChar//"CheckInput    -- validate the input deck, write a report, and exit")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
@@ -83,6 +84,7 @@ subroutine InitSettingsFlags( ProgInfo, CLSettings, CLFlags )
    CLFlags%DTDefault           =  .FALSE.        ! specified 'DEFAULT' for resolution in time
    CLFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
    CLFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
+   CLFlags%CheckInput          =  .FALSE.        ! -CheckInput mode requested on the command line
 
 end subroutine InitSettingsFlags
 
@@ -284,6 +286,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( ThisArgUC(1:1) == "V"   )   THEN
             CLFlags%Verbose         = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "CHECKINPUT" )   THEN
+            CLFlags%CheckInput      = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &

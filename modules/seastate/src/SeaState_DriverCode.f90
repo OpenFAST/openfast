@@ -28,7 +28,8 @@ program SeaStateDriver
    use SeaState_Output
    use ModMesh_Types
    use VersionInfo
-   
+   use NWTC_CheckInput
+
    implicit none
    
    type SeaSt_Drvr_InitInput
@@ -110,9 +111,15 @@ program SeaStateDriver
 
    type(ProgDesc), parameter        :: version   = ProgDesc( 'SeaState Driver', '', '' )  ! The version number of this program.
 
+   logical                          :: CheckInputMode   ! true if -CheckInput was given on the command line (no initializer -- set below)
+   type(CheckInputCollectorType)    :: Checker          ! -CheckInput result collector
+   character(64)                    :: CkStage          ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+
    ! Variables Init
    Time = -99999
-   
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
+
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -139,7 +146,11 @@ program SeaStateDriver
 
    drvrFilename = ''
    call CheckArgs( drvrFilename, Flag=FlagArg )
-   if ( LEN( TRIM(FlagArg) ) > 0 ) call NormStop()
+   IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+      CheckInputMode = .TRUE.
+   ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+      call NormStop()   ! -h/-v were already handled inside CheckArgs
+   END IF
 
       ! Display the copyright notice
    call DispCopyrightLicense( version%Name )
@@ -147,11 +158,18 @@ program SeaStateDriver
    
    
       ! Parse the driver input file and run the simulation based on that file
+   CkStage = 'Driver'
    call ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call SeaSt_DvrCleanup()
    end if
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(drvrInitInp%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
    InitInData%Gravity      = drvrInitInp%Gravity
    InitInData%defWtrDens   = drvrInitInp%WtrDens
    InitInData%defWtrDpth   = drvrInitInp%WtrDpth
@@ -188,6 +206,7 @@ program SeaStateDriver
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
+   CkStage = 'SeaState'
    call SeaSt_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
@@ -197,13 +216,15 @@ program SeaStateDriver
 
    if ( Interval /= drvrInitInp%TimeInterval) then
       call SetErrStat( ErrID_Fatal, 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.', ErrStat, ErrMsg, 'Driver')
-      call SeaSt_DvrCleanup() 
+      call SeaSt_DvrCleanup()
    end if
 
+   CkStage = 'Driver'   ! post-init wave-elevation-output/destroy validation below is attributed back to the Driver stage
 
       ! Write the gridded wave elevation data to a file
-
-   if ( drvrInitInp%WaveElevVis )      call WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
+      ! -CheckInput: this genuinely writes a compute artifact (the wave elevation grid file), not just
+      ! validation, so it is skipped entirely in check mode regardless of the WaveElevVis flag.
+   if ( drvrInitInp%WaveElevVis .AND. .NOT. CheckInputMode )      call WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call SeaSt_DvrCleanup()
@@ -231,7 +252,17 @@ program SeaStateDriver
 
    ! loop through time steps
 
-   
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through SeaSt_DvrCleanup's CkIn_DriverFail interception and never returned). Record both
+      ! stages as passed, in order, then finish -- this call never returns.
+      CALL CkIn_Collect( Checker, 'Driver',   ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',   ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'SeaState', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'SeaState', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
+
    do n = 1, drvrInitInp%NSteps
 
       Time = (n-1) * drvrInitInp%TimeInterval
@@ -276,7 +307,14 @@ subroutine SeaSt_DvrCleanup()
    
       errStat2 = ErrID_None
       errMsg2  = ""
-     
+
+      ! -CheckInput: SeaSt_DvrCleanup is the single chokepoint every failure reaches, but it is also
+      ! called unconditionally on the success teardown path (after the time loop) -- so a fatal must be
+      ! distinguished from a clean exit before intercepting. ErrStat/ErrMsg here are the program-level
+      ! ones (host-associated; this is a CONTAINS'd subroutine), exactly what every call site above set
+      ! before calling in.
+      IF ( CheckInputMode .AND. ErrStat >= AbortErrLev ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
+
       call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
 

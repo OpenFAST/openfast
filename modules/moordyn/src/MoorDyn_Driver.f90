@@ -24,8 +24,9 @@ PROGRAM MoorDyn_Driver
    USE MoorDyn
    USE SeaState_Types
    USE SeaState
-   USE NWTC_Library 
+   USE NWTC_Library
    USE VersionInfo
+   USE NWTC_CheckInput
 
    IMPLICIT NONE 
 
@@ -131,21 +132,31 @@ PROGRAM MoorDyn_Driver
    CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '2024-01-18' )
 
+   LOGICAL                               :: CheckInputMode       ! true if -CheckInput was given on the command line (no initializer -- set below)
+   TYPE(CheckInputCollectorType)         :: Checker              ! -CheckInput result collector
+   CHARACTER(64)                         :: CkStage              ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+
   
   
    ErrMsg  = ""
    ErrStat = ErrID_None
    UnEcho=-1 ! set to -1 as echo is no longer used by MD
    UnIn  =-1
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
 
-  
+
    ! TODO: Sort out error handling (two sets of flags currently used)
-  
+
    CALL NWTC_Init( ProgNameIn=version%Name )
 
    MD_InitInp%FileName = "MoorDyn.dat"  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( MD_InitInp%FileName, Arg2=drvrInitInp%InputsFile, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+   IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+      CheckInputMode = .TRUE.
+   ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+      CALL NormStop()   ! -h/-v were already handled inside CheckArgs
+   END IF
 
    !    ! Display the copyright notice
    ! CALL DispCopyrightLicense( version%Name, ' Copyright (C) 2019 Matt Hall' )
@@ -164,9 +175,19 @@ PROGRAM MoorDyn_Driver
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)
+   ! -CheckInput re-fetch quirk: the raw arg 1 re-fetched above bypasses CheckArgs' parse, so if the
+   ! user typed "moordyn_driver -CheckInput file.dvr" it would be the flag itself, not the file name.
+   ! Under CheckInputMode use the CheckArgs-parsed file name instead; normal path is untouched.
+   IF ( CheckInputMode ) drvrFilename = MD_InitInp%FileName
+   CkStage = 'Driver'
    CALL ReadDriverInputFile( drvrFilename, drvrInitInp);
-   
-   ! do any initializing and allocating needed in prep for calling MD_Init   
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(drvrInitInp%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
+   ! do any initializing and allocating needed in prep for calling MD_Init
 
    ! set the input file name and other environment terms
    MD_InitInp%Tmax                    = drvrInitInp%TMax   
@@ -222,6 +243,7 @@ PROGRAM MoorDyn_Driver
    
    ! -------------------------------- -----------------------------------
 
+   CkStage = 'SeaState'
    IF (LEN_TRIM(drvrInitInp%SeaStateInputFile) > 0 ) THEN ! If SeaState input file path in driver input file is not empty. Error checks for Null pointer in MD_Init -> setupWaterKin
       ! Initialize the SeaState module
       InitInData_SeaSt%hasIce       = .FALSE.
@@ -248,8 +270,9 @@ PROGRAM MoorDyn_Driver
       MD_InitInp%WaveField => InitOutData_SeaSt%WaveField
 
    END IF
-  
+
    ! call the initialization routine
+   CkStage = 'MoorDyn'
    CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 )
       call AbortIfFailed()
 
@@ -268,8 +291,8 @@ PROGRAM MoorDyn_Driver
 
    call WrScr('MoorDyn has '//trim(num2lstr(ncIn))//' coupled DOFs and/or active-tensioned inputs.')
 
-   
-   
+
+   CkStage = 'Motions'
    if (drvrInitInp%InputsMod == 1 ) then
 
       if ( LEN( TRIM(drvrInitInp%InputsFile) ) < 1 ) then
@@ -461,10 +484,11 @@ PROGRAM MoorDyn_Driver
       END DO
       
       
-   else   
+   else
       nt = TMax/dtC - 1            ! number of coupling time steps
-   end if   
-   
+   end if
+   CkStage = 'MoorDyn'   ! post-motions setup below is attributed back to the MoorDyn stage
+
    CALL WrScr(" ")
    call WrScr("Tmax - "//trim(Num2LStr(TMax))//" and nt="//trim(Num2LStr(nt)))
    CALL WrScr(" ")
@@ -556,17 +580,50 @@ PROGRAM MoorDyn_Driver
          end do
       endif
    
-   end if   ! InputsMod == 1 
+   end if   ! InputsMod == 1
+
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+      ! routed through AbortIfFailed's CkIn_DriverFail interception and never returned). Record all four
+      ! stages, marking SeaState/Motions not_used when the driver input file didn't enable them, then
+      ! finish -- this call never returns. This must run BEFORE MD_CalcOutput below: MD_CalcOutput
+      ! internally calls MDIO_WriteOutputs and would append a t=0 data row to <Root>.MD.out, but a
+      ! check-mode run only validates input and must not produce simulation output (the header row
+      ! written during MD_Init is an unavoidable module-scope ride-along and is fine to leave).
+      CALL CkIn_Collect( Checker, 'Driver', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver', ErrStat2, ErrMsg2 )
+
+      IF ( LEN_TRIM(drvrInitInp%SeaStateInputFile) > 0 ) THEN
+         CALL CkIn_Collect( Checker, 'SeaState', ErrID_None, '' )
+      ELSE
+         CALL CkIn_Collect( Checker, 'SeaState', ErrID_None, '', Status='not_used' )
+      END IF
+      CALL CkIn_ReportComponent( Checker, 'SeaState', ErrStat2, ErrMsg2 )
+
+      CALL CkIn_Collect( Checker, 'MoorDyn', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'MoorDyn', ErrStat2, ErrMsg2 )
+
+      IF ( drvrInitInp%InputsMod == 1 ) THEN
+         CALL CkIn_Collect( Checker, 'Motions', ErrID_None, '' )
+      ELSE
+         CALL CkIn_Collect( Checker, 'Motions', ErrID_None, '', Status='not_used' )
+      END IF
+      CALL CkIn_ReportComponent( Checker, 'Motions', ErrStat2, ErrMsg2 )
+
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
+
    CALL MD_CalcOutput(  t, MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
-  
-  
+
+
   ! -------------------------------------------------------------------------
-  ! BEGIN time marching 
+  ! BEGIN time marching
   ! -------------------------------------------------------------------------
-  
+
+
    call WrScr("Doing time marching now...")
-   
+
    CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, TMax )
 
    DO i = 1,nt
@@ -698,6 +755,10 @@ CONTAINS
 
       if (ErrStat >= AbortErrLev .OR. ErrStat2 >= AbortErrLev) then
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver')
+
+         ! SetErrStat above already folded ErrStat2/ErrMsg2 into ErrStat/ErrMsg (taking whichever was
+         ! more severe), so ErrStat/ErrMsg is the single authoritative fatal to report here.
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
 
          call EndAndCleanUp()
          Call ProgAbort(trim(ErrMsg))

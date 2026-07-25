@@ -31,8 +31,9 @@
 program AeroAcoustics_Driver
    use AeroAcoustics_Driver_Subs
    use VersionInfo
+   use NWTC_CheckInput
    implicit none
-   
+
    ! Program variables
    REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
    REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
@@ -41,39 +42,73 @@ program AeroAcoustics_Driver
    INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
    REAL(DbKi)                       :: t_global      ! global-loop time marker
    REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
-   
+
    TYPE(Dvr_Data)                   :: DriverData
-   
+
    character(1024)                  :: InputFile
    integer                          :: nt            !< loop counter (for time step)
    character(20)                    :: FlagArg       ! flag argument from command line
    integer(IntKi)                   :: ErrStat       ! status of error message
    character(ErrMsgLen)             :: ErrMsg        !local error message if ErrStat /= ErrID_None
 
-   
+   LOGICAL                          :: CheckInputMode          ! true if -CheckInput was given on the command line (no initializer -- set below)
+   TYPE(CheckInputCollectorType)    :: Checker                 ! -CheckInput result collector
+   CHARACTER(64)                    :: CkStage                 ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+   INTEGER(IntKi)                   :: ErrStat2                ! secondary error status, used only for -CheckInput report calls
+   CHARACTER(ErrMsgLen)             :: ErrMsg2                 ! secondary error message, used only for -CheckInput report calls
+
    CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
    UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
    UsrTime2 = UsrTime1                                    ! CPU_TIME: Initialize in case of error before getting real data
    SimStrtTime = StrtTime                                    ! CPU_TIME: Initialize in case of error before getting real data
    nt = 0
-   
+
+   CheckInputMode = .FALSE.
+   CkStage        = 'Driver'   ! default stage label; overridden before each named stage below
+
    ! --- Driver initialization
    CALL NWTC_Init( ProgNameIN=version%Name )
-   
+
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
-   
+   IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+      CheckInputMode = .TRUE.
+   ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+      CALL NormStop()   ! -h/-v were already handled inside CheckArgs
+   END IF
+
    ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
 
 
    ! Initialize modules
+   CkStage = 'Driver'
    call ReadDriverInputFile( InputFile, DriverData, ErrStat, ErrMsg ); call CheckError()
+
+   IF ( CheckInputMode ) THEN
+      CALL CkIn_OpenReport( Checker, TRIM(DriverData%OutRootName)//'.driver', ErrStat2, ErrMsg2 )
+      IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+   END IF
+
+   CkStage = 'AirfoilInfo'
    call Init_AFI(DriverData%Airfoil_FileName, DriverData%AFInfo, ErrStat, ErrMsg); call CheckError()
-   call Init_AAmodule(DriverData, ErrStat, ErrMsg); call CheckError()
+   CkStage = 'AeroAcoustics'
+   call Init_AAmodule(DriverData, ErrStat, ErrMsg, CheckInputMode=CheckInputMode); call CheckError()
+
+   IF ( CheckInputMode ) THEN
+      ! Reaching here means all three stages above completed without a fatal error (a fatal one
+      ! would have routed through CheckError's CkIn_DriverFail interception and never returned).
+      ! Record all three stages as passed, in order, then finish -- this call never returns.
+      CALL CkIn_Collect( Checker, 'Driver',        ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'Driver',        ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'AirfoilInfo',   ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'AirfoilInfo',   ErrStat2, ErrMsg2 )
+      CALL CkIn_Collect( Checker, 'AeroAcoustics', ErrID_None, '' )
+      CALL CkIn_ReportComponent( Checker, 'AeroAcoustics', ErrStat2, ErrMsg2 )
+      CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+   END IF
 
    ! Init of time estimator
    t_global=0.0_DbKi
@@ -105,6 +140,7 @@ contains
       if (ErrStat /= ErrID_None) then
          call WrScr(TRIM(errMsg))
          if (errStat >= AbortErrLev) then
+            IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrStat, ErrMsg )   ! never returns
             call Dvr_End()
          end if
          ErrStat = ErrID_None

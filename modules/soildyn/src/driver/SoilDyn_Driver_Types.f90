@@ -45,6 +45,7 @@ MODULE SoilDyn_Driver_Types
       LOGICAL                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+      LOGICAL                 :: CheckInput           = .FALSE.      !< specified -CheckInput mode on the command line
    END TYPE    SlDDriver_Flags
 
 

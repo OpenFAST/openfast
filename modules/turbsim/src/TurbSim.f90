@@ -58,6 +58,7 @@ USE TS_FileIO
 USE TS_Profiles
 use TS_CohStructures
 use VersionInfo
+USE NWTC_CheckInput
 
 IMPLICIT                   NONE
 
@@ -85,6 +86,12 @@ CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
 CHARACTER(1024)                  :: InFile                  ! Name of the TurbSim input file.
 CHARACTER(20)                    :: FlagArg                 ! flag argument from command line
 
+LOGICAL                          :: CheckInputMode          ! true if -CheckInput was given on the command line (no initializer -- set below)
+TYPE(CheckInputCollectorType)    :: Checker                 ! -CheckInput result collector
+CHARACTER(64)                    :: CkStage                 ! name of the -CheckInput stage/component currently executing (no initializer -- set below)
+INTEGER(IntKi)                   :: ErrStat2                ! secondary error status, used only for -CheckInput report calls
+CHARACTER(ErrMsgLen)             :: ErrMsg2                 ! secondary error message, used only for -CheckInput report calls
+
 
 !BONNIE:*****************************
 !    Time = TIMEF() ! Initialize the Wall Clock Time counter
@@ -92,13 +99,20 @@ CHARACTER(20)                    :: FlagArg                 ! flag argument from
 
 p%US = -1
 
+CheckInputMode = .FALSE.
+CkStage        = 'Input'   ! default stage label; overridden before each named stage below
+
    ! ... Initialize NWTC Library (open console, set pi constants) ...
-CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )       
+CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )
 
    ! Check for command line arguments.
 InFile = 'TurbSim.inp'  ! default name for input file
 CALL CheckArgs( InFile, Flag=FlagArg )
-IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+IF ( TRIM(FlagArg) == 'CHECKINPUT' ) THEN
+   CheckInputMode = .TRUE.
+ELSE IF ( LEN( TRIM(FlagArg) ) > 0 ) THEN
+   CALL NormStop()   ! -h/-v were already handled inside CheckArgs
+END IF
 
    ! Print out program name, version, and date.
 
@@ -111,6 +125,11 @@ IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
    
 CALL GetRoot( InFile, p%RootName )
 
+IF ( CheckInputMode ) THEN
+   CALL CkIn_OpenReport( Checker, TRIM(p%RootName), ErrStat2, ErrMsg2 )
+   IF (ErrStat2 >= AbortErrLev) CALL WrScr('Warning: could not open -CheckInput report: '//TRIM(ErrMsg2))
+END IF
+
    ! Open input file and summary file.
 
 CALL OpenSummaryFile( p%RootName, p%US, p%DescStr, ErrStat, ErrMsg )
@@ -118,13 +137,23 @@ CALL CheckError(ErrStat, ErrMsg)
 
    ! Get input parameters.
 
+CkStage = 'Input'
 CALL ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 CALL CheckError(ErrStat, ErrMsg)
 
-CALL WrSum_EchoInputs(p) 
+CALL WrSum_EchoInputs(p)
 call WrSum_UserInput(p%met,p%usr, p%US)
 
+CkStage = 'Validation'
 CALL TS_ValidateInput(p, ErrStat, ErrMsg)
+IF ( CheckInputMode .AND. ErrStat /= ErrID_None .AND. ErrStat < AbortErrLev ) THEN
+   ! TS_ValidateInput is an accumulating validator: non-fatal (warning-level) messages returned here
+   ! are otherwise only printed by CheckError's non-fatal branch and discarded. Collect them now, into
+   ! this same host-scope ErrStat/ErrMsg, before the fatal case (if any) is handled by CheckError's own
+   ! CkIn_DriverFail interception below -- that path collects independently, so this branch must skip
+   ! the fatal case to avoid double-recording the same messages.
+   CALL CkIn_Collect( Checker, 'Validation', ErrStat, ErrMsg )
+END IF
 CALL CheckError(ErrStat, ErrMsg)
 
 
@@ -133,13 +162,15 @@ CALL CheckError(ErrStat, ErrMsg)
 !..................................................................................................................................
 
    ! Define the other parameters for the time series.
+CkStage = 'Grid'
 CALL CreateGrid( p%grid, p%usr, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError(ErrStat, ErrMsg)
-      
+
 !..................................................................................................................................
 ! Calculate mean velocity and direction profiles:
 !..................................................................................................................................
 
+CkStage = 'Profiles'
    !  Wind speed:
 CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, ErrMsg )
 CALL CheckError(ErrStat, ErrMsg)
@@ -179,10 +210,27 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
    
 END IF
 
-           
+
+CkStage = 'Summary'
 CALL WrSum_SpecModel( p, U, HWindDir, VWindDir, ErrStat, ErrMsg )
 CALL CheckError(ErrStat, ErrMsg)
 
+IF ( CheckInputMode ) THEN
+   ! Reaching here means every stage above completed without a fatal error (a fatal one would have
+   ! routed through CheckError's CkIn_DriverFail interception and never returned). Record all five
+   ! stages as passed, in order, then finish -- this call never returns.
+   CALL CkIn_Collect( Checker, 'Input',      ErrID_None, '' )
+   CALL CkIn_ReportComponent( Checker, 'Input',      ErrStat2, ErrMsg2 )
+   CALL CkIn_Collect( Checker, 'Validation', ErrID_None, '' )
+   CALL CkIn_ReportComponent( Checker, 'Validation', ErrStat2, ErrMsg2 )
+   CALL CkIn_Collect( Checker, 'Grid',       ErrID_None, '' )
+   CALL CkIn_ReportComponent( Checker, 'Grid',       ErrStat2, ErrMsg2 )
+   CALL CkIn_Collect( Checker, 'Profiles',   ErrID_None, '' )
+   CALL CkIn_ReportComponent( Checker, 'Profiles',   ErrStat2, ErrMsg2 )
+   CALL CkIn_Collect( Checker, 'Summary',    ErrID_None, '' )
+   CALL CkIn_ReportComponent( Checker, 'Summary',    ErrStat2, ErrMsg2 )
+   CALL CkIn_DriverFinish( Checker )   ! summary + close + ProgExit(CkIn_ExitCode) -- never returns
+END IF
 
 !..................................................................................................................................
 ! Get the single-point power spectral densities
@@ -363,6 +411,8 @@ SUBROUTINE CheckError(ErrID,Msg)
    IF (ErrID /= ErrID_None) THEN
    
       IF (ErrID >= AbortErrLev) THEN
+
+         IF ( CheckInputMode ) CALL CkIn_DriverFail( Checker, TRIM(CkStage), ErrID, Msg )   ! never returns
 
          IF (ALLOCATED(PhaseAngles)) DEALLOCATE(PhaseAngles)
          IF (ALLOCATED(S          )) DEALLOCATE(S          )
