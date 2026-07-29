@@ -166,6 +166,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    logical                                 :: CallStart
 
    REAL(R8Ki)                              :: theta(3)            ! angles for hub orientation matrix for aeromaps
+   TYPE(ED_InitOutputType)                  :: InitOutData_ED_Dummy ! dummy for SetVTKParameters when ED is not used
 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitializeAll'
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
@@ -1523,8 +1524,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    if ( p_FAST%WrVTK > VTK_None ) then
-      ! TODO: support multiple ElastoDyns
-      call SetVTKParameters(p_FAST, Init%OutData_ED(1), Init%OutData_SED, Init%OutData_AD, Init%OutData_SeaSt, Init%OutData_HD, ED, SED, BD, AD, HD, ErrStat2, ErrMsg2)
+      ! TODO: support multiple ElastoDyns -- remove InitOutData_ED_Dummy when done.
+      ! FIXME: this solution conflicts with multirotor development.  When merging, favor the multirotor approach already in dev over this.
+      if (allocated(Init%OutData_ED)) then
+         call SetVTKParameters(p_FAST, Init%OutData_ED(1), Init%OutData_SED, Init%OutData_AD, Init%OutData_SeaSt, Init%OutData_HD, ED, SED, BD, AD, HD, ErrStat2, ErrMsg2)
+      else
+         call SetVTKParameters(p_FAST, InitOutData_ED_Dummy, Init%OutData_SED, Init%OutData_AD, Init%OutData_SeaSt, Init%OutData_HD, ED, SED, BD, AD, HD, ErrStat2, ErrMsg2)
+      end if
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
 
@@ -3803,7 +3809,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
    TYPE(SeaSt_InitOutputType),   INTENT(INOUT) :: InitOutData_SeaSt   !< The initialization output from SeaState
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
    TYPE(ElastoDyn_Data), TARGET, INTENT(IN   ) :: ED               !< ElastoDyn data
-   TYPE(SED_Data),               INTENT(IN   ) :: SED              !< Simplified-ElastoDyn data
+   TYPE(SED_Data),        TARGET, INTENT(IN   ) :: SED              !< Simplified-ElastoDyn data
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    TYPE(AeroDyn_Data),           INTENT(IN   ) :: AD               !< AeroDyn data
    TYPE(HydroDyn_Data),          INTENT(IN   ) :: HD               !< HydroDyn data
@@ -3862,6 +3868,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
    if ( p_FAST%CompElast == Module_BD ) then
       BladeLength = TwoNorm(BD%y(1)%BldMotion%Position(:,1) - BD%y(1)%BldMotion%Position(:,BD%y(1)%BldMotion%Nnodes))
       HubRad = InitOutData_ED%HubRad
+   else if ( p_FAST%CompElast == Module_SED ) then
+      BladeLength = InitOutData_SED%BladeLength
+      HubRad = InitOutData_SED%HubRad
    else
       BladeLength = InitOutData_ED%BladeLength
       HubRad = InitOutData_ED%HubRad
@@ -3916,7 +3925,11 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
    ! Create the tower surface data
    !.......................
    ! TODO: Support multiple towers
-   TowerMotionMesh => ED%y(1)%TowerLn2Mesh
+   if (p_FAST%CompElast == Module_SED) then
+      TowerMotionMesh => SED%y%TowerLn2Mesh
+   else
+      TowerMotionMesh => ED%y(1)%TowerLn2Mesh
+   end if
 
    CALL AllocAry(p_FAST%VTK_Surface%TowerRad,TowerMotionMesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -4001,7 +4014,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
-!   ELSE IF (p_FAST%CompElast == Module_SED) THEN     ! no blade surface info from SED
+   ELSE IF (p_FAST%CompElast == Module_SED) THEN
+      ! SED has no blade line2 mesh; skip generic blade surface generation
+      call WrScr('Skipping generic blade surfaces for Simplified ElastoDyn (no blade mesh available).')
    ELSE
       call WrScr('Using generic blade surfaces for ElastoDyn (rectangular airfoil, constant chord). ') ! TODO make this an option
       DO K=1,NumBl
