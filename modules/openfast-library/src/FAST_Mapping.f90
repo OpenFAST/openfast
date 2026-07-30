@@ -3474,6 +3474,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
                                         T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(:, 1)
       T%IfW%Input(iInput)%HubOrientation = T%ED%y(ModSrc%Ins)%HubPtMotion%Orientation(:, :, 1)
 
+      ! MHK: shift hub position from MSL frame to seabed frame for InflowWind
+      if (T%p_FAST%MHK /= MHK_None) then
+         T%IfW%Input(iInput)%HubPosition(3) = T%IfW%Input(iInput)%HubPosition(3) + T%p_FAST%WtrDpth
+      end if
+
       ! Set Lidar position directly from hub motion mesh
       T%IfW%Input(iInput)%lidar%HubDisplacementX = T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(1, 1)
       T%IfW%Input(iInput)%lidar%HubDisplacementY = T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(2, 1)
@@ -3485,6 +3490,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%IfW%Input(iInput)%HubPosition = T%SED%y%HubPtMotion%Position(:, 1) + &
                                         T%SED%y%HubPtMotion%TranslationDisp(:, 1)
       T%IfW%Input(iInput)%HubOrientation = T%SED%y%HubPtMotion%Orientation(:, :, 1)
+
+      ! MHK: shift hub position from MSL frame to seabed frame for InflowWind
+      if (T%p_FAST%MHK /= MHK_None) then
+         T%IfW%Input(iInput)%HubPosition(3) = T%IfW%Input(iInput)%HubPosition(3) + T%p_FAST%WtrDpth
+      end if
 
       ! Set Lidar position directly from hub motion mesh
       T%IfW%Input(iInput)%lidar%HubDisplacementX = T%SED%y%HubPtMotion%TranslationDisp(1, 1)

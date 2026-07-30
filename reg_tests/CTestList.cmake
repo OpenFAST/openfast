@@ -56,11 +56,11 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY STEA
   if(STEADYSTATE_FLAG STREQUAL " ")
     set(STEADYSTATE_FLAG "")
   endif()
-  
+
   if(OTHER_FLAGS STREQUAL " ")
     set(OTHER_FLAGS "")
   endif()
-  
+
   add_test(
     ${TESTNAME} ${Python_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -111,7 +111,7 @@ function(of_fastlib_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " "${TESTNAME}_fastlib" "${LABEL}" " " ${TESTNAME})
 endfunction(of_fastlib_regression)
 
-# openfast aeroacoustic 
+# openfast aeroacoustic
 function(of_regression_aeroacoustic TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastAeroAcousticRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
@@ -514,7 +514,7 @@ sd_regression("SD_PendulumDamp"                               "subdyn;offshore")
 sd_regression("SD_Rigid"                                      "subdyn;offshore")
 sd_regression("SD_SparHanging"                                "subdyn;offshore")
 sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore") # TODO Issue #855
-sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore") 
+sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore")
 sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore") # TODO Issue #855
 sd_regression("SD_Spring_Case1"                               "subdyn;offshore")
 sd_regression("SD_Spring_Case2"                               "subdyn;offshore")
@@ -523,6 +523,7 @@ sd_regression("SD_Revolute_Joint"                             "subdyn;offshore")
 sd_regression("SD_2Beam_Spring"                               "subdyn;offshore")
 sd_regression("SD_2Beam_Cantilever"                           "subdyn;offshore")
 sd_regression("SD_CantileverBeam_Rectangular"                 "subdyn;offshore")
+sd_regression("SD_SelfWeight_FloatingSystem"                  "subdyn;offshore")
 # TODO test below are bugs, should be added when fixed
 # sd_regression("SD_Force"                                      "subdyn;offshore")
 # sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")

@@ -46,9 +46,9 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeIDs      !< Node IDs associated with ordinal numbers for the output member [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElmIDs      !< Element IDs connected to each NodeIDs; max 10 elements [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElmNds      !< Flag to indicate 1st or 2nd node of element for each ElmIDs [-]
-    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Me      !< Mass matrix connected to each joint element for outAll output [-]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Ke      !< Mass matrix connected to each joint element for outAll output [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Fg      !< Gravity load vector connected to each joint element for requested member output [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: extrap      !< Whether to extrapolate force; true for member end nodes if member has more than 1 element [-]
   END TYPE MeshAuxDataType
 ! =======================
 ! =========  CB_MatArrays  =======
@@ -115,6 +115,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: SubRotateZ = 0.0_ReKi      !< Rotation angle in degrees about global Z [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: SoilStiffness      !< Soil stiffness matrices from SoilDyn ['(N/m,]
     TYPE(MeshType)  :: SoilMesh      !< Mesh for soil stiffness locations [-]
+    LOGICAL  :: SlDNonLinear = .false.      !< Flag indicating that SoilDyn is returning nonlinear loads [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
   END TYPE SD_InitInputType
 ! =======================
@@ -258,6 +259,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFRB = 0_IntKi      !< number of rigid-body modes [-]
     INTEGER(IntKi)  :: SttcSolve = 0_IntKi      !< Solve dynamics about static equilibrium point (flag) [-]
     LOGICAL  :: Floating = .false.      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
+    LOGICAL  :: SlDNonLinear = .false.      !< Flag indicating that SoilDyn is returning nonlinear loads [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MMB      !< Matrix after C-B reduction (transpose of MBM [-]
@@ -544,18 +546,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       end if
       DstMeshAuxDataTypeData%ElmNds = SrcMeshAuxDataTypeData%ElmNds
    end if
-   if (allocated(SrcMeshAuxDataTypeData%Me)) then
-      LB(1:4) = lbound(SrcMeshAuxDataTypeData%Me)
-      UB(1:4) = ubound(SrcMeshAuxDataTypeData%Me)
-      if (.not. allocated(DstMeshAuxDataTypeData%Me)) then
-         allocate(DstMeshAuxDataTypeData%Me(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMeshAuxDataTypeData%Me.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMeshAuxDataTypeData%Me = SrcMeshAuxDataTypeData%Me
-   end if
    if (allocated(SrcMeshAuxDataTypeData%Ke)) then
       LB(1:4) = lbound(SrcMeshAuxDataTypeData%Ke)
       UB(1:4) = ubound(SrcMeshAuxDataTypeData%Ke)
@@ -580,6 +570,18 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
       end if
       DstMeshAuxDataTypeData%Fg = SrcMeshAuxDataTypeData%Fg
    end if
+   if (allocated(SrcMeshAuxDataTypeData%extrap)) then
+      LB(1:1) = lbound(SrcMeshAuxDataTypeData%extrap)
+      UB(1:1) = ubound(SrcMeshAuxDataTypeData%extrap)
+      if (.not. allocated(DstMeshAuxDataTypeData%extrap)) then
+         allocate(DstMeshAuxDataTypeData%extrap(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMeshAuxDataTypeData%extrap.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMeshAuxDataTypeData%extrap = SrcMeshAuxDataTypeData%extrap
+   end if
 end subroutine
 
 subroutine SD_DestroyMeshAuxDataType(MeshAuxDataTypeData, ErrStat, ErrMsg)
@@ -601,14 +603,14 @@ subroutine SD_DestroyMeshAuxDataType(MeshAuxDataTypeData, ErrStat, ErrMsg)
    if (allocated(MeshAuxDataTypeData%ElmNds)) then
       deallocate(MeshAuxDataTypeData%ElmNds)
    end if
-   if (allocated(MeshAuxDataTypeData%Me)) then
-      deallocate(MeshAuxDataTypeData%Me)
-   end if
    if (allocated(MeshAuxDataTypeData%Ke)) then
       deallocate(MeshAuxDataTypeData%Ke)
    end if
    if (allocated(MeshAuxDataTypeData%Fg)) then
       deallocate(MeshAuxDataTypeData%Fg)
+   end if
+   if (allocated(MeshAuxDataTypeData%extrap)) then
+      deallocate(MeshAuxDataTypeData%extrap)
    end if
 end subroutine
 
@@ -623,9 +625,9 @@ subroutine SD_PackMeshAuxDataType(RF, Indata)
    call RegPackAlloc(RF, InData%NodeIDs)
    call RegPackAlloc(RF, InData%ElmIDs)
    call RegPackAlloc(RF, InData%ElmNds)
-   call RegPackAlloc(RF, InData%Me)
    call RegPackAlloc(RF, InData%Ke)
    call RegPackAlloc(RF, InData%Fg)
+   call RegPackAlloc(RF, InData%extrap)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -643,9 +645,9 @@ subroutine SD_UnPackMeshAuxDataType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%NodeIDs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ElmIDs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ElmNds); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Me); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ke); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%extrap); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCode, ErrStat, ErrMsg)
@@ -987,6 +989,7 @@ subroutine SD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    call MeshCopy(SrcInitInputData%SoilMesh, DstInitInputData%SoilMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitInputData%SlDNonLinear = SrcInitInputData%SlDNonLinear
    DstInitInputData%Linearize = SrcInitInputData%Linearize
 end subroutine
 
@@ -1023,6 +1026,7 @@ subroutine SD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%SubRotateZ)
    call RegPackAlloc(RF, InData%SoilStiffness)
    call MeshPack(RF, InData%SoilMesh) 
+   call RegPack(RF, InData%SlDNonLinear)
    call RegPack(RF, InData%Linearize)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1044,6 +1048,7 @@ subroutine SD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%SubRotateZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SoilStiffness); if (RegCheckErr(RF, RoutineName)) return
    call MeshUnpack(RF, OutData%SoilMesh) ! SoilMesh 
+   call RegUnpack(RF, OutData%SlDNonLinear); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2413,6 +2418,7 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nDOFRB = SrcParamData%nDOFRB
    DstParamData%SttcSolve = SrcParamData%SttcSolve
    DstParamData%Floating = SrcParamData%Floating
+   DstParamData%SlDNonLinear = SrcParamData%SlDNonLinear
    if (allocated(SrcParamData%KMMDiag)) then
       LB(1:1) = lbound(SrcParamData%KMMDiag)
       UB(1:1) = ubound(SrcParamData%KMMDiag)
@@ -3466,6 +3472,7 @@ subroutine SD_PackParam(RF, Indata)
    call RegPack(RF, InData%nDOFRB)
    call RegPack(RF, InData%SttcSolve)
    call RegPack(RF, InData%Floating)
+   call RegPack(RF, InData%SlDNonLinear)
    call RegPackAlloc(RF, InData%KMMDiag)
    call RegPackAlloc(RF, InData%CMMDiag)
    call RegPackAlloc(RF, InData%MMB)
@@ -3666,6 +3673,7 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nDOFRB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SttcSolve); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Floating); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SlDNonLinear); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%KMMDiag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CMMDiag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MMB); if (RegCheckErr(RF, RoutineName)) return

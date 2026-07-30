@@ -1222,7 +1222,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       if (Failed())  return;
 
          ! OutAll - Whether or not to output information for every member and joint
-   call ParseVar( FileInfo_In, CurLine, 'OutAll', InputFileData%OutAll, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'OutAll', InputFileData%Morison%OutAll, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
          ! OutSwtch - Specify how to write to an output file
@@ -2803,15 +2803,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !-------------------------------------------------------------------------------------------------
    ! Data section for OUTPUT
    !-------------------------------------------------------------------------------------------------
-
-
-      ! OutAll - output all member and joint data
-
-   IF ( InputFileData%OutAll ) THEN    !TODO: Alter this check once OutAll is supported
-         CALL SetErrStat( ErrID_Fatal,'OutAll must be FALSE. Future versions of HydroDyn will once again support values of either TRUE or FALSE.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-   END IF
-
 
       ! OutSwtch - output file switch
 

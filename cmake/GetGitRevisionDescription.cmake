@@ -116,7 +116,37 @@ function(git_describe _var)
 		ERROR_QUIET
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
 	if(NOT res EQUAL 0)
-		set(out "${out}-${res}-NOTFOUND")
+		# git describe failed (e.g. shallow clone with no reachable tags).
+		# Fall back to the short commit hash.
+		execute_process(COMMAND
+			"${GIT_EXECUTABLE}"
+			rev-parse --short=8 HEAD
+			WORKING_DIRECTORY
+			"${CMAKE_CURRENT_SOURCE_DIR}"
+			RESULT_VARIABLE
+			res_hash
+			OUTPUT_VARIABLE
+			out_hash
+			ERROR_QUIET
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		if(res_hash EQUAL 0)
+			# Check for dirty working tree
+			execute_process(COMMAND
+				"${GIT_EXECUTABLE}"
+				diff-index --quiet HEAD --
+				WORKING_DIRECTORY
+				"${CMAKE_CURRENT_SOURCE_DIR}"
+				RESULT_VARIABLE
+				res_dirty
+				ERROR_QUIET)
+			if(res_dirty EQUAL 0)
+				set(out "${out_hash}")
+			else()
+				set(out "${out_hash}-dirty")
+			endif()
+		else()
+			set(out "${out}-${res}-NOTFOUND")
+		endif()
 	endif()
 
 	set(${_var} "${out}" PARENT_SCOPE)

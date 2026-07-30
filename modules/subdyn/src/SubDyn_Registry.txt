@@ -15,9 +15,9 @@ typedef  ^  MeshAuxDataType  INTEGER  NodeCnt   {:}           -  -  "Node ordina
 typedef  ^  MeshAuxDataType  INTEGER  NodeIDs   {:}           -  -  "Node IDs associated with ordinal numbers for the output member"
 typedef  ^  MeshAuxDataType  INTEGER  ElmIDs    {:}{:}        -  -  "Element IDs connected to each NodeIDs; max 10 elements"
 typedef  ^  MeshAuxDataType  INTEGER  ElmNds    {:}{:}        -  -  "Flag to indicate 1st or 2nd node of element for each ElmIDs"
-typedef  ^  MeshAuxDataType  R8Ki     Me        {:}{:}{:}{:}  -  -  "Mass matrix connected to each joint element for outAll output"
 typedef  ^  MeshAuxDataType  R8Ki     Ke        {:}{:}{:}{:}  -  -  "Mass matrix connected to each joint element for outAll output"
 typedef  ^  MeshAuxDataType  R8Ki     Fg        {:}{:}{:}     -  -  "Gravity load vector connected to each joint element for requested member output"
+typedef  ^  MeshAuxDataType  LOGICAL  extrap    {:}           -  -  "Whether to extrapolate force; true for member end nodes if member has more than 1 element"
 
 # CB_MatArrays: Matrices and arrays for CB summary
 typedef  ^  CB_MatArrays  R8Ki     MBB     {:}{:}  -  -  "FULL MBB ( no constraints applied)"
@@ -78,6 +78,7 @@ typedef  ^  InitInputType  ReKi             TP_RefPoint  {3}{:} - -  "global pos
 typedef  ^  InitInputType  ReKi             SubRotateZ   - - -       "Rotation angle in degrees about global Z"
 typedef  ^  InitInputType  ReKi             SoilStiffness ::: - -    "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
 typedef  ^  InitInputType  MeshType         SoilMesh     - - -       "Mesh for soil stiffness locations" -
+typedef  ^  InitInputType  Logical          SlDNonLinear - - -       "Flag indicating that SoilDyn is returning nonlinear loads"
 typedef  ^  InitInputType  Logical          Linearize    - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 
 # ============================== Initialization outputs ============================================================================================================================================
@@ -208,6 +209,7 @@ typedef  ^  ParameterType  IntKi   nDOFM        -  -  -  "retained degrees of fr
 typedef  ^  ParameterType  IntKi   nDOFRB       -  -  -  "number of rigid-body modes"
 typedef  ^  ParameterType  IntKi   SttcSolve    -  -  -  "Solve dynamics about static equilibrium point (flag)"
 typedef  ^  ParameterType  Logical Floating     -  -  -  "True if floating bottom (the 6 DOF are free at all reaction nodes)"
+typedef  ^  ParameterType  Logical SlDNonLinear -  -  -  "Flag indicating that SoilDyn is returning nonlinear loads"
 typedef  ^  ParameterType  ReKi    KMMDiag  {:}    -  -  "Diagonal coefficients of Kmm (OmegaM squared)"
 typedef  ^  ParameterType  ReKi    CMMDiag  {:}    -  -  "Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
 typedef  ^  ParameterType  ReKi    MMB  {:}{:}     -  -  "Matrix after C-B reduction (transpose of MBM"

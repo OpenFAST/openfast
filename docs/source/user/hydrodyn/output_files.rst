@@ -166,6 +166,59 @@ data for a single 6\ **NBody**-by-6\ **NBody** matrix. If **NBodyMod** > 1
 (no hydrodynamic coupling), the summary file will contain data for **NBody** 
 6-by-6 radiation kernal matrices.
 
+.. _hd-outall-option:
+
+**OutAll** Option
+~~~~~~~~~~~~~~~~~
+
+If **OutAll** is set to TRUE, HydroDyn will output the total strip-theory
+forces and moments on each user-defined member and joint. These are
+included as additional columns in the output file independent of any
+user-requested outputs. The forces and moments on the members (integrated loads across
+all side walls) will be written first. For example, the 6 load components
+on the first member in the **MEMBERS** table (the first row of the table)
+are given by **M1TotFxi**, **M1TotFyi**, **M1TotFzi**, **M1TotMxi**,
+**M1TotMyi**, and **M1TotMzi**. After the member loads, the total lumped
+loads on each joint are printed next. For instance, the loads on the first
+joint in the **MEMBER JOINTS** table are printed with the column names
+**J1TotFxi**, **J1TotFyi**, **J1TotFzi**, **J1TotMxi**, **J1TotMyi**, and
+**J1TotMzi**. Note that for these outputs, the members and joints are
+simply numbered based on their order of appearance in the respective tables
+in the input file, so, as an example, **J2** refers to the joint defined
+on the second row of the **MEMBER JOINTS** table. The member and joint
+numbering does not follow **MemberID** and **JointID**, nor does it follow
+the numbering used with the user-requested member and joint outputs.
+
+The output forces and moments are the total strip-theory loads, including
+hydrodynamic, hydrostatic, marine growth, and ballast contributions. If a
+member has **PropPot** set to TRUE, the relevant load components will be
+omitted for that member and its connecting joints as appropriate. All
+force and moment components are resolved in the earth-fixed inertial frame
+of reference, and the moments are computed about the instantaneous principal
+reference point (PRP), same as the output channels **HydroFxi**,
+**HydroFyi**, etc. As a reminder, the PRP is a body-fixed point located at
+the earth-fixed origin when the HydroDyn structure is undisplaced. Summing
+all member and joint loads gives the total strip-theory loads on the entire
+structure.
+
+After the member and joint loads, HydroDyn also outputs the total forces
+and moments on each computational node of the HydroDyn strip-theory (Morison)
+mesh. This internal mesh is used to map the loads to other structural
+modules, such as SubDyn, and contains joint nodes at the user-defined joint
+locations followed by member internal nodes created from member discretization.
+The force and moment components are again resolved in the earth-fixed inertial
+frame of reference. However, the moment on each node is about the node itself,
+not about the PRP as with the member and joint load outputs above. Additionally,
+the joint mesh nodes can have load contributions from both member side walls
+and from the joint/endplates. This is because part of the side-wall loads on
+the first and last element of a member can be assignd to the joint nodes. As
+a result, the load outputs at the joint nodes do not necessarily match the joint
+load outputs above, which do not contain contributions from member side walls.
+The nodal load output column names indicate the node number, e.g., **N1TotFxi**,
+**N1TotFyi**, **N1TotFzi**, **N1TotMxi**, **N1TotMyi**, and **N1TotMzi** for
+the first node. The node numbering follows the **Nodes** table in the HydroDyn
+summary file.
+
 Results File
 ~~~~~~~~~~~~
 

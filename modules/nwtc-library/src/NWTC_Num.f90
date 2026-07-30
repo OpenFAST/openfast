@@ -4818,7 +4818,7 @@ end function Rad2M180to180Deg
    q2q2 = q%v(2)**2
    q2q3 = q%v(2)    * q%v(3)
    
-   q3q3 = q%v(2)**2
+   q3q3 = q%v(3)**2
    
    
    Quaternion_to_DCM(1,1) =          q0q0 +          q1q1 - q2q2 - q3q3  ! Eq.  9

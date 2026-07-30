@@ -248,6 +248,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_sum                         {:}{:}         -         -         "Member-based (side-effects) Nodal combined loads at time t"   -
+typedef   ^                            ^                             ReKi                     F_tot                         {6}            -         -         "Member total force and moment"   -
 #
 typedef   ^                            Morison_CoefMembersCyl        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -405,6 +407,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {:}        -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
+typedef   ^                            ^                             LOGICAL                  OutAll                           -       .false.     -         "Output all user-specified member and joint loads (only total member loads, not interior locations) [T/F]"    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                        -       .false.     -         "Output visualization meshes" -
@@ -458,7 +461,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_I_End                       {:}{:}         -         -         "Lumped intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_A_End                       {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
-typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         ""        -
+typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         "Joint internal ballast hydrostatic loads"        -
+typedef   ^                            ^                             ReKi                     F_tot_End                     {:}{:}         -         -         "Joint total loads"
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
 typedef   ^                            ^                             ReKi                     zFillGroup                    {:}            -         -         "Instantaneous highest point of each filled group"  m
@@ -494,6 +498,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                       {:}        -        -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                      {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                       -          -        -         ""        -
+typedef   ^                            ^                             LOGICAL                  OutAll                        -       .false.     -         "Output all user-specified member and joint loads (only total member loads, not interior locations) [T/F]"    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                     -       .false.     -         "Output visualization meshes" -
 typedef   ^                            ^                             INTEGER                  PtfmYMod                      -          -        -         "Large yaw model" -
@@ -506,6 +511,7 @@ typedef   ^                            ^                             Morison_Fil
 #
 typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
 typedef   ^                            ^                             ReKi                     PtfmRefY                      -          -        -         "Reference platform yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     PRP                           {3}        -        -         "Coordinates of the principal reference point" (m)
 #
 #
 # ..... Outputs ...................................................................................................................

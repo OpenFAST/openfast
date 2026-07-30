@@ -536,7 +536,7 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    else
       ! YAML Line format
       if (present(AllFmt)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//', "]")'   
       elseif (nc==1) then
          Fmt = '('//trim(Fmt)//'"- [", '//trim(Num2LStr(nc))//'('//VarFmt//'), "]")'   
       else
@@ -589,7 +589,7 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    else
       ! YAML Line format
       if (present(AllFmt)) then
-         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//'"]")'   
+         Fmt = '('//trim(Fmt)//'"- [",'//trim(AllFmt)//', "]")'   
       elseif (nc==1) then
          Fmt = '('//trim(Fmt)//'"- [", '//trim(Num2LStr(nc))//'('//VarFmt//'), "]")'   
       else

@@ -76,7 +76,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NUserOutputs = 0_IntKi      !< Number of Hydrodyn-level requested output channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: UserOutputs      !< This should really be dimensioned with MaxOutPts [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files] [-]
-    LOGICAL  :: OutAll = .false.      !< Output all user-specified member and joint loads (only at each member end, not interior locations) [T/F] [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< The number of outputs for this module as requested in the input file [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: HDSum = .false.      !< Generate a HydroDyn summary file [T/F] [-]
@@ -228,20 +227,21 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: HydroDyn_x_Morison_DummyContState =   4 ! HydroDyn%Morison%DummyContState
    integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   5 ! HydroDyn%Morison%Mesh
    integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =   6 ! HydroDyn%Morison%PtfmRefY
-   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =   7 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =   8 ! HydroDyn%PRPMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOF               =   9 ! HydroDyn%qAddDOF
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDot            =  10 ! HydroDyn%qAddDOFDot
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDotDot         =  11 ! HydroDyn%qAddDOFDotDot
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  12 ! HydroDyn%WAMIT(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_FAddDOF         =  13 ! HydroDyn%WAMIT(DL%i1)%FAddDOF
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  14 ! HydroDyn%WAMIT2(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  15 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  16 ! HydroDyn%Morison%VisMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  17 ! HydroDyn%Morison%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  18 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  19 ! HydroDyn%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_FAddDOF               =  20 ! HydroDyn%FAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PRP           =   7 ! HydroDyn%Morison%PRP
+   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =   8 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =   9 ! HydroDyn%PRPMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOF               =  10 ! HydroDyn%qAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDot            =  11 ! HydroDyn%qAddDOFDot
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDotDot         =  12 ! HydroDyn%qAddDOFDotDot
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  13 ! HydroDyn%WAMIT(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_FAddDOF         =  14 ! HydroDyn%WAMIT(DL%i1)%FAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  15 ! HydroDyn%WAMIT2(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  16 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  17 ! HydroDyn%Morison%VisMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  18 ! HydroDyn%Morison%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  19 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  20 ! HydroDyn%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_FAddDOF               =  21 ! HydroDyn%FAddDOF
 
 contains
 
@@ -457,7 +457,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%UserOutputs = SrcInputFileData%UserOutputs
    end if
    DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
-   DstInputFileData%OutAll = SrcInputFileData%OutAll
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
       LB(1:1) = lbound(SrcInputFileData%OutList)
@@ -579,7 +578,6 @@ subroutine HydroDyn_PackInputFile(RF, Indata)
    call RegPack(RF, InData%NUserOutputs)
    call RegPackAlloc(RF, InData%UserOutputs)
    call RegPack(RF, InData%OutSwtch)
-   call RegPack(RF, InData%OutAll)
    call RegPack(RF, InData%NumOuts)
    call RegPackAlloc(RF, InData%OutList)
    call RegPack(RF, InData%HDSum)
@@ -629,7 +627,6 @@ subroutine HydroDyn_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%NUserOutputs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UserOutputs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutSwtch); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%OutAll); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HDSum); if (RegCheckErr(RF, RoutineName)) return
@@ -2823,6 +2820,8 @@ subroutine HydroDyn_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%Morison%Mesh, ValAry)                          ! Mesh
       case (HydroDyn_u_Morison_PtfmRefY)
          VarVals(1) = u%Morison%PtfmRefY                                      ! Scalar
+      case (HydroDyn_u_Morison_PRP)
+         VarVals = u%Morison%PRP(V%iLB:V%iUB)                                 ! Rank 1 Array
       case (HydroDyn_u_WAMITMesh)
          call MV_PackMesh(V, u%WAMITMesh, ValAry)                             ! Mesh
       case (HydroDyn_u_PRPMesh)
@@ -2859,6 +2858,8 @@ subroutine HydroDyn_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%Morison%Mesh)                        ! Mesh
       case (HydroDyn_u_Morison_PtfmRefY)
          u%Morison%PtfmRefY = VarVals(1)                                      ! Scalar
+      case (HydroDyn_u_Morison_PRP)
+         u%Morison%PRP(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
       case (HydroDyn_u_WAMITMesh)
          call MV_UnpackMesh(V, ValAry, u%WAMITMesh)                           ! Mesh
       case (HydroDyn_u_PRPMesh)
@@ -2881,6 +2882,8 @@ function HydroDyn_InputFieldName(DL) result(Name)
        Name = "u%Morison%Mesh"
    case (HydroDyn_u_Morison_PtfmRefY)
        Name = "u%Morison%PtfmRefY"
+   case (HydroDyn_u_Morison_PRP)
+       Name = "u%Morison%PRP"
    case (HydroDyn_u_WAMITMesh)
        Name = "u%WAMITMesh"
    case (HydroDyn_u_PRPMesh)

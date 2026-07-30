@@ -109,9 +109,11 @@ subroutine SlD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    z%DummyConstrState = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-   ! are the returned reaction forces only the non-linear portion (used when SubDyn is calculating the linear portion)
+   ! The linear soil stiffness is passed directly to SubDyn as a stiffness matrix (not as a load)
+   ! The nonlinear portion of reaction forces is only computed when REDWIN DLL is active and passed as loads.
    p%SlDNonLinearForcePortionOnly = InitInp%SlDNonLinearForcePortionOnly
-   if (p%SlDNonLinearForcePortionOnly) call WrScr(' SoilDyn returning only non-linear portion of reaction forces')
+   call WrScr(' SoilDyn: linear stiffness passed directly to SubDyn as a stiffness matrix')
+   if (p%CalcOption == Calc_REDWIN) call WrScr(' SoilDyn: nonlinear soil reaction loads computed by REDWIN')
 
    ! If the module does not implement the four Jacobian routines at the end of this template, or the module cannot
    ! linearize with the features that are enabled, stop the simulation if InitInp%Linearize is true.

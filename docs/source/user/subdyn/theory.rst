@@ -167,16 +167,25 @@ Member or Element Local Coordinate System (:math:`{x_e, y_e, z_e}`) (:numref:`el
    start node (S,MJointID1).
 
 -  The local  :math:`z_{e}` axis is along the elastic axis of the member, directed from
-   the start node (S) to the end node (E,MJointID2). Nodes are ordered
-   along the member main axis directed from start joint to end joint
+   the start node (MJointID1) to the end node (MJointID2). Nodes are ordered
+   along the member main axis directed from the start joint to the end joint
    (per user's input definition).
 
--  The local  :math:`x_{e}` axis is parallel to the global :math:`\text{XY}` plane, and
-   directed such that a positive, less than or equal to 180 :math:`^\circ` rotation
-   about it, would bring the local :math:`z_{e}` axis parallel to the global *Z* axis.
+-  For a member with its spin angle *MSpin* set to zero. The local :math:`x_{e}` axis is
+   parallel to the global :math:`\text{XY}` plane, and directed such that a positive, less
+   than or equal to 180 :math:`^\circ` rotation about it, would bring the local :math:`z_{e}`
+   axis parallel to the global *Z* axis.
+
+-  A nonzero *MSpin* rotates the member about its local :math:`z_{e}` axis following the
+   right-hand convention from the orientation described above. As a result, the local
+   :math:`x_{e}` axis will no longer be parallel to the global :math:`\text{XY}` plane.
 
 -  The local :math:`y_{e}` axis can be found assuming a right-handed Cartesian
    coordinate system.
+
+-  Side A and Side B of a rectangular beam cross section are assumed to be parallel to the
+   local :math:`x_{e}` axis and :math:`y_{e}` axis, respectively. Therefore, the cross
+   section can be reoriented using *MSpin*.
 
 .. _element-cs:
 
@@ -332,7 +341,7 @@ The Craig-Bampton reduction is described in :numref:`GenericCBReduction`.
 
 Self-Weight Loads  
 ~~~~~~~~~~~~~~~~~
-The loads caused by self-weight are precomputed during initialization
+For fixed-bottom structures, the loads caused by self-weight are precomputed during initialization
 based on the undisplaced configuration. It is therefore assumed that the
 displacements will be small and that P-delta effects are small for the
 substructure. 
@@ -361,7 +370,16 @@ coordinate system):
 
 Note also that if lumped masses exist (selected by the user at
 prescribed joints), their contribution will be included as concentrated
-forces along global *Z* at the relevant nodes.
+forces along global *Z* at the relevant nodes. Additional moments will
+also be included if the concentrated mass is offset from the node it is
+attached to.
+
+For floating structures, the loads caused by self-weight are recomputed
+at each time step for the displaced structure. Only rigid-body motion is
+considered. The small elastic deflection is neglected. In this case, the
+direction cosine matrix :math:`D_c` in Eq. :eq:`FG` is replaced with the
+product of the rigid-body rotation matrix and the constant element direction
+cosine matrix.
 
 
 Beam Element Formulation    
@@ -2345,40 +2363,58 @@ SubDyn calculates 12-vector element loads in the element coordinate system using
 
 .. math:: :label: el_loads
 
-	\text{Element Inertia load:} ~~ F_{I,12}^e   &= [D_{c,12}]^T [m] \ddot{U}_{e,12}
-	
-	\text{Element Stiffness load:} ~~ F_{S,12}^e &= [D_{c,12}]^T [k] \left[ \hat{U}_e + U_{L,\text{SIM}} \right]_{12}
+	\text{Element elastic load:} ~~ F_{k,12}^e &= [D_{c,12}]^T [k] \left[ \hat{U}_e + U_{L,\text{SIM}} \right]_{12}
  
-where [*k*] and [*m*] are element stiffness and mass matrices expressed in the global frame, 
-:math:`D_{c,12}` is a 12x12 matrix of DCM for a given element, 
-the subscript 12 indicates that the 12 degrees of freedom of the element are considered,
-and :math:`U_e` and :math:`\ddot{U}_e` are element nodal deflections and accelerations respectively,
-which can be obtained from Eq. :eq:`y2` and may contain the static displacement contribution :math:`U_{L,\text{SIM}}`.  There is no good way to quantify the damping forces for each element, so
-the element damping forces are not calculated.
+where [*k*] is the element stiffness matrix expressed in the global frame,
+:math:`D_{c,12}` is a 12x12 direction cosine matrix for a given element
+(the subscript 12 indicates that the 12 degrees of freedom of the element are considered),
+and :math:`U_e` is the element nodal deflection,
+which can be obtained from Eq. :eq:`y2` and may contain the static displacement contribution :math:`U_{L,\text{SIM}}`.
+There is no good way to quantify the damping forces for each element, so the element damping forces are not calculated.
 
 **Nodal loads**
 
-For a given element node, the loads are the 6-vector with index 1-6 or 7-12 for the first or second node respectively. By convention, the 6-vector is multiplied by -1 for the first node and +1 for the second node of the element:
+For a given element, the loads are the 6-vector with index 1-6 or 7-12 for the first or second node, respectively.
+By convention, the 6-vector is multiplied by -1 for the first node and +1 for the second node of the element:
 
 .. math:: :label: nd_loads
 
-         F_{6}^{n_1}  = - F_{12}^e(1:6)
+         F_{6}^{n_1}  = - ( F_{k,12}^e(1:6)  - F_{eq,12}^e(1:6)  )
          ,\quad
-         F_{6}^{n_2}  = + F_{12}^e(7:12)
+         F_{6}^{n_2}  = + ( F_{k,12}^e(7:12) - F_{eq,12}^e(7:12) )
 
-The above applies for the inertial and stiffness loads.
- 
+where :math:`F_{eq,12}^e` contains the equivalent nodal moments from the self-weight of the element applied at its two end nodes (Eq. :eq:`FG`). Note that other external
+load components, such as hydrodynamic and hydrostatic loads, are mapped to SubDyn as simple lumped nodal loads without additional equivalent moments; therefore, no correction
+is required. We also omitted the self-weight equivalent forces in :math:`F_{eq,12}^e` because the reconstruction of nodal forces is done using element averaging (interpolation)
+and extrapolation instead as explained below. This method provides better reconstruction of member forces due to distributed external loads, such as those from HydroDyn, which
+are simplified into lumped loads by OpenFAST mesh mapping.
 
 **Member nodal loads requested by the user**
 
 The user can output nodal loads for a set of members (see :numref:`SD_Member_Output`).
 
-For the user requested member nodal outputs, the loads are either: 1) the appropriate 6-vector at the member end nodes, or, 2) the average of the 6-vectors from the two elements surrounding a node for the nodes in the middle of a member. When averaging is done, the 12-vectors of both surrounding elements are expressed using the DCM of the member where outputs are requested.
+For the user requested nodal load outputs, additional post-processing of the elastic loads is required. The post-processing depends on whether the requested node
+is an interior node in the middle of a member or a member end node/user-defined joint.
+
+For an interior node, the reported load is the average of :math:`F_{6}` computed from the two elements the node connects. The resulting forces and moments are resolved
+in the element local coordinate system of the member for output.
+
+For an end node, SubDyn will compute :math:`F_{6}` for the end node and the neighboring node on the same member if the member has more than one element. These loads are
+computed using the first and second element of the member from the end node, respectively. The reported member end force is linearly extrapolated from these forces.
+Again, the output loads are expressed in the element local coordinate system of the member requested. If the member only has one element, no extrapolation is done for
+the end node, and SubDyn reports :math:`F_{6}` as is. In general, we recommend subdividing each member into at least two elements for more accurate load outputs at the
+end nodes.
+
+Note that the averaging and extrapolation effectively assume that the forces vary linearly along the member, which corresponds to uniform distributed external loads
+on the member. This is usually an adequate approximation for load reconstruction. However, it can yield large errors if a large point load, such as that from a mooring
+fairlead, is mapped to a member interior node. This kind of situation should be avoided when setting up the model. Large external point loads should always be mapped
+to user-defined joints instead.
 
 
 **"AllOuts" nodal loads**
 
-For "AllOuts" nodal outputs, the loads are not averaged and the 6-vector (with the appropriate signs) are directly written to file.
+With the "AllOuts" option, the two end loads of each member are directly written to file. The outputs follow the same sign convention explained above, and, if the
+member has more than one element, the end forces are linearly extrapolated from the forces computed for the first and second element from the end node.
 
 **Reaction nodal loads**
 (See :numref:`SD_Reaction`)
@@ -2405,8 +2441,10 @@ reference point (0,0,-**WtrDpth**) in the global reference frame, with
 
 To obtain this overall reaction, the forces and moments at the :math:`N_\text{React}` restrained
 nodes are expressed in the global coordinate frame and gathered into the vector :math:`F_{\text{React}}`, which is a (6*N\ :sub:`React`) array.
-For a given reaction node, the 6-vector of loads is obtained by summing the nodal load contributions from all the elements connected to that node expressed in the global frame (no account of the sign is done here), and subtracting the external loads (:math:`F_{HDR}`) applied on this node.
-The loads from all nodes, :math:`F_{\text{React}}`, are then rigidly-transferred to :math:`(0,0,-\text{WtrDpth})` to obtain the overall six-element array :math:`\overrightarrow{R}`:
+For a given reaction node, the 6-vector of loads is obtained by summing the nodal load contributions from all the elements connected to that node
+expressed in the global frame (no account of the sign is done here and no extrapolation is performed), and subtracting the external loads (:math:`F_{HDR}`)
+applied on this node. The loads from all nodes, :math:`F_{\text{React}}`, are then rigidly-transferred to :math:`(0,0,-\text{WtrDpth})` to obtain the overall
+six-element array :math:`\overrightarrow{R}`:
 
 .. math:: :label: reaction
 
