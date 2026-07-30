@@ -7845,7 +7845,7 @@ end subroutine ReadR8AryWDefault
    INTEGER                      :: MaxLen                                       ! Maximum number of columns to be written to the screen.
    INTEGER                      :: NewLineIndx                                  ! The string index where the NewLine character occurs
 
-   CHARACTER(10)                :: Frm                                          ! Format specifier for the output.
+   CHARACTER(11)                :: Frm                                          ! Format specifier for the output.
    CHARACTER(Len=:),allocatable :: Str                                          ! The next string to be processed
 
 
@@ -7872,8 +7872,8 @@ end subroutine ReadR8AryWDefault
    Indent = MIN( Indent, MaxLen-2 )                                              ! at least 2 characters per line
    MaxLen = MaxLen - Indent
    IF ( Indent > 0 )  THEN
-      Frm    = '(1X,  X,A)'
-      WRITE (Frm(5:6),'(I2)')  Indent
+      Frm    = '(1X,   X,A)'
+      WRITE (Frm(5:7),'(I3)')  Indent
    ELSE
       Frm    = '(1X,A)'
    END IF

@@ -43,6 +43,7 @@ option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(WIN_DLL_LOAD "Enable loading of Windows only DLL's (OrcaFlex, SoilDyn)" on)  # This is mostly for testing purposes
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
+option(FASTFARM_TIMING_PRINTS "Enable FAST.Farm timing instrumentation and summary output" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ CFD API" off)
 option(BUILD_OPENFAST_LIB_DRIVER "Enable building OpenFAST driver using C++ Library API" off)

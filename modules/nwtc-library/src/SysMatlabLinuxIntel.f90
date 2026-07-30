@@ -60,7 +60,7 @@ MODULE SysSubs
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
    INTEGER, PUBLIC               :: CU          = 6                                 ! The I/O unit for the console (Can be changed with SetConsoleUnit subroutine)
-   INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
+   INTEGER, PARAMETER            :: MaxWrScrLen = 256                                ! The maximum number of characters allowed to be written to a line in WrScr
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Fortran for Linux with Matlab' ! Description of the language/OS
