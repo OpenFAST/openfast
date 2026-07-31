@@ -731,6 +731,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
    real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
+   integer(IntKi)                               :: oobIdx(0:p%MaxNumPlanes-1)
+   integer(IntKi)                               :: nOOB, iOOB, jOOB
+   logical                                      :: merged
 
    errStat = ErrID_None
    errMsg  = ""
@@ -984,23 +987,33 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
 
    ! --------------------------------------------------------------------------------
-   ! Merge consecutive out-of-bounds planes that are within 2*dr of each other
-   ! TODO: this assumes that only sequential planes will be out of bounds.  We may need to modify this for drones.
+   ! Merge any out-of-bounds planes within 2*dr of each other (non-sequential)
    ! --------------------------------------------------------------------------------
    maxPln = NINT(xd%NumPlanes) - 1
-   i = maxPln
-   do while (i >= 1)
-      ! Check if plane i is out of domain in any dimension
+
+   ! Collect indices of all OOB planes
+   nOOB = 0
+   do i = 0, maxPln
       if (PlaneOutOfBounds(xd%p_plane(:,i))) then
-         ! Check if the adjacent lower-index plane (i-1) is also out of domain
-         if (PlaneOutOfBounds(xd%p_plane(:,i-1))) then
-            ! Check spatial proximity
-            if (TwoNorm(xd%p_plane(:,i) - xd%p_plane(:,i-1)) <= 2.0_ReKi * p%dr) then
-               call MergeWakePlanes(i-1, i)
-            end if
-         end if
+         nOOB = nOOB + 1
+         oobIdx(nOOB) = i
       end if
-      i = i - 1
+   end do
+
+   ! Check all OOB pairs for proximity; work backwards so shifts don't invalidate lower indices
+   iOOB = nOOB
+   do while (iOOB >= 2)
+      merged = .false.
+      do jOOB = iOOB - 1, 1, -1
+         if (TwoNorm(xd%p_plane(:,oobIdx(iOOB)) - xd%p_plane(:,oobIdx(jOOB))) <= 2.0_ReKi * p%dr) then
+            call MergeWakePlanes(oobIdx(jOOB), oobIdx(iOOB))
+            ! Remove entry iOOB and adjust indices above the dropped plane
+            call AdjustOobIndices(oobIdx, nOOB, iOOB)
+            merged = .true.
+            exit
+         end if
+      end do
+      if (.not. merged) iOOB = iOOB - 1
    end do
 
    ! --------------------------------------------------------------------------------
@@ -1082,6 +1095,21 @@ contains
       logical                :: outOfBounds
       outOfBounds = any(p_pos < p%LowResBounds(:,1)) .or. any(p_pos > p%LowResBounds(:,2))
    end function PlaneOutOfBounds
+
+   !> Remove entry iRemoved from oobIdx and decrement stored indices above the dropped plane.
+   subroutine AdjustOobIndices(oobIdx, nOOB, iRemoved)
+      integer(IntKi), intent(inout) :: oobIdx(0:), nOOB
+      integer(IntKi), intent(in)    :: iRemoved
+      integer(IntKi) :: droppedPlane, k
+      droppedPlane = oobIdx(iRemoved)
+      do k = iRemoved, nOOB - 1
+         oobIdx(k) = oobIdx(k+1)
+      end do
+      nOOB = nOOB - 1
+      do k = 1, nOOB
+         if (oobIdx(k) > droppedPlane) oobIdx(k) = oobIdx(k) - 1
+      end do
+   end subroutine AdjustOobIndices
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j
