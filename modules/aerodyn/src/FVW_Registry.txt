@@ -28,6 +28,12 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             uGrid    {:}{:}{:}{:} - -  "Grid velocity 3 x nz x ny x nx" -
 typedef     ^                   ^               ReKi                             omGrid   {:}{:}{:}{:} - -  "Grid vorticity 3 x nz x ny x nx" -
 typedef     ^                   ^               DbKi                             tLastOutput       -  -  -  "Last output time" -
+typedef     ^                   ^               ReKi                             xPts       {:}       -  -  "Explicit x coordinates (non-equidistant grid, if used)" m
+typedef     ^                   ^               ReKi                             yPts       {:}       -  -  "Explicit y coordinates (non-equidistant grid, if used)" m
+typedef     ^                   ^               ReKi                             zPts       {:}       -  -  "Explicit z coordinates (non-equidistant grid, if used)" m
+typedef     ^                   ^               CHARACTER(1024)                  xListFile  -         -  -  "File with explicit x coordinates (empty if equidistant)" -
+typedef     ^                   ^               CHARACTER(1024)                  yListFile  -         -  -  "File with explicit y coordinates (empty if equidistant)" -
+typedef     ^                   ^               CHARACTER(1024)                  zListFile  -         -  -  "File with explicit z coordinates (empty if equidistant)" -
 
 #####################  Segments         ###############
 typedef  FVW/FVW           T_Sgmt               ReKi                             Points     ::    -  -  "Points delimiting the segments" - 

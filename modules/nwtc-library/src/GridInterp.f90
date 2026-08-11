@@ -302,7 +302,7 @@ Subroutine GridInterpSetup3D( position, p, m, ErrStat, ErrMsg )
    character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter              :: RoutineName = 'GridInterpSetup3D'
-   integer(IntKi)                       :: dim,i,j,k
+   integer(IntKi)                       :: dim,j,k
    integer(IntKi)                       :: support
    real(ReKi)                           :: N1D(4,3)
    real(ReKi)                           :: isopc       ! isoparametric coordinates
@@ -320,9 +320,7 @@ Subroutine GridInterpSetup3D( position, p, m, ErrStat, ErrMsg )
 
    do k = 1,4
       do j = 1,4
-         do i = 1,4
-            m%N3D(i,j,k) = N1D(i,1)*N1D(j,2)*N1D(k,3)
-         end do
+         m%N3D(:,j,k) = N1D(:,1) * (N1D(j,2)*N1D(k,3))
       end do
    end do
 
@@ -343,9 +341,10 @@ Subroutine GridInterpSetup4D( position, p, m, ErrStat, ErrMsg )
    character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter              :: RoutineName = 'GridInterpSetup4D'
-   integer(IntKi)                       :: dim,i,j,k,l
+   integer(IntKi)                       :: dim,j,k,l
    integer(IntKi)                       :: support
    real(ReKi)                           :: N1D(4,4)
+   real(ReKi)                           :: Nkl
    real(ReKi)                           :: isopc       ! isoparametric coordinates
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
@@ -361,10 +360,9 @@ Subroutine GridInterpSetup4D( position, p, m, ErrStat, ErrMsg )
 
    do l = 1,4
       do k = 1,4
+         Nkl = N1D(k,3)*N1D(l,4)
          do j = 1,4
-            do i = 1,4
-               m%N4D(i,j,k,l) = N1D(i,1)*N1D(j,2)*N1D(k,3)*N1D(l,4)
-            end do
+            m%N4D(:,j,k,l) = N1D(:,1) * (N1D(j,2)*Nkl)
          end do
       end do
    end do
@@ -386,7 +384,7 @@ Subroutine GridInterpSetupN( position, p, m, ErrStat, ErrMsg )
    character(*),                        intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter              :: RoutineName = 'GridInterpSetupN'
-   integer(IntKi)                       :: dim,i,j,k
+   integer(IntKi)                       :: dim,j,k
    integer(IntKi)                       :: support
    real(ReKi)                           :: N1D(4,3)
    real(ReKi)                           :: N1Ddx(4,2:3)
@@ -409,10 +407,8 @@ Subroutine GridInterpSetupN( position, p, m, ErrStat, ErrMsg )
    ! Need two sets of weights for d(.)/dx and d(.)/dy. Borrow m%N4D for this.
    do k = 1,4
       do j = 1,4
-         do i = 1,4
-            m%N4D(i,j,k,1) = N1D(i,1)*N1Ddx(j,2)*N1D  (k,3)
-            m%N4D(i,j,k,2) = N1D(i,1)*N1D  (j,2)*N1Ddx(k,3)
-         end do
+         m%N4D(:,j,k,1) = N1D(:,1) * (N1Ddx(j,2)*N1D  (k,3))
+         m%N4D(:,j,k,2) = N1D(:,1) * (N1D  (j,2)*N1Ddx(k,3))
       end do
    end do
 
@@ -436,17 +432,21 @@ function GridInterp3DR4( data, m )
 
    character(*), parameter                      :: RoutineName = 'GridInterp3DR4'
    real(SiKi)                                   :: GridInterp3DR4
-   integer(IntKi)                               :: i,j,k
+   real(SiKi)                                   :: acc(4)
+   integer(IntKi)                               :: i,j,k,jj,kk
 
    ! interpolate
-   GridInterp3DR4 = 0.0_SiKi
+   acc = 0.0_SiKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            GridInterp3DR4 = GridInterp3DR4 + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
+            acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk )
          end do
       end do
    end do
+   GridInterp3DR4 = acc(1) + acc(2) + acc(3) + acc(4)
 
 end function GridInterp3DR4
 
@@ -456,17 +456,21 @@ function GridInterp3DR8( data, m )
 
    character(*), parameter                      :: RoutineName = 'GridInterp3DR8'
    real(DbKi)                                   :: GridInterp3DR8
-   integer(IntKi)                               :: i,j,k
+   real(DbKi)                                   :: acc(4)
+   integer(IntKi)                               :: i,j,k,jj,kk
 
    ! interpolate
-   GridInterp3DR8 = 0.0_DbKi
+   acc = 0.0_DbKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            GridInterp3DR8 = GridInterp3DR8 + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
+            acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk )
          end do
       end do
    end do
+   GridInterp3DR8 = acc(1) + acc(2) + acc(3) + acc(4)
 
 end function GridInterp3DR8
 
@@ -482,18 +486,23 @@ function GridInterp3DVecR4( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp3DVecR4'
    integer(IntKi), parameter                    :: vDim = 3
    integer(IntKi)                               :: i,j,k,vi
+   integer(IntKi)                               :: jj,kk
+   real(SiKi)                                   :: acc(4)
    real(SiKi)                                   :: GridInterp3DVecR4(vDim)
 
    ! interpolate
-   GridInterp3DVecR4 = 0.0_SiKi
-   do k = 1,4
-      do j = 1,4
-         do i = 1,4
-            do vi = 1,vDim
-               GridInterp3DVecR4(vi) = GridInterp3DVecR4(vi) + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), vi )
+   do vi = 1,vDim
+      acc = 0.0_SiKi
+      do k = 1,4
+         kk = m%Indx(k,3)
+         do j = 1,4
+            jj = m%Indx(j,2)
+            do i = 1,4
+               acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk, vi )
             end do
          end do
       end do
+      GridInterp3DVecR4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp3DVecR4
@@ -505,18 +514,23 @@ function GridInterp3DVecR8( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp3DVecR8'
    integer(IntKi), parameter                    :: vDim = 3
    integer(IntKi)                               :: i,j,k,vi
+   integer(IntKi)                               :: jj,kk
+   real(DbKi)                                   :: acc(4)
    real(DbKi)                                   :: GridInterp3DVecR8(vDim)
 
    ! interpolate
-   GridInterp3DVecR8 = 0.0_DbKi
-   do k = 1,4
-      do j = 1,4
-         do i = 1,4
-            do vi = 1,vDim
-               GridInterp3DVecR8(vi) = GridInterp3DVecR8(vi) + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), vi )
+   do vi = 1,vDim
+      acc = 0.0_DbKi
+      do k = 1,4
+         kk = m%Indx(k,3)
+         do j = 1,4
+            jj = m%Indx(j,2)
+            do i = 1,4
+               acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk, vi )
             end do
          end do
       end do
+      GridInterp3DVecR8(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp3DVecR8
@@ -533,18 +547,23 @@ function GridInterp3DVec6R4( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp3DVec6R4'
    integer(IntKi), parameter                    :: vDim = 6
    integer(IntKi)                               :: i,j,k,vi
+   integer(IntKi)                               :: jj,kk
+   real(SiKi)                                   :: acc(4)
    real(SiKi)                                   :: GridInterp3DVec6R4(vDim)
 
    ! interpolate
-   GridInterp3DVec6R4 = 0.0_SiKi
-   do k = 1,4
-      do j = 1,4
-         do i = 1,4
-            do vi = 1,vDim
-               GridInterp3DVec6R4(vi) = GridInterp3DVec6R4(vi) + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), vi )
+   do vi = 1,vDim
+      acc = 0.0_SiKi
+      do k = 1,4
+         kk = m%Indx(k,3)
+         do j = 1,4
+            jj = m%Indx(j,2)
+            do i = 1,4
+               acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk, vi )
             end do
          end do
       end do
+      GridInterp3DVec6R4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp3DVec6R4
@@ -556,18 +575,23 @@ function GridInterp3DVec6R8( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp3DVec6R8'
    integer(IntKi), parameter                    :: vDim = 6
    integer(IntKi)                               :: i,j,k,vi
+   integer(IntKi)                               :: jj,kk
+   real(DbKi)                                   :: acc(4)
    real(DbKi)                                   :: GridInterp3DVec6R8(vDim)
 
    ! interpolate
-   GridInterp3DVec6R8 = 0.0_DbKi
-   do k = 1,4
-      do j = 1,4
-         do i = 1,4
-            do vi = 1,vDim
-               GridInterp3DVec6R8(vi) = GridInterp3DVec6R8(vi) + m%N3D(i,j,k) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), vi )
+   do vi = 1,vDim
+      acc = 0.0_DbKi
+      do k = 1,4
+         kk = m%Indx(k,3)
+         do j = 1,4
+            jj = m%Indx(j,2)
+            do i = 1,4
+               acc(i) = acc(i) + m%N3D(i,j,k) * data( m%Indx(i,1), jj, kk, vi )
             end do
          end do
       end do
+      GridInterp3DVec6R8(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp3DVec6R8
@@ -583,19 +607,24 @@ function GridInterp4DR4( data, m )
 
    character(*), parameter                      :: RoutineName = 'GridInterp4DR4'
    real(SiKi)                                   :: GridInterp4DR4
-   integer(IntKi)                               :: i,j,k,l
+   real(SiKi)                                   :: acc(4)
+   integer(IntKi)                               :: i,j,k,l,jj,kk,ll
 
    ! interpolate
-   GridInterp4DR4 = 0.0_SiKi
+   acc = 0.0_SiKi
    do l = 1,4
+      ll = m%Indx(l,4)
       do k = 1,4
+         kk = m%Indx(k,3)
          do j = 1,4
+            jj = m%Indx(j,2)
             do i = 1,4
-               GridInterp4DR4 = GridInterp4DR4 + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4) )
+               acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll )
             end do
          end do
       end do
    end do
+   GridInterp4DR4 = acc(1) + acc(2) + acc(3) + acc(4)
 
 end function GridInterp4DR4
 
@@ -605,19 +634,24 @@ function GridInterp4DR8( data, m )
 
    character(*), parameter                      :: RoutineName = 'GridInterp4DR8'
    real(DbKi)                                   :: GridInterp4DR8
-   integer(IntKi)                               :: i,j,k,l
+   real(DbKi)                                   :: acc(4)
+   integer(IntKi)                               :: i,j,k,l,jj,kk,ll
 
    ! interpolate
-   GridInterp4DR8 = 0.0_DbKi
+   acc = 0.0_DbKi
    do l = 1,4
+      ll = m%Indx(l,4)
       do k = 1,4
+         kk = m%Indx(k,3)
          do j = 1,4
+            jj = m%Indx(j,2)
             do i = 1,4
-               GridInterp4DR8 = GridInterp4DR8 + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4) )
+               acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll )
             end do
          end do
       end do
    end do
+   GridInterp4DR8 = acc(1) + acc(2) + acc(3) + acc(4)
 
 end function GridInterp4DR8
 
@@ -633,20 +667,26 @@ function GridInterp4DVecR4( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecR4'
    integer(IntKi), parameter                    :: vDim = 3
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(SiKi)                                   :: acc(4)
    real(SiKi)                                   :: GridInterp4DVecR4(vDim)
 
    ! interpolate
-   GridInterp4DVecR4 = 0.0_SiKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVecR4(vi) = GridInterp4DVecR4(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_SiKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVecR4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVecR4
@@ -658,20 +698,26 @@ function GridInterp4DVecR8( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecR8'
    integer(IntKi), parameter                    :: vDim = 3
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(DbKi)                                   :: acc(4)
    real(DbKi)                                   :: GridInterp4DVecR8(vDim)
 
    ! interpolate
-   GridInterp4DVecR8 = 0.0_DbKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVecR8(vi) = GridInterp4DVecR8(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_DbKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVecR8(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVecR8
@@ -688,20 +734,26 @@ function GridInterp4DVec6R4( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVec6R4'
    integer(IntKi), parameter                    :: vDim = 6
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(SiKi)                                   :: acc(4)
    real(SiKi)                                   :: GridInterp4DVec6R4(vDim)
 
    ! interpolate
-   GridInterp4DVec6R4 = 0.0_SiKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVec6R4(vi) = GridInterp4DVec6R4(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_SiKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVec6R4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVec6R4
@@ -713,20 +765,26 @@ function GridInterp4DVec6R8( data, m )
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVec6R8'
    integer(IntKi), parameter                    :: vDim = 6
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(DbKi)                                   :: acc(4)
    real(DbKi)                                   :: GridInterp4DVec6R8(vDim)
 
    ! interpolate
-   GridInterp4DVec6R8 = 0.0_DbKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVec6R8(vi) = GridInterp4DVec6R8(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_DbKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVec6R8(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVec6R8
@@ -743,20 +801,26 @@ function GridInterp4DVecNR4( vDim, data, m )
 
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecNR4'
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(SiKi)                                   :: acc(4)
    real(SiKi)                                   :: GridInterp4DVecNR4(vDim)
 
    ! interpolate
-   GridInterp4DVecNR4 = 0.0_SiKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVecNR4(vi) = GridInterp4DVecNR4(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_SiKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVecNR4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVecNR4
@@ -768,20 +832,26 @@ function GridInterp4DVecNR8( vDim, data, m )
 
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecNR8'
    integer(IntKi)                               :: i,j,k,l,vi
+   integer(IntKi)                               :: jj,kk,ll
+   real(DbKi)                                   :: acc(4)
    real(DbKi)                                   :: GridInterp4DVecNR8(vDim)
 
    ! interpolate
-   GridInterp4DVecNR8 = 0.0_DbKi
-   do l = 1,4
-      do k = 1,4
-         do j = 1,4
-            do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVecNR8(vi) = GridInterp4DVecNR8(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
+   do vi = 1,vDim
+      acc = 0.0_DbKi
+      do l = 1,4
+         ll = m%Indx(l,4)
+         do k = 1,4
+            kk = m%Indx(k,3)
+            do j = 1,4
+               jj = m%Indx(j,2)
+               do i = 1,4
+                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
                end do
             end do
          end do
       end do
+      GridInterp4DVecNR8(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVecNR8
@@ -799,21 +869,25 @@ function GridInterpNR4( data, p, m )
    character(*), parameter                        :: RoutineName = 'GridInterpNR4'
    real(SiKi)                                     :: GridInterpNR4(3)
    real(SiKi)                                     :: dZetadx, dZetady
-   integer(IntKi)                                 :: i,j,k
+   real(SiKi)                                     :: accx(4), accy(4), d
+   integer(IntKi)                                 :: i,j,k,jj,kk
 
    ! interpolate slope
-   dZetadx = 0.0_SiKi
-   dZetady = 0.0_SiKi
+   accx = 0.0_SiKi
+   accy = 0.0_SiKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            dZetadx = dZetadx + m%N4D(i,j,k,1) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
-            dZetady = dZetady + m%N4D(i,j,k,2) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
+            d = data( m%Indx(i,1), jj, kk )
+            accx(i) = accx(i) + m%N4D(i,j,k,1) * d
+            accy(i) = accy(i) + m%N4D(i,j,k,2) * d
          end do
       end do
    end do
-   dZetadx = dZetadx / p%delta(2)
-   dZetady = dZetady / p%delta(3)
+   dZetadx = ( accx(1) + accx(2) + accx(3) + accx(4) ) / p%delta(2)
+   dZetady = ( accy(1) + accy(2) + accy(3) + accy(4) ) / p%delta(3)
 
    GridInterpNR4 = [-dZetadx,-dZetady,1.0_SiKi]
    GridInterpNR4 = GridInterpNR4 / TwoNorm(GridInterpNR4)
@@ -828,21 +902,25 @@ function GridInterpNR8( data, p, m )
    character(*), parameter                        :: RoutineName = 'GridInterpNR8'
    real(DbKi)                                     :: GridInterpNR8(3)
    real(DbKi)                                     :: dZetadx, dZetady
-   integer(IntKi)                                 :: i,j,k
+   real(DbKi)                                     :: accx(4), accy(4), d
+   integer(IntKi)                                 :: i,j,k,jj,kk
 
    ! interpolate slope
-   dZetadx = 0.0_DbKi
-   dZetady = 0.0_DbKi
+   accx = 0.0_DbKi
+   accy = 0.0_DbKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            dZetadx = dZetadx + m%N4D(i,j,k,1) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
-            dZetady = dZetady + m%N4D(i,j,k,2) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
+            d = data( m%Indx(i,1), jj, kk )
+            accx(i) = accx(i) + m%N4D(i,j,k,1) * d
+            accy(i) = accy(i) + m%N4D(i,j,k,2) * d
          end do
       end do
    end do
-   dZetadx = dZetadx / p%delta(2)
-   dZetady = dZetady / p%delta(3)
+   dZetadx = ( accx(1) + accx(2) + accx(3) + accx(4) ) / p%delta(2)
+   dZetady = ( accy(1) + accy(2) + accy(3) + accy(4) ) / p%delta(3)
 
    GridInterpNR8 = (/-dZetadx,-dZetady,1.0_DbKi/)
    GridInterpNR8 = GridInterpNR8 / TwoNorm(GridInterpNR8)
@@ -861,19 +939,25 @@ function GridInterpSR4( data, p, m )
 
    character(*), parameter                        :: RoutineName = 'GridInterpSR4'
    real(SiKi)                                     :: GridInterpSR4(2)
-   integer(IntKi)                                 :: i,j,k,dir
+   real(SiKi)                                     :: accx(4), accy(4), d
+   integer(IntKi)                                 :: i,j,k,jj,kk
 
    ! interpolate slope
-   GridInterpSR4 = 0.0_SiKi
+   accx = 0.0_SiKi
+   accy = 0.0_SiKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            do dir = 1,2
-               GridInterpSR4(dir) = GridInterpSR4(dir) + m%N4D(i,j,k,dir) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
-            end do
+            d = data( m%Indx(i,1), jj, kk )
+            accx(i) = accx(i) + m%N4D(i,j,k,1) * d
+            accy(i) = accy(i) + m%N4D(i,j,k,2) * d
          end do
       end do
    end do
+   GridInterpSR4(1) = accx(1) + accx(2) + accx(3) + accx(4)
+   GridInterpSR4(2) = accy(1) + accy(2) + accy(3) + accy(4)
    GridInterpSR4 = GridInterpSR4 / p%delta(2:3)
 
 end function GridInterpSR4
@@ -885,19 +969,25 @@ function GridInterpSR8( data, p, m )
 
    character(*), parameter                        :: RoutineName = 'GridInterpSR8'
    real(DbKi)                                     :: GridInterpSR8(2)
-   integer(IntKi)                                 :: i,j,k,dir
+   real(DbKi)                                     :: accx(4), accy(4), d
+   integer(IntKi)                                 :: i,j,k,jj,kk
 
    ! interpolate slope
-   GridInterpSR8 = 0.0_DbKi
+   accx = 0.0_DbKi
+   accy = 0.0_DbKi
    do k = 1,4
+      kk = m%Indx(k,3)
       do j = 1,4
+         jj = m%Indx(j,2)
          do i = 1,4
-            do dir = 1,2
-               GridInterpSR8(dir) = GridInterpSR8(dir) + m%N4D(i,j,k,dir) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3) )
-            end do
+            d = data( m%Indx(i,1), jj, kk )
+            accx(i) = accx(i) + m%N4D(i,j,k,1) * d
+            accy(i) = accy(i) + m%N4D(i,j,k,2) * d
          end do
       end do
    end do
+   GridInterpSR8(1) = accx(1) + accx(2) + accx(3) + accx(4)
+   GridInterpSR8(2) = accy(1) + accy(2) + accy(3) + accy(4)
    GridInterpSR8 = GridInterpSR8 / p%delta(2:3)
 
 end function GridInterpSR8

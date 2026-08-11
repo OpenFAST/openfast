@@ -271,7 +271,15 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
     p%BlSpn   = InitInp%BlSpn
     p%BlChord = InitInp%BlChord
 
-    p%startnode = max(1, p%NumBlNds - 1)
+    IF (InputFileData%AA_Bl_Prcntge .lt. (100.*(p%BlSpn(p%NumBlNds,1) - p%BlSpn(p%NumBlNds-1,1))/p%BlSpn(p%NumBlNds,1))) THEN
+        CALL SetErrStat(ErrID_Warn, 'BldPrcnt is smaller than the last blade element size. '// &
+            'OpenFAST will move on assuming the last blade element, which is the minimum blade span used for noise calculations. '// &
+            'Either increase BldPrcnt in your aeroacoustic input file '// &
+            'or refine the aerodynamic mesh in your blade AeroDyn input file.', ErrStat2, ErrMsg2, RoutineName )
+        if(Failed()) return
+    endif
+
+    p%startnode = min(p%NumBlNds, 2)
     BladeSpanUsedForNoise = p%BlSpn(p%NumBlNds,1)*(1.0 - InputFileData%AA_Bl_Prcntge/100.0)
     do j=p%NumBlNds-1,2,-1
         IF ( p%BlSpn(j,1) .lt. BladeSpanUsedForNoise )THEN
@@ -279,7 +287,7 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
             exit ! exit the loop
         endif
     enddo
-    p%startnode = max(min(p%NumBlNds,2),p%startnode)
+
     
    p%BlElemSpn = 0;
    DO I = 1,p%numBlades

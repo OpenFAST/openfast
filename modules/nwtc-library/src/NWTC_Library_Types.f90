@@ -104,12 +104,6 @@ IMPLICIT NONE
     CHARACTER(MaxFileInfoLineLen) , DIMENSION(:), ALLOCATABLE  :: Lines 
   END TYPE FileInfoType
 ! =======================
-! =========  Quaternion  =======
-  TYPE, PUBLIC :: Quaternion
-    REAL(ReKi)  :: q0 = 0.0_ReKi 
-    REAL(ReKi) , DIMENSION(1:3)  :: v = 0.0_ReKi 
-  END TYPE Quaternion
-! =======================
 ! =========  NWTC_RandomNumber_ParameterType  =======
   TYPE, PUBLIC :: NWTC_RandomNumber_ParameterType
     INTEGER(IntKi)  :: pRNG = 0_IntKi 
@@ -527,47 +521,6 @@ subroutine NWTC_Library_UnPackFileInfoType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%FileIndx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%FileList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Lines); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine NWTC_Library_CopyQuaternion(SrcQuaternionData, DstQuaternionData, CtrlCode, ErrStat, ErrMsg)
-   type(Quaternion), intent(in) :: SrcQuaternionData
-   type(Quaternion), intent(inout) :: DstQuaternionData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyQuaternion'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstQuaternionData%q0 = SrcQuaternionData%q0
-   DstQuaternionData%v = SrcQuaternionData%v
-end subroutine
-
-subroutine NWTC_Library_DestroyQuaternion(QuaternionData, ErrStat, ErrMsg)
-   type(Quaternion), intent(inout) :: QuaternionData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyQuaternion'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine NWTC_Library_PackQuaternion(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(Quaternion), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'NWTC_Library_PackQuaternion'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%q0)
-   call RegPack(RF, InData%v)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine NWTC_Library_UnPackQuaternion(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(Quaternion), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackQuaternion'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%q0); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%v); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber_ParameterTypeData, DstNWTC_RandomNumber_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)

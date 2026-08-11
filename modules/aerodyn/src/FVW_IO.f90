@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -26,7 +26,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ErrMsg  = ""
    Inp%SrcPnlFile = '' ! TODO registry init for empty strings
    ! Open file
-   CALL GetNewUnit( UnIn )   
+   CALL GetNewUnit( UnIn )
    CALL OpenFInpfile(UnIn, TRIM(FileName), ErrStat2, ErrMsg2)
    if (Check( ErrStat2 /= ErrID_None , 'Could not open input file')) return
    CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.
@@ -100,20 +100,35 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
       allocate(m%GridOutputs(p%nGridOut), stat=ErrStat2);
       CALL ReadCom (UnIn,FileName,  'GridOutHeaders', ErrStat2,ErrMsg2); if(Failed()) return
       CALL ReadCom (UnIn,FileName,  'GridOutUnits', ErrStat2,ErrMsg2); if(Failed()) return
-      do i =1, p%nGridOut 
+      do i =1, p%nGridOut
          ErrMsg2='Error reading OLAF grid outputs line '//trim(num2lstr(i))
          read(UnIn, fmt='(A)', iostat=ErrStat2) sLine  ; if(Failed()) return
          call ReadGridOut(sLine, m%GridOutputs(i)); if(Failed()) return
+         ! Resolve each axis to an explicit coordinate array (regardless of whether it is a list file or a range)
+         call ResolveGridAxis(m%GridOutputs(i)%xStart, m%GridOutputs(i)%xEnd, m%GridOutputs(i)%nx, &
+                               m%GridOutputs(i)%xListFile, m%GridOutputs(i)%xPts, ErrStat2, ErrMsg2); if(Failed()) return
+         call ResolveGridAxis(m%GridOutputs(i)%yStart, m%GridOutputs(i)%yEnd, m%GridOutputs(i)%ny, &
+                               m%GridOutputs(i)%yListFile, m%GridOutputs(i)%yPts, ErrStat2, ErrMsg2); if(Failed()) return
+         call ResolveGridAxis(m%GridOutputs(i)%zStart, m%GridOutputs(i)%zEnd, m%GridOutputs(i)%nz, &
+                               m%GridOutputs(i)%zListFile, m%GridOutputs(i)%zPts, ErrStat2, ErrMsg2); if(Failed()) return
+         ! Error checking
          if (Check(m%GridOutputs(i)%nx<1, 'Grid output nx needs to be >=1')) return
          if (Check(m%GridOutputs(i)%ny<1, 'Grid output ny needs to be >=1')) return
          if (Check(m%GridOutputs(i)%nz<1, 'Grid output nz needs to be >=1')) return
+         ! Vorticity (GridType=2) requires equidistant spacing. GridType must be 1 when using list files.
+         if (m%GridOutputs(i)%type==idGridVelVorticity) then
+            if (Check( len_trim(m%GridOutputs(i)%xListFile)>0 .or. &
+                       len_trim(m%GridOutputs(i)%yListFile)>0 .or. &
+                       len_trim(m%GridOutputs(i)%zListFile)>0, &
+                       'Grid "'//trim(m%GridOutputs(i)%name)//'": vorticity requires equidistant spacing. GridType must be 1 when using list files.')) return
+         endif
       enddo
    endif
 
    ! --- Advanced Options
    ! NOTE: no error handling since this is for debug
    ! Default options are typically "true"
-   CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
+   CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2);
    CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
    if(ErrStat2==ErrID_None) then
       call WrScr(' - Reading advanced options for OLAF:')
@@ -203,7 +218,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check(Inp%WingRegParam<0             , 'Wing regularization parameter (WakeRegParam) should be positive')) return
    if (Check(Inp%CoreSpreadEddyVisc<0       , 'Core spreading eddy viscosity (CoreSpreadEddyVisc) should be positive')) return
 
-   ! Removing the shed vorticity is a dangerous option if this is done too close to the blades. 
+   ! Removing the shed vorticity is a dangerous option if this is done too close to the blades.
    ! To be safe, we will no matter what ensure that the last segments of NW are 0 if FWShedVorticity is False (see PackPanelsToSegments)
    ! Still we force the user to be responsible.
    if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<30, '`FWShedVorticity` should be true if `nNWPanels`<30. Alternatively, use a larger number of NWPanels  ')) return
@@ -216,7 +231,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
 
 CONTAINS
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_ReadInputFile') 
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_ReadInputFile')
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
@@ -289,7 +304,7 @@ CONTAINS
       ErrStat2=ErrID_Fatal
       ErrMsg2='Error reading OLAF grid outputs line: '//trim(sLine)
       ! Name
-      GridOut%name =StrArray(1) 
+      GridOut%name =StrArray(1)
       ! Type
       if (.not. is_integer(StrArray(2), GridOut%type  ) ) then
          ErrMsg2=trim(ErrMsg2)//NewLine//'GridType needs to be an integer.'
@@ -300,7 +315,7 @@ CONTAINS
       if ( index(StrArray(3), "DEFAULT" ) == 1 ) then
          GridOut%tStart  = 0.0_ReKi
       else
-         if (.not. is_numeric(StrArray(3), GridOut%tStart) ) then 
+         if (.not. is_numeric(StrArray(3), GridOut%tStart) ) then
             ErrMsg2=trim(ErrMsg2)//NewLine//'TStart needs to be numeric or "default".'
             return
          endif
@@ -327,23 +342,139 @@ CONTAINS
             return
          endif
       endif
-      ! x,y,z
+      ! x
       ErrMsg2='Error reading OLAF "x" inputs for grid outputs line: '//trim(sLine)
-      if (.not. is_numeric(StrArray( 6), GridOut%xStart) ) return
-      if (.not. is_numeric(StrArray( 7), GridOut%xEnd  ) ) return
-      if (.not. is_integer(StrArray( 8), GridOut%nx    ) ) return
+      GridOut%xListFile = ''
+      if ( is_numeric(StrArray(6), GridOut%xStart) ) then
+         if (.not. is_numeric(StrArray(7), GridOut%xEnd) ) return
+         if (.not. is_integer(StrArray(8), GridOut%nx  ) ) return
+      else
+         GridOut%xListFile = StrArray(6)
+         GridOut%xStart = 0.0_ReKi
+         GridOut%xEnd   = 0.0_ReKi
+         GridOut%nx     = -1
+      endif
+      ! y
       ErrMsg2='Error reading OLAF "y" inputs for grid outputs line: '//trim(sLine)
-      if (.not. is_numeric(StrArray( 9), GridOut%yStart) ) return
-      if (.not. is_numeric(StrArray(10), GridOut%yEnd  ) ) return
-      if (.not. is_integer(StrArray(11), GridOut%ny    ) ) return
+      GridOut%yListFile = ''
+      if ( is_numeric(StrArray(9), GridOut%yStart) ) then
+         if (.not. is_numeric(StrArray(10), GridOut%yEnd) ) return
+         if (.not. is_integer(StrArray(11), GridOut%ny  ) ) return
+      else
+         GridOut%yListFile = StrArray(9)
+         GridOut%yStart = 0.0_ReKi
+         GridOut%yEnd   = 0.0_ReKi
+         GridOut%ny     = -1
+      endif
+      ! z
       ErrMsg2='Error reading OLAF "z" inputs for grid outputs line: '//trim(sLine)
-      if (.not. is_numeric(StrArray(12), GridOut%zStart) ) return
-      if (.not. is_numeric(StrArray(13), GridOut%zEnd  ) ) return
-      if (.not. is_integer(StrArray(14), GridOut%nz    ) ) return
+      GridOut%zListFile = ''
+      if ( is_numeric(StrArray(12), GridOut%zStart) ) then
+         if (.not. is_numeric(StrArray(13), GridOut%zEnd) ) return
+         if (.not. is_integer(StrArray(14), GridOut%nz  ) ) return
+      else
+         GridOut%zListFile = StrArray(12)
+         GridOut%zStart = 0.0_ReKi
+         GridOut%zEnd   = 0.0_ReKi
+         GridOut%nz     = -1
+      endif
       ! Success
       ErrStat2=ErrID_None
       ErrMsg2=''
    end subroutine ReadGridOut
+
+   ! Resolve one grid axis to an explicit, strictly increasing coordinate array,
+   ! either read from ListFile (if given) or built from an equidistant Start/End/n range.
+   subroutine ResolveGridAxis(AStart, AEnd, n, ListFile, Pts, ErrStat, ErrMsg)
+      real(ReKi),               intent(in)    :: AStart, AEnd
+      integer(IntKi),           intent(inout) :: n
+      character(*),             intent(in)    :: ListFile
+      real(ReKi), allocatable,  intent(out)   :: Pts(:)
+      integer(IntKi),           intent(out)   :: ErrStat
+      character(*),             intent(out)   :: ErrMsg
+      ! Locals
+      character(1024)       :: FullFile
+      integer(IntKi)        :: UnList, j, IOS
+      integer(IntKi)        :: ErrStat2
+      character(ErrMsgLen)  :: ErrMsg2
+      real(ReKi)            :: val
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      if (len_trim(ListFile) == 0) then
+         ! Equidistant points, expressed as an explicit array
+         if (n < 1) then
+            call SetErrStat(ErrID_Fatal, 'ResolveGridAxis: grid axis definition requires n >= 1 (got '//trim(Num2LStr(n))//').', &
+                             ErrStat, ErrMsg, 'ResolveGridAxis')
+            return
+         endif
+         allocate(Pts(n), stat=IOS)
+         if (IOS /= 0) then
+            call SetErrStat(ErrID_Fatal, 'ResolveGridAxis: error allocating grid axis points array (n='//trim(Num2LStr(n))//').', &
+                          ErrStat, ErrMsg, 'ResolveGridAxis')
+            return
+         endif
+         do j = 1, n
+            Pts(j) = AStart + (AEnd - AStart) * real(j-1,ReKi) / real(max(n-1,1),ReKi)
+         enddo
+         return
+      endif
+
+      ! Explicit list from file
+      FullFile = ListFile
+      if (PathIsRelative(FullFile)) FullFile = trim(PriPath)//trim(FullFile)
+
+      call GetNewUnit(UnList)
+      call OpenFInpFile(UnList, trim(FullFile), ErrStat2, ErrMsg2)
+      if (ErrStat2 /= ErrID_None) then
+         call SetErrStat(ErrID_Fatal, 'ResolveGridAxis: could not open grid point list file "'//trim(FullFile)//'": '//trim(ErrMsg2), &
+                          ErrStat, ErrMsg, 'ResolveGridAxis')
+         return
+      endif
+
+      ! Count valid lines
+      n = 0
+      do
+         read(UnList, *, iostat=IOS) val
+         if (IOS /= 0) exit
+         n = n + 1
+      enddo
+
+      if (n < 1) then
+         call SetErrStat(ErrID_Fatal, 'ResolveGridAxis: grid point list file "'//trim(FullFile)//'" contains no valid values.', &
+                          ErrStat, ErrMsg, 'ResolveGridAxis')
+         close(UnList)
+         return
+      endif
+
+      ! Read values
+      rewind(UnList)
+      allocate(Pts(n), stat=IOS)
+      if (IOS /= 0) then
+         call SetErrStat(ErrID_Fatal, 'ResolveGridAxis: error allocating grid axis points array (n='//trim(Num2LStr(n))//').', &
+                          ErrStat, ErrMsg, 'ResolveGridAxis')
+         close(UnList)
+         return
+      endif
+      do j = 1, n
+         read(UnList, *) Pts(j)
+      enddo
+      close(UnList)
+
+      ! Validate strictly increasing, no duplicates
+      do j = 2, n
+         if (Pts(j) <= Pts(j-1)) then
+            call SetErrStat(ErrID_Fatal, &
+               'ResolveGridAxis: grid point list file "'//trim(FullFile)//'" must be strictly increasing (no duplicates); '// &
+               'value at line '//trim(Num2LStr(j))//' ('//trim(Num2LStr(Pts(j)))//') is not greater than '// &
+               'the previous value ('//trim(Num2LStr(Pts(j-1)))//').', &
+               ErrStat, ErrMsg, 'ResolveGridAxis')
+            return
+         endif
+      enddo
+
+   end subroutine ResolveGridAxis
 
 END SUBROUTINE FVW_ReadInputFile
 
@@ -387,7 +518,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
          Call ProgAbort('Programming error in WrVTK_FVW call: Cannot use the WrVTK_FVW with bladeFrame==TRUE without the optional arguments of HubOrientation and HubPosition')
       endif
    endif
- 
+
    if (DEV_VERSION) then
       print*,'------------------------------------------------------------------------------'
       print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
@@ -399,7 +530,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
 
    ! --------------------------------------------------------------------------------}
-   ! --- Blade 
+   ! --- Blade
    ! --------------------------------------------------------------------------------{
    ! --- Blade Quarter chord points (AC)
    do iW=1,p%VTKBlades
@@ -427,7 +558,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    !    call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,:), m%W(iW)%Gamma_LL(:), bladeFrame=bladeFrame)
    ! enddo
    ! --------------------------------------------------------------------------------}
-   ! --- Near wake 
+   ! --- Near wake
    ! --------------------------------------------------------------------------------{
    ! --- Near wake panels
    do iW=1,p%VTKBlades
@@ -445,7 +576,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       endif
    enddo
    ! --------------------------------------------------------------------------------}
-   ! --- Far wake 
+   ! --- Far wake
    ! --------------------------------------------------------------------------------{
    ! --- Far wake panels
    do iW=1,p%VTKBlades
@@ -469,7 +600,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    endif
    if (nSeg>0) then
       Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
-      CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame) 
+      CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame)
    endif
 
    if (p%SrcPnl%n>0) then
@@ -497,6 +628,7 @@ subroutine WrVTK_FVW_Grid(p, m, iGrid, FileRootName, VTKcount, Twidth, HubOrient
    character(255)    :: Label
    character(Twidth) :: Tstr     ! string for current VTK write-out step (padded with zeros)
    real(ReKi), dimension(3) :: dx
+   logical           :: bListBased
    type(GridOutType), pointer :: g
    type(VTK_Misc)   :: mvtk
 
@@ -510,19 +642,29 @@ subroutine WrVTK_FVW_Grid(p, m, iGrid, FileRootName, VTKcount, Twidth, HubOrient
    g => m%GridOutputs(iGrid)
    Label=trim(g%name)
    Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
+   bListBased = len_trim(g%xListFile)>0 .or. len_trim(g%yListFile)>0 .or. len_trim(g%zListFile)>0
    if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-      dx(1) = (g%xEnd- g%xStart)/max(g%nx-1,1)
-      dx(2) = (g%yEnd- g%yStart)/max(g%ny-1,1)
-      dx(3) = (g%zEnd- g%zStart)/max(g%nz-1,1)
-      call vtk_dataset_structured_points((/g%xStart, g%yStart, g%zStart/),dx,(/g%nx,g%ny,g%nz/),mvtk)
-      call vtk_point_data_init(mvtk)
-      call vtk_point_data_vector(g%uGrid(1:3,:,:,:),'Velocity',mvtk) 
-      ! Compute vorticity on the fly
-      if (g%type==idGridVelVorticity) then
-         call curl_regular_grid(g%uGrid, g%omgrid, 1,1,1, g%nx,g%ny,g%nz, dx(1),dx(2),dx(3))
-         call vtk_point_data_vector(g%omGrid(1:3,:,:,:),'Vorticity',mvtk) 
+      if (bListBased) then
+         ! List-based grid
+         ! At least one axis is non-equidistant: RectilinearGrid (explicit coordinates)
+         ! NOTE: vorticity is blocked for this case at read time. GridType = 1 (velocity only).
+         call vtk_dataset_rectilinear(g%xPts, g%yPts, g%zPts, mvtk)
+         call vtk_point_data_init(mvtk)
+         call vtk_point_data_vector(g%uGrid(1:3,:,:,:),'Velocity',mvtk)
+      else
+         ! Equidistant grid: StructuredPoints (implicit coordinates)
+         dx(1) = (g%xEnd- g%xStart)/max(g%nx-1,1)
+         dx(2) = (g%yEnd- g%yStart)/max(g%ny-1,1)
+         dx(3) = (g%zEnd- g%zStart)/max(g%nz-1,1)
+         call vtk_dataset_structured_points((/g%xStart, g%yStart, g%zStart/),dx,(/g%nx,g%ny,g%nz/),mvtk)
+         call vtk_point_data_init(mvtk)
+         call vtk_point_data_vector(g%uGrid(1:3,:,:,:),'Velocity',mvtk)
+         ! Compute vorticity on the fly
+         if (g%type==idGridVelVorticity) then
+            call curl_regular_grid(g%uGrid, g%omgrid, 1,1,1, g%nx,g%ny,g%nz, dx(1),dx(2),dx(3))
+            call vtk_point_data_vector(g%omGrid(1:3,:,:,:),'Vorticity',mvtk)
+         endif
       endif
-      !
       call vtk_close_file(mvtk)
    endif
 
@@ -569,14 +711,14 @@ subroutine WrVTK_Panels(filename, mvtk, p, m, z)
 endsubroutine WrVTK_Panels
 
 
-subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
+subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame)
    use VTK
    character(len=*),intent(in)                 :: filename
    type(VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
-   real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !< 
-   integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !< 
-   real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !< 
-   real(ReKi),     dimension(:)  ,  intent(in) :: SegEpsilon !< 
+   real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !<
+   integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !<
+   real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !<
+   real(ReKi),     dimension(:)  ,  intent(in) :: SegEpsilon !<
    logical,                      intent(in   ) :: bladeFrame !< Output in blade coordinate frame
    if ( vtk_new_ascii_file(filename,'Sgmt',mvtk) ) then
       call vtk_dataset_polydata(SegPoints(1:3,:),mvtk,bladeFrame)

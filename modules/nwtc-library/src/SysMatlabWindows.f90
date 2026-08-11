@@ -47,8 +47,9 @@ MODULE SysSubs
 !=======================================================================
 
 
+   INTEGER, PARAMETER            :: ConRecL     = 180                               ! The record length for console output (maximum number of characters that can be written in WrOver(), must be larger than MaxWrScrLen)
    INTEGER, PUBLIC               :: CU          = 6                                 ! The I/O unit for the console (Can be changed with SetConsoleUnit subroutine)
-   INTEGER, PARAMETER            :: MaxWrScrLen = 256                                ! The maximum number of characters allowed to be written to a line in WrScr
+   INTEGER, PARAMETER            :: MaxWrScrLen = ConRecL-1                         ! The maximum number of characters allowed to be written to a line in WrScr, must be smaller than ConRecL
 
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 

@@ -504,7 +504,7 @@ subroutine find_nan_1D(array, varname)
          tot=tot+1
       endif
    enddo
-   if (found) then 
+   if (found) then
       print*,'OLAF NAN ',trim(varname),tot,n
       STOP
    endif
@@ -526,7 +526,7 @@ subroutine find_nan_2D(array, varname)
          tot=tot+1
       endif
    enddo
-   if (found) then 
+   if (found) then
       print*,'OLAF NAN ',trim(varname),tot,n
       STOP
    endif
@@ -572,7 +572,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    type(FVW_MiscVarType),           intent(in   ), target      :: m       !< Initial misc/optimization variables
    integer(IntKi) :: iP_start,iP_end   ! Current index of point, start and end of range
    integer(IntKi) :: iGrid,i,j,k,iW
-   real(ReKi) :: xP,yP,zP,dx,dy,dz
+   real(ReKi) :: xP,yP,zP
    type(GridOutType), pointer :: g
 
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
@@ -608,15 +608,12 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    iP_start=iP_end+1
    do iGrid=1,p%nGridOut
       g => m%GridOutputs(iGrid)
-      dx = (g%xEnd- g%xStart)/max(g%nx-1,1)
-      dy = (g%yEnd- g%yStart)/max(g%ny-1,1)
-      dz = (g%zEnd- g%zStart)/max(g%nz-1,1)
       do k=1,g%nz
-         zP = g%zStart  + (k-1)*dz
+         zP = g%zPts(k)
          do j=1,g%ny
-            yP = g%yStart  + (j-1)*dy
+            yP = g%yPts(j)
             do i=1,g%nx
-               xP = g%xStart  + (i-1)*dx
+               xP = g%xPts(i)
                r_wind(1:3,iP_start) = (/xP,yP,zP/)
                iP_start=iP_start+1
             enddo
@@ -787,8 +784,8 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
 
    allocate(x%W(p%nWings))
    do iW=1,p%nWings
-      call AllocAry( x%W(iW)%Gamma_NW,    p%W(iW)%nSpan   , p%nNWMax  , 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
-      call AllocAry( x%W(iW)%Gamma_FW,    FWnSpan   , p%nFWMax  , 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
+      call AllocAry( x%W(iW)%Gamma_NW,    p%W(iW)%nSpan   , p%nNWMax  , 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+      call AllocAry( x%W(iW)%Gamma_FW,    FWnSpan   , p%nFWMax  , 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
       call AllocAry( x%W(iW)%Eps_NW  , 3, p%W(iW)%nSpan   , p%nNWMax  , 'NW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
       call AllocAry( x%W(iW)%Eps_FW  , 3, FWnSpan   , p%nFWMax  , 'FW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
       ! set x%W(iW)%r_NW and x%W(iW)%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
@@ -797,10 +794,10 @@ subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
       x%W(iW)%r_NW     = 0.0_ReKi
       x%W(iW)%r_FW     = 0.0_ReKi
-      x%W(iW)%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
+      x%W(iW)%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set
       x%W(iW)%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%W(iW)%Gamma_LL at init
-      x%W(iW)%Eps_NW   = 0.001_ReKi 
-      x%W(iW)%Eps_FW   = 0.001_ReKi 
+      x%W(iW)%Eps_NW   = 0.001_ReKi
+      x%W(iW)%Eps_FW   = 0.001_ReKi
    enddo
 end subroutine FVW_InitStates
 
@@ -839,7 +836,7 @@ subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
    bWakeNeedsPart = p%VelocityMethod(1)==idVelocityPart .or. p%VelocityMethod(1)==idVelocityTreePart
    bLLNeedsPart   = p%VelocityMethod(2)==idVelocityPart .or. p%VelocityMethod(2)==idVelocityTreePart
    if (bLLNeedsPart .or. bWakeNeedsPart) then
-      nPart = 0 
+      nPart = 0
       if (bWakeNeedsPart) nPart = max(nPart, nSeg * p%PartPerSegment(1))
       if (bLLNeedsPart)   nPart = max(nPart, nSeg * p%PartPerSegment(2))
       call AllocAry( m%Part%P     , 3, nPart, 'PartP'      , ErrStat2, ErrMsg2 ); if(Failed())return; m%Part%P = -999999_ReKi;
@@ -854,7 +851,7 @@ subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Uind     , 3,  nCPs, 'Uind'      , ErrStat2, ErrMsg2 ); if(Failed())return; m%Uind= -999999_ReKi;
 contains
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_InitMiscVarsPostParam') 
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_InitMiscVarsPostParam')
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 end subroutine FVW_InitMiscVarsPostParam
@@ -1138,7 +1135,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    ! Local variables
    integer(IntKi) :: nCPs, iHeadP
    integer(IntKi) :: i,j,k
-   real(ReKi) :: xP,yP,zP,dx,dy,dz
+   real(ReKi) :: xP,yP,zP
    ! TODO new options
    type(T_Tree)   :: Tree
    type(T_Panl)   :: Panl
@@ -1152,15 +1149,12 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    nCPs = g%nx * g%ny * g%nz
    allocate(CPs(3, nCPs), stat=ErrStat)
    iHeadP=1
-   dx = (g%xEnd- g%xStart)/max(g%nx-1,1)
-   dy = (g%yEnd- g%yStart)/max(g%ny-1,1)
-   dz = (g%zEnd- g%zStart)/max(g%nz-1,1)
    do k=1,g%nz
-      zP = g%zStart  + (k-1)*dz
+      zP = g%zPts(k)
       do j=1,g%ny
-         yP = g%yStart  + (j-1)*dy
+         yP = g%yPts(j)
          do i=1,g%nx
-            xP = g%xStart  + (i-1)*dx
+            xP = g%xPts(i)
             CPs(1:3,iHeadP) = (/xP,yP,zP/)
             iHeadP=iHeadP+1
          enddo
@@ -1211,7 +1205,7 @@ subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, all
    else
       ! check that we have enough space
       if (.not. allocated(Part%P)) then
-          print*,'>>> PartP not allocated'; 
+          print*,'>>> PartP not allocated';
           STOP
       endif
       if (size(Part%P,2)<nPart) then
@@ -1553,20 +1547,20 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
 
       ! --- Compute velocity on LL
       ! TreeSeg is faster but introduce some noise, so we keep this open for the user to choose
-      if (p%VelocityMethod(iVel) == idVelocityBasic) then 
+      if (p%VelocityMethod(iVel) == idVelocityBasic) then
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
 
-      else if (p%VelocityMethod(iVel) == idVelocityPart) then 
+      else if (p%VelocityMethod(iVel) == idVelocityPart) then
          call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
          call ui_part_nograd(nCPs, CPs, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, Uind)
          !deallocate(Part%P, Part%Alpha, Part%RegParam)
 
-      else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then 
+      else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then
          call grow_tree_segment(Tree, nSeg, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
          call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
          call cut_tree(Tree)
 
-      else if (p%VelocityMethod(iVel) == idVelocityTreePart) then 
+      else if (p%VelocityMethod(iVel) == idVelocityTreePart) then
          call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
          call grow_tree_part(Tree, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, 0)
          call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
@@ -1793,15 +1787,15 @@ subroutine AlphaVrel_Generic(M_ag, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel
 end subroutine AlphaVrel_Generic
 
 
-!> Initialize / allocated main variables for source panels. 
+!> Initialize / allocated main variables for source panels.
 !! If an non empty input file is provided, the panels points and connectivity are read
 !! Otherwise, Points and IDs should be provided in "p"
-!! 
-!! Acknowledgements: 
+!!
+!! Acknowledgements:
 !!   The original implementation of the source panel method was funded by Accelerate Wind,
 !!   and implemented by E. Branlard.
 !!   For more acknowledgements, visit: https://openfast.readthedocs.io/en/main/source/acknowledgements.html
-!! 
+!!
 subroutine srcPnl_init(p, m, z, errStat, errMsg, filename)
    use VTK !, only: ReadVTK_PD_info, ReadVTK_PD_fields
    type(T_SrcPanlParam), intent(inout)        :: p
@@ -1900,7 +1894,7 @@ subroutine srcPnl_init(p, m, z, errStat, errMsg, filename)
 
       ! --- Compute influence matrix
       ! For now, panels don't move so we compute this only once, otherwise, put this in FVW_CalcConstrStateResidual
-      call srcPnl_build_mat(p, m%AI, m%UUI) 
+      call srcPnl_build_mat(p, m%AI, m%UUI)
 
       ! --- Factorization
       call linalg_factor(m%AI, m%IPIV, errStat2, errMsg2); if(Failed()) return
@@ -1918,27 +1912,27 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
    type(T_SrcPanlParam), intent(inout) :: Panl
    integer(IntKi)      , intent(out)   :: errStat !< Error status of the operation
    character(errMsgLen), intent(out)   :: errMsg  !< Error message if errStat /= ErrID_None
-   real(ReKi)                   :: alpha       !< 
-   real(ReKi)                   :: d1          !< 
-   real(ReKi)                   :: DLastRingTE !< 
-   real(ReKi)                   :: eta0        !< 
-   integer(IntKi), dimension(4) :: IDs         !< 
-   real(ReKi), dimension(3)     :: P1          !< 
-   real(ReKi), dimension(3)     :: P1e         !< 
-   real(ReKi), dimension(3)     :: P1es        !< 
-   real(ReKi), dimension(3)     :: P1p         !< 
-   real(ReKi), dimension(3)     :: P2          !< 
-   real(ReKi), dimension(3)     :: P2e         !< 
-   real(ReKi), dimension(3)     :: P2es        !< 
-   real(ReKi), dimension(3)     :: P2p         !< 
-   real(ReKi), dimension(3)     :: P3          !< 
-   real(ReKi), dimension(3)     :: P3e         !< 
-   real(ReKi), dimension(3)     :: P3es        !< 
-   real(ReKi), dimension(3)     :: P3p         !< 
-   real(ReKi), dimension(3)     :: P4          !< 
-   real(ReKi), dimension(3)     :: P4e         !< 
-   real(ReKi), dimension(3)     :: P4es        !< 
-   real(ReKi), dimension(3)     :: P4p         !< 
+   real(ReKi)                   :: alpha       !<
+   real(ReKi)                   :: d1          !<
+   real(ReKi)                   :: DLastRingTE !<
+   real(ReKi)                   :: eta0        !<
+   integer(IntKi), dimension(4) :: IDs         !<
+   real(ReKi), dimension(3)     :: P1          !<
+   real(ReKi), dimension(3)     :: P1e         !<
+   real(ReKi), dimension(3)     :: P1es        !<
+   real(ReKi), dimension(3)     :: P1p         !<
+   real(ReKi), dimension(3)     :: P2          !<
+   real(ReKi), dimension(3)     :: P2e         !<
+   real(ReKi), dimension(3)     :: P2es        !<
+   real(ReKi), dimension(3)     :: P2p         !<
+   real(ReKi), dimension(3)     :: P3          !<
+   real(ReKi), dimension(3)     :: P3e         !<
+   real(ReKi), dimension(3)     :: P3es        !<
+   real(ReKi), dimension(3)     :: P3p         !<
+   real(ReKi), dimension(3)     :: P4          !<
+   real(ReKi), dimension(3)     :: P4e         !<
+   real(ReKi), dimension(3)     :: P4es        !<
+   real(ReKi), dimension(3)     :: P4p         !<
    real(ReKi), dimension(3)     :: T1
    real(ReKi), dimension(3)     :: T2
    real(ReKi), dimension(3)     :: Ptmp        !< temp for computing norm of delta points
@@ -1947,7 +1941,7 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
    real(ReKi)                   :: norm_T1
    real(ReKi)                   :: norm_T2
    integer                      :: ip
-   real(ReKi)                   :: xi0         !< 
+   real(ReKi)                   :: xi0         !<
    integer(IntKi)               :: errStat2    !< temporary Error status
    character(ErrMsgLen)         :: errMsg2     !< temporary Error message
    errStat = ErrID_None
@@ -1970,7 +1964,7 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
    call AllocAry(Panl%eta   , 4,    Panl%n,'eta  ' ,errStat2,errMsg2); if(Failed())return
    call AllocAry(Panl%xi    , 4,    Panl%n,'xi   ' ,errStat2,errMsg2); if(Failed())return
    call AllocAry(Panl%Area  ,       Panl%n,'Area ' ,errStat2,errMsg2); if(Failed())return
-   
+
    do ip = 1, Panl%n
       IDs = Panl%IDs(:,ip)
       P1  = Panl%P(:,IDs(1))
@@ -1980,10 +1974,10 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
       Panl%Pmid(1:3,ip) = (P1+P2+P3+p4)/4 ! that's hess's barred coordinates
       T1 = P3-P1
       T2 = P4-P2
-      ! maximum diagonal 
+      ! maximum diagonal
       norm_T1  = sqrt(T1(1)**2+ T1(2)**2+ T1(3)**2)
       norm_T2  = sqrt(T2(1)**2+ T2(2)**2+ T2(3)**2)
-      ! flat panel coordinate system 
+      ! flat panel coordinate system
       Ptmp(1) = T2(2) * T1(3) - T2(3) * T1(2)
       Ptmp(2) = T2(3) * T1(1) - T2(1) * T1(3)
       Ptmp(3) = T2(1) * T1(2) - T2(2) * T1(1)
@@ -2001,22 +1995,22 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
       Panl%R_g2p(2, 1:3, ip) = T2
       Panl%R_g2p(3, 1:3, ip) = Panl%Normal(:,ip)
       Mat = Panl%R_g2p(:,:,ip)
-      ! Projection of the surface into a flat panel - Hess primed coordinates 
+      ! Projection of the surface into a flat panel - Hess primed coordinates
       d1  = dot_product(Panl%Normal(:,ip),Panl%Pmid(:,ip)-P1)
       P1p = P1+Panl%Normal(:,ip)*(-1)**(1-1)*d1
       P2p = P2+Panl%Normal(:,ip)*(-1)**(2-1)*d1
       P3p = P3+Panl%Normal(:,ip)*(-1)**(3-1)*d1
       P4p = P4+Panl%Normal(:,ip)*(-1)**(4-1)*d1
-      !Coordinates of flat panel points in panel coordinate system - Hess starred coordinates with greek letters 
-      ! the transformation is such that the zeta coordinate will always be zero 
+      !Coordinates of flat panel points in panel coordinate system - Hess starred coordinates with greek letters
+      ! the transformation is such that the zeta coordinate will always be zero
       P1es = matmul(Mat,(P1p-Panl%Pmid(:,ip)))
       P2es = matmul(Mat,(P2p-Panl%Pmid(:,ip)))
       P3es = matmul(Mat,(P3p-Panl%Pmid(:,ip)))
       P4es = matmul(Mat,(P4p-Panl%Pmid(:,ip)))
-      ! Coordinates of the centroid 
+      ! Coordinates of the centroid
       xi0  = 1._ReKi/3._ReKi*1.0_ReKi/(P2es(2)-P4es(2)) * (P4es(1)*(P1es(2)-P2es(2))+P2es(1)*(P4es(2)-P1es(2) ))
       eta0 = -1._ReKi/3._ReKi * P1es(2)
-      ! Coordinates based on centroid - Hess greek letters coordinates 
+      ! Coordinates based on centroid - Hess greek letters coordinates
       P1e = P1es-(/ xi0,eta0,0.0_ReKi /)
       P2e = P2es-(/ xi0,eta0,0.0_ReKi /)
       P3e = P3es-(/ xi0,eta0,0.0_ReKi /)
@@ -2025,7 +2019,7 @@ subroutine srcPnl_geometry(Panl, errStat, errMsg)
       Panl%eta(:,ip) = (/ P1e(2), P2e(2), P3e(2), P4e(2)/)
       ! Centroid in reference frame
       Panl%Pcent(:,ip) = Panl%Pmid(:,ip) + matmul( (/ xi0,eta0,0.0_ReKi /),Mat)
-      ! Area 
+      ! Area
       Panl%Area(ip) = 0.5_ReKi*(Panl%xi(3,ip)-Panl%xi(1,ip))*(Panl%eta(2,ip)-Panl%eta(4,ip))
    end do ! Loop on panels
 contains
@@ -2041,8 +2035,8 @@ subroutine srcPnl_build_mat(Panl, AI, UUI)
    real(ReKi), dimension(:,:),   intent(out) :: AI   !< (nCPs x nPanels) Self Induced Velocities matrix along normal
    real(ReKi), dimension(:,:,:), intent(out) :: UUI   !< (3 x nCPs x nPanels) Unit induced velocity
    ! Variables
-   real(ReKi), parameter    :: UnitIntensity=1.0_ReKi !< 
-   real(ReKi), dimension(3) :: Uind_tmp               !< 
+   real(ReKi), parameter    :: UnitIntensity=1.0_ReKi !<
+   real(ReKi), dimension(3) :: Uind_tmp               !<
    integer :: icp, ip !< loop variables
    if (OLAF_PROFILING) call tic('SrcPanel build matrix')
    !$OMP PARALLEL DEFAULT(shared)
@@ -2053,12 +2047,12 @@ subroutine srcPnl_build_mat(Panl, AI, UUI)
       ! ---- loop on all panls
       do ip = 1, Panl%n
          call ui_quad_src_11(Panl%Pcent(:,icp), UnitIntensity, Panl%xi(1:4,ip), Panl%eta(1:4,ip), Panl%Pcent(1:3,ip), Panl%R_g2p(1:3,1:3,ip), Uind_tmp)
-         ! AI= Vi . N 
+         ! AI= Vi . N
          AI(icp, ip) = dot_product(Uind_tmp, Panl%Normal(1:3,icp))
          UUI(:, icp, ip) = Uind_tmp
-      end do 
-   end do 
-   !$OMP END DO 
+      end do
+   end do
+   !$OMP END DO
    !$OMP END PARALLEL
    if (OLAF_PROFILING) call toc()
 end subroutine srcPnl_build_mat
@@ -2085,7 +2079,7 @@ subroutine srcPnl_ExtVelocities_OnPanels(u, p, x, m, errStat, errMsg)
    m%SrcPnl%Uext(1:3,:) = 0.0_ReKi ! Due to side effects of ui_ functions
    ! Convert Panels to segments, segments to particles, particles to tree
    call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, Panl, errStat, errMsg, allocPart=.false.)
-   ! We don't want the influence of panels so we nullify 
+   ! We don't want the influence of panels so we nullify
    nullify(Panl%p_Src); nullify(Panl%m_Src)
    call InducedVelocitiesAll_Calc(p%SrcPnl%Pcent(1:3,:), p%SrcPnl%n, m%SrcPnl%Uext, p, m%Sgmt, m%Part, Tree, Panl, errStat, errMsg)
    call InducedVelocitiesAll_End(p, Tree, m%Part, Panl, errStat, errMsg, deallocPart=.false.)
@@ -2145,7 +2139,7 @@ subroutine srcPnl_calcOutput(p, m, z, rho) !, errStat, errMsg
       ! Static    pressure  ps  = 1/2 rho Utot**2
       ! Reference pressure  qinf  = 1/2 rho Uwnd**2
       ! Pressure Coefficient Cp = ps-pinf/qinf (by convention)
-      ! Pressure force        F = (ps-p0) A e_n 
+      ! Pressure force        F = (ps-p0) A e_n
       if (Uwnd_norm2>0) then
          Cp = max( 1-(norm2(m%Utot(1:3,ip))**2)/Uwnd_norm2, -10._ReKi)  ! Bernoulli.
       else
@@ -2173,7 +2167,7 @@ subroutine linalg_factor(AA, IPIV, errStat, errMsg)
    n = size(AA,1)
    m = n
    call LAPACK_GETRF(m, n, AA, IPIV, errStat, errMsg)
-endsubroutine 
+endsubroutine
 
 subroutine linalg_solve(AFact, RHS, IPIV, errStat, errMsg)
    use NWTC_LAPACK, only : LAPACK_GETRS
@@ -2185,7 +2179,7 @@ subroutine linalg_solve(AFact, RHS, IPIV, errStat, errMsg)
    integer :: n
    n = size(AFact,1)
    call LAPACK_GETRS('N', n, AFact, IPIV, RHS, errStat, errMsg)
-end subroutine 
+end subroutine
 
 !> Solve A x = B
 subroutine linalg_solveWrap(AA, B, X, errStat, errMsg)

@@ -56,6 +56,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uGrid      !< Grid velocity 3 x nz x ny x nx [-]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: omGrid      !< Grid vorticity 3 x nz x ny x nx [-]
     REAL(DbKi)  :: tLastOutput = 0.0_R8Ki      !< Last output time [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xPts      !< Explicit x coordinates (non-equidistant grid, if used) [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: yPts      !< Explicit y coordinates (non-equidistant grid, if used) [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zPts      !< Explicit z coordinates (non-equidistant grid, if used) [m]
+    CHARACTER(1024)  :: xListFile      !< File with explicit x coordinates (empty if equidistant) [-]
+    CHARACTER(1024)  :: yListFile      !< File with explicit y coordinates (empty if equidistant) [-]
+    CHARACTER(1024)  :: zListFile      !< File with explicit z coordinates (empty if equidistant) [-]
   END TYPE GridOutType
 ! =======================
 ! =========  T_Sgmt  =======
@@ -466,6 +472,45 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
       DstGridOutTypeData%omGrid = SrcGridOutTypeData%omGrid
    end if
    DstGridOutTypeData%tLastOutput = SrcGridOutTypeData%tLastOutput
+   if (allocated(SrcGridOutTypeData%xPts)) then
+      LB(1:1) = lbound(SrcGridOutTypeData%xPts)
+      UB(1:1) = ubound(SrcGridOutTypeData%xPts)
+      if (.not. allocated(DstGridOutTypeData%xPts)) then
+         allocate(DstGridOutTypeData%xPts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGridOutTypeData%xPts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGridOutTypeData%xPts = SrcGridOutTypeData%xPts
+   end if
+   if (allocated(SrcGridOutTypeData%yPts)) then
+      LB(1:1) = lbound(SrcGridOutTypeData%yPts)
+      UB(1:1) = ubound(SrcGridOutTypeData%yPts)
+      if (.not. allocated(DstGridOutTypeData%yPts)) then
+         allocate(DstGridOutTypeData%yPts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGridOutTypeData%yPts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGridOutTypeData%yPts = SrcGridOutTypeData%yPts
+   end if
+   if (allocated(SrcGridOutTypeData%zPts)) then
+      LB(1:1) = lbound(SrcGridOutTypeData%zPts)
+      UB(1:1) = ubound(SrcGridOutTypeData%zPts)
+      if (.not. allocated(DstGridOutTypeData%zPts)) then
+         allocate(DstGridOutTypeData%zPts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGridOutTypeData%zPts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGridOutTypeData%zPts = SrcGridOutTypeData%zPts
+   end if
+   DstGridOutTypeData%xListFile = SrcGridOutTypeData%xListFile
+   DstGridOutTypeData%yListFile = SrcGridOutTypeData%yListFile
+   DstGridOutTypeData%zListFile = SrcGridOutTypeData%zListFile
 end subroutine
 
 subroutine FVW_DestroyGridOutType(GridOutTypeData, ErrStat, ErrMsg)
@@ -480,6 +525,15 @@ subroutine FVW_DestroyGridOutType(GridOutTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(GridOutTypeData%omGrid)) then
       deallocate(GridOutTypeData%omGrid)
+   end if
+   if (allocated(GridOutTypeData%xPts)) then
+      deallocate(GridOutTypeData%xPts)
+   end if
+   if (allocated(GridOutTypeData%yPts)) then
+      deallocate(GridOutTypeData%yPts)
+   end if
+   if (allocated(GridOutTypeData%zPts)) then
+      deallocate(GridOutTypeData%zPts)
    end if
 end subroutine
 
@@ -505,6 +559,12 @@ subroutine FVW_PackGridOutType(RF, Indata)
    call RegPackAlloc(RF, InData%uGrid)
    call RegPackAlloc(RF, InData%omGrid)
    call RegPack(RF, InData%tLastOutput)
+   call RegPackAlloc(RF, InData%xPts)
+   call RegPackAlloc(RF, InData%yPts)
+   call RegPackAlloc(RF, InData%zPts)
+   call RegPack(RF, InData%xListFile)
+   call RegPack(RF, InData%yListFile)
+   call RegPack(RF, InData%zListFile)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -533,6 +593,12 @@ subroutine FVW_UnPackGridOutType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%uGrid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%omGrid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tLastOutput); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%xPts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%yPts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zPts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%xListFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%yListFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%zListFile); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMsg)
