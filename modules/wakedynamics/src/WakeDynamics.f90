@@ -731,7 +731,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
    real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
-   integer(IntKi)                               :: oobIdx(0:p%MaxNumPlanes-1)
+   integer(IntKi)                               :: oobIdx(0:p%MaxNumPlanes)  ! One extra slot: allows all p%MaxNumPlanes planes can be simultaneously out-of-bounds (corner case)
    integer(IntKi)                               :: nOOB, iOOB, jOOB
    logical                                      :: merged
 
@@ -1009,6 +1009,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call MergeWakePlanes(oobIdx(jOOB), oobIdx(iOOB))
             ! Remove entry iOOB and adjust indices above the dropped plane
             call AdjustOobIndices(oobIdx, nOOB, iOOB)
+            ! nOOB has shrunk; clamp iOOB so it still refers to a valid, populated entry
+            iOOB = min(iOOB, nOOB)
             merged = .true.
             exit
          end if
