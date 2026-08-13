@@ -78,7 +78,9 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
    ! Determine if acceleration should be calculated and returned
    OutputAccel = allocated(AccelUVW)
-   if (OutputAccel .and. .not. FF%AccFieldValid) then
+   ! Cubic velocity interpolation also requires a valid acceleration field, since its
+   ! formula uses the derivative data even when acceleration output is not requested.
+   if ((OutputAccel .or. FF%VelInterpCubic) .and. .not. FF%AccFieldValid) then
       call SetErrStat(ErrID_Fatal, "Accel output requested, but accel field is not valid", &
                       ErrStat, ErrMsg, RoutineName)
       return
@@ -224,8 +226,10 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
          ! Calculate grid cells for interpolation, returns velocity and acceleration
          ! components at corners of grid cell containing time and position. Also
-         ! returns interpolation values Xi.
-         call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), OutputAccel, GridExceedAllow, &
+         ! returns interpolation values Xi. AccCell is required whenever cubic
+         ! velocity interpolation is used (its formula uses the derivative data),
+         ! not only when acceleration is explicitly requested as an output.
+         call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), OutputAccel .or. FF%VelInterpCubic, GridExceedAllow, &
                                   VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
          if (TmpErrStat >= AbortErrLev) then
             call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
@@ -1442,9 +1446,18 @@ subroutine IfW_Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! If number of time grids is 1 or 2, set all accelerations to zero, return
-   if (G3D%NTGrids < 3) then
+   ! If number of time steps is 1 or 2, set all accelerations to zero, return
+   if (G3D%NSteps < 3) then
       G3D%Acc = 0.0_SiKi
+      ! Also allocate/zero tower acceleration so GetCellInTower has a valid array to reference
+      if (G3D%NTGrids > 0) then
+         call AllocAry(G3D%AccTower, size(G3D%VelTower, dim=1), &
+                       size(G3D%VelTower, dim=2), size(G3D%VelTower, dim=3), &
+                       'tower wind acceleration data.', TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+         G3D%AccTower = 0.0_SiKi
+      end if
       return
    end if
 
@@ -1477,16 +1490,14 @@ subroutine IfW_Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! If number of time grids is 1 or 2, set all accelerations to zero
-   if (G3D%NTGrids < 3) then
-      G3D%Acc = 0.0_SiKi
-   else  ! Otherwise, calculate acceleration at each grid point
-      do iz = 1, G3D%NTGrids
-         do ic = 1, G3D%NComp
-            call CalcCubicSplineDeriv(G3D%NSteps, G3D%DTime, G3D%VelTower(ic, iz, :), G3D%AccTower(ic, iz, :))
-         end do
+   ! Calculate acceleration at each tower grid point. NSteps < 3 is already handled by the
+   ! early return above, and each tower height is interpolated independently in time, so no
+   ! minimum tower height count is required here.
+   do iz = 1, G3D%NTGrids
+      do ic = 1, G3D%NComp
+         call CalcCubicSplineDeriv(G3D%NSteps, G3D%DTime, G3D%VelTower(ic, iz, :), G3D%AccTower(ic, iz, :))
       end do
-   end if
+   end do
 
 contains
 

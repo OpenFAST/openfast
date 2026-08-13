@@ -51,6 +51,7 @@ add_test(NAME beamdyn_utest COMMAND beamdyn_utest)
 add_executable(inflowwind_utest 
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/inflowwind_utest.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_bladed_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_grid3d_field.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_hawc_wind.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_outputs.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_steady_wind.F90
