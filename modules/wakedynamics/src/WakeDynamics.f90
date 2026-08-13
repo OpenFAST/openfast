@@ -45,8 +45,8 @@ module WakeDynamics
    public :: WD_WritePlaneOutputs              ! Routine for IO Operation
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
-   public :: WD_TEST_Axi2Cart
-   public :: WD_TEST_AddVelocityCurl
+   public :: AddVelocityCurl                  ! Exposed for unit testing
+   public :: Axisymmetric2CartesianVel         ! Exposed for unit testing
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -1385,28 +1385,6 @@ subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
    
 end subroutine AddSwirl
 
-!> Test the curled wake velocity curl function
-subroutine WD_TEST_AddVelocityCurl()
-  
-   real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
-   real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
-   real(ReKi) :: y(2)=(/ 0., 2./)
-   real(ReKi) :: z(2)=(/-1.,1./)
-   real(ReKi) :: Gamma0
-
-   call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
-      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
-
-   if (abs(Vy_curl(1,1)+0.217109)>1e-4) then
-      print*,'Test fail for vy'
-      !STOP
-   endif
-   if (abs(Vz_curl(2,2)+4.459746e-2)>1e-4) then
-      print*,'>>> Test fail for vz'
-      !STOP
-   endif
-end subroutine
-
 
 
 !> Weighted average of two angles
@@ -1581,40 +1559,6 @@ function exp_safe(x)
       exp_safe = exp(x)
    endif
 end function exp_safe
-
-subroutine WD_TEST_Axi2Cart()
-   real(ReKi) :: r(4)=(/0.,1.,2.,3./)
-!    real(ReKi) :: y(4)=(/-1.,0.,1.5,2./)
-!    real(ReKi) :: z(5)=(/-2.5,-1.5,0.,1.5,2./)
-   real(ReKi) :: y(4)=(/0.,1. ,1.5, 2./)
-   real(ReKi) :: z(5)=(/0.,0.5,1. ,1.5,2./)
-   real(ReKi) :: Vr_axi(4)
-   real(ReKi) :: Vx_axi(4)
-   real(ReKi) :: Vx(4,5)=0.0_ReKi
-   real(ReKi) :: Vy(4,5)=0.0_ReKi
-   real(ReKi) :: Vz(4,5)=0.0_ReKi
-   integer :: i,j 
-   real(ReKi) :: Vr, r_tmp
-   Vr_axi=4._ReKi*r
-   Vx_axi=3._ReKi*r
-   call Axisymmetric2CartesianVel(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
-
-   do i = 1,size(y)
-      do j = 1,size(z)
-         r_tmp = sqrt(y(i)**2+z(j)**2)
-         Vr    = sqrt(Vy(i,j)**2 + Vz(i,j)**2)
-         if (abs(Vr-4*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vr',Vr,4*r_tmp
-            STOP
-         endif
-         if (abs(Vx(i,j)-3*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vx',Vx(i,j),3*r_tmp
-            STOP
-         endif
-      enddo
-   enddo
-end subroutine 
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
