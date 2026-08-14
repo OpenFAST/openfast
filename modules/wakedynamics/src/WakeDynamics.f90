@@ -561,6 +561,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Ct_azavg_filt       = 0.0_ReKi
    xd%Cq_azavg_filt       = 0.0_ReKi
    OtherState%firstPass   = .true.     
+   OtherState%MaxPlanesWarned = .false.
    
       ! miscvars to avoid the allocation per timestep
       ! Cartesian eddy viscosity (allocated even for polar if plane outputs are requested)
@@ -977,7 +978,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%NumPlanes = xd%NumPlanes + 1.0
    if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
       xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
-      call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+      if (.not. OtherState%MaxPlanesWarned) then
+         call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+         OtherState%MaxPlanesWarned = .true.
+      end if
    end if
    if ( NINT(xd%NumPlanes) < 2 ) then
       ! Check just in case following implementation plan; however, this should never happen. Consider removing in the future.

@@ -68,6 +68,7 @@ add_executable(wakedynamics_utest
   ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_addvelocitycurl.F90
   ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_axisymmetric2cartesian.F90
   ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_oobidx.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_maxplanes_warning.F90
 )
 target_link_libraries(wakedynamics_utest wdlib versioninfolib testdrivelib)
 add_test(NAME wakedynamics_utest COMMAND wakedynamics_utest)

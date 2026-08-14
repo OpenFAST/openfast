@@ -114,6 +114,7 @@ typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "R
 
 # Define any other states, including integer or logical states here:
 typedef   ^      OtherStateType               LOGICAL     firstPass          -      -      -      "Flag indicating whether or not the states have been initialized with proper inputs"      -
+typedef   ^      OtherStateType               LOGICAL     MaxPlanesWarned    -      -      -      "Flag indicating the MaxNumPlanes-exceeded warning has already been issued for this turbine"      -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):

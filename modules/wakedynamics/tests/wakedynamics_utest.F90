@@ -5,6 +5,7 @@ use testdrive, only: run_testsuite, new_testsuite, testsuite_type
 use test_addvelocitycurl, only: test_addvelocitycurl_suite
 use test_axisymmetric2cartesian, only: test_axisymmetric2cartesian_suite
 use test_wd_oobidx, only: test_wd_oobidx_suite
+use test_wd_maxplanes_warning, only: test_wd_maxplanes_warning_suite
 use NWTC_Num
 
 implicit none
@@ -19,7 +20,8 @@ call SetConstants()
 testsuites = [ &
              new_testsuite("AddVelocityCurl", test_addvelocitycurl_suite), &
              new_testsuite("Axisymmetric2Cartesian", test_axisymmetric2cartesian_suite), &
-             new_testsuite("WD_UpdateStates_OOBIdx", test_wd_oobidx_suite) &
+             new_testsuite("WD_UpdateStates_OOBIdx", test_wd_oobidx_suite), &
+             new_testsuite("WD_UpdateStates_MaxPlanesWarning", test_wd_maxplanes_warning_suite) &
              ]
 
 do is = 1, size(testsuites)

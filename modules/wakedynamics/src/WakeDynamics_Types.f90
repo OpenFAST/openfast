@@ -138,6 +138,7 @@ IMPLICIT NONE
 ! =========  WD_OtherStateType  =======
   TYPE, PUBLIC :: WD_OtherStateType
     LOGICAL  :: firstPass = .false.      !< Flag indicating whether or not the states have been initialized with proper inputs [-]
+    LOGICAL  :: MaxPlanesWarned = .false.      !< Flag indicating the MaxNumPlanes-exceeded warning has already been issued for this turbine [-]
   END TYPE WD_OtherStateType
 ! =======================
 ! =========  WD_MiscVarType  =======
@@ -977,6 +978,7 @@ subroutine WD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%firstPass = SrcOtherStateData%firstPass
+   DstOtherStateData%MaxPlanesWarned = SrcOtherStateData%MaxPlanesWarned
 end subroutine
 
 subroutine WD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -994,6 +996,7 @@ subroutine WD_PackOtherState(RF, Indata)
    character(*), parameter         :: RoutineName = 'WD_PackOtherState'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%firstPass)
+   call RegPack(RF, InData%MaxPlanesWarned)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1003,6 +1006,7 @@ subroutine WD_UnPackOtherState(RF, OutData)
    character(*), parameter            :: RoutineName = 'WD_UnPackOtherState'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%firstPass); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MaxPlanesWarned); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
