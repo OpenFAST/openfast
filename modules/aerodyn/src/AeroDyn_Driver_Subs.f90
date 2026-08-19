@@ -910,13 +910,15 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          elseif (wt%bld(iB)%motionType==idBldMotionVariable) then
             call interpTimeValue(wt%bld(iB)%motion, time, wt%bld(iB)%iMotion, bldMotion)
             wt%bld(iB)%pitch =bldMotion(1)
-            y_ED%BladeRootMotion(iB)%RotationVel(:,1) = y_ED%BladeRootMotion(iB)%RotationVel(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(2))
-            y_ED%BladeRootMotion(iB)%RotationAcc(:,1) = y_ED%BladeRootMotion(iB)%RotationAcc(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(3))
+            y_ED%BladeRootMotion(iB)%RotationVel(:,1) = y_ED%BladeRootMotion(iB)%RotationVel(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-rotDirDvr*bldMotion(2))
+            y_ED%BladeRootMotion(iB)%RotationAcc(:,1) = y_ED%BladeRootMotion(iB)%RotationAcc(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-rotDirDvr*bldMotion(3))
          else
             print*,'Unknown blade motion type, should never happen'
             STOP
          endif
-         theta(3) = - wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
+         ! MirrorRotor: pitch is supplied in the CW convention and mirrored here, matching
+         ! the blade twist that was negated on read.
+         theta(3) = - rotDirDvr * wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
          orientation_loc = EulerConstruct(theta)
          y_ED%BladeRootMotion(iB)%Orientation(:,:,1) = matmul(orientation_loc, y_ED%BladeRootMotion(iB)%Orientation(:,:,1))
       enddo

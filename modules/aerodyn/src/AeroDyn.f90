@@ -3490,7 +3490,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       endif
 
       if (p%BEM_Mod /= BEMMod_2D) then ! TODO
-         m%BEMT_u(indx)%chi0 = sign( m%BEMT_u(indx)%chi0, signOfAngle )
+         ! MirrorRotor: SkewVec is a pseudovector, so RotDir keeps the reported skew
+         ! angle in the rotor's own convention, matching the BEMMod_2D path above.
+         m%BEMT_u(indx)%chi0 = sign( m%BEMT_u(indx)%chi0, p%RotDir * signOfAngle )
       endif
    end if
 
@@ -3500,7 +3502,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
-      m%BEMT_u(indx)%psi_s = p%RotDir * Azimuth
+      ! Azimuth is measured in the skew-aligned disk frame, which DiskAvgValues already
+      ! keeps in the CW-equivalent orientation, so no further mirroring here.
+      m%BEMT_u(indx)%psi_s = Azimuth
    elseif (p%AeroProjMod==APM_BEM_Polar) then
 
       do k=1,p%NumBlades
@@ -3520,7 +3524,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%psiSkewOffset = PiBy2
       else
          ! Assemble blade azimuth unit vectors and orientation matrix
-         z_vec = windCrossDisk / windCrossDiskMag
+         ! MirrorRotor: windCrossDisk is a pseudovector; RotDir keeps this triad
+         ! right-handed so it mirrors as S*R*S and theta(1) simply negates.
+         z_vec = p%RotDir * windCrossDisk / windCrossDiskMag
          x_vec = x_hat_disk
          y_vec = cross_product( z_vec, x_vec )
          orientation(1,:) = x_vec
@@ -3528,7 +3534,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          orientation(3,:) = z_vec
          ! Extract azimuth angle for most down-wind blade orientation
          theta = -EulerExtract( transpose(orientation) )
-         m%BEMT_u(indx)%psiSkewOffset = theta(1)+PiBy2  ! cross-product of wind vector and rotor axis will lead downwind blade azimuth by 90 degrees
+         m%BEMT_u(indx)%psiSkewOffset = p%RotDir * theta(1)+PiBy2  ! cross-product of wind vector and rotor axis will lead downwind blade azimuth by 90 degrees
       end if
 
 
@@ -3750,7 +3756,10 @@ subroutine DiskAvgValues(p, u, RotInflow, m, x_hat_disk, y_hat_disk, z_hat_disk,
          z_hat_disk = u%HubMotion%Orientation(3,:,1)
       else
         y_hat_disk = tmp / tmp_sz
-        z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
+        ! MirrorRotor: this cross product is a pseudovector, so without RotDir the
+        ! skew-aligned frame would flip handedness and Azimuth would come out as
+        ! pi-Azimuth instead of the CW-equivalent value the skew model expects.
+        z_hat_disk = p%RotDir * cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
      end if
 
          ! "Azimuth angle" rad
