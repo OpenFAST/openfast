@@ -432,7 +432,17 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
       p%rotors(iR)%RotDir      = 1.0_ReKi
-      if (InitInp%rotors(iR)%MirrorRotor) p%rotors(iR)%RotDir = -1.0_ReKi
+      if (InitInp%rotors(iR)%MirrorRotor) then
+         p%rotors(iR)%RotDir = -1.0_ReKi
+         ! Not yet worked through for the free wake or the acoustics model.
+         if (InputFileData%Wake_Mod == WakeMod_FVW) then
+            call SetErrStat(ErrID_Fatal, 'MirrorRotor is not yet supported with the OLAF free-vortex-wake model (Wake_Mod=3).', ErrStat, ErrMsg, RoutineName)
+         end if
+         if (InputFileData%CompAA) then
+            call SetErrStat(ErrID_Fatal, 'MirrorRotor is not yet supported with the AeroAcoustics model.', ErrStat, ErrMsg, RoutineName)
+         end if
+         if (ErrStat >= AbortErrLev) return
+      end if
       call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;

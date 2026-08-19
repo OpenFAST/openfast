@@ -354,6 +354,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_ED%Gravity        = p_FAST%Gravity
          Init%InData_ED%MHK            = p_FAST%MHK
          Init%InData_ED%WtrDpth        = p_FAST%WtrDpth
+         Init%InData_ED%MirrorRotor    = p_FAST%MirrorRotor(iRot)
       
          ! Call module initialization routine
          dt_module = p_FAST%DT
@@ -670,6 +671,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_AD%Linearize          = p_FAST%Linearize
          Init%InData_AD%CompAeroMaps       = p_FAST%CompAeroMaps
          Init%InData_AD%rotors(iRot)%RotSpeed = p_FAST%RotSpeedInit ! used only for aeromaps
+         Init%InData_AD%rotors(iRot)%MirrorRotor = p_FAST%MirrorRotor(iRot)
          Init%InData_AD%InputFile          = p_FAST%AeroFile
          Init%InData_AD%RootName           = p_FAST%OutFileRoot
          Init%InData_AD%MHK                = p_FAST%MHK
@@ -2204,6 +2206,20 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
 
       end if
 
+   end if
+
+      ! Combinations not yet supported with a mirrored (counter-clockwise) rotor. Each of
+      ! these is removed as the corresponding module is worked through.
+   if (allocated(p%MirrorRotor)) then
+      if (any(p%MirrorRotor)) then
+         if (p%Linearize)                     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with linearization.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompAeroMaps)                  CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with the steady-state (aero map) solver.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompElast == Module_SED)       CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with SimplifiedElastoDyn.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompElast == Module_BD)        CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with BeamDyn.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompAero  == Module_ADsk)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with AeroDisk.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompAero  == Module_ExtLd)     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ExtLoads.', ErrStat, ErrMsg, RoutineName )
+         if (p%CompServo == Module_SrvD)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ServoDyn.', ErrStat, ErrMsg, RoutineName )
+      end if
    end if
 
 END SUBROUTINE ValidateInputData

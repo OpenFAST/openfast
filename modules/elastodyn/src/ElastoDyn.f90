@@ -1879,7 +1879,7 @@ END IF
       END IF
    END DO
    y%LSS_Spd  = x%QDT(DOF_GeAz)
-   y%HSS_Spd  = ABS(p%GBRatio)*x%QDT(DOF_GeAz)
+   y%HSS_Spd  = p%RotDir*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
    y%RotSpeed = x%QDT(DOF_GeAz) + x%QDT(DOF_DrTr)
    
    IF ( t > 0.0_DbKi  )  THEN
@@ -2753,6 +2753,10 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
       
    end if
    
+   ! MirrorRotor: the blade is mirrored about the rotor XZ plane, so the structural twist
+   ! reverses along with the aerodynamic twist negated in AeroDyn.
+   p%ThetaS  = p%RotDir * p%ThetaS
+
    p%CThetaS = COS(REAL(p%ThetaS,R8Ki))
    p%SThetaS = SIN(REAL(p%ThetaS,R8Ki))
    
@@ -3390,6 +3394,8 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmXZIner = InputFileData%PtfmXZIner
    p%GBoxEff   = InputFileData%GBoxEff
    p%GBRatio   = InputFileData%GBRatio
+   p%RotDir    = 1.0_ReKi
+   if (InitInp%MirrorRotor)  p%RotDir = -1.0_ReKi
    p%DTTorSpr  = InputFileData%DTTorSpr
    p%DTTorDmp  = InputFileData%DTTorDmp
 
@@ -3544,7 +3550,9 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    !p%PtfmPDOF  = InputFileData%PtfmPDOF
    !p%PtfmYDOF  = InputFileData%PtfmYDOF
    !p%Azimuth   = InputFileData%Azimuth
-   p%RotSpeed  = InputFileData%RotSpeed
+   ! MirrorRotor: RotSpeed is supplied in the CW convention (validated non-negative) and
+   ! mirrored here; the state itself is the physical shaft speed about +x.
+   p%RotSpeed  = p%RotDir * InputFileData%RotSpeed
    !p%TTDspFA   = InputFileData%TTDspFA
    !p%TTDspSS   = InputFileData%TTDspSS
    !p%PtfmSurge = InputFileData%PtfmSurge
@@ -3605,7 +3613,7 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
       InitQE1 = 0.0_ReKi
    END IF
    
-   x%QT ( DOF_BP(1:p%NumBl  ) ) = InputFileData%BlPitch(1:p%NumBl)
+   x%QT ( DOF_BP(1:p%NumBl  ) ) = p%RotDir * InputFileData%BlPitch(1:p%NumBl)
    x%QT ( DOF_BF(1:p%NumBl,1) ) = InitQF1   ! These come from InitBlDefl().
    x%QT ( DOF_BF(1:p%NumBl,2) ) = InitQF2   ! These come from InitBlDefl().
    x%QT ( DOF_BE(1:p%NumBl,1) ) = InitQE1   ! These come from InitBlDefl().
@@ -3633,7 +3641,7 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
    !JASON: CHANGE THESE MOD() FUNCTIONS INTO MODULO() FUNCTIONS SO THAT YOU CAN ELIMINATE ADDING 360:
 !   x%QT (DOF_GeAz) = MOD( (InputFileData%Azimuth - p%AzimB1Up)*R2D + 270.0 + 360.0, 360.0 )*D2R   ! Internal position of blade 1
    
-   x%QT (DOF_GeAz) = REAL(InputFileData%Azimuth, R8Ki) - p%AzimB1Up - REAL(Piby2_D, R8Ki)
+   x%QT (DOF_GeAz) = p%RotDir * REAL(InputFileData%Azimuth, R8Ki) - p%AzimB1Up - REAL(Piby2_D, R8Ki)
    CALL Zero2TwoPi( x%QT (DOF_GeAz) )
    x%QDT(DOF_GeAz) = p%RotSpeed                                               ! Rotor speed in rad/sec.
 
@@ -8235,7 +8243,10 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
       ! Initialize the matrix:
       
    AugMat      = 0.0
-   GBoxTrq    = ( u%GenTrq + HSSBrTrq )*ABS(p%GBRatio) ! bjj: do we use HSSBrTrqC or HSSBrTrq?
+   ! MirrorRotor: GenTrq arrives from ServoDyn in the CW convention and needs RotDir to put
+   ! it on the physical shaft. HSSBrTrq is already signed by the rotation direction
+   ! (SIGN(HSSBrTrqC, qdt) below), so mirroring the bracket would make the brake drive the rotor.
+   GBoxTrq    = ( p%RotDir*u%GenTrq + HSSBrTrq )*ABS(p%GBRatio) ! bjj: do we use HSSBrTrqC or HSSBrTrq?
    
    DO K = 1,p%NumBl ! Loop through all blades
    
