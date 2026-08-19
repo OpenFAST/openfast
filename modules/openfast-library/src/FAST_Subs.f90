@@ -2218,7 +2218,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
          if (p%CompElast == Module_SED)       CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with SimplifiedElastoDyn.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ADsk)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with AeroDisk.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ExtLd)     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ExtLoads.', ErrStat, ErrMsg, RoutineName )
-         if (p%CompServo == Module_SrvD)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ServoDyn.', ErrStat, ErrMsg, RoutineName )
       end if
    end if
 

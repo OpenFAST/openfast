@@ -3312,6 +3312,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    real(R8Ki)                             :: r(3), r_hub(3)
    real(R8Ki)                             :: Vrot(3), Vel(3)
    real(R8Ki)                             :: DampingForce(3)
+   real(ReKi)                             :: RotDir      !< +1 normal, -1 for a mirrored rotor
    
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -3387,10 +3388,21 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SrvD_to_ED)
 
+      ! MirrorRotor: ServoDyn works entirely in the clockwise convention, so signals
+      ! crossing this boundary are converted rather than ServoDyn being told anything.
+      ! GenTrq and HSSBrTrqC are not converted: ElastoDyn applies RotDir to the generator
+      ! torque itself, and the brake torque is signed there by the rotation direction.
+      ! Yaw is not converted either: it acts about the vertical axis in the inertial
+      ! frame, so it is not a rotor-convention quantity. ServoDyn is given the physical
+      ! yaw angle and rate through the ordinary variable mapping, which already makes
+      ! its yaw spring and damper mirror correctly.
+      RotDir = 1.0_ReKi
+      if (T%p_FAST%MirrorRotor(ModDst%iRotor)) RotDir = -1.0_ReKi
+
       T%ED%Input(iInput, ModDst%Ins)%GenTrq = T%SrvD%y(ModSrc%Ins)%GenTrq
       T%ED%Input(iInput, ModDst%Ins)%HSSBrTrqC = T%SrvD%y(ModSrc%Ins)%HSSBrTrqC
       T%ED%Input(iInput, ModDst%Ins)%BlPitchCom = T%SrvD%y(ModSrc%Ins)%BlPitchCom
-      T%ED%Input(iInput, ModDst%Ins)%BlPitchMom = T%SrvD%y(ModSrc%Ins)%BlPitchMom
+      T%ED%Input(iInput, ModDst%Ins)%BlPitchMom = RotDir*T%SrvD%y(ModSrc%Ins)%BlPitchMom
       T%ED%Input(iInput, ModDst%Ins)%YawMom = T%SrvD%y(ModSrc%Ins)%YawMom
 
    case (Custom_ED_Tower_Damping)
@@ -3546,9 +3558,14 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
       iBld = T%p_FAST%BDBldMap(ModSrc%Ins)
 
-      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = &
+      ! MirrorRotor: in-plane root moment is presented in the clockwise convention, as in
+      ! the ElastoDyn path below.
+      RotDir = 1.0_ReKi
+      if (T%p_FAST%MirrorRotor(ModDst%iRotor)) RotDir = -1.0_ReKi
+
+      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = RotDir*( &
          T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld))
+         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)))
 
       T%SrvD%Input(iInput,ModDst%Ins)%RootMyc(iBld) = &
          -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
@@ -3556,39 +3573,55 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_ED_to_SrvD)
 
+      ! MirrorRotor: everything ServoDyn sees is presented in the clockwise convention, so
+      ! an unmodified controller behaves exactly as it does on a clockwise rotor.
+      ! In-plane and about-axis quantities flip; out-of-plane ones do not. HSS_Spd and
+      ! BlPitch already arrive in that convention from ElastoDyn, and RotPwr is a product
+      ! of two flipped quantities, so none of those are converted here.
+      RotDir = 1.0_ReKi
+      if (T%p_FAST%MirrorRotor(ModSrc%iRotor)) RotDir = -1.0_ReKi
+
       ! Blade root moment if not using BeamDyn
       if (T%p_FAST%CompElast /= Module_BD) then
-         T%SrvD%Input(iInput,ModDst%Ins)%RootMxc = T%ED%y(ModSrc%Ins)%RootMxc ! fixed-size arrays: always size 3
+         T%SrvD%Input(iInput,ModDst%Ins)%RootMxc = RotDir*T%ED%y(ModSrc%Ins)%RootMxc ! fixed-size arrays: always size 3
          T%SrvD%Input(iInput,ModDst%Ins)%RootMyc = T%ED%y(ModSrc%Ins)%RootMyc ! fixed-size arrays: always size 3
       end if
 
+      ! Yaw is left alone: it is an inertial-frame quantity, so the yaw error stays
+      ! physically correct and an unmodified yaw controller still points the nacelle
+      ! into the real wind.
       T%SrvD%Input(iInput,ModDst%Ins)%YawAngle = T%ED%y(ModSrc%Ins)%YawAngle ! nacelle yaw plus platform yaw
       T%SrvD%Input(iInput,ModDst%Ins)%YawErr = T%SrvD%Input(iInput,ModDst%Ins)%WindDir - T%SrvD%Input(iInput,ModDst%Ins)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
       T%SrvD%Input(iInput,ModDst%Ins)%BlPitch = T%ED%y(ModSrc%Ins)%BlPitch
-      T%SrvD%Input(iInput,ModDst%Ins)%LSS_Spd = T%ED%y(ModSrc%Ins)%LSS_Spd
-      T%SrvD%Input(iInput,ModDst%Ins)%RotSpeed = T%ED%y(ModSrc%Ins)%RotSpeed
+      T%SrvD%Input(iInput,ModDst%Ins)%LSS_Spd = RotDir*T%ED%y(ModSrc%Ins)%LSS_Spd
+      T%SrvD%Input(iInput,ModDst%Ins)%RotSpeed = RotDir*T%ED%y(ModSrc%Ins)%RotSpeed
 
       T%SrvD%Input(iInput,ModDst%Ins)%YawBrTAxp = T%ED%y(ModSrc%Ins)%YawBrTAxp
-      T%SrvD%Input(iInput,ModDst%Ins)%YawBrTAyp = T%ED%y(ModSrc%Ins)%YawBrTAyp
+      T%SrvD%Input(iInput,ModDst%Ins)%YawBrTAyp = RotDir*T%ED%y(ModSrc%Ins)%YawBrTAyp
       T%SrvD%Input(iInput,ModDst%Ins)%LSSTipPxa = T%ED%y(ModSrc%Ins)%LSSTipPxa
+      if (T%p_FAST%MirrorRotor(ModSrc%iRotor)) then
+         ! Present a clockwise-increasing azimuth, re-wrapped into [0, 2pi).
+         T%SrvD%Input(iInput,ModDst%Ins)%LSSTipPxa = -T%SrvD%Input(iInput,ModDst%Ins)%LSSTipPxa
+         call Zero2TwoPi(T%SrvD%Input(iInput,ModDst%Ins)%LSSTipPxa)
+      end if
 
-      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMxa = T%ED%y(ModSrc%Ins)%LSSTipMxa
+      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMxa = RotDir*T%ED%y(ModSrc%Ins)%LSSTipMxa
       T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMya = T%ED%y(ModSrc%Ins)%LSSTipMya
-      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMza = T%ED%y(ModSrc%Ins)%LSSTipMza
+      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMza = RotDir*T%ED%y(ModSrc%Ins)%LSSTipMza
       T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMys = T%ED%y(ModSrc%Ins)%LSSTipMys
-      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMzs = T%ED%y(ModSrc%Ins)%LSSTipMzs
+      T%SrvD%Input(iInput,ModDst%Ins)%LSSTipMzs = RotDir*T%ED%y(ModSrc%Ins)%LSSTipMzs
 
       T%SrvD%Input(iInput,ModDst%Ins)%YawBrMyn = T%ED%y(ModSrc%Ins)%YawBrMyn
-      T%SrvD%Input(iInput,ModDst%Ins)%YawBrMzn = T%ED%y(ModSrc%Ins)%YawBrMzn
-      T%SrvD%Input(iInput,ModDst%Ins)%NcIMURAxs = T%ED%y(ModSrc%Ins)%NcIMURAxs
+      T%SrvD%Input(iInput,ModDst%Ins)%YawBrMzn = RotDir*T%ED%y(ModSrc%Ins)%YawBrMzn
+      T%SrvD%Input(iInput,ModDst%Ins)%NcIMURAxs = RotDir*T%ED%y(ModSrc%Ins)%NcIMURAxs
       T%SrvD%Input(iInput,ModDst%Ins)%NcIMURAys = T%ED%y(ModSrc%Ins)%NcIMURAys
-      T%SrvD%Input(iInput,ModDst%Ins)%NcIMURAzs = T%ED%y(ModSrc%Ins)%NcIMURAzs
+      T%SrvD%Input(iInput,ModDst%Ins)%NcIMURAzs = RotDir*T%ED%y(ModSrc%Ins)%NcIMURAzs
 
       T%SrvD%Input(iInput,ModDst%Ins)%RotPwr = T%ED%y(ModSrc%Ins)%RotPwr
 
       T%SrvD%Input(iInput,ModDst%Ins)%LSShftFxa = T%ED%y(ModSrc%Ins)%LSShftFxa
-      T%SrvD%Input(iInput,ModDst%Ins)%LSShftFys = T%ED%y(ModSrc%Ins)%LSShftFys
+      T%SrvD%Input(iInput,ModDst%Ins)%LSShftFys = RotDir*T%ED%y(ModSrc%Ins)%LSShftFys
       T%SrvD%Input(iInput,ModDst%Ins)%LSShftFzs = T%ED%y(ModSrc%Ins)%LSShftFzs
 
    case (Custom_SED_to_SrvD)
