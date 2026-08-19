@@ -2754,7 +2754,7 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
    end if
    
    ! MirrorRotor: the blade is mirrored about the rotor XZ plane, so the structural twist
-   ! reverses along with the aerodynamic twist negated in AeroDyn.
+   ! reverses. This only orients the mode shapes; a rigid blade is unaffected.
    p%ThetaS  = p%RotDir * p%ThetaS
 
    p%CThetaS = COS(REAL(p%ThetaS,R8Ki))
@@ -6265,8 +6265,10 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
          CosPitch = COS( x%QT(DOF_BP(K)) )
          SinPitch = SIN( x%QT(DOF_BP(K)) )
       ELSE
-         CosPitch = COS( REAL(BlPitch(K),R8Ki) )
-         SinPitch = SIN( REAL(BlPitch(K),R8Ki) )
+         ! MirrorRotor: the pitch command is in the CW convention (the pitch DOF state
+         ! above is already physical), so mirror it here.
+         CosPitch = COS( REAL(p%RotDir*BlPitch(K),R8Ki) )
+         SinPitch = SIN( REAL(p%RotDir*BlPitch(K),R8Ki) )
       END IF
 
       CoordSys%j1(K,:) = CosPitch*CoordSys%i1(K,:) - SinPitch*CoordSys%i2(K,:)      ! j1(K,:) = vector / direction j1 for blade K (=  xbK from the IEC coord. system).
