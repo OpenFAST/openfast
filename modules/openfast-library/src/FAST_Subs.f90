@@ -311,6 +311,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_SED%Linearize = p_FAST%Linearize
       Init%InData_SED%InputFile = p_FAST%EDFile(1)
       Init%InData_SED%RootName  = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SED))
+      Init%InData_SED%MirrorRotor = p_FAST%MirrorRotor(1)
    
       ! Call module initialization routine
       dt_module = p_FAST%DT
@@ -761,6 +762,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       Init%InData_ADsk%InputFile       = p_FAST%AeroFile
       Init%InData_ADsk%RootName        = p_FAST%OutFileRoot
+      Init%InData_ADsk%MirrorRotor     = p_FAST%MirrorRotor(1)
       
       ! NOTE: cone angle is not included in the RotorRad calculation!!!
       if (p_FAST%CompElast == Module_SED) then
@@ -2215,8 +2217,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       if (any(p%MirrorRotor)) then
          if (p%Linearize)                     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with linearization.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAeroMaps)                  CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with the steady-state (aero map) solver.', ErrStat, ErrMsg, RoutineName )
-         if (p%CompElast == Module_SED)       CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with SimplifiedElastoDyn.', ErrStat, ErrMsg, RoutineName )
-         if (p%CompAero  == Module_ADsk)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with AeroDisk.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ExtLd)     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ExtLoads.', ErrStat, ErrMsg, RoutineName )
       end if
    end if

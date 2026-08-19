@@ -745,6 +745,8 @@ subroutine ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat
    p%RotorRad  = InputFileData%RotorRad
    p%AirDens   = InputFileData%AirDens
    p%UseTSR    = .false.      ! Reset below if N_TSR>1
+   p%RotDir    = 1.0_ReKi
+   if (InitInp%MirrorRotor)   p%RotDir = -1.0_ReKi
 
       ! Derived parameter
    p%halfRhoA  = 0.5_ReKi * p%AirDens * Pi * p%RotorRad*p%RotorRad

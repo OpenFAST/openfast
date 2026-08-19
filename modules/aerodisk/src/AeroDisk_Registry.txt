@@ -56,6 +56,7 @@ typedef  ^        InitInputType     ReKi                 HubPosition      {3} - 
 typedef  ^        InitInputType     R8Ki                 HubOrientation   {3}{3} - - "Hub orientation" -
 typedef  ^        InitInputType     ReKi                 defAirDens        -  - -   "Default atmospheric density from the driver; may be overwritten" "kg/m^3"
 typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
+typedef  ^        InitInputType     LOGICAL              MirrorRotor       - .false. - "Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)" -
 typedef  ^        InitInputType     LOGICAL              UseInputFile      - .TRUE.  - "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef  ^        InitInputType     FileInfoType         PassedFileData    -  - -   "If we don't use the input file, pass everything through this"   -
 typedef  ^        InitInputType     FlowFieldType        *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
@@ -115,6 +116,7 @@ typedef  ^        ParameterType        IntKi             NumOuts           -  - 
 typedef  ^        ParameterType        ReKi              halfRhoA          -  - -   "half air density times rotor swept area" "kg/m"
 typedef  ^        ParameterType        ADsk_AeroTable    AeroTable         -  - -   "Data table" -
 typedef  ^        ParameterType        LOGICAL           UseTSR            -  .false. -   "Use TSR values from table instead of VRel + RtSpd" -
+typedef  ^        ParameterType        ReKi              RotDir            -  1.0 -   "Rotation direction: +1 normal, -1 for a mirrored rotor" -
 typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
 typedef  ^        ParameterType        FlowFieldType     *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
 typedef  ^        ParameterType        ReKi              DiskWindPosRel  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (relative to hub)" m
