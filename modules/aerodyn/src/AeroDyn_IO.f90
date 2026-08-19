@@ -330,7 +330,7 @@ CONTAINS
          if (k<=size(BAeroFxi)) then
             ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( BAeroPwr(k) ) = omega * tmp(1)
+            m%AllOuts( BAeroPwr(k) ) = p%RotDir * omega * tmp(1)
             
             ! In global, wrt hub! 
             m%AllOuts( BAeroFxi(k) ) = m%HubLoad%force(1,1)
@@ -359,7 +359,7 @@ CONTAINS
       m%AllOuts( RtAeroMyh ) = tmp(2)
       m%AllOuts( RtAeroMzh ) = tmp(3)
       
-      m%AllOuts( RtAeroPwr ) = omega * m%AllOuts( RtAeroMxh )
+      m%AllOuts( RtAeroPwr ) = p%RotDir * omega * m%AllOuts( RtAeroMxh )
       
      
    
@@ -420,6 +420,7 @@ CONTAINS
       REAL(ReKi)                                   :: denom !, rmax
       REAL(ReKi)                                   :: ct, st ! cosine, sine of theta
       REAL(ReKi)                                   :: cp, sp ! cosine, sine of phi
+      REAL(ReKi)                                   :: Xcw, Ycw ! blade node forces in the CW-equivalent (BEMT) frame
  
 
       ! Induced velocity in Global
@@ -450,7 +451,7 @@ CONTAINS
             m%AllOuts( BNM(    beta,k) ) = m%BEMT_y%Vrel(j,k) / p%SpdSound
 
             m%AllOuts( BNVIndx(beta,k) ) = - m%BEMT_u(indx)%Vx(j,k) * m%BEMT_y%axInduction( j,k)
-            m%AllOuts( BNVIndy(beta,k) ) =   m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
+            m%AllOuts( BNVIndy(beta,k) ) =   p%RotDir * m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
 
             m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
             m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
@@ -469,22 +470,26 @@ CONTAINS
             sp=sin(m%BEMT_y%phi(j,k))
             m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp
             m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp
-            m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)
+            m%AllOuts( BNCm(   beta,k) ) = p%RotDir * m%BEMT_y%Cm(j,k)
             m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)
-            m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k)
+            m%AllOuts( BNCy(   beta,k) ) = p%RotDir * m%BEMT_y%Cy(j,k)
 
             ct=cos(m%BEMT_u(indx)%theta(j,k))
             st=sin(m%BEMT_u(indx)%theta(j,k))
-            m%AllOuts( BNCn(   beta,k) ) = m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
+            m%AllOuts( BNCn(   beta,k) ) =            m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
+            m%AllOuts( BNCt(   beta,k) ) = p%RotDir*(-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct)
 
-            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+            ! MirrorRotor: m%X/m%Y are in the mirrored frame while phi and theta are the
+            ! CW-equivalent BEMT values, so convert the forces back before combining them.
+            Xcw =            m%X(j,k)
+            Ycw = p%RotDir * m%Y(j,k)
+            m%AllOuts( BNFl(   beta,k) ) =  Xcw*cp - Ycw*sp
+            m%AllOuts( BNFd(   beta,k) ) =  Xcw*sp + Ycw*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
-            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
-            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( BNFn(   beta,k) ) =            Xcw*ct - Ycw*st
+            m%AllOuts( BNFt(   beta,k) ) = p%RotDir*(-Xcw*st - Ycw*ct)
 
             m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) * m%BEMT_y%Cl(j,k) ! "Gam" [m^2/s]
             

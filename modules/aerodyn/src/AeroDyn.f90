@@ -401,6 +401,17 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          k = k + 1
       end do
    end do
+
+      ! MirrorRotor: mirror the blade geometry about the rotor XZ plane. Twist is a rotation
+      ! about the span axis and sweep is the in-plane offset, so both flip; curvature (out of
+      ! plane) does not. This must follow setCantAngle, which derives BlCrvAng from BlTwist.
+   do iR = 1, nRotors
+      if (.not. InitInp%rotors(iR)%MirrorRotor) cycle
+      do I=1,NumBlades(iR)
+         InputFileData%rotors(iR)%BladeProps(I)%BlTwist = -InputFileData%rotors(iR)%BladeProps(I)%BlTwist
+         InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC = -InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC
+      end do
+   end do
    
       !............................................................................................
       ! Define parameters
@@ -420,6 +431,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%Wake_Mod      = InputFileData%Wake_Mod
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
+      p%rotors(iR)%RotDir      = 1.0_ReKi
+      if (InitInp%rotors(iR)%MirrorRotor) p%rotors(iR)%RotDir = -1.0_ReKi
       call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
@@ -3453,7 +3466,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    m%tilt = tilt
      
    ! "Angular velocity of rotor" rad/s
-   m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
+   ! MirrorRotor: BEMT is always presented a CW-equivalent problem; see mirror_rotor docs.
+   m%BEMT_u(indx)%omega   = p%RotDir * dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
    
    ! "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad 
    denom = TwoNorm( m%V_diskAvg )
@@ -3486,7 +3500,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
-      m%BEMT_u(indx)%psi_s = Azimuth
+      m%BEMT_u(indx)%psi_s = p%RotDir * Azimuth
    elseif (p%AeroProjMod==APM_BEM_Polar) then
 
       do k=1,p%NumBlades
@@ -3496,7 +3510,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          ! Extract azimuth angle for blade k
          ! NOTE: EB, this might need improvements (express wrt hub, also deal with case hubRad=0). This is likely not psi_skew. 
          theta = -EulerExtract( transpose(orientationBladeAzimuth(:,:,1)) )
-         m%BEMT_u(indx)%psi_s(k) = theta(1)
+         m%BEMT_u(indx)%psi_s(k) = p%RotDir * theta(1)
       end do !k=blades
          
       ! Find the most-downwind azimuth angle needed by the skewed wake correction model
@@ -3597,7 +3611,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       ! Local and instantaneous blade twist+pitch (aerodynamic + elastic), cant and toe (include elastic deformation)
       do k=1,p%NumBlades
          do j=1,p%NumBlNds         
-            m%BEMT_u(indx)%theta(j,k) = thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+            m%BEMT_u(indx)%theta(j,k) = p%RotDir * thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
 
             ! NOTE: curve computed by Calculate_MeshOrientation_*
             m%BEMT_u(indx)%toeAngle(j,k)  = 0.0_ReKi
@@ -3607,8 +3621,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    elseif (p%AeroProjMod==APM_BEM_Polar) then
          do k=1,p%NumBlades
             do j=1,p%NumBlNds
-               m%BEMT_u(indx)%theta(j,k)     = thetaBladeNds(j,k)
-               m%BEMT_u(indx)%toeAngle(j,k)  = m%Toe(j,k)
+               m%BEMT_u(indx)%theta(j,k)     = p%RotDir * thetaBladeNds(j,k)
+               m%BEMT_u(indx)%toeAngle(j,k)  = p%RotDir * m%Toe(j,k)
                m%BEMT_u(indx)%cantAngle(j,k) = m%Cant(j,k)
             end do !j=nodes
          end do !k=blades
@@ -3629,7 +3643,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          endif
          ! Velocity in "p" or "w" system (depending) on AeroProjMod
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, m%orientationAnnulus(1,:,j,k) ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-         m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
+         m%BEMT_u(indx)%Vy(j,k) = p%RotDir * dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vz(j,k) = dot_product( tmp, m%orientationAnnulus(3,:,j,k) ) ! radial component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          ! NOTE: We'll likely remove that:
@@ -3646,7 +3660,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       do j=1,p%NumBlNds
          ! inputs for CUA (and CDBEMT):
          ! TODO Here we should take the rotation in the airfoil coordinate system instead of the "l" or "w" system
-         m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+         m%BEMT_u(indx)%omega_z(j,k)       = p%RotDir * dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
       end do !j=nodes
    end do !k=blades
@@ -4119,26 +4133,28 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
          Cya = -Cl*sin(aoa) + Cd*cos(aoa)
 
          ! Dimensionalize the aero forces and moment
+         ! MirrorRotor: BEMT returns CW-frame coefficients; RotDir maps the y-component of
+         ! forces and the x/z-components of moments back into the mirrored rotor frame.
          q = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2              ! dynamic pressure of the jth node in the kth blade
          c = p%BEMT%chord(j,k)
          forceAirfoil(1)  = Cxa * q * c
-         forceAirfoil(2)  = Cya * q * c
+         forceAirfoil(2)  = p%RotDir * Cya * q * c
          forceAirfoil(3)  = 0.0_reki
          momentAirfoil(1) = 0.0_reki
          momentAirfoil(2) = 0.0_reki
-         momentAirfoil(3) = Cm * q * c**2
+         momentAirfoil(3) = p%RotDir * Cm * q * c**2
          m%M(j,k) = momentAirfoil(3)     ! TODO EB     
          
          ! NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE!
          !EAM (fix this!)  These output variables are possibly not what they should be 
          ! relative to the original AeroDyn manual and intent !!!!
          force(1) =  m%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-         force(2) = -m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+         force(2) = -p%RotDir * m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          force(3) =  m%BEMT_y%cz(j,k) * q * p%BEMT%chord(j,k)     ! Z = axial force per unit length of the jth node in the kth blade
 
-         moment(1)=  m%BEMT_y%Cmx(j,k) * q * p%BEMT%chord(j,k)**2  ! Mx = pitching moment (x-component) per unit length of the jth node in the kth blade
+         moment(1)=  p%RotDir * m%BEMT_y%Cmx(j,k) * q * p%BEMT%chord(j,k)**2  ! Mx = pitching moment (x-component) per unit length of the jth node in the kth blade
          moment(2)=  m%BEMT_y%Cmy(j,k) * q * p%BEMT%chord(j,k)**2  ! My = pitching moment (y-component) per unit length of the jth node in the kth blade
-         moment(3)=  m%BEMT_y%Cmz(j,k) * q * p%BEMT%chord(j,k)**2  ! Mz = pitching moment (z-component) per unit length of the jth node in the kth blade
+         moment(3)=  p%RotDir * m%BEMT_y%Cmz(j,k) * q * p%BEMT%chord(j,k)**2  ! Mz = pitching moment (z-component) per unit length of the jth node in the kth blade
          
             ! save these values for possible output later:
          m%X(j,k) = force(1)
