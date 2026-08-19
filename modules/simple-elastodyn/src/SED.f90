@@ -1432,7 +1432,7 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    ! convention, so a mirrored rotor turning its design direction still reads positive.
    y%LSSTipPxa =  p%RotDir * x%QT( DOF_Az)
    call Zero2TwoPi(y%LSSTipPxa)  ! Modulo
-   y%RotSpeed  = p%RotDir * x%QDT(DOF_Az)
+   y%RotSpeed  = x%QDT(DOF_Az)
    y%HSS_Spd   = p%RotDir * x%QDT(DOF_Az)    * p%GBoxRatio
    ! Rotor torque is the torque applied to the LSS shaft by the rotor.
    !  NOTE: this is equivalent to the reactionary torque of the generator due to its torque and inertia.

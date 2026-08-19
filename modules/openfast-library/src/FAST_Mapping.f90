@@ -3626,6 +3626,10 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SED_to_SrvD)
 
+      ! MirrorRotor: as for ElastoDyn, ServoDyn is handed the clockwise convention.
+      RotDir = 1.0_ReKi
+      if (T%p_FAST%MirrorRotor(ModDst%iRotor)) RotDir = -1.0_ReKi
+
       ! ServoDyn inputs from combination of InflowWind and ElastoDyn
       T%SrvD%Input(iInput,ModDst%Ins)%YawAngle  = T%SED%y%Yaw     !nacelle yaw (platform rigid)
       T%SrvD%Input(iInput,ModDst%Ins)%YawErr    = T%SrvD%Input(iInput,ModDst%Ins)%WindDir - T%SrvD%Input(iInput,ModDst%Ins)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
@@ -3633,9 +3637,9 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       ! ServoDyn inputs from Simplified-ElastoDyn
       T%SrvD%Input(iInput,ModDst%Ins)%Yaw       = T%SED%y%Yaw  !nacelle yaw
       T%SrvD%Input(iInput,ModDst%Ins)%YawRate   = T%SED%y%YawRate
-      T%SrvD%Input(iInput,ModDst%Ins)%LSS_Spd   = T%SED%y%RotSpeed
+      T%SrvD%Input(iInput,ModDst%Ins)%LSS_Spd   = RotDir*T%SED%y%RotSpeed
       T%SrvD%Input(iInput,ModDst%Ins)%HSS_Spd   = T%SED%y%HSS_Spd
-      T%SrvD%Input(iInput,ModDst%Ins)%RotSpeed  = T%SED%y%RotSpeed
+      T%SrvD%Input(iInput,ModDst%Ins)%RotSpeed  = RotDir*T%SED%y%RotSpeed
       T%SrvD%Input(iInput,ModDst%Ins)%BlPitch   = T%SED%y%BlPitch
 
       ! root moments
