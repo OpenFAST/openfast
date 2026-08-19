@@ -971,10 +971,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    
    m%AllOuts(   LSSTipVxa) =      (     x%QDT (DOF_GeAz) +          x%QDT (DOF_DrTr) )*RPS2RPM
    m%AllOuts(   LSSTipAxa) = ( m%QD2T(DOF_GeAz) + m%QD2T(DOF_DrTr) )*R2D
+
+      ! Rotor-convention counterparts: azimuth increases and speed is positive while the
+      ! rotor turns its design direction, whichever way it was built.
+   m%AllOuts(   AzimuthRC) = p%RotDir*y%LSSTipPxa
+   if (.not. m%IgnoreMod) CALL Zero2TwoPi(m%AllOuts(AzimuthRC))
+   m%AllOuts(   AzimuthRC) = m%AllOuts(AzimuthRC)*R2D
+   m%AllOuts(  RotSpeedRC) = p%RotDir*m%AllOuts(LSSTipVxa)
+   m%AllOuts(  RotAccelRC) = p%RotDir*m%AllOuts(LSSTipAxa)
    m%AllOuts(   LSSGagVxa) =            x%QDT (DOF_GeAz)                              *RPS2RPM
    m%AllOuts(   LSSGagAxa) =   m%QD2T(DOF_GeAz)                              *R2D
-   m%AllOuts(     HSShftV) = ABS(p%GBRatio)*m%AllOuts(LSSGagVxa)
-   m%AllOuts(     HSShftA) = ABS(p%GBRatio)*m%AllOuts(LSSGagAxa)
+      ! MirrorRotor: the generator side keeps its own convention, so these stay positive
+      ! while the rotor turns its design direction (CONVENTIONS section 4).
+   m%AllOuts(     HSShftV) = p%RotDir*ABS(p%GBRatio)*m%AllOuts(LSSGagVxa)
+   m%AllOuts(     HSShftA) = p%RotDir*ABS(p%GBRatio)*m%AllOuts(LSSGagAxa)
 
    !IF ( .NOT. EqualRealNos( m%AllOuts(WindVxi), 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equation is not zero.
    !   m%AllOuts(TipSpdRat) =      ( x%QDT (DOF_GeAz) + x%QDT (DOF_DrTr) )*p%AvgNrmTpRd / m%AllOuts(  WindVxi)
@@ -1221,6 +1231,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    m%AllOuts(LSShftFys) = -DOT_PRODUCT(  FrcPRot, m%CoordSys%c3 )
    m%AllOuts(LSShftFzs) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%c2 )
    m%AllOuts(LSShftMxa) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e1 )
+   m%AllOuts(RotTorqRC) =  p%RotDir*m%AllOuts(LSShftMxa)
    m%AllOuts(LSSTipMya) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e2 )
    m%AllOuts(LSSTipMza) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e3 )
    m%AllOuts(LSSTipMys) = -DOT_PRODUCT( MomLPRot, m%CoordSys%c3 )
@@ -4032,14 +4043,14 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                "YAWFRIMOM ","YAWFRIMZ  ","YAWPOS    ","YAWPZN    ","YAWPZP    ","YAWRATE   ","YAWVZN    ", &
                                "YAWVZP    "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(1121) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                 LSSTipPxa ,   BldPAcc1 ,   BldPAcc2 ,   BldPAcc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
+                                 AzimuthRC ,   BldPAcc1 ,   BldPAcc2 ,   BldPAcc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
                                  BldPRate1 ,  BldPRate2 ,  BldPRate3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,   dOmegaYF , &
                                    HSShftA ,    HSShftV ,    HSSBrTq ,    HSShftA ,  HSShftPwr ,   HSShftTq ,    HSShftV , &
                                    TipDyc1 ,    TipDyc2 ,    TipDyc3 ,  LSSGagAxa ,  LSSGagAxa ,  LSSGagAxa ,  LSShftFxa , &
                                  LSShftFxa ,  LSShftFya ,  LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa , &
                                  LSSGagMya ,  LSSGagMys ,  LSSGagMza ,  LSSGagMzs ,  LSSGagPxa ,  LSSGagPxa ,  LSSGagPxa , &
                                  LSSGagVxa ,  LSSGagVxa ,  LSSGagVxa ,  LSShftFxa ,  LSShftFxa ,  LSShftFya ,  LSShftFys , &
-                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  LSShftMxa ,  LSSTipAxa , &
+                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  RotTorqRC ,  LSSTipAxa , &
                                  LSSTipAxa ,  LSSTipAxa ,  LSSTipMya ,  LSSTipMys ,  LSSTipMza ,  LSSTipMzs ,  LSSTipPxa , &
                                  LSSTipPxa ,  LSSTipPxa ,  LSSTipVxa ,  LSSTipVxa ,  LSSTipVxa ,     YawPzn ,     YawAzn , &
                                     YawPzn ,     YawVzn ,  NcIMURAxs ,  NcIMURAys ,  NcIMURAzs ,  NcIMURVxs ,  NcIMURVys , &
@@ -4070,9 +4081,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 ,   RootMyc1 , &
                                   RootMyc2 ,   RootMyc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMxc1 ,   RootMxc2 , &
                                   RootMxc3 ,   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMyc1 ,   RootMyc2 ,   RootMyc3 , &
-                                  RootMzc1 ,   RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 ,  LSSTipAxa , &
-                                  RotFurlP ,   RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr ,  LSSTipVxa ,    TeetAya , &
-                                   TeetPya ,    TeetVya ,  LSShftFxa ,  LSShftMxa , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , &
+                                  RootMzc1 ,   RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 , RotAccelRC , &
+                                  RotFurlP ,   RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr , RotSpeedRC ,    TeetAya , &
+                                   TeetPya ,    TeetVya ,  LSShftFxa ,  RotTorqRC , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , &
                                 Spn1ALgyb1 , Spn1ALgyb2 , Spn1ALgyb3 , Spn1ALgzb1 , Spn1ALgzb2 , Spn1ALgzb3 ,  Spn1ALxb1 , &
                                  Spn1ALxb2 ,  Spn1ALxb3 ,  Spn1ALyb1 ,  Spn1ALyb2 ,  Spn1ALyb3 ,  Spn1ALzb1 ,  Spn1ALzb2 , &
                                  Spn1ALzb3 ,  Spn1FLxb1 ,  Spn1FLxb2 ,  Spn1FLxb3 ,  Spn1FLyb1 ,  Spn1FLyb2 ,  Spn1FLyb3 , &
