@@ -351,6 +351,8 @@ of_regression("SWRT_YFree_VS_WTurb"                    "openfast;elastodyn;aerod
 of_regression("5MW_Land_DLL_WTurb"                     "openfast;elastodyn;aerodyn;servodyn")
 of_regression("5MW_Land_noDLL_Steady_CW"               "openfast;elastodyn;aerodyn;mirrorrotor")
 of_regression("5MW_Land_noDLL_Steady_MirrorRotor"      "openfast;elastodyn;aerodyn;mirrorrotor")
+of_regression("5MW_Land_BD_noDLL_Steady_CW"            "openfast;elastodyn;beamdyn;aerodyn;mirrorrotor")
+of_regression("5MW_Land_BD_noDLL_Steady_MirrorRotor"   "openfast;elastodyn;beamdyn;aerodyn;mirrorrotor")
 of_regression("5MW_Land_DLL_WTurb_wNacDrag"            "openfast;elastodyn;aerodyn;servodyn")
 of_regression("5MW_Land_DLL_WTurb_wBlPDyn"             "openfast;elastodyn;aerodyn;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore")
