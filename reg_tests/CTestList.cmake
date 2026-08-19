@@ -332,6 +332,7 @@ endfunction(py_wavetank_regression)
 # OpenFAST regression tests
 of_regression("AWT_YFix_WSt"                           "openfast;elastodyn;aerodyn;servodyn")
 of_regression("AWT_WSt_StartUp_HighSpShutDown"         "openfast;elastodyn;aerodyn;servodyn")
+of_regression("AWT_WSt_StartUp_HighSpShutDown_MirrorRotor" "openfast;elastodyn;aerodyn;servodyn;mirrorrotor")
 of_regression("AWT_YFree_WSt"                          "openfast;elastodyn;aerodyn;servodyn")
 of_regression("AWT_YFree_WTurb"                        "openfast;elastodyn;aerodyn;servodyn")
 of_regression("AWT_WSt_StartUpShutDown"                "openfast;elastodyn;aerodyn;servodyn")
