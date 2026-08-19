@@ -432,7 +432,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
             if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   do iNdL=1,nNd; iNd=Nd(iNdL);
-                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vy(iNd,iB) * m%BEMT_y%tanInduction(iNd,iB)
+                     y%WriteOutput(iOut)  = p%RotDir * m%BEMT_u(Indx)%Vy(iNd,iB) * m%BEMT_y%tanInduction(iNd,iB)
                      iOut = iOut + 1
                   END DO
                END DO
@@ -731,7 +731,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
             if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m%BEMT_y%Cm(iNd,iB)
+                     y%WriteOutput(iOut)  = p%RotDir * m%BEMT_y%Cm(iNd,iB)
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -769,7 +769,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
             if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m%BEMT_y%Cy(iNd,iB)
+                     y%WriteOutput(iOut)  = p%RotDir * m%BEMT_y%Cy(iNd,iB)
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -812,7 +812,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
                      st=sin(m%BEMT_u(Indx)%theta(iNd,iB))               
-                     y%WriteOutput(iOut)  = -m%BEMT_y%Cx(iNd,iB)*st + m%BEMT_y%Cy(iNd,iB)*ct
+                     y%WriteOutput(iOut)  = p%RotDir * (-m%BEMT_y%Cx(iNd,iB)*st + m%BEMT_y%Cy(iNd,iB)*ct)
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -830,13 +830,15 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
 
 
                ! Lift force, drag force, pitching moment
+         ! MirrorRotor: m%X and m%Y are in the mirrored frame while phi and theta are the
+         ! CW-equivalent BEMT values, so the y-component is converted back before combining.
          CASE ( BldNd_Fl )
             if (p_AD%Wake_Mod /= WakeMod_FVW) then
                DO iB=1,nB
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
                      cp=cos(m%BEMT_y%phi(iNd,iB))
                      sp=sin(m%BEMT_y%phi(iNd,iB))
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - m%Y(iNd,iB)*sp
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - p%RotDir*m%Y(iNd,iB)*sp
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -858,7 +860,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
                      cp=cos(m%BEMT_y%phi(iNd,iB))
                      sp=sin(m%BEMT_y%phi(iNd,iB))
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + m%Y(iNd,iB)*cp
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + p%RotDir*m%Y(iNd,iB)*cp
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -889,7 +891,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
                      st=sin(m%BEMT_u(Indx)%theta(iNd,iB))
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - m%Y(iNd,iB)*st
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - p%RotDir*m%Y(iNd,iB)*st
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -912,7 +914,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
                      ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
                      st=sin(m%BEMT_u(Indx)%theta(iNd,iB))
-                     y%WriteOutput(iOut)  = -m%X(iNd,iB)*st - m%Y(iNd,iB)*ct
+                     y%WriteOutput(iOut)  = p%RotDir * (-m%X(iNd,iB)*st - p%RotDir*m%Y(iNd,iB)*ct)
                      iOut = iOut + 1
                   END DO
                END DO 
