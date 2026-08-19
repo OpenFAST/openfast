@@ -4,9 +4,14 @@ Mirrored (counter-clockwise) rotors
 ===================================
 
 By convention an OpenFAST turbine rotor turns **clockwise when viewed from
-upwind**.  Setting ``MirrorRotor = T`` in the main OpenFAST input file runs the
-same turbine as its **mirror image**, so the rotor turns **counter-clockwise
-viewed from upwind**, without changing any of the input files that describe it.
+upwind**.  Setting ``MirrorRotor = T`` in the main OpenFAST input file makes the
+rotor turn **counter-clockwise viewed from upwind** instead, without changing any
+of the input files that describe it.
+
+The purpose is to model a counter-clockwise rotor, not to mirror a whole turbine.
+The reflection is applied internally to the rotor and to the drivetrain
+quantities attached to it.  The tower, nacelle, support structure, mooring and
+the environment are left alone, and are described exactly as they really are.
 
 .. contents::
    :local:
@@ -231,6 +236,13 @@ sweep past a given point, so under non-axisymmetric inflow — shear, yaw, or
 shaft tilt — blade 2 of the mirrored rotor corresponds to blade 3 of the
 clockwise one.
 
+It records how the two runs of a **symmetric** comparison relate to each other,
+which is how the implementation is verified.  It is not a claim that these
+channels change sign whenever the flag is set: in an ordinary simulation the
+tower, support structure and inflow are not mirrored, so a quantity such as
+``TwrBsMxt`` is simply the response of an unchanged structure to a
+counter-clockwise rotor.
+
 .. list-table::
    :header-rows: 1
    :widths: 20 80
@@ -278,13 +290,20 @@ the real wind rather than into its mirror image.
 
 .. _glue-code-mirror-rotor-asymmetric:
 
-Inputs that are not mirrored
-----------------------------
+Nothing outside the rotor is mirrored
+-------------------------------------
 
-The flag mirrors the **turbine**.  It does not mirror the environment, the
-control setpoints, or any other input that happens to be one-sided.  Anything in
-the list below is left exactly as written, and must be mirrored by hand if the
-intent is to reproduce the mirror image of a clockwise simulation:
+The flag reverses the **rotor**.  It does not touch the environment, the control
+setpoints, the support structure, or anything else that happens to be one-sided.
+For ordinary use that is exactly what is wanted: a counter-clockwise rotor, on
+the turbine and in the conditions you actually have.  A real mooring spread, a
+real wind field and a real yaw setpoint should all be left as they are.
+
+The list below matters only when **verifying** the implementation.  That check
+compares a clockwise run against a mirrored one and expects the two to be
+reflections of each other, which requires the whole problem — not just the rotor
+— to be symmetric about the rotor ``xz`` plane.  For that comparison, and only
+for it, these have to be mirrored by hand:
 
 - initial or fixed nacelle yaw (``NacYaw``) and the neutral yaw position
   (``YawNeut``);
@@ -303,8 +322,8 @@ intent is to reproduce the mirror image of a clockwise simulation:
   verified against a mirror pair, however, because doing so requires mirroring
   the furl input file as well.
 
-This matters most when verifying the mirror: leaving one of these unmirrored
-looks exactly like a sign error in the code.
+Leaving one of these unmirrored during a verification run looks exactly like a
+sign error in the code, which is the only reason the list is written down.
 
 .. _glue-code-mirror-rotor-limits:
 
