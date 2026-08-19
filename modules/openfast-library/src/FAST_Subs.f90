@@ -444,6 +444,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             Init%InData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))&
                &//'.R'//TRIM(Num2LStr(iRot))//'.B'//TRIM(Num2LStr(k))
             Init%InData_BD%InputFile    = p_FAST%BDBldFile(k, iRot)
+            Init%InData_BD%MirrorRotor  = p_FAST%MirrorRotor(iRot)
             Init%InData_BD%GlbPos       = ED%y(iRot)%BladeRootMotion(k)%Position(:,1)          ! {:}    - - "Initial Position Vector of the local blade coordinate system"
             Init%InData_BD%GlbRot       = ED%y(iRot)%BladeRootMotion(k)%RefOrientation(:,:,1)  ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
 
@@ -2215,7 +2216,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
          if (p%Linearize)                     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with linearization.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAeroMaps)                  CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with the steady-state (aero map) solver.', ErrStat, ErrMsg, RoutineName )
          if (p%CompElast == Module_SED)       CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with SimplifiedElastoDyn.', ErrStat, ErrMsg, RoutineName )
-         if (p%CompElast == Module_BD)        CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with BeamDyn.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ADsk)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with AeroDisk.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ExtLd)     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ExtLoads.', ErrStat, ErrMsg, RoutineName )
          if (p%CompServo == Module_SrvD)      CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ServoDyn.', ErrStat, ErrMsg, RoutineName )

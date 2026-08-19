@@ -38,6 +38,7 @@ add_executable(beamdyn_utest
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_Misc.F90
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_diffmtc.F90
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_MemberEta.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_MirrorBladeData.F90
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_QuadraturePointData.F90
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_ShapeFuncs.F90
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_TrapezoidalPointWeight.F90
