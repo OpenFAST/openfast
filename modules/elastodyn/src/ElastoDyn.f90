@@ -1283,7 +1283,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! high-speed shaft torque and power are reported in the rotor's own convention.
    m%AllOuts( HSShftTq)  = p%RotDir*m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
    m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*p%RotDir*x%QDT(DOF_GeAz)
-   m%AllOuts(HSSBrTq)    = OtherState%HSSBrTrq*0.001_ReKi
+   m%AllOuts(HSSBrTq)    = p%RotDir*OtherState%HSSBrTrq*0.001_ReKi
 
 
    !IF ( .NOT. EqualRealNos( ComDenom, 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equations is not zero (ComDenom is the same as it is calculated above).
@@ -1884,8 +1884,9 @@ END IF
    y%YawAngle = x%QT( DOF_Yaw) + x%QT(DOF_Y)  !crude approximation for yaw error... (without subtracting it from the wind direction)
    DO K=1,p%NumBl
       IF ( p%DOF_Flag(DOF_BP(K)) ) THEN
-         y%BlPRate(K) = x%QDT( DOF_BP(K) )
-         y%BlPitch(K) = x%QT(  DOF_BP(K) )
+         ! MirrorRotor: reported in the pitch command's convention, as in the branch below.
+         y%BlPRate(K) = p%RotDir * x%QDT( DOF_BP(K) )
+         y%BlPitch(K) = p%RotDir * x%QT(  DOF_BP(K) )
       ELSE
          y%BlPRate(K) = 0.0_ReKi
          y%BlPitch(K) = u%BlPitchCom(K)
