@@ -187,7 +187,7 @@ Two turbine input formats are supported:
 .. code::
 
     ----- Turbine(1) Geometry -------------------------------------------------------
-            True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+            True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
            False    MirrorRotor(1)  - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
            0,0,0    BaseOriginInit(1) - Coordinates of turbine base in global coordinates (m)
                3    NumBlades(1)    - Number of blades (-)
@@ -225,7 +225,7 @@ Two turbine input formats are supported:
 .. code::
 
     ----- Turbine(1) Geometry -------------------------------------------------------
-         False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+         False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
     False           MirrorRotor(1)         - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
     0,0,0           BaseOriginInit(1)      - x,y,z coordinates of turbine base origin (m)
     0,0,0           BaseOrientationInit(1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the base frame from the global frame (e.g. roll, tilt, yaw) (deg)
@@ -503,7 +503,7 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     ----- Turbine Data ----------------------------------------------------------------------
     1               NumTurbines - Number of turbines
     ----- Turbine(1) Geometry ---------------------------------------------------------------
-            True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+            True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
            False    MirrorRotor(1)  - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
            0,0,0    BaseOriginInit(1) - Coordinate of tower base in base coordinates (m)
                3    NumBlades(1)    - Number of blades (-)
