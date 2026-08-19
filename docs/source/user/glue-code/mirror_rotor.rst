@@ -147,6 +147,46 @@ clockwise one.
    * - Mirrored angle
      - ``LSSTipPxa``, ``LSSGagPxa``
 
+.. _glue-code-mirror-rotor-control:
+
+Controllers
+-----------
+
+ServoDyn is not told that the rotor has been reversed.  Everything crossing its
+boundary is presented in the **clockwise convention**, so an unmodified
+controller — including a Bladed-style DLL such as ROSCO — sees exactly what it
+would see on a clockwise machine and behaves identically.  Rotor speed, blade
+pitch, generator and brake torque, shaft azimuth and the blade root moments are
+all converted; the controller needs no mirrored copy and no new input.
+
+Yaw is the exception, and it is deliberate.  Yaw acts about the vertical axis in
+the inertial frame, so it is **not** a rotor-convention quantity and is left
+alone.  The yaw angle, the wind direction and hence the yaw error all stay
+physically correct, which means a yaw controller still points the nacelle into
+the real wind rather than into its mirror image.
+
+.. _glue-code-mirror-rotor-asymmetric:
+
+Inputs that are not mirrored
+----------------------------
+
+The flag mirrors the **turbine**.  It does not mirror the environment, the
+control setpoints, or any other input that happens to be one-sided.  Anything in
+the list below is left exactly as written, and must be mirrored by hand if the
+intent is to reproduce the mirror image of a clockwise simulation:
+
+- initial or fixed nacelle yaw (``NacYaw``) and the neutral yaw position
+  (``YawNeut``);
+- wind direction and horizontal shear in a uniform wind file — vertical shear is
+  symmetric about the mirror plane and needs no change;
+- a full-field turbulence box, which has to be reflected in :math:`y`;
+- prescribed force and moment time series for a structural control, where the
+  lateral force and the roll and yaw moments change sign;
+- lateral geometry such as ``NacCMyn``.
+
+This matters most when verifying the mirror: leaving one of these unmirrored
+looks exactly like a sign error in the code.
+
 .. _glue-code-mirror-rotor-limits:
 
 Limitations
@@ -166,21 +206,19 @@ through.
      - ``Linearize = T``
    * - Steady-state solver
      - ``CompAeroMaps = T``
-   * - BeamDyn
-     - ``CompElast = 2``
    * - SimplifiedElastoDyn
      - ``CompElast = 3``
    * - AeroDisk, ExtLoads
      - ``CompAero = 1`` or ``3``
-   * - ServoDyn
-     - ``CompServo = 1``
+   * - Furling turbines
+     - ``Furling = True`` in the ElastoDyn input file.  A furling machine is
+       chiral by design — the tail boom, tail fin and furl axes are all offset
+       to one side — so reversing only the rotor would leave that geometry
+       inconsistent with it.
    * - OLAF free vortex wake
      - ``Wake_Mod = 3`` in the AeroDyn input file
    * - AeroAcoustics
      - ``CompAA = True`` in the AeroDyn input file
-
-Because ServoDyn is not yet supported, a mirrored rotor currently runs without a
-controller, at fixed or freely accelerating rotor speed.
 
 .. _glue-code-mirror-rotor-verification:
 
