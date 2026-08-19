@@ -161,6 +161,15 @@ Yawing occurs around the :math:`z_n` axis,  the rotor rotates about the :math:`x
 
 **Turbine geometry definition**
 
+Each turbine block begins with `BasicHAWTFormat`, selecting between the two
+geometry formats described below, followed by `MirrorRotor`. `MirrorRotor` is
+read for both formats. Setting it to `True` runs the turbine as its mirror
+image, so the rotor turns counter-clockwise viewed from upwind, without changing
+any of the geometry, blade or airfoil inputs that describe it. The driver
+mirrors the prescribed hub motion and blade pitch to match. See
+:numref:`glue-code-mirror-rotor` for what the flag does and what it does not
+mirror.
+
 Two turbine input formats are supported:
 
 - basic (`BasicHAWTFormat=True`): Basic horizontal axis wind turbine (HAWT) format.
@@ -179,6 +188,7 @@ Two turbine input formats are supported:
 
     ----- Turbine(1) Geometry -------------------------------------------------------
             True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+           False    MirrorRotor(1)  - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
            0,0,0    BaseOriginInit(1) - Coordinates of turbine base in global coordinates (m)
                3    NumBlades(1)    - Number of blades (-)
               3.    HubRad(1)       - Hub radius (m)
@@ -216,6 +226,7 @@ Two turbine input formats are supported:
 
     ----- Turbine(1) Geometry -------------------------------------------------------
          False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+    False           MirrorRotor(1)         - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
     0,0,0           BaseOriginInit(1)      - x,y,z coordinates of turbine base origin (m)
     0,0,0           BaseOrientationInit(1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the base frame from the global frame (e.g. roll, tilt, yaw) (deg)
     True            HasTower(1)            - True if turbine has a tower (flag)
@@ -493,6 +504,7 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     1               NumTurbines - Number of turbines
     ----- Turbine(1) Geometry ---------------------------------------------------------------
             True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+           False    MirrorRotor(1)  - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
            0,0,0    BaseOriginInit(1) - Coordinate of tower base in base coordinates (m)
                3    NumBlades(1)    - Number of blades (-)
               3.    HubRad(1)       - Hub radius (m)

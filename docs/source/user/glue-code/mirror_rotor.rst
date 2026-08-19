@@ -51,7 +51,8 @@ Mirroring is the reflection :math:`S = \mathrm{diag}(1, -1, 1)` about the rotor
 for positions, true vectors such as force and velocity, pseudovectors such as
 moment and angular velocity, and direction cosine matrices respectively.
 
-The reflection is applied **at module boundaries only**.  The physics kernels —
+The reflection is applied **at module boundaries**, with one exception noted
+below for the BeamDyn blade description.  The physics kernels —
 the blade-element momentum solver, the unsteady aerodynamics and dynamic wake
 models, the airfoil interpolation, and the structural finite elements — are
 never told the rotor is mirrored.  They continue to solve the equivalent
@@ -63,6 +64,112 @@ Quantities crossing a boundary are converted on the way in and back on the way
 out.  Inside ElastoDyn the azimuth and rotor speed states are the **physical**
 ones, so a mirrored rotor really does have a negative shaft speed about the
 :math:`+x` axis.
+
+.. _glue-code-mirror-rotor-where:
+
+Where the mirror is applied
+---------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 12 66
+
+   * - Module
+     - Changed
+     - Where the transformation happens
+   * - Glue code
+     - yes
+     - Reads ``MirrorRotor`` and distributes it to ElastoDyn, AeroDyn and
+       BeamDyn; holds the restrictions listed below; and carries the whole
+       ElastoDyn-to-ServoDyn presentation layer
+   * - ServoDyn
+     - **no**
+     - Nothing internal.  Signals are converted in the glue code, and the
+       generator and brake torque signs are applied inside ElastoDyn.  A
+       Bladed-style controller is likewise untouched
+   * - AeroDyn
+     - yes
+     - Four places, all at the edges — see the table below
+   * - BeamDyn
+     - yes
+     - The blade **input data**, not the boundary.  See
+       :ref:`glue-code-mirror-rotor-beamdyn`
+   * - ElastoDyn
+     - yes
+     - Initial states, blade-pitch geometry, the gearbox, and the outputs
+   * - SimplifiedElastoDyn
+     - yes
+     - The same pattern as ElastoDyn
+   * - InflowWind
+     - **no**
+     - The flag mirrors the turbine, not the environment; a reflected
+       turbulence box is supplied by the user
+   * - BEMT, UnsteadyAero, DBEMT, AirfoilInfo
+     - **no**
+     - The physics kernels solve the equivalent clockwise problem
+   * - AeroDyn driver
+     - yes
+     - Per-turbine flag; mirrors the prescribed hub kinematics and pitch
+   * - SimplifiedElastoDyn driver
+     - yes
+     - Flag pass-through only
+
+Within AeroDyn:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 46 20
+
+   * - What
+     - Where
+     - Direction
+   * - Blade twist and sweep
+     - On read, after the cant angle is derived from the twist
+     - In
+   * - Rotor speed, blade pitch, toe angle, in-plane inflow, blade angular rate
+     - ``SetInputsForBEMT``
+     - In
+   * - Skew-aligned disk frame
+     - ``DiskAvgValues`` — the disk normal is a pseudovector and needs an
+       explicit flip
+     - In
+   * - Hub and airfoil loads
+     - Load conversion out of the blade-element solver
+     - Out
+   * - Output channels
+     - Aerodynamic power, tangential force, and the lateral force, moment and
+       induction coefficients
+     - Out
+
+.. _glue-code-mirror-rotor-beamdyn:
+
+BeamDyn blades
+--------------
+
+BeamDyn is the one place where the mirror is **not** confined to a module
+boundary.  A BeamDyn blade is described by a reference line and by full
+:math:`6 \times 6` stiffness and mass matrices that couple bending, extension,
+shear and torsion, and those cross-couplings carry a handedness of their own.
+Presenting mirrored motion to an unmirrored blade would not give the mirrored
+result.
+
+The blade data is therefore transformed once, as it is read.  The key-point
+:math:`y` coordinates and the structural twist are negated, and each matrix is
+transformed by :math:`T\,M\,T` with
+
+.. math::
+
+   T = \mathrm{diag}(1, -1, 1, -1, 1, -1)
+
+which is the reflection written in BeamDyn's ordering of three translational
+followed by three rotational degrees of freedom.  In practice an entry changes
+sign if exactly one of its two indices is a :math:`y` translation, an :math:`x`
+rotation or a :math:`z` rotation.  The transform is its own inverse, and it
+preserves the polar-inertia constraint that BeamDyn validates on input.
+
+The blade input file itself still describes the **clockwise** blade and is
+supplied unchanged, exactly as for ElastoDyn.  The finite-element solver is
+still never told the rotor is mirrored.
 
 .. _glue-code-mirror-rotor-conventions:
 
@@ -136,13 +243,17 @@ clockwise one.
        ``RotThrust``, ``LSShftFxa``, ``LSShftFza``, ``LSSTipMya``,
        ``YawBrFxp``, ``YawBrFzp``, ``YawBrMyp``, ``TwrBsFxt``, ``TwrBsMyt``,
        ``OoPDefl*``, ``TipDxc*``, ``TipDzc*``, ``RootFxc*``, ``RootFzc*``,
-       ``RootMyc*``, and the AeroDyn ``*Alpha``, ``*Theta``, ``*Phi``, ``*Cl``,
-       ``*Cd``, ``*Fn`` families
+       ``RootMyc*``, ``BldPitch*``, ``GenTq``, ``GenPwr``, ``HSSBrTq``,
+       the BeamDyn ``B*RootFxr``, ``B*RootFzr``, ``B*RootMyr``, ``B*TipTDxr``,
+       ``B*TipTDzr``, ``B*TipRDyr`` families, and the AeroDyn ``*Alpha``,
+       ``*Theta``, ``*Phi``, ``*Cl``, ``*Cd``, ``*Fn`` families
    * - Sign-flipped
      - ``LSShftMxa``, ``LSSTipVxa``, ``LSSTipAxa``, ``LSSGagMxa``,
        ``LSShftFya``, ``LSSTipMza``, ``YawBrFyp``, ``YawBrMxp``, ``YawBrMzp``,
        ``TwrBsFyt``, ``TwrBsMxt``, ``TwrBsMzt``, ``IPDefl*``, ``TipDyc*``,
-       ``RootFyc*``, ``RootMxc*``, ``RootMzc*``, and the AeroDyn ``*Ft``,
+       ``RootFyc*``, ``RootMxc*``, ``RootMzc*``,
+       the BeamDyn ``B*RootFyr``, ``B*RootMxr``, ``B*RootMzr``, ``B*TipTDyr``,
+       ``B*TipRDxr``, ``B*TipRDzr`` families, and the AeroDyn ``*Ft``,
        ``*Cy``, ``*Vindy`` families
    * - Mirrored angle
      - ``LSSTipPxa``, ``LSSGagPxa``
@@ -235,12 +346,39 @@ Anything else indicates that two quantities have been combined while expressed i
 different frames.
 
 The check is repeated across a matrix of conditions, since any single condition
-leaves most of the sign map untested — rigid and flexible blades, fixed and free
-drivetrain, vertical shear, positive and negative nacelle yaw, fixed and free
-yaw, and combinations of those.  At the AeroDyn module level the same comparison
-is run over blade pitch, wind speed, tip-speed ratio, the propeller-brake state,
-shaft tilt, precone, both BEM models, dynamic wake, and four unsteady-aerodynamic
-models.
+leaves most of the sign map untested — rigid and flexible blades, ElastoDyn and
+BeamDyn blades, fixed and free drivetrain, vertical shear, positive and negative
+nacelle yaw, fixed and free yaw, and combinations of those.  At the AeroDyn
+module level the same comparison is run over blade pitch, wind speed, tip-speed
+ratio, the propeller-brake state, shaft tilt, precone, both BEM models, dynamic
+wake, and four unsteady-aerodynamic models.
+
+Three of those comparisons are kept as regression cases, each paired with the
+clockwise model it mirrors:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Case
+     - What it covers
+   * - ``5MW_Land_noDLL_Steady_MirrorRotor``
+     - Steady wind, no controller, ElastoDyn blades
+   * - ``5MW_Land_BD_noDLL_Steady_MirrorRotor``
+     - The same with BeamDyn blades
+   * - ``AWT_WSt_StartUp_HighSpShutDown_MirrorRotor``
+     - The high-speed-shaft brake taking the rotor down through zero speed,
+       which is the one torque signed by the direction of rotation
+   * - ``5MW_Land_DLL_WTurb_MirrorRotor``
+     - Turbulence and a Bladed-style controller, ElastoDyn blades
+   * - ``5MW_Land_BD_DLL_WTurb_MirrorRotor``
+     - The same with BeamDyn blades
+
+The two turbulent cases are the ones that demonstrate the controller claim.  The
+DISCON library is used completely unchanged, and blade pitch, generator torque,
+generator power, generator speed and rotor speed all come out identical between
+the clockwise and mirrored runs.  They read a ``y``-reflected copy of the
+turbulence box, for the reason given above.
 
 For a clockwise rotor every mirror-related expression reduces to a multiplication
 by ``+1``, so existing regression baselines reproduce bit-for-bit.
