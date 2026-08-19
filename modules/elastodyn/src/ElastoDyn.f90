@@ -3411,12 +3411,12 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%RotDir    = 1.0_ReKi
    if (InitInp%MirrorRotor) then
       p%RotDir = -1.0_ReKi
-      ! A furling machine is deliberately one-sided: tail boom, tail fin and furl axes are
-      ! all offset to one side, and that geometry is not mirrored here.
+      ! A furling machine is deliberately one-sided, and that geometry is not mirrored.
       if (InputFileData%Furling) then
-         CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not supported for a furling turbine. '// &
-              'The furl geometry would have to be mirrored as well.', ErrStat, ErrMsg, 'SetPrimaryParameters' )
-         RETURN
+         CALL SetErrStat( ErrID_Warn, 'MirrorRotor has not been fully tested for a furling turbine. '// &
+              'The rotor is mirrored but the furl geometry is not, so the tail and furl inputs must be '// &
+              'mirrored as well for the result to be the mirror image of the clockwise turbine.', &
+              ErrStat, ErrMsg, 'SetPrimaryParameters' )
       end if
    end if
    p%DTTorSpr  = InputFileData%DTTorSpr

@@ -182,7 +182,15 @@ intent is to reproduce the mirror image of a clockwise simulation:
 - a full-field turbulence box, which has to be reflected in :math:`y`;
 - prescribed force and moment time series for a structural control, where the
   lateral force and the roll and yaw moments change sign;
-- lateral geometry such as ``NacCMyn``.
+- lateral geometry such as ``NacCMyn``;
+- the furl geometry of a furling turbine — the tail boom, tail fin and the
+  rotor- and tail-furl axes are all offset to one side.  Setting
+  ``MirrorRotor`` with ``Furling = True`` raises a warning and continues: the
+  tail is modelled as a drag force applying a moment about the yaw axis, and
+  that calculation does not depend on which way the rotor turns, since tail
+  interaction with the wake is not modelled.  The combination has not been
+  verified against a mirror pair, however, because doing so requires mirroring
+  the furl input file as well.
 
 This matters most when verifying the mirror: leaving one of these unmirrored
 looks exactly like a sign error in the code.
@@ -210,11 +218,6 @@ through.
      - ``CompElast = 3``
    * - AeroDisk, ExtLoads
      - ``CompAero = 1`` or ``3``
-   * - Furling turbines
-     - ``Furling = True`` in the ElastoDyn input file.  A furling machine is
-       chiral by design — the tail boom, tail fin and furl axes are all offset
-       to one side — so reversing only the rotor would leave that geometry
-       inconsistent with it.
    * - OLAF free vortex wake
      - ``Wake_Mod = 3`` in the AeroDyn input file
    * - AeroAcoustics
