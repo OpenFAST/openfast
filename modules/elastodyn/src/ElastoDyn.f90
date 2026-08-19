@@ -1268,8 +1268,10 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Generator and High-Speed Shaft Loads:
 
-   m%AllOuts( HSShftTq)  = m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
-   m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
+      ! MirrorRotor: LSShftMxa is the physical component about the shaft axis, while the
+      ! high-speed shaft torque and power are reported in the rotor's own convention.
+   m%AllOuts( HSShftTq)  = p%RotDir*m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
+   m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*p%RotDir*x%QDT(DOF_GeAz)
    m%AllOuts(HSSBrTq)    = OtherState%HSSBrTrq*0.001_ReKi
 
 
@@ -6682,7 +6684,10 @@ FUNCTION SignLSSTrq( p, m )
       ! MomLProt has now been found.  Now dot this with e1 to get the
       !   low-speed shaft torque and take the SIGN of the result:
 
-   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, DOT_PRODUCT( MomLPRot, m%CoordSys%e1 ) ) )
+      ! MirrorRotor: the gearbox efficiency factor depends on which way power flows, not
+      ! on the sign of the torque about +x. A mirrored rotor generates with a negative
+      ! shaft torque, so without RotDir the loss would be inverted into a gain.
+   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, p%RotDir*DOT_PRODUCT( MomLPRot, m%CoordSys%e1 ) ) )
 
 END FUNCTION SignLSSTrq
 !----------------------------------------------------------------------------------------------------------------------------------
