@@ -238,6 +238,7 @@ PROGRAM SED_Driver
 
    InitInData%InputFile = Settings%SEDIptFileName
    InitInData%RootName  = Settings%OutRootName
+   InitInData%MirrorRotor = Settings%MirrorRotor
 
       ! Initialize the module
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
