@@ -126,9 +126,11 @@ get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
 # FFTPACK 5.1 uses legacy Fortran 77 type punning (COMPLEX<->REAL) and must
 # NOT be promoted to double precision (its callers pass explicit SiKi/R4Ki arrays).
+# -Wno-pedantic is required because -pedantic (added for Debug builds) promotes the
+# argument mismatches back to errors, overriding -fallow-argument-mismatch.
 if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
    set_source_files_properties(src/NetLib/fftpack/fftpack5.1.f PROPERTIES COMPILE_FLAGS
-      "-fallow-argument-mismatch -fno-default-real-8 -fno-default-double-8")
+      "-fallow-argument-mismatch -Wno-pedantic -fno-default-real-8 -fno-default-double-8")
 endif()
 
 # Recursive use of routine in qk61/dqk61 will trigger errors in debug
