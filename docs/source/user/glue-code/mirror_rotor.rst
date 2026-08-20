@@ -105,6 +105,13 @@ Where the mirror is applied
    * - SimplifiedElastoDyn
      - yes
      - The same pattern as ElastoDyn
+   * - AeroDisk
+     - yes
+     - The rotor speed and tip-speed ratio going into the coefficient table,
+       the skew-aligned disk triad, and the moment components coming out.  The
+       triad is built so that all three basis vectors mirror as true vectors,
+       which makes the disk-frame force components invariant and every
+       disk-frame moment component change sign
    * - InflowWind
      - **no**
      - The flag mirrors the turbine, not the environment; a reflected
@@ -234,7 +241,8 @@ registered mirrored case and comparing each channel against its clockwise
 counterpart, so it records behaviour that is actually observed rather than
 behaviour that is expected from reading the code.  The cases contributing to it
 are the ElastoDyn + AeroDyn pair, the BeamDyn pair, the marine-turbine pair, the
-two-rotor aerodynamic driver case and the twin-rotor semisubmersible.
+yawed AeroDisk pair, the two-rotor aerodynamic driver case and the twin-rotor
+semisubmersible.
 
 Note that mirroring reverses the order in which the blades sweep past a given
 point, so under non-axisymmetric inflow — shear, yaw, or shaft tilt — blade 2 of
@@ -266,10 +274,15 @@ counter-clockwise rotor.
        ``RootFxb*``, ``RootFzb*``, ``RootMyb*``;
        the BeamDyn ``B*RootFxr``, ``B*RootFzr``, ``B*RootMyr``, ``B*TipTDxr``,
        ``B*TipTDzr``, ``B*TipRDyr``, ``B*FldFz`` families;
-       the AeroDyn ``*Alpha``, ``*Theta``, ``*Fn``, ``*Fl``, ``*Fd``,
-       ``*Vrel``, ``*Vindx``, ``*AxInd``, ``*TnInd``, ``*Gam``, ``*VUndx``,
+       the AeroDyn ``*Alpha``, ``*Theta``, ``*Phi``, ``*Fn``, ``*Fl``,
+       ``*Fd``, ``*Fx``, ``*Cl``, ``*Cd``, ``*Cx``, ``*Cn``, ``*Vrel``,
+       ``*Vindx``, ``*AxInd``, ``*TnInd``, ``*Gam``, ``*VUndx``,
        ``*VDisx`` families, in both the module (``B1N001Fn``) and nodal
        (``AB1N001Fn``) forms;
+       the per-blade ``B*AeroPwr``;
+       the AeroDisk ``ADFx``, ``ADFy``, ``ADFz``, ``ADFxi``, ``ADFzi``,
+       ``ADMyi``, ``ADCp``, ``ADCq``, ``ADCt``, ``ADPower``, ``ADSkew``,
+       ``ADTSR``, ``ADVRel`` channels;
        ``RtAeroFxh``, ``RtAeroFzh``, ``RtAeroMyh``, ``RtAeroPwr``,
        ``RtAeroCp``, ``RtAeroCt``, ``RtArea``, ``RtSkew``, ``RtTSR``,
        ``RtSpeed``, ``RtVAvgxh``, ``RtVAvgzh``, ``RtFldFxh``, ``RtFldFzg``,
@@ -286,8 +299,10 @@ counter-clockwise rotor.
        ``RootFyb*``, ``RootMxb*``, ``RootMzb*``;
        the BeamDyn ``B*RootFyr``, ``B*RootMxr``, ``B*RootMzr``, ``B*TipTDyr``,
        ``B*TipRDxr``, ``B*TipRDzr``, ``B*FldMx`` families;
-       the AeroDyn ``*Ft``, ``*Vindy``, ``*STVy``, ``*Mm`` families, again in
-       both the module and nodal forms;
+       the AeroDyn ``*Ft``, ``*Fy``, ``*Cy``, ``*Cm``, ``*Ct``, ``*Vindy``,
+       ``*STVy``, ``*Mm`` families, again in both the module and nodal forms;
+       the AeroDisk ``ADMx``, ``ADMy``, ``ADMz``, ``ADFyi``, ``ADMxi``,
+       ``ADMzi``, ``ADSpeed`` channels;
        ``RtAeroFyh``, ``RtAeroMxh``, ``RtAeroMzh``, ``RtAeroCq``,
        ``RtVAvgyh``, ``RtFldFyh``, ``RtFldMxh``, ``RtFldMzh``; and for a
        marine turbine the buoyant ``*Fbt``, ``*Mbn``, ``*Mbs``, ``HbFby``,
@@ -295,12 +310,17 @@ counter-clockwise rotor.
    * - Mirrored angle
      - ``LSSTipPxa``, ``LSSGagPxa``
 
-A few channels carry a sign change in the code but are not requested by any
-registered mirrored case, so they do not appear above: the AeroDyn ``*Cy``,
-``*Cm`` and ``*Ct`` coefficients, and the ``*Phi``, ``*Cl`` and ``*Cd`` families
-that do not change.  Their behaviour follows the same rule as the corresponding
-force channels, but it is inferred rather than measured, and it should be
-treated with more caution than the rest of the table.
+Every channel that carries a mirror sign in the code is now requested by at
+least one registered case, so no entry in this table is inferred from reading
+the source.  The coefficient families in particular are measured together with
+their mirror-invariant partners — ``*Cy``, ``*Cm`` and ``*Ct`` alongside
+``*Cl``, ``*Cd``, ``*Cx`` and ``*Cn`` — so that a sign applied to a whole group
+by mistake cannot pass unnoticed.
+
+Across the six pairs, 1002 channels resolve: 677 identical, 324 sign-flipped and
+one mirrored angle, with a further 58 below the noise floor in every case and
+133 mooring channels set aside because their pairing is layout-specific.  No
+channel is unresolved.
 
 
 .. _glue-code-mirror-rotor-control:
@@ -377,10 +397,8 @@ through.
      - ``Linearize = T``
    * - Steady-state solver
      - ``CompAeroMaps = T``
-   * - SimplifiedElastoDyn
-     - ``CompElast = 3``
-   * - AeroDisk, ExtLoads
-     - ``CompAero = 1`` or ``3``
+   * - ExtLoads
+     - ``CompAero = 3``
    * - OLAF free vortex wake
      - ``Wake_Mod = 3`` in the AeroDyn input file
    * - AeroAcoustics
@@ -405,8 +423,10 @@ module level the same comparison is run over blade pitch, wind speed, tip-speed
 ratio, the propeller-brake state, shaft tilt, precone, both BEM models, dynamic
 wake, and four unsteady-aerodynamic models.
 
-Three of those comparisons are kept as regression cases, each paired with the
-clockwise model it mirrors:
+Some of those comparisons are kept as regression cases, each paired with the
+clockwise model it mirrors — either a case that already existed, or a ``_CW``
+case registered alongside it.  They all carry the ctest label ``mirrorrotor``,
+so ``ctest -R mirrorrotor`` runs the set:
 
 .. list-table::
    :header-rows: 1
@@ -415,16 +435,38 @@ clockwise model it mirrors:
    * - Case
      - What it covers
    * - ``5MW_Land_noDLL_Steady_MirrorRotor``
-     - Steady wind, no controller, ElastoDyn blades
+     - Steady wind, no controller, ElastoDyn blades.  The baseline pair, pinned
+       against ``5MW_Land_noDLL_Steady_CW``
    * - ``5MW_Land_BD_noDLL_Steady_MirrorRotor``
-     - The same with BeamDyn blades
+     - The same with BeamDyn blades, against ``5MW_Land_BD_noDLL_Steady_CW``
    * - ``AWT_WSt_StartUp_HighSpShutDown_MirrorRotor``
      - The high-speed-shaft brake taking the rotor down through zero speed,
-       which is the one torque signed by the direction of rotation
+       which is the one torque signed by the direction of rotation.  Also a
+       two-bladed teetering rotor, which needs no blade swap
    * - ``5MW_Land_DLL_WTurb_MirrorRotor``
      - Turbulence and a Bladed-style controller, ElastoDyn blades
    * - ``5MW_Land_BD_DLL_WTurb_MirrorRotor``
      - The same with BeamDyn blades
+   * - ``5MW_OC4Semi_WSt_WavesWN_MirrorRotor``
+     - A floating platform, exercising HydroDyn, SeaState and MoorDyn beneath a
+       mirrored rotor
+   * - ``5MW_Land_DLL_WTurb_ADsk_SED_MirrorRotor``
+     - SimplifiedElastoDyn and AeroDisk in place of ElastoDyn and AeroDyn
+   * - ``5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor``
+     - A twin-rotor floating machine, with the whole stack solved together, so
+       one rotor is mirrored and the other is not
+   * - ``MHK_RM1_Floating_Steady_MirrorRotor``
+     - A marine turbine, where the blade buoyancy and centre-of-buoyancy offset
+       are mirrored too.  Paired with ``MHK_RM1_Floating_Steady_CW``
+   * - ``ad_MultipleHAWT_MirrorRotor``
+     - The AeroDyn driver rather than the glue code, covering the **nodal**
+       output path with two rotors in a single run
+   * - ``5MW_Land_ADsk_SED_Yaw_MirrorRotor``
+     - A yawed AeroDisk rotor, paired with ``5MW_Land_ADsk_SED_Yaw_CW``.  The
+       nacelle yaw is reversed between the two, since yaw acts about the
+       inertial vertical and is not mirrored.  It uses a coefficient table with
+       the lateral coefficients filled in, because the shipped 5MW table has
+       them identically zero and so cannot reach the lateral sign factors at all
 
 The two turbulent cases are the ones that demonstrate the controller claim.  The
 DISCON library is used completely unchanged, and blade pitch, generator torque,
