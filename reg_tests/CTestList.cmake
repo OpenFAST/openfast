@@ -391,6 +391,8 @@ of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerod
 of_regression("5MW_Land_DLL_WTurb_ADsk"                "openfast;elastodyn;aerodisk")
 of_regression("5MW_Land_DLL_WTurb_ADsk_SED"            "openfast;simple-elastodyn;aerodisk")
 of_regression("5MW_Land_DLL_WTurb_ADsk_SED_MirrorRotor" "openfast;simple-elastodyn;aerodisk;mirrorrotor")
+of_regression("5MW_Land_ADsk_SED_Yaw_CW"              "openfast;simple-elastodyn;aerodisk;mirrorrotor")
+of_regression("5MW_Land_ADsk_SED_Yaw_MirrorRotor"     "openfast;simple-elastodyn;aerodisk;mirrorrotor")
 of_regression("5MW_Land_DLL_WTurb_SED"                 "openfast;simple-elastodyn;aerodyn")
 of_regression("IEA22MW_ModalDamping"                   "openfast;beamdyn;servodyn")
 of_regression("IEA22MW_ModalDampingLoose"              "openfast;beamdyn;servodyn")
