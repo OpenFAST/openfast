@@ -10,6 +10,12 @@ RT=$REPO/reg_tests/r-test/glue-codes/openfast
 OF=$REPO/build-docker-double-debug/glue-codes/openfast/openfast
 SRC=$RT/5MW_Land_noDLL_Steady_MirrorRotor
 
+# The deck refers to ../5MW_Baseline for the inflow and airfoil data.  Without this
+# the runs abort while reading their inputs, before reaching the guard at all - and a
+# guard that is never reached looks exactly like a guard that stayed silent, so the
+# clockwise controls would pass for the wrong reason.
+ln -sfn "$RT/5MW_Baseline" "$GC/5MW_Baseline"
+
 # $1 = variant name, $2 = MirrorRotor (True/False), $3 = Linearize (True/False),
 # $4 = Wake_Mod (1/3), $5 = CompAA (True/False)
 mkvariant () {
