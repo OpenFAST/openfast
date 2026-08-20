@@ -137,7 +137,10 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, x
       omega = m%BEMT_u(indx)%omega
    else
       rmax  = Calc_MaxRadius(p, u)
-      omega = Calc_Omega(u)
+      ! MirrorRotor: present omega in the same clockwise-equivalent convention that
+      ! BEMT supplies above, since RtSpeed, RtTSR and the power channels below are
+      ! shared between the two wake models and cannot carry two conventions at once.
+      omega = p%RotDir * Calc_Omega(u)
    endif
 
    
