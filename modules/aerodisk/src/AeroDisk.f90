@@ -559,15 +559,18 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ M_y = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,y}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    !! - \f$ M_z = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,z}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    ! MirrorRotor: the coefficients come out of the table in the clockwise convention and
-   ! are reflected here as they become physical loads. Force is a true vector and moment a
-   ! pseudovector, so different components change sign. C_F and C_M are left alone, since
-   ! the Ct and Cq outputs report the rotor's own convention.
+   ! are reflected here as they become physical loads. The skew-aligned triad above is
+   ! built so that all three basis vectors mirror as true vectors, which is what the
+   ! RotDir on z_hat achieves. Taking components against that triad, a true vector such
+   ! as force keeps every component, since both the vector and the basis vector reflect
+   ! together, while a pseudovector such as moment reverses every one. C_F and C_M are
+   ! left alone, since the Ct and Cq outputs report the rotor's own convention.
    tmp1 = real(p%halfRhoA,SiKi) * m%VRel_xd * m%VRel_xd
    m%Force(1)    = tmp1 * m%C_F(1)
-   m%Force(2)    = tmp1 * m%C_F(2) * real(p%RotDir,SiKi)
+   m%Force(2)    = tmp1 * m%C_F(2)
    m%Force(3)    = tmp1 * m%C_F(3)
    m%Moment(1)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1) * real(p%RotDir,SiKi)
-   m%Moment(2)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(2)
+   m%Moment(2)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(2) * real(p%RotDir,SiKi)
    m%Moment(3)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(3) * real(p%RotDir,SiKi)
 
 
