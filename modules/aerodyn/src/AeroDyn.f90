@@ -405,11 +405,13 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! MirrorRotor: mirror the blade geometry about the rotor XZ plane. Twist is a rotation
       ! about the span axis and sweep is the in-plane offset, so both flip; curvature (out of
       ! plane) does not. This must follow setCantAngle, which derives BlCrvAng from BlTwist.
+      ! BlCenBt is the MHK centre-of-buoyancy offset in the same in-plane direction as sweep.
    do iR = 1, nRotors
       if (.not. InitInp%rotors(iR)%MirrorRotor) cycle
       do I=1,NumBlades(iR)
          InputFileData%rotors(iR)%BladeProps(I)%BlTwist = -InputFileData%rotors(iR)%BladeProps(I)%BlTwist
          InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC = -InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC
+         InputFileData%rotors(iR)%BladeProps(I)%BlCenBt = -InputFileData%rotors(iR)%BladeProps(I)%BlCenBt
       end do
    end do
    
