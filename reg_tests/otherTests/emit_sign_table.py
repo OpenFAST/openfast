@@ -36,6 +36,9 @@ FILE_PAIRS = [
      "MHK_RM1_Floating_Steady_MirrorRotor", 2),
     ("AeroDisk, yawed", "5MW_Land_ADsk_SED_Yaw_CW",
      "5MW_Land_ADsk_SED_Yaw_MirrorRotor", 3),
+    ("OLAF free wake",
+     f"{R}/modules/aerodyn/ad_B1n2_OLAF_CW/ad_driver.outb",
+     f"{R}/modules/aerodyn/ad_B1n2_OLAF_MirrorRotor/ad_driver.outb", 1),
 ]
 
 # label, single output file, per-rotor channel prefixes, blades
@@ -102,7 +105,10 @@ def main():
     origin = defaultdict(set)
 
     for label, cw, mir, nb_ in FILE_PAIRS:
-        pa, pb = f"{GC}/{cw}/{cw}.outb", f"{GC}/{mir}/{mir}.outb"
+        if cw.startswith("/") or "/" in cw:
+            pa, pb = cw, mir          # explicit paths, for the module-level driver cases
+        else:
+            pa, pb = f"{GC}/{cw}/{cw}.outb", f"{GC}/{mir}/{mir}.outb"
         if not (os.path.exists(pa) and os.path.exists(pb)):
             print(f"  skip {label}: missing baseline", file=sys.stderr)
             continue
