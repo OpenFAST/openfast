@@ -86,6 +86,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             s_LL         : -  -  "Spanwise coordinate of LL elements" m
 typedef     ^                   ^               ReKi                             s_CP         : -  -  "Spanwise coordinate of LL CP" m
 typedef     ^                   ^               IntKi                            iRotor       - 0  -  "Index of rotor the wing belong to" -
+typedef     ^                   ^               ReKi                             RotDir       - 1.0  -  "Rotation direction of the rotor the wing belongs to: +1 clockwise, -1 mirrored (counter-clockwise viewed from upwind)" -
 typedef     ^                   ^               IntKi                            AFindx       :: -  - "Index to the airfoils from AD15 [BladeNode,BladeIndex=1]" - 
 typedef     ^                   ^               IntKi                            nSpan             -  0  -  "TODO, should be defined per wing. Number of spanwise element"          -
 typedef     ^                   ^               ReKi                             PrescribedCirculation    :  -  - "Prescribed circulation on all lifting lines" "m/s" 
@@ -292,6 +293,7 @@ typedef  FVW/FVW           Wng_InitInputType    IntKi                           
 typedef     ^                   ^               ReKi                             chord             :  -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
 typedef     ^                   ^               IntKi                            iRotor            - -  -  "Index of rotor the wing belong to" -
+typedef     ^                   ^               ReKi                             RotDir            - 1.0  -  "Rotation direction of the rotor the wing belongs to: +1 clockwise, -1 mirrored (counter-clockwise viewed from upwind)" -
 typedef     ^                   ^              INTEGER                  UAOff_innerNode          - - -   "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
 typedef     ^                   ^              INTEGER                  UAOff_outerNode          - - -   "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 

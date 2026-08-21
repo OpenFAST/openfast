@@ -436,10 +436,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%RotDir      = 1.0_ReKi
       if (InitInp%rotors(iR)%MirrorRotor) then
          p%rotors(iR)%RotDir = -1.0_ReKi
-         ! Not yet worked through for the free wake or the acoustics model.
-         if (InputFileData%Wake_Mod == WakeMod_FVW) then
-            call SetErrStat(ErrID_Fatal, 'MirrorRotor is not yet supported with the OLAF free-vortex-wake model (Wake_Mod=3).', ErrStat, ErrMsg, RoutineName)
-         end if
+         ! Not yet worked through for the acoustics model.
          if (InputFileData%CompAA) then
             call SetErrStat(ErrID_Fatal, 'MirrorRotor is not yet supported with the AeroAcoustics model.', ErrStat, ErrMsg, RoutineName)
          end if
@@ -4259,7 +4256,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Vwnd = m%rotors(iR)%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
             theta = m%FVW%W(iW)%PitchAndTwist(j) ! TODO
             call FVW_AeroOuts( m%rotors(iR)%orientationAnnulus(1:3,1:3,j,k), u%rotors(iR)%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
-                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
+                        theta, p%rotors(iR)%RotDir, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
 
@@ -4299,9 +4296,13 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cy = Cl_dyn*sp - Cd_dyn*cp
 
             q = 0.5 * p%rotors(iR)%airDens * Vrel**2                ! dynamic pressure of the jth node in the kth blade
+            ! MirrorRotor: Cx, Cy and Cm_dyn are clockwise-frame coefficients, exactly as
+            ! BEMT returns them, so RotDir maps the tangential force and the pitching
+            ! moment back into the mirrored rotor frame before they are applied through
+            ! the physical annulus orientation. See SetOutputsFromBEMT.
             force(1) =  Cx * q * p%FVW%W(iW)%chord_LL(j)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-            force(2) = -Cy * q * p%FVW%W(iW)%chord_LL(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-            moment(3)=  Cm_dyn * q * p%FVW%W(iW)%chord_LL(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
+            force(2) = -p%rotors(iR)%RotDir * Cy * q * p%FVW%W(iW)%chord_LL(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+            moment(3)=  p%rotors(iR)%RotDir * Cm_dyn * q * p%FVW%W(iW)%chord_LL(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
 
                ! save these values for possible output later:
             m%rotors(iR)%X(j,k) = force(1)
@@ -5242,6 +5243,9 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
       do iB=1,p%rotors(iR)%numBlades
          iW=iW_incr+iB
          InitInp%W(iW)%iRotor = iR ! Indicate OLAF which wing belongs to which rotor
+         ! MirrorRotor: OLAF holds every rotor's wings in one shared wake, so the
+         ! rotation direction has to travel per wing rather than per simulation.
+         InitInp%W(iW)%RotDir = p%rotors(iR)%RotDir
 
          call AllocAry(InitInp%W(iW)%Chord, InitInp%numBladeNodes,  'chord', ErrStat2,ErrMsg2); if(Failed()) return
          call AllocAry(InitInp%W(iW)%AFindx,InitInp%numBladeNodes,1,'AFindx',ErrStat2,ErrMsg2); if(Failed()) return
