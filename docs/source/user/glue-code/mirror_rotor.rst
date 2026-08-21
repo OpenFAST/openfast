@@ -119,6 +119,11 @@ Where the mirror is applied
    * - BEMT, UnsteadyAero, DBEMT, AirfoilInfo
      - **no**
      - The physics kernels solve the equivalent clockwise problem
+   * - OLAF free vortex wake
+     - yes
+     - The circulation, the angle of attack and the lifting-line geometry, per
+       wing.  The wake itself is left in the physical frame; see
+       :ref:`glue-code-mirror-rotor-olaf`
    * - AeroDyn driver
      - yes
      - Per-turbine flag; mirrors the prescribed hub kinematics and pitch
@@ -152,6 +157,35 @@ Within AeroDyn:
      - Aerodynamic power, tangential force, and the lateral force, moment and
        induction coefficients
      - Out
+
+.. _glue-code-mirror-rotor-olaf:
+
+The free wake
+-------------
+
+OLAF holds the wings of **every** rotor in one shared wake and one Biot-Savart
+solve, so a mirrored rotor cannot be handled by reflecting the world the wake
+solver sees: a farm may mix the two directions, and both must coexist in the
+same frame.  The rotation direction is therefore carried per wing, and the wake
+stays in the physical frame.  This keeps the wake visualisation, the ambient
+wind sampled along the filaments, and any circulation written to a checkpoint in
+the frame the user expects.
+
+Three things change for a mirrored wing.  The angle of attack is taken in the
+clockwise-equivalent frame, so the airfoil tables are used verbatim as they are
+everywhere else.  The bound circulation reverses, because it is a pseudovector
+along a span axis that is itself a true vector.  And the lifting line's leading
+and trailing edges are placed on the other side of the reference point, because
+the section is used as the mirror image of the tabulated one; without that the
+bound vortex and the shed sheet sit on the wrong side of the chord and the wake
+is not the mirror image, an error of order chord over span.
+
+One detail is worth stating because it looks wrong.  The sign factor sits on the
+**chordwise** term where the angle is taken from the airfoil direction cosine
+matrix, and on the **normal** term where it is taken from the lifting-line panel.
+Both describe the same angle.  The panel normal is a cross product of two true
+vectors and so is a pseudovector, while the rows of a direction cosine matrix
+are not; the two carry opposite signs under the reflection.
 
 .. _glue-code-mirror-rotor-beamdyn:
 
@@ -241,8 +275,8 @@ registered mirrored case and comparing each channel against its clockwise
 counterpart, so it records behaviour that is actually observed rather than
 behaviour that is expected from reading the code.  The cases contributing to it
 are the ElastoDyn + AeroDyn pair, the BeamDyn pair, the marine-turbine pair, the
-yawed AeroDisk pair, the two-rotor aerodynamic driver case and the twin-rotor
-semisubmersible.
+yawed AeroDisk pair, the free-wake pair, the two-rotor aerodynamic driver case
+and the twin-rotor semisubmersible.
 
 Note that mirroring reverses the order in which the blades sweep past a given
 point, so under non-axisymmetric inflow — shear, yaw, or shaft tilt — blade 2 of
@@ -317,8 +351,8 @@ their mirror-invariant partners — ``*Cy``, ``*Cm`` and ``*Ct`` alongside
 ``*Cl``, ``*Cd``, ``*Cx`` and ``*Cn`` — so that a sign applied to a whole group
 by mistake cannot pass unnoticed.
 
-Across the six pairs, 1002 channels resolve: 677 identical, 324 sign-flipped and
-one mirrored angle, with a further 58 below the noise floor in every case and
+Across the seven pairs, 1015 channels resolve: 686 identical, 328 sign-flipped
+and one mirrored angle, with a further 55 below the noise floor in every case and
 133 mooring channels set aside because their pairing is layout-specific.  No
 channel is unresolved.
 
@@ -399,8 +433,6 @@ through.
      - ``CompAeroMaps = T``
    * - ExtLoads
      - ``CompAero = 3``
-   * - OLAF free vortex wake
-     - ``Wake_Mod = 3`` in the AeroDyn input file
    * - AeroAcoustics
      - ``CompAA = True`` in the AeroDyn input file
 
@@ -454,13 +486,17 @@ so ``ctest -R mirrorrotor`` runs the set:
      - SimplifiedElastoDyn and AeroDisk in place of ElastoDyn and AeroDyn
    * - ``5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor``
      - A twin-rotor floating machine, with the whole stack solved together, so
-       one rotor is mirrored and the other is not
+       one rotor is mirrored and the other is not.  It runs OLAF, so the two
+       rotation directions also share a single wake
    * - ``MHK_RM1_Floating_Steady_MirrorRotor``
      - A marine turbine, where the blade buoyancy and centre-of-buoyancy offset
        are mirrored too.  Paired with ``MHK_RM1_Floating_Steady_CW``
    * - ``ad_MultipleHAWT_MirrorRotor``
      - The AeroDyn driver rather than the glue code, covering the **nodal**
        output path with two rotors in a single run
+   * - ``ad_B1n2_OLAF_MirrorRotor``
+     - The free wake, paired with ``ad_B1n2_OLAF_CW``.  A single blade of two
+       aerodynamic sections, which is the cheapest case that is still a rotor
    * - ``5MW_Land_ADsk_SED_Yaw_MirrorRotor``
      - A yawed AeroDisk rotor, paired with ``5MW_Land_ADsk_SED_Yaw_CW``.  The
        nacelle yaw is reversed between the two, since yaw acts about the
