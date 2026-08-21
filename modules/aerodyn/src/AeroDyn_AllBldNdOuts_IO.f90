@@ -440,7 +440,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);
-                     y%WriteOutput(iOut)  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,iNd) * m_AD%FVW%W(iW)%BN_TanInd(iNd)
+                     y%WriteOutput(iOut)  =  p%RotDir * m_AD%FVW%W(iW)%BN_UrelWind_s(2,iNd) * m_AD%FVW%W(iW)%BN_TanInd(iNd)
                      iOut = iOut + 1
                   END DO
                END DO
@@ -739,7 +739,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cm(iNd)
+                     y%WriteOutput(iOut)  = p%RotDir * m_AD%FVW%W(iW)%BN_Cm(iNd)
                      iOut = iOut + 1
                   END DO
                END DO
@@ -777,7 +777,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cy(iNd)
+                     y%WriteOutput(iOut)  = p%RotDir * m_AD%FVW%W(iW)%BN_Cy(iNd)
                      iOut = iOut + 1
                   END DO
                END DO
@@ -820,9 +820,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
-                     y%WriteOutput(iOut)  = -m_AD%FVW%W(iW)%BN_Cx(iNd)*st + m_AD%FVW%W(iW)%BN_Cy(iNd)*ct
+                     ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = p%RotDir * (-m_AD%FVW%W(iW)%BN_Cx(iNd)*st + m_AD%FVW%W(iW)%BN_Cy(iNd)*ct)
                      iOut = iOut + 1
                   END DO
                END DO
@@ -848,7 +848,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
                      cp=cos(m_AD%FVW%W(iW)%BN_phi(iNd))
                      sp=sin(m_AD%FVW%W(iW)%BN_phi(iNd))
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - m%Y(iNd,iB)*sp
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - p%RotDir*m%Y(iNd,iB)*sp
                      iOut = iOut + 1
                   END DO
                END DO
@@ -870,7 +870,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                   do iNdL=1,nNd; iNd=Nd(iNdL);                   
                      cp=cos(m_AD%FVW%W(iW)%BN_phi(iNd))
                      sp=sin(m_AD%FVW%W(iW)%BN_phi(iNd))
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + m%Y(iNd,iB)*cp
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + p%RotDir*m%Y(iNd,iB)*cp
                      iOut = iOut + 1
                   END DO
                END DO
@@ -899,9 +899,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
-                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - m%Y(iNd,iB)*st
+                     ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - p%RotDir*m%Y(iNd,iB)*st
                      iOut = iOut + 1
                   END DO
                END DO 
@@ -922,9 +922,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
                DO iB=1,nB
                   iW = W2B(iB)
                   do iNdL=1,nNd; iNd=Nd(iNdL);   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
-                     y%WriteOutput(iOut)  = -m%X(iNd,iB)*st - m%Y(iNd,iB)*ct
+                     ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = p%RotDir * (-m%X(iNd,iB)*st - p%RotDir*m%Y(iNd,iB)*ct)
                      iOut = iOut + 1
                   END DO
                END DO 

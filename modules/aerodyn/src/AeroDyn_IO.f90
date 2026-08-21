@@ -520,6 +520,7 @@ CONTAINS
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       integer    :: iW
+      real(ReKi) :: Xcw, Ycw   ! blade-element loads converted back to the clockwise frame
 
       ! Induced velocity in global
       ! FVW already return this, we do a simple copy from Wings to Blades
@@ -545,36 +546,40 @@ CONTAINS
             m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j) / p%SpdSound
 
             m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,j) * m_AD%FVW%W(iW)%BN_AxInd(j)
-            m%AllOuts( BNVIndy(beta,k) ) =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,j) * m_AD%FVW%W(iW)%BN_TanInd(j)
+            ! MirrorRotor: the FVW quantities below are clockwise-frame, as BEMT's are,
+            ! so this block now carries the same RotDir factors as its BEMT counterpart.
+            m%AllOuts( BNVIndy(beta,k) ) =  p%RotDir * m_AD%FVW%W(iW)%BN_UrelWind_s(2,j) * m_AD%FVW%W(iW)%BN_TanInd(j)
 
             m%AllOuts( BNAxInd(beta,k) ) = m_AD%FVW%W(iW)%BN_AxInd(j)
             m%AllOuts( BNTnInd(beta,k) ) = m_AD%FVW%W(iW)%BN_TanInd(j)
 
             m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%W(iW)%BN_alpha(j)*R2D
-            m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
+            m%AllOuts( BNTheta(beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
             m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(iW)%BN_phi(j)*R2D
 
             m%AllOuts( BNCpmin(beta,k) ) = m_AD%FVW%W(iW)%BN_Cpmin(j)
             m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cl(j)
             m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cd(j)
-            m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cm(j)
+            m%AllOuts( BNCm(   beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%BN_Cm(j)
             m%AllOuts( BNCx(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)
-            m%AllOuts( BNCy(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cy(j)
+            m%AllOuts( BNCy(   beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%BN_Cy(j)
 
-            ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! cos(theta)
-            st=sin(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! sin(theta)
+            ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(j))    ! cos(theta)
+            st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(j))    ! sin(theta)
             m%AllOuts( BNCn(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)*ct + m_AD%FVW%W(iW)%BN_Cy(j)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m_AD%FVW%W(iW)%BN_Cx(j)*st + m_AD%FVW%W(iW)%BN_Cy(j)*ct
+            m%AllOuts( BNCt(   beta,k) ) = p%RotDir*(-m_AD%FVW%W(iW)%BN_Cx(j)*st + m_AD%FVW%W(iW)%BN_Cy(j)*ct)
 
             cp=cos(m_AD%FVW%W(iW)%BN_phi(j))
             sp=sin(m_AD%FVW%W(iW)%BN_phi(j))
-            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+            Xcw = m%X(j,k)
+            Ycw = p%RotDir * m%Y(j,k)
+            m%AllOuts( BNFl(   beta,k) ) =  Xcw*cp - Ycw*sp
+            m%AllOuts( BNFd(   beta,k) ) =  Xcw*sp + Ycw*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
-            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
-            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( BNFn(   beta,k) ) =  Xcw*ct - Ycw*st
+            m%AllOuts( BNFt(   beta,k) ) = p%RotDir*(-Xcw*st - Ycw*ct)
 
             m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
