@@ -28,6 +28,7 @@ program SeaStateDriver
    use SeaState_Output
    use ModMesh_Types
    use VersionInfo
+   USE SeaSt_WaveField, ONLY: WaveField_WriteBlockVTK
    
    implicit none
    
@@ -45,6 +46,7 @@ program SeaStateDriver
       logical                 :: WaveElevVis          !< Should we put together a wave elevation series and save it to file?
       integer(IntKi)          :: WaveElevVisNx        !< Number of points in the X direction for the wave elevation series (-)
       integer(IntKi)          :: WaveElevVisNy        !< Number of points in the X direction for the wave elevation series (-)
+      integer(IntKi)          :: WrBlockVTK           !< Write wave-block VTK every N steps; 0=off (optional trailing input)
    end type SeaSt_Drvr_InitInput
    
 ! -----------------------------------------------------------------------------------   
@@ -88,7 +90,9 @@ program SeaStateDriver
    real(R8Ki)                                          :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    character(1024)                                     :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    type(SeaSt_Drvr_InitInput)                          :: drvrInitInp          ! Initialization data for the driver program
-   
+   integer(IntKi)                                      :: BlkVTKFrame = 0      ! Frame counter for wave-block VTK series
+   integer(IntKi)                                      :: BlkVTKtWidth         ! Width of the zero-padded frame number in wave-block VTK filenames
+
    integer                                             :: StrtTime (8)         ! Start time of simulation (including initialization)
    integer                                             :: SimStrtTime (8)      ! Start time of simulation (after initialization)
    real(ReKi)                                          :: PrevClockTime        ! Clock time at start of simulation in seconds
@@ -231,7 +235,8 @@ program SeaStateDriver
 
    ! loop through time steps
 
-   
+   BlkVTKtWidth = MAX( 4_IntKi, CEILING( LOG10( REAL(drvrInitInp%NSteps,ReKi) + 1.0_ReKi ) ) )
+
    do n = 1, drvrInitInp%NSteps
 
       Time = (n-1) * drvrInitInp%TimeInterval
@@ -244,8 +249,17 @@ program SeaStateDriver
             ! Clean up and exit
          call SeaSt_DvrCleanup()
       end if
-   
-   
+
+      if ( drvrInitInp%WrBlockVTK > 0 ) then
+         if ( mod( n-1, drvrInitInp%WrBlockVTK ) == 0 ) then
+            call WaveField_WriteBlockVTK ( Time, p%WaveField, trim(drvrInitInp%OutRootName), &
+                                           BlkVTKFrame, BlkVTKtWidth, ErrStat, ErrMsg )
+            if (ErrStat /= ErrID_None) call WrScr( trim(ErrMsg) )
+            BlkVTKFrame = BlkVTKFrame + 1
+         end if
+      end if
+
+
       if ( MOD( n + 1, n_SttsTime ) == 0 ) then
 
          call SimStatus( TiLstPrn, PrevClockTime, time, InitInData%TMax )
@@ -330,7 +344,10 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    real(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
    integer(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
 
-   
+   integer(IntKi)                                   :: ErrStatTmp           !< Local error status for optional trailing inputs
+   character(ErrMsgLen)                             :: ErrMsgTmp            !< Local error message for optional trailing inputs
+
+
    
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
@@ -598,6 +615,11 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
 !         return
 !      end if
 
+      !> WrBlockVTK -- optional trailing input: write wave-block VTK every N steps (0=off).
+      !  Old driver files end before this line; treat any read failure as "absent" => 0.
+   InitInp%WrBlockVTK = 0
+   call ReadVar ( UnIn, FileName, InitInp%WrBlockVTK, 'WrBlockVTK', 'Wave-block VTK interval', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+   if ( ErrStatTmp /= ErrID_None ) InitInp%WrBlockVTK = 0
 
    if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
    close( UnIn )

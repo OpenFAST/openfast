@@ -38,6 +38,49 @@ typedef     ^             MiscVarType           integer              Indx_Hi    
 typedef     ^             MiscVarType           logical              FirstWarn_Clamp  -            .true.      -        "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
 
 
+# On-demand wave-kinematics block partitioning (WvKinBlockMod=True): one cube block of the volume grid (partitioned in x, y, z; full time extent)
+typedef     ^             SeaSt_WaveBlockType   SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,nPtZ]" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveVel         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,nPtZ,3]"       (m/s)
+typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,nPtZ,3]"   (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveAccMCF      {:}{:}{:}{:}{:}  -        -        "Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3]" (m/s^2)
+typedef     ^                 ^                 DbKi                 LastAccess      -                0        -        "Simulation time of the most recent access to this block" (s)
+typedef     ^                 ^                 LOGICAL              Populated       -             .false.     -        "True when the block arrays are allocated and filled" -
+typedef     ^                 ^                 LOGICAL              EverPopulated   -             .false.     -        "True if this block has ever been populated (never cleared by eviction)" -
+typedef     ^                 ^                 INTEGER              iPtX0           -                0        -        "Global x-index of this block's first grid point" -
+typedef     ^                 ^                 INTEGER              iPtY0           -                0        -        "Global y-index of this block's first grid point" -
+typedef     ^                 ^                 INTEGER              iPtZ0           -                0        -        "Global z-index of this block's first grid point" -
+typedef     ^                 ^                 INTEGER              nPtX            -                0        -        "Number of grid points this block covers in x" -
+typedef     ^                 ^                 INTEGER              nPtY            -                0        -        "Number of grid points this block covers in y" -
+typedef     ^                 ^                 INTEGER              nPtZ            -                0        -        "Number of grid points this block covers in z" -
+
+# Block store: block-grid layout, per-frequency/per-level generation seeds, and bookkeeping (owned by SeaState MiscVarType)
+typedef     ^          SeaSt_WaveBlockStoreType SeaSt_WaveBlockType  Blocks          {:}              -        -        "Wave-kinematics blocks, index = ((kb-1)*nBlkY + (jb-1))*nBlkX + ib" -
+typedef     ^                 ^                 INTEGER              nBlkX           -                0        -        "Number of blocks in x" -
+typedef     ^                 ^                 INTEGER              nBlkY           -                0        -        "Number of blocks in y" -
+typedef     ^                 ^                 INTEGER              nBlkZ           -                0        -        "Number of blocks in z" -
+typedef     ^                 ^                 INTEGER              BlkCellsX       -                0        -        "Grid cells per block in x (interior blocks)" -
+typedef     ^                 ^                 INTEGER              BlkCellsY       -                0        -        "Grid cells per block in y (interior blocks)" -
+typedef     ^                 ^                 INTEGER              BlkCellsZ       -                0        -        "Grid cells per block in z (interior blocks)" -
+typedef     ^                 ^                 SiKi                 WaveNmbrArr     {:}              -        -        "Wave number of each non-negative frequency component (0:NStepWave2)" (1/m)
+typedef     ^                 ^                 SiKi                 OmegaIArr       {:}              -        -        "Intrinsic (Doppler-corrected) angular frequency of each component; <0 marks components beyond the critical frequency (0:NStepWave2)" (rad/s)
+typedef     ^                 ^                 SiKi                 MCFCArr         {:}              -        -        "MacCamy-Fuchs acceleration scaling coefficient of each component (0:NStepWave2)" -
+typedef     ^                 ^                 SiKi                 CurrVxi         {:}              -        -        "Steady current xi-velocity at each grid z level (NZ)" (m/s)
+typedef     ^                 ^                 SiKi                 CurrVyi         {:}              -        -        "Steady current yi-velocity at each grid z level (NZ)" (m/s)
+typedef     ^                 ^                 SiKi                 zGrid           {:}              -        -        "Grid z coordinates relative to SWL, <=0 (NZ)" (m)
+typedef     ^                 ^                 SiKi                 xGrid           {:}              -        -        "Grid x coordinates (NX)" (m)
+typedef     ^                 ^                 SiKi                 yGrid           {:}              -        -        "Grid y coordinates (NY)" (m)
+typedef     ^                 ^                 SiKi                 CosWaveDirArr   {:}              -        -        "COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
+typedef     ^                 ^                 SiKi                 SinWaveDirArr   {:}              -        -        "SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2)" -
+typedef     ^                 ^                 LOGICAL              HasCurr         -             .false.     -        "True if a current profile was available to add to the wave velocities" -
+typedef     ^                 ^                 ReKi                 Gravity         -                0        -        "Gravitational acceleration, needed by the second-order kernel's per-pair dispersion solves" (m/s^2)
+typedef     ^                 ^                 LOGICAL              SecondOrderDiff -             .false.     -        "Add difference-QTF second-order kinematics during block population" -
+typedef     ^                 ^                 LOGICAL              SecondOrderSum  -             .false.     -        "Add sum-QTF second-order kinematics during block population" -
+typedef     ^                 ^                 DbKi                 LastSweep       -                0        -        "Simulation time of the last idle-block eviction sweep" (s)
+typedef     ^                 ^                 INTEGER              nPopulated      -                0        -        "Total number of block population events" -
+typedef     ^                 ^                 INTEGER              nEvicted        -                0        -        "Total number of block eviction events" -
+typedef     ^                 ^                 INTEGER              nPeakResident   -                0        -        "Peak number of simultaneously populated blocks" -
+
+
 typedef  SeaSt_WaveField  SeaSt_WaveFieldType   SiKi                 WaveTime        {:}              -        -        "Time array"   (s)
 typedef     ^                 ^                 SiKi                 WaveDynP        {:}{:}{:}{:}     -        -        "Incident wave dynamic pressure" (N/m^2)
 typedef     ^                 ^                 SiKi                 WaveAcc         {:}{:}{:}{:}{:}  -        -        "Incident wave acceleration"     (m/s^2)
@@ -83,4 +126,8 @@ typedef     ^                 ^                 INTEGER              NStepWave  
 typedef     ^                 ^                 INTEGER              NStepWave2        -              -        -        "NStepWave / 2" -
 typedef     ^                 ^                 SiKi                 GridDepth         -              -        -        "Depth (>0) of wave grid below SWL" m
 typedef     ^                 ^                 DbKi                 WaveTimeShift     -              0        -        "Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time)" (s)
+typedef     ^                 ^                 LOGICAL              WvKinBlockMod     -              .FALSE.  -        "Use on-demand block partitioning of the wave-kinematics volume grid (flag)" -
+typedef     ^                 ^                 ReKi                 WvKinBlockSize    -              -        -        "Target edge length of an on-demand cube block" (m)
+typedef     ^                 ^                 DbKi                 WvKinBlockFreeT   -              -        -        "Idle simulation time after which a block is freed; <=0 never" (s)
+typedef     ^                 ^        SeaSt_WaveBlockStoreType      *BlockStore       -              -        -        "Non-owning pointer to the on-demand wave-kinematics block store (owned by SeaState MiscVarType) [associated only when WvKinBlockMod=True]" -
 typedef     ^                 ^            Current_InitInputType   Current_InitInput   -              -        -        "InitInputs in the Current Module. For coupling with MD." - 

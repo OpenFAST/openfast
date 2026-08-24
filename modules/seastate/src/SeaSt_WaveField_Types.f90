@@ -62,6 +62,52 @@ IMPLICIT NONE
     LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
   END TYPE SeaSt_WaveField_MiscVarType
 ! =======================
+! =========  SeaSt_WaveBlockType  =======
+  TYPE, PUBLIC :: SeaSt_WaveBlockType
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveDynP      !< Block-local incident wave dynamic pressure [0:NStepWave,nPtX,nPtY,nPtZ] [(N/m^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel      !< Block-local incident wave velocity [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAcc      !< Block-local incident wave acceleration [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveAccMCF      !< Block-local scaled acceleration for MacCamy-Fuchs members [0:NStepWave,nPtX,nPtY,nPtZ,3] [(m/s^2)]
+    REAL(DbKi)  :: LastAccess = 0      !< Simulation time of the most recent access to this block [(s)]
+    LOGICAL  :: Populated = .false.      !< True when the block arrays are allocated and filled [-]
+    LOGICAL  :: EverPopulated = .false.      !< True if this block has ever been populated (never cleared by eviction) [-]
+    INTEGER(IntKi)  :: iPtX0 = 0      !< Global x-index of this block's first grid point [-]
+    INTEGER(IntKi)  :: iPtY0 = 0      !< Global y-index of this block's first grid point [-]
+    INTEGER(IntKi)  :: iPtZ0 = 0      !< Global z-index of this block's first grid point [-]
+    INTEGER(IntKi)  :: nPtX = 0      !< Number of grid points this block covers in x [-]
+    INTEGER(IntKi)  :: nPtY = 0      !< Number of grid points this block covers in y [-]
+    INTEGER(IntKi)  :: nPtZ = 0      !< Number of grid points this block covers in z [-]
+  END TYPE SeaSt_WaveBlockType
+! =======================
+! =========  SeaSt_WaveBlockStoreType  =======
+  TYPE, PUBLIC :: SeaSt_WaveBlockStoreType
+    TYPE(SeaSt_WaveBlockType) , DIMENSION(:), ALLOCATABLE  :: Blocks      !< Wave-kinematics blocks, index = ((kb-1)*nBlkY + (jb-1))*nBlkX + ib [-]
+    INTEGER(IntKi)  :: nBlkX = 0      !< Number of blocks in x [-]
+    INTEGER(IntKi)  :: nBlkY = 0      !< Number of blocks in y [-]
+    INTEGER(IntKi)  :: nBlkZ = 0      !< Number of blocks in z [-]
+    INTEGER(IntKi)  :: BlkCellsX = 0      !< Grid cells per block in x (interior blocks) [-]
+    INTEGER(IntKi)  :: BlkCellsY = 0      !< Grid cells per block in y (interior blocks) [-]
+    INTEGER(IntKi)  :: BlkCellsZ = 0      !< Grid cells per block in z (interior blocks) [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveNmbrArr      !< Wave number of each non-negative frequency component (0:NStepWave2) [(1/m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: OmegaIArr      !< Intrinsic (Doppler-corrected) angular frequency of each component; <0 marks components beyond the critical frequency (0:NStepWave2) [(rad/s)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MCFCArr      !< MacCamy-Fuchs acceleration scaling coefficient of each component (0:NStepWave2) [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVxi      !< Steady current xi-velocity at each grid z level (NZ) [(m/s)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !< Steady current yi-velocity at each grid z level (NZ) [(m/s)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: zGrid      !< Grid z coordinates relative to SWL, <=0 (NZ) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: xGrid      !< Grid x coordinates (NX) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: yGrid      !< Grid y coordinates (NY) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CosWaveDirArr      !< COS(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: SinWaveDirArr      !< SIN(D2R*WaveDirArr), captured from VariousWaves_Init (0:NStepWave2) [-]
+    LOGICAL  :: HasCurr = .false.      !< True if a current profile was available to add to the wave velocities [-]
+    REAL(ReKi)  :: Gravity = 0      !< Gravitational acceleration, needed by the second-order kernel's per-pair dispersion solves [(m/s^2)]
+    LOGICAL  :: SecondOrderDiff = .false.      !< Add difference-QTF second-order kinematics during block population [-]
+    LOGICAL  :: SecondOrderSum = .false.      !< Add sum-QTF second-order kinematics during block population [-]
+    REAL(DbKi)  :: LastSweep = 0      !< Simulation time of the last idle-block eviction sweep [(s)]
+    INTEGER(IntKi)  :: nPopulated = 0      !< Total number of block population events [-]
+    INTEGER(IntKi)  :: nEvicted = 0      !< Total number of block eviction events [-]
+    INTEGER(IntKi)  :: nPeakResident = 0      !< Peak number of simultaneously populated blocks [-]
+  END TYPE SeaSt_WaveBlockStoreType
+! =======================
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]
@@ -107,6 +153,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(SiKi)  :: GridDepth = 0.0_R4Ki      !< Depth (>0) of wave grid below SWL [m]
     REAL(DbKi)  :: WaveTimeShift = 0      !< Add this to the time to effectively phase shift the wave (useful for hybrid tank testing). Positive value only (advance time) [(s)]
+    LOGICAL  :: WvKinBlockMod = .FALSE.      !< Use on-demand block partitioning of the wave-kinematics volume grid (flag) [-]
+    REAL(ReKi)  :: WvKinBlockSize = 0.0_ReKi      !< Target edge length of an on-demand cube block [(m)]
+    REAL(DbKi)  :: WvKinBlockFreeT = 0.0_R8Ki      !< Idle simulation time after which a block is freed; <=0 never [(s)]
+    TYPE(SeaSt_WaveBlockStoreType) , POINTER :: BlockStore => NULL()      !< Non-owning pointer to the on-demand wave-kinematics block store (owned by SeaState MiscVarType) [associated only when WvKinBlockMod=True] [-]
     TYPE(Current_InitInputType)  :: Current_InitInput      !< InitInputs in the Current Module. For coupling with MD. [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
@@ -161,6 +211,449 @@ subroutine SeaSt_WaveField_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%Indx_Lo); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Indx_Hi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FirstWarn_Clamp); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SeaSt_WaveField_CopySeaSt_WaveBlockType(SrcSeaSt_WaveBlockTypeData, DstSeaSt_WaveBlockTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_WaveBlockType), intent(in) :: SrcSeaSt_WaveBlockTypeData
+   type(SeaSt_WaveBlockType), intent(inout) :: DstSeaSt_WaveBlockTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopySeaSt_WaveBlockType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcSeaSt_WaveBlockTypeData%WaveDynP)) then
+      LB(1:4) = lbound(SrcSeaSt_WaveBlockTypeData%WaveDynP)
+      UB(1:4) = ubound(SrcSeaSt_WaveBlockTypeData%WaveDynP)
+      if (.not. allocated(DstSeaSt_WaveBlockTypeData%WaveDynP)) then
+         allocate(DstSeaSt_WaveBlockTypeData%WaveDynP(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockTypeData%WaveDynP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockTypeData%WaveDynP = SrcSeaSt_WaveBlockTypeData%WaveDynP
+   end if
+   if (allocated(SrcSeaSt_WaveBlockTypeData%WaveVel)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveBlockTypeData%WaveVel)
+      UB(1:5) = ubound(SrcSeaSt_WaveBlockTypeData%WaveVel)
+      if (.not. allocated(DstSeaSt_WaveBlockTypeData%WaveVel)) then
+         allocate(DstSeaSt_WaveBlockTypeData%WaveVel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockTypeData%WaveVel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockTypeData%WaveVel = SrcSeaSt_WaveBlockTypeData%WaveVel
+   end if
+   if (allocated(SrcSeaSt_WaveBlockTypeData%WaveAcc)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveBlockTypeData%WaveAcc)
+      UB(1:5) = ubound(SrcSeaSt_WaveBlockTypeData%WaveAcc)
+      if (.not. allocated(DstSeaSt_WaveBlockTypeData%WaveAcc)) then
+         allocate(DstSeaSt_WaveBlockTypeData%WaveAcc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockTypeData%WaveAcc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockTypeData%WaveAcc = SrcSeaSt_WaveBlockTypeData%WaveAcc
+   end if
+   if (allocated(SrcSeaSt_WaveBlockTypeData%WaveAccMCF)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveBlockTypeData%WaveAccMCF)
+      UB(1:5) = ubound(SrcSeaSt_WaveBlockTypeData%WaveAccMCF)
+      if (.not. allocated(DstSeaSt_WaveBlockTypeData%WaveAccMCF)) then
+         allocate(DstSeaSt_WaveBlockTypeData%WaveAccMCF(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockTypeData%WaveAccMCF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockTypeData%WaveAccMCF = SrcSeaSt_WaveBlockTypeData%WaveAccMCF
+   end if
+   DstSeaSt_WaveBlockTypeData%LastAccess = SrcSeaSt_WaveBlockTypeData%LastAccess
+   DstSeaSt_WaveBlockTypeData%Populated = SrcSeaSt_WaveBlockTypeData%Populated
+   DstSeaSt_WaveBlockTypeData%EverPopulated = SrcSeaSt_WaveBlockTypeData%EverPopulated
+   DstSeaSt_WaveBlockTypeData%iPtX0 = SrcSeaSt_WaveBlockTypeData%iPtX0
+   DstSeaSt_WaveBlockTypeData%iPtY0 = SrcSeaSt_WaveBlockTypeData%iPtY0
+   DstSeaSt_WaveBlockTypeData%iPtZ0 = SrcSeaSt_WaveBlockTypeData%iPtZ0
+   DstSeaSt_WaveBlockTypeData%nPtX = SrcSeaSt_WaveBlockTypeData%nPtX
+   DstSeaSt_WaveBlockTypeData%nPtY = SrcSeaSt_WaveBlockTypeData%nPtY
+   DstSeaSt_WaveBlockTypeData%nPtZ = SrcSeaSt_WaveBlockTypeData%nPtZ
+end subroutine
+
+subroutine SeaSt_WaveField_DestroySeaSt_WaveBlockType(SeaSt_WaveBlockTypeData, ErrStat, ErrMsg)
+   type(SeaSt_WaveBlockType), intent(inout) :: SeaSt_WaveBlockTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_DestroySeaSt_WaveBlockType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SeaSt_WaveBlockTypeData%WaveDynP)) then
+      deallocate(SeaSt_WaveBlockTypeData%WaveDynP)
+   end if
+   if (allocated(SeaSt_WaveBlockTypeData%WaveVel)) then
+      deallocate(SeaSt_WaveBlockTypeData%WaveVel)
+   end if
+   if (allocated(SeaSt_WaveBlockTypeData%WaveAcc)) then
+      deallocate(SeaSt_WaveBlockTypeData%WaveAcc)
+   end if
+   if (allocated(SeaSt_WaveBlockTypeData%WaveAccMCF)) then
+      deallocate(SeaSt_WaveBlockTypeData%WaveAccMCF)
+   end if
+end subroutine
+
+subroutine SeaSt_WaveField_PackSeaSt_WaveBlockType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SeaSt_WaveBlockType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackSeaSt_WaveBlockType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%WaveDynP)
+   call RegPackAlloc(RF, InData%WaveVel)
+   call RegPackAlloc(RF, InData%WaveAcc)
+   call RegPackAlloc(RF, InData%WaveAccMCF)
+   call RegPack(RF, InData%LastAccess)
+   call RegPack(RF, InData%Populated)
+   call RegPack(RF, InData%EverPopulated)
+   call RegPack(RF, InData%iPtX0)
+   call RegPack(RF, InData%iPtY0)
+   call RegPack(RF, InData%iPtZ0)
+   call RegPack(RF, InData%nPtX)
+   call RegPack(RF, InData%nPtY)
+   call RegPack(RF, InData%nPtZ)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SeaSt_WaveBlockType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_WaveField_UnPackSeaSt_WaveBlockType'
+   integer(B4Ki)   :: LB(5), UB(5)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%WaveDynP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveAcc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveAccMCF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastAccess); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Populated); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EverPopulated); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iPtX0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iPtY0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iPtZ0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPtX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPtY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPtZ); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SeaSt_WaveField_CopySeaSt_WaveBlockStoreType(SrcSeaSt_WaveBlockStoreTypeData, DstSeaSt_WaveBlockStoreTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_WaveBlockStoreType), intent(in) :: SrcSeaSt_WaveBlockStoreTypeData
+   type(SeaSt_WaveBlockStoreType), intent(inout) :: DstSeaSt_WaveBlockStoreTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopySeaSt_WaveBlockStoreType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%Blocks)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%Blocks)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%Blocks)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%Blocks)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%Blocks(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%Blocks.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_WaveField_CopySeaSt_WaveBlockType(SrcSeaSt_WaveBlockStoreTypeData%Blocks(i1), DstSeaSt_WaveBlockStoreTypeData%Blocks(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstSeaSt_WaveBlockStoreTypeData%nBlkX = SrcSeaSt_WaveBlockStoreTypeData%nBlkX
+   DstSeaSt_WaveBlockStoreTypeData%nBlkY = SrcSeaSt_WaveBlockStoreTypeData%nBlkY
+   DstSeaSt_WaveBlockStoreTypeData%nBlkZ = SrcSeaSt_WaveBlockStoreTypeData%nBlkZ
+   DstSeaSt_WaveBlockStoreTypeData%BlkCellsX = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsX
+   DstSeaSt_WaveBlockStoreTypeData%BlkCellsY = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsY
+   DstSeaSt_WaveBlockStoreTypeData%BlkCellsZ = SrcSeaSt_WaveBlockStoreTypeData%BlkCellsZ
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%WaveNmbrArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%WaveNmbrArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%WaveNmbrArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%WaveNmbrArr = SrcSeaSt_WaveBlockStoreTypeData%WaveNmbrArr
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%OmegaIArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%OmegaIArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%OmegaIArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%OmegaIArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%OmegaIArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%OmegaIArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%OmegaIArr = SrcSeaSt_WaveBlockStoreTypeData%OmegaIArr
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%MCFCArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%MCFCArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%MCFCArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%MCFCArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%MCFCArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%MCFCArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%MCFCArr = SrcSeaSt_WaveBlockStoreTypeData%MCFCArr
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%CurrVxi)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%CurrVxi)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%CurrVxi)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%CurrVxi)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%CurrVxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%CurrVxi = SrcSeaSt_WaveBlockStoreTypeData%CurrVxi
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%CurrVyi)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%CurrVyi)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%CurrVyi)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%CurrVyi)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%CurrVyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%CurrVyi = SrcSeaSt_WaveBlockStoreTypeData%CurrVyi
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%zGrid)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%zGrid)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%zGrid)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%zGrid)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%zGrid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%zGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%zGrid = SrcSeaSt_WaveBlockStoreTypeData%zGrid
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%xGrid)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%xGrid)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%xGrid)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%xGrid)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%xGrid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%xGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%xGrid = SrcSeaSt_WaveBlockStoreTypeData%xGrid
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%yGrid)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%yGrid)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%yGrid)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%yGrid)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%yGrid(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%yGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%yGrid = SrcSeaSt_WaveBlockStoreTypeData%yGrid
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%CosWaveDirArr = SrcSeaSt_WaveBlockStoreTypeData%CosWaveDirArr
+   end if
+   if (allocated(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+      if (.not. allocated(DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+         allocate(DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveBlockStoreTypeData%SinWaveDirArr = SrcSeaSt_WaveBlockStoreTypeData%SinWaveDirArr
+   end if
+   DstSeaSt_WaveBlockStoreTypeData%HasCurr = SrcSeaSt_WaveBlockStoreTypeData%HasCurr
+   DstSeaSt_WaveBlockStoreTypeData%Gravity = SrcSeaSt_WaveBlockStoreTypeData%Gravity
+   DstSeaSt_WaveBlockStoreTypeData%SecondOrderDiff = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderDiff
+   DstSeaSt_WaveBlockStoreTypeData%SecondOrderSum = SrcSeaSt_WaveBlockStoreTypeData%SecondOrderSum
+   DstSeaSt_WaveBlockStoreTypeData%LastSweep = SrcSeaSt_WaveBlockStoreTypeData%LastSweep
+   DstSeaSt_WaveBlockStoreTypeData%nPopulated = SrcSeaSt_WaveBlockStoreTypeData%nPopulated
+   DstSeaSt_WaveBlockStoreTypeData%nEvicted = SrcSeaSt_WaveBlockStoreTypeData%nEvicted
+   DstSeaSt_WaveBlockStoreTypeData%nPeakResident = SrcSeaSt_WaveBlockStoreTypeData%nPeakResident
+end subroutine
+
+subroutine SeaSt_WaveField_DestroySeaSt_WaveBlockStoreType(SeaSt_WaveBlockStoreTypeData, ErrStat, ErrMsg)
+   type(SeaSt_WaveBlockStoreType), intent(inout) :: SeaSt_WaveBlockStoreTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_DestroySeaSt_WaveBlockStoreType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SeaSt_WaveBlockStoreTypeData%Blocks)) then
+      LB(1:1) = lbound(SeaSt_WaveBlockStoreTypeData%Blocks)
+      UB(1:1) = ubound(SeaSt_WaveBlockStoreTypeData%Blocks)
+      do i1 = LB(1), UB(1)
+         call SeaSt_WaveField_DestroySeaSt_WaveBlockType(SeaSt_WaveBlockStoreTypeData%Blocks(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SeaSt_WaveBlockStoreTypeData%Blocks)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%WaveNmbrArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%WaveNmbrArr)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%OmegaIArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%OmegaIArr)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%MCFCArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%MCFCArr)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%CurrVxi)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%CurrVxi)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%CurrVyi)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%CurrVyi)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%zGrid)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%zGrid)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%xGrid)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%xGrid)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%yGrid)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%yGrid)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%CosWaveDirArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%CosWaveDirArr)
+   end if
+   if (allocated(SeaSt_WaveBlockStoreTypeData%SinWaveDirArr)) then
+      deallocate(SeaSt_WaveBlockStoreTypeData%SinWaveDirArr)
+   end if
+end subroutine
+
+subroutine SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SeaSt_WaveBlockStoreType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackSeaSt_WaveBlockStoreType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%Blocks))
+   if (allocated(InData%Blocks)) then
+      call RegPackBounds(RF, 1, lbound(InData%Blocks), ubound(InData%Blocks))
+      LB(1:1) = lbound(InData%Blocks)
+      UB(1:1) = ubound(InData%Blocks)
+      do i1 = LB(1), UB(1)
+         call SeaSt_WaveField_PackSeaSt_WaveBlockType(RF, InData%Blocks(i1)) 
+      end do
+   end if
+   call RegPack(RF, InData%nBlkX)
+   call RegPack(RF, InData%nBlkY)
+   call RegPack(RF, InData%nBlkZ)
+   call RegPack(RF, InData%BlkCellsX)
+   call RegPack(RF, InData%BlkCellsY)
+   call RegPack(RF, InData%BlkCellsZ)
+   call RegPackAlloc(RF, InData%WaveNmbrArr)
+   call RegPackAlloc(RF, InData%OmegaIArr)
+   call RegPackAlloc(RF, InData%MCFCArr)
+   call RegPackAlloc(RF, InData%CurrVxi)
+   call RegPackAlloc(RF, InData%CurrVyi)
+   call RegPackAlloc(RF, InData%zGrid)
+   call RegPackAlloc(RF, InData%xGrid)
+   call RegPackAlloc(RF, InData%yGrid)
+   call RegPackAlloc(RF, InData%CosWaveDirArr)
+   call RegPackAlloc(RF, InData%SinWaveDirArr)
+   call RegPack(RF, InData%HasCurr)
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, InData%SecondOrderDiff)
+   call RegPack(RF, InData%SecondOrderSum)
+   call RegPack(RF, InData%LastSweep)
+   call RegPack(RF, InData%nPopulated)
+   call RegPack(RF, InData%nEvicted)
+   call RegPack(RF, InData%nPeakResident)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SeaSt_WaveField_UnPackSeaSt_WaveBlockStoreType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SeaSt_WaveBlockStoreType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_WaveField_UnPackSeaSt_WaveBlockStoreType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   if (allocated(OutData%Blocks)) deallocate(OutData%Blocks)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Blocks(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Blocks.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SeaSt_WaveField_UnpackSeaSt_WaveBlockType(RF, OutData%Blocks(i1)) ! Blocks 
+      end do
+   end if
+   call RegUnpack(RF, OutData%nBlkX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nBlkY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nBlkZ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlkCellsX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlkCellsY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlkCellsZ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveNmbrArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%OmegaIArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MCFCArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CurrVyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%xGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%yGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CosWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SinWaveDirArr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasCurr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SecondOrderDiff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SecondOrderSum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastSweep); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPopulated); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nEvicted); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nPeakResident); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, DstSeaSt_WaveFieldTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -387,6 +880,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%NStepWave2 = SrcSeaSt_WaveFieldTypeData%NStepWave2
    DstSeaSt_WaveFieldTypeData%GridDepth = SrcSeaSt_WaveFieldTypeData%GridDepth
    DstSeaSt_WaveFieldTypeData%WaveTimeShift = SrcSeaSt_WaveFieldTypeData%WaveTimeShift
+   DstSeaSt_WaveFieldTypeData%WvKinBlockMod = SrcSeaSt_WaveFieldTypeData%WvKinBlockMod
+   DstSeaSt_WaveFieldTypeData%WvKinBlockSize = SrcSeaSt_WaveFieldTypeData%WvKinBlockSize
+   DstSeaSt_WaveFieldTypeData%WvKinBlockFreeT = SrcSeaSt_WaveFieldTypeData%WvKinBlockFreeT
+   DstSeaSt_WaveFieldTypeData%BlockStore => SrcSeaSt_WaveFieldTypeData%BlockStore
    call Current_CopyInitInput(SrcSeaSt_WaveFieldTypeData%Current_InitInput, DstSeaSt_WaveFieldTypeData%Current_InitInput, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -451,6 +948,7 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, E
       deallocate(SeaSt_WaveFieldTypeData%WaveDirArr)
    end if
    nullify(SeaSt_WaveFieldTypeData%CurrField)
+   nullify(SeaSt_WaveFieldTypeData%BlockStore)
    call Current_DestroyInitInput(SeaSt_WaveFieldTypeData%Current_InitInput, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -510,6 +1008,16 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, Indata)
    call RegPack(RF, InData%NStepWave2)
    call RegPack(RF, InData%GridDepth)
    call RegPack(RF, InData%WaveTimeShift)
+   call RegPack(RF, InData%WvKinBlockMod)
+   call RegPack(RF, InData%WvKinBlockSize)
+   call RegPack(RF, InData%WvKinBlockFreeT)
+   call RegPack(RF, associated(InData%BlockStore))
+   if (associated(InData%BlockStore)) then
+      call RegPackPointer(RF, c_loc(InData%BlockStore), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call SeaSt_WaveField_PackSeaSt_WaveBlockStoreType(RF, InData%BlockStore) 
+      end if
+   end if
    call Current_PackInitInput(RF, InData%Current_InitInput) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -584,6 +1092,27 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GridDepth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTimeShift); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvKinBlockFreeT); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%BlockStore)) deallocate(OutData%BlockStore)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%BlockStore)
+      else
+         allocate(OutData%BlockStore,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BlockStore.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%BlockStore)
+         call SeaSt_WaveField_UnpackSeaSt_WaveBlockStoreType(RF, OutData%BlockStore) ! BlockStore 
+      end if
+   else
+      OutData%BlockStore => null()
+   end if
    call Current_UnpackInitInput(RF, OutData%Current_InitInput) ! Current_InitInput 
 end subroutine
 

@@ -137,6 +137,18 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call ParseVar( FileInfo_In, CurLine, 'NZ', InputFileData%NZ, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
+      ! WvKinBlockMod - Wave kinematics volume-data mode.
+   call ParseVar( FileInfo_In, CurLine, 'WvKinBlockMod', InputFileData%WvKinBlockMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! WvKinBlockSize - Target edge length of an on-demand cube block.
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WvKinBlockSize', InputFileData%WvKinBlockSize, 100.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! WvKinBlockFreeT - Idle simulation time after which an on-demand block is freed.
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WvKinBlockFreeT', InputFileData%WvKinBlockFreeT, 600.0_DbKi, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
    !-------------------------------------------------------------------------------------------------
    ! Data section for waves
    !-------------------------------------------------------------------------------------------------
@@ -586,6 +598,18 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    if ( InputFileData%NZ < 2 ) then
       call SetErrStat( ErrID_Fatal,'NZ must be greater than or equal to 2.',ErrStat,ErrMsg,RoutineName)
       return
+   end if
+
+      ! WvKinBlockMod - Wave kinematics volume-data mode
+   if ( InputFileData%WvKinBlockMod ) then
+      if ( InputFileData%WvKinBlockSize <= 0.0_ReKi ) then
+         call SetErrStat( ErrID_Fatal,'WvKinBlockSize must be greater than zero when WvKinBlockMod=True.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+      if ( InputFileData%WaveMod == WaveMod_ExtFull ) then
+         call SetErrStat( ErrID_Fatal,'WvKinBlockMod=True cannot be used with WaveMod=6 (externally generated full wave-kinematics data).',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
    end if
 
       ! WaveMod - Wave kinematics model switch.
@@ -1194,6 +1218,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    p%WaveField%WaveDir      = InputFileData%WaveDir
    p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
    p%WaveField%MCFD         = InputFileData%MCFD
+
+   p%WaveField%WvKinBlockMod   = InputFileData%WvKinBlockMod
+   p%WaveField%WvKinBlockSize  = InputFileData%WvKinBlockSize
+   p%WaveField%WvKinBlockFreeT = InputFileData%WvKinBlockFreeT
 
    p%WaveField%WvLowCOff    =  InputFileData%WvLowCOff
    p%WaveField%WvHiCOff     =  InputFileData%WvHiCOff
