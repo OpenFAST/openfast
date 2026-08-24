@@ -2019,9 +2019,9 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NX'], 'NX', '– Number of nodes in half of the X-direction domain (-) [>=2]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NY'], 'NY', '– Number of nodes in half of the Y-direction domain (-) [>=2]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NZ'], 'NZ', '– Number of nodes in the Z direction (-) [>=2]\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockMod'], 'WvKinBlockMod', '- Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockSize'], 'WvKinBlockSize', '- Target edge length of an on-demand cube block (m) [used only when WvKinBlockMod=1; DEFAULT=100]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockFreeT'], 'WvKinBlockFreeT', '- Free a block after this much simulation time without an access (s) [used only when WvKinBlockMod=1; <=0 disables freeing; DEFAULT=600]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockMod'], 'WvKinBlockMod', '- Use on-demand block partitioning of the wave-kinematics volume grid (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockSize'], 'WvKinBlockSize', '- Target edge length of an on-demand cube block (m) [used only when WvKinBlockMod=True; DEFAULT=100]\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WvKinBlockFreeT'], 'WvKinBlockFreeT', '- Free a block after this much simulation time without an access (s) [used only when WvKinBlockMod=True; <=0 disables freeing; DEFAULT=600]\n'))
 
         f.write('---------------------- WAVES ---------------------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['WaveMod'], 'WaveMod', '- Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0]} (switch)\n'))

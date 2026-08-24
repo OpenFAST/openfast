@@ -2459,7 +2459,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SeaState']['NX']           = int_read(f.readline().split()[0])
         self.fst_vt['SeaState']['NY']           = int_read(f.readline().split()[0])
         self.fst_vt['SeaState']['NZ']           = int_read(f.readline().split()[0])
-        self.fst_vt['SeaState']['WvKinBlockMod']   = int_read(f.readline().split()[0])
+        self.fst_vt['SeaState']['WvKinBlockMod']   = bool_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WvKinBlockSize']  = float_read(f.readline().split()[0])
         self.fst_vt['SeaState']['WvKinBlockFreeT'] = float_read(f.readline().split()[0])
 

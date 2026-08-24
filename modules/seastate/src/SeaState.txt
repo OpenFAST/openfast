@@ -31,9 +31,9 @@ typedef     ^                 ^                 ReKi                     Z_Depth
 typedef     ^                 ^                 INTEGER                  NX                -        -        -  "Number of nodes in half of the X-direction domain"
 typedef     ^                 ^                 INTEGER                  NY                -        -        -  "Number of nodes in half of the Y-direction domain"
 typedef     ^                 ^                 INTEGER                  NZ                -        -        -  "Number of nodes in half of the Z-direction domain"
-typedef     ^                 ^                 INTEGER                  WvKinBlockMod     -        -        -  "Wave kinematics volume-data mode {0: precompute full domain, 1: on-demand block partitioning} (switch)" -
-typedef     ^                 ^                 ReKi                     WvKinBlockSize    -        -        -  "Target edge length of an on-demand cube block, snapped to whole grid cells [used only when WvKinBlockMod=1]" (m)
-typedef     ^                 ^                 DbKi                     WvKinBlockFreeT   -        -        -  "Free a block after this much simulation time without an access; <=0 disables freeing [used only when WvKinBlockMod=1]" (s)
+typedef     ^                 ^                 LOGICAL                  WvKinBlockMod     -        .FALSE.  -  "Use on-demand block partitioning of the wave-kinematics volume grid (flag)" -
+typedef     ^                 ^                 ReKi                     WvKinBlockSize    -        -        -  "Target edge length of an on-demand cube block, snapped to whole grid cells [used only when WvKinBlockMod=True]" (m)
+typedef     ^                 ^                 DbKi                     WvKinBlockFreeT   -        -        -  "Free a block after this much simulation time without an access; <=0 disables freeing [used only when WvKinBlockMod=True]" (s)
 typedef     ^                 ^                 Waves_InitInputType      Waves             -        -        -  "Initialization data for Waves module"    -
 typedef     ^                 ^                 Waves2_InitInputType     Waves2            -        -        -  "Initialization data for Waves2 module"    -
 typedef     ^                 ^                 Current_InitInputType    Current           -        -        -  "Initialization data for Current module"    -
@@ -172,7 +172,7 @@ typedef   ^                  MiscVarType            INTEGER                     
 typedef   ^                  ^                      DbKi                           LastOutTime        -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                        LastIndWave        -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
 typedef   ^                  ^                      GridInterp_MiscVarType         WaveField_m        -       -      -  "misc var information from the SeaState Interpolation module"   -
-typedef   ^                  ^                      SeaSt_WaveBlockStoreType       &WaveBlockStore    -       -      -  "On-demand wave-kinematics block store (allocated only when WvKinBlockMod=1; WaveField%BlockStore points here)"   -
+typedef   ^                  ^                      SeaSt_WaveBlockStoreType       &WaveBlockStore    -       -      -  "On-demand wave-kinematics block store (allocated only when WvKinBlockMod=True; WaveField%BlockStore points here)"   -
 
 # .... Linearization .......................................................................................................
 typedef   ^                  ^                      ModJacType                     Jac                -       -      -  "Values corresponding to module variables"  -

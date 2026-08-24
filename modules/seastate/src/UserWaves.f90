@@ -66,7 +66,7 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, WaveField, InitInp, WaveDT, ErrStat, 
    
       ALLOCATE ( WaveField%WaveElev1(0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)                   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveElev1.', ErrStat,ErrMsg,RoutineName)
       IF ( .NOT. ASSOCIATED(WaveField%BlockStore) ) THEN
-         ! Full-domain volume arrays. With on-demand block partitioning (WvKinBlockMod=1) these stay
+         ! Full-domain volume arrays. With on-demand block partitioning (WvKinBlockMod=True) these stay
          ! unallocated -- the kinematics live in per-block arrays populated on first access.
       ALLOCATE ( WaveField%WaveDynP (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveDynP.', ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( WaveField%WaveVel  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveVel.',  ErrStat,ErrMsg,RoutineName)

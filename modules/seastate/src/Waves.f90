@@ -779,7 +779,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
 
    ! Point the generation-seed store for the wave-kinematics volume kernel at the block store when on-demand block
-   ! partitioning is active (WvKinBlockMod=1, seeds must persist beyond init), or at a routine-local store otherwise.
+   ! partitioning is active (WvKinBlockMod=True, seeds must persist beyond init), or at a routine-local store otherwise.
    IF ( ASSOCIATED(WaveField%BlockStore) ) THEN
       Seeds => WaveField%BlockStore
    ELSE
@@ -1192,7 +1192,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    ! Compute the wave-kinematics volume arrays (first-order kinematics + steady current, with above-SWL/below-seabed
    ! zeroing and the periodic last-step wrap) via the shared per-column kernel over the full grid. With on-demand
-   ! block partitioning (WvKinBlockMod=1) the full-domain fill is skipped entirely -- the same kernel populates
+   ! block partitioning (WvKinBlockMod=True) the full-domain fill is skipped entirely -- the same kernel populates
    ! individual blocks on first access, driven by the seeds captured above.
    IF ( ASSOCIATED(WaveField%BlockStore) ) THEN
       ! on-demand blocks: nothing to fill at init

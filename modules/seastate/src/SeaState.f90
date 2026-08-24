@@ -93,7 +93,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves submodule initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       TYPE(SeaSt_WaveBlockStoreType), TARGET :: W2LocalSeeds                        ! Mode-0 local store for the second-order kernel seeds (grid coordinates, gravity, mode flags)
-      TYPE(SeaSt_WaveBlockStoreType), POINTER:: W2Seeds                             ! Seeds for the second-order kernel: the block store (WvKinBlockMod=1) or the local store above
+      TYPE(SeaSt_WaveBlockStoreType), POINTER:: W2Seeds                             ! Seeds for the second-order kernel: the block store (WvKinBlockMod=True) or the local store above
       INTEGER                                :: I                                   ! Generic counters
       INTEGER                                :: it                                  ! Generic counters
       REAL(ReKi)                             :: TmpElev                             ! temporary wave elevation
@@ -183,19 +183,19 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
       
-      ! Set up the on-demand wave-kinematics block store (WvKinBlockMod=1): owned by the misc vars and exposed to the
+      ! Set up the on-demand wave-kinematics block store (WvKinBlockMod=True): owned by the misc vars and exposed to the
       ! wave-field accessors through a non-owning pointer. Must be wired before Waves_Init so that VariousWaves_Init
       ! can capture the per-frequency generation seeds as it computes them.
-      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
+      if ( p%WaveField%WvKinBlockMod ) then
          if ( InputFileData%WaveMod == WaveMod_None ) then
-            call WrScr ( ' WvKinBlockMod=1 has no benefit in still water (WaveMod=0); using full-domain arrays.' )
-            p%WaveField%WvKinBlockMod = 0_IntKi
+            call WrScr ( ' WvKinBlockMod=True has no benefit in still water (WaveMod=0); using full-domain arrays.' )
+            p%WaveField%WvKinBlockMod = .false.
          else if ( InitInp%WrWvKinMod == 2 ) then
-            call WrScr ( ' WvKinBlockMod=1 cannot be used with full-field wave-kinematics file output (WrWvKinMod=2); using full-domain arrays.' )
-            p%WaveField%WvKinBlockMod = 0_IntKi
+            call WrScr ( ' WvKinBlockMod=True cannot be used with full-field wave-kinematics file output (WrWvKinMod=2); using full-domain arrays.' )
+            p%WaveField%WvKinBlockMod = .false.
          end if
       end if
-      if ( p%WaveField%WvKinBlockMod == 1_IntKi ) then
+      if ( p%WaveField%WvKinBlockMod ) then
          allocate( m%WaveBlockStore, STAT=ErrStat2 )
          if ( ErrStat2 /= 0 ) then
             call SetErrStat( ErrID_Fatal, 'Error allocating m%WaveBlockStore.', ErrStat, ErrMsg, RoutineName )
@@ -204,7 +204,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          p%WaveField%BlockStore => m%WaveBlockStore
       end if
 
-      ! Initialize Waves module, which also captures the block-store generation seeds when WvKinBlockMod=1
+      ! Initialize Waves module, which also captures the block-store generation seeds when WvKinBlockMod=True
       ! (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
@@ -321,7 +321,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                                 p%WaveField%VolGridParams, ErrStat2, ErrMsg2 )
       if(Failed()) return;
 
-      ! Set up the XY block layout for on-demand wave-kinematics population (WvKinBlockMod=1)
+      ! Set up the XY block layout for on-demand wave-kinematics population (WvKinBlockMod=True)
       IF ( ASSOCIATED(p%WaveField%BlockStore) ) THEN
          CALL WaveField_BlockStore_Init( p%WaveField, ErrStat2, ErrMsg2 ); if(Failed()) return;
       END IF
@@ -355,7 +355,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                       TRIM(Num2LStr(p%nGrid(3)))//' points, '//TRIM(Num2LStr(p%WaveField%NStepWave+1))// &
                       ' time steps, '//TRIM(Num2LStr(nComp))//' volume components' )
          call WrScr ( '   Full-domain volume data: '//TRIM(ADJUSTL(sVol))//' GB  ('// &
-                      MERGE('mode 0: allocated','mode 1: on demand',p%WaveField%WvKinBlockMod==0_IntKi)//')' )
+                      TRIM(MERGE('full domain: allocated','on demand             ',.not. p%WaveField%WvKinBlockMod))//')' )
          call WrScr ( '   Surface (eager) data:    '//TRIM(ADJUSTL(sSurf))//' GB' )
          IF ( ASSOCIATED(p%WaveField%BlockStore) ) THEN
             ASSOCIATE ( Store => p%WaveField%BlockStore )

@@ -840,20 +840,20 @@ contains
 END SUBROUTINE WaveField_GetMeanDynSurfCurr
 
 !----------------------------------------------------------------------------------------------------
-! On-demand wave-kinematics block partitioning (WvKinBlockMod=1)
+! On-demand wave-kinematics block partitioning (WvKinBlockMod=True)
 !----------------------------------------------------------------------------------------------------
 
 !> True when a MacCamy-Fuchs scaled acceleration field exists — either the eager full-domain array
-!! (WvKinBlockMod=0) or per-block MCF data (WvKinBlockMod=1 with MCFD>0, where the full-domain array
+!! (WvKinBlockMod=False) or per-block MCF data (WvKinBlockMod=True with MCFD>0, where the full-domain array
 !! is never allocated).
 LOGICAL FUNCTION WaveField_HasMCF( WaveField )
    type(SeaSt_WaveFieldType), intent(in   ) :: WaveField
    WaveField_HasMCF = ALLOCATED(WaveField%WaveAccMCF) .OR. &
-                      ( WaveField%WvKinBlockMod == 1_IntKi .AND. WaveField%MCFD > 0.0_SiKi )
+                      ( WaveField%WvKinBlockMod .AND. WaveField%MCFD > 0.0_SiKi )
 END FUNCTION WaveField_HasMCF
 
 
-!> Set up the XY block layout of the wave-kinematics volume grid (WvKinBlockMod=1). Blocks partition the
+!> Set up the XY block layout of the wave-kinematics volume grid (WvKinBlockMod=True). Blocks partition the
 !! grid CELLS; each block additionally stores the grid-point planes its interpolation stencils reach into
 !! (the volume interpolation uses a 4-point stencil per dimension, base cell c touching points c-1..c+2),
 !! so any query whose base cell lies in a block is served entirely from that block. No block data is
@@ -1140,7 +1140,7 @@ END SUBROUTINE WaveField_SweepBlocks
 !> Write the on-demand block partition as a legacy-VTK rectilinear grid: one cell per block,
 !> one CELL_DATA scalar "BlockLife" (-1 = never populated, 0 = evicted, (0,1] = active,
 !> normalized time remaining before eviction; pinned at 1 when eviction is disabled).
-!> Silent no-op unless WvKinBlockMod=1 with an allocated block store. Errors are warnings only.
+!> Silent no-op unless WvKinBlockMod=True with an allocated block store. Errors are warnings only.
 SUBROUTINE WaveField_WriteBlockVTK ( Time, WaveField, OutRootName, FrameNo, TWidth, ErrStat, ErrMsg )
    REAL(DbKi),                INTENT(IN   ) :: Time
    TYPE(SeaSt_WaveFieldType), INTENT(IN   ) :: WaveField
@@ -1162,7 +1162,7 @@ SUBROUTINE WaveField_WriteBlockVTK ( Time, WaveField, OutRootName, FrameNo, TWid
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( WaveField%WvKinBlockMod /= 1_IntKi ) RETURN
+   IF ( .NOT. WaveField%WvKinBlockMod ) RETURN
    IF ( .NOT. ASSOCIATED(WaveField%BlockStore) ) RETURN
    Store => WaveField%BlockStore
    IF ( .NOT. ALLOCATED(Store%Blocks) ) RETURN
@@ -1236,7 +1236,7 @@ END SUBROUTINE WaveField_WriteBlockVTK
 
 !> Interpolate the wave-kinematics volume quantities for the point/time previously set up through
 !! WaveField_Interp_Setup4D. This is the only place the volume data is read: in full-domain mode
-!! (WvKinBlockMod=0) it reads the eager WaveField arrays; in on-demand mode (WvKinBlockMod=1) it
+!! (WvKinBlockMod=False) it reads the eager WaveField arrays; in on-demand mode (WvKinBlockMod=True) it
 !! locates (and if needed populates) the wave block containing the interpolation stencil and reads
 !! the block-local arrays — same values by construction, since blocks are filled by the same kernels
 !! as the full-domain arrays. FAMCF is only written when a MacCamy-Fuchs field exists.
@@ -1258,7 +1258,7 @@ SUBROUTINE WaveField_InterpVol( WaveField, WaveField_m, Time, ErrStat, ErrMsg, F
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   IF ( WaveField%WvKinBlockMod == 1_IntKi ) THEN
+   IF ( WaveField%WvKinBlockMod ) THEN
 
       CALL WaveField_EnsureBlock( WaveField, WaveField_m, Time, iBlk, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN

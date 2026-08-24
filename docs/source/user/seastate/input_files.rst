@@ -103,18 +103,18 @@ Currently, the SeaState wave grid is always centered at the global origin and sy
 
 **NZ** sets the number of grid points in the vertical *Z*-direction from *Z* = (\ **MSL2SWL** − **Z_Depth**\ ) to *Z* = **MSL2SWL**\ . The distribution of grid points in the *Z*-direction is not uniform. It instead follows a cosine distribution: *Z*\ [\ *n*\ ] = **Z_Depth**\ (cos(\ *n*\ ·d\ *θ*\ )–1), where *n* = 0,1,…,\ **NZ**\ -1 and d\ *θ* = *π*\ /(2(\ **NZ**\ -1)). This distribution places more grid points near the free surface. **NZ** must be greater than or equal to 2.
 
-**WvKinBlockMod** selects whether the wave-kinematics volume-data grid is precomputed over its full domain (**WvKinBlockMod** = 0, the default/current behavior) or partitioned into on-demand cube blocks (**WvKinBlockMod** = 1). When on-demand block partitioning is enabled, the wave-kinematics grid is divided into blocks partitioned in *X*, *Y*, and *Z*; each block is computed and stored only once wave kinematics are first requested at a point inside it. This reduces initialization time and memory use for domains that are much larger than the region actually queried during the simulation. Results with **WvKinBlockMod** = 1 are identical to those with **WvKinBlockMod** = 0 to within solver precision.
+**WvKinBlockMod** selects whether the wave-kinematics volume-data grid is precomputed over its full domain (**WvKinBlockMod** = False, the default/current behavior) or partitioned into on-demand cube blocks (**WvKinBlockMod** = True). When on-demand block partitioning is enabled, the wave-kinematics grid is divided into blocks partitioned in *X*, *Y*, and *Z*; each block is computed and stored only once wave kinematics are first requested at a point inside it. This reduces initialization time and memory use for domains that are much larger than the region actually queried during the simulation. Results with **WvKinBlockMod** = True are identical to those with **WvKinBlockMod** = False to within solver precision.
 
-**WvKinBlockSize** sets (in m) the target edge length of an on-demand cube block, applied to all three of *X*, *Y*, and *Z*; it is used only when **WvKinBlockMod** = 1. The requested size is snapped to whole grid cells, with a minimum of 8 cells per side. Because the *Z* grid is cosine-distributed (non-uniform), the *Z* edge length is snapped using the mean *Z* spacing, so coarse-*Z* grids may remain a single *Z* block even at small **WvKinBlockSize**. A block size on the order of the platform footprint is recommended (DEFAULT = 100 m). See :ref:`sea-block-sizing` below for measured sizing guidance.
+**WvKinBlockSize** sets (in m) the target edge length of an on-demand cube block, applied to all three of *X*, *Y*, and *Z*; it is used only when **WvKinBlockMod** = True. The requested size is snapped to whole grid cells, with a minimum of 8 cells per side. Because the *Z* grid is cosine-distributed (non-uniform), the *Z* edge length is snapped using the mean *Z* spacing, so coarse-*Z* grids may remain a single *Z* block even at small **WvKinBlockSize**. A block size on the order of the platform footprint is recommended (DEFAULT = 100 m). See :ref:`sea-block-sizing` below for measured sizing guidance.
 
-**WvKinBlockFreeT** sets (in s) the amount of simulation time a block may go without being accessed before it is freed; it is used only when **WvKinBlockMod** = 1. A freed block is transparently recomputed if it is revisited later in the simulation. **WvKinBlockFreeT** should be set larger than the platform's slow-drift (surge) period to avoid repeatedly freeing and recomputing blocks that are still in active use. Setting **WvKinBlockFreeT** less than or equal to zero disables freeing, so all populated blocks remain resident in memory (DEFAULT = 600 s).
+**WvKinBlockFreeT** sets (in s) the amount of simulation time a block may go without being accessed before it is freed; it is used only when **WvKinBlockMod** = True. A freed block is transparently recomputed if it is revisited later in the simulation. **WvKinBlockFreeT** should be set larger than the platform's slow-drift (surge) period to avoid repeatedly freeing and recomputing blocks that are still in active use. Setting **WvKinBlockFreeT** less than or equal to zero disables freeing, so all populated blocks remain resident in memory (DEFAULT = 600 s).
 
 .. _sea-block-sizing:
 
 Choosing WvKinBlockSize and WvKinBlockFreeT
 +++++++++++++++++++++++++++++++++++++++++++
 
-On-demand block partitioning (**WvKinBlockMod** = 1) pays off when the wave
+On-demand block partitioning (**WvKinBlockMod** = True) pays off when the wave
 grid is much larger than the region a structure actually visits during the
 simulation: only the blocks touched by a query are ever computed and stored.
 For a typical station-keeping floating platform the queried footprint is
@@ -128,7 +128,7 @@ Two behaviors are worth understanding before tuning these inputs:
   therefore duplicate more grid points than one large block covering the same
   footprint, and can use *more* memory than the full-domain default. In a
   measured MHK case, **WvKinBlockSize** = 50 m split the footprint across
-  three blocks and consumed ~17% *more* peak memory than **WvKinBlockMod** = 0,
+  three blocks and consumed ~17% *more* peak memory than **WvKinBlockMod** = False,
   whereas **WvKinBlockSize** = 100–200 m used a single block at parity with
   the full domain.
 
@@ -152,8 +152,8 @@ Measured peak resident memory (single-turbine glue-code cases, ~600 s):
      - Peak mem
      - Blocks
      - Evictions
-     - vs. mode 0
-   * - **WvKinBlockMod** = 0 (full domain)
+     - vs. full domain
+   * - **WvKinBlockMod** = False (full domain)
      - 1216 MB
      - —
      - —
@@ -195,7 +195,7 @@ Practical guidance:
 Visualizing the block partition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When ``WvKinBlockMod = 1`` and OpenFAST is run with ``WrVTK = 2``, a
+When ``WvKinBlockMod = True`` and OpenFAST is run with ``WrVTK = 2``, a
 ``<root>.SeaSt.WaveBlocks.<frame>.vtk`` series is written alongside the other
 VTK animation output: a rectilinear grid with one cell per block whose
 ``BlockLife`` cell scalar encodes the block state — ``-1`` never populated,

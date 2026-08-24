@@ -601,17 +601,13 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    end if
 
       ! WvKinBlockMod - Wave kinematics volume-data mode
-   if ( InputFileData%WvKinBlockMod /= 0_IntKi .and. InputFileData%WvKinBlockMod /= 1_IntKi ) then
-      call SetErrStat( ErrID_Fatal,'WvKinBlockMod must be 0 (precompute full domain) or 1 (on-demand block partitioning).',ErrStat,ErrMsg,RoutineName)
-      return
-   end if
-   if ( InputFileData%WvKinBlockMod == 1_IntKi ) then
+   if ( InputFileData%WvKinBlockMod ) then
       if ( InputFileData%WvKinBlockSize <= 0.0_ReKi ) then
-         call SetErrStat( ErrID_Fatal,'WvKinBlockSize must be greater than zero when WvKinBlockMod=1.',ErrStat,ErrMsg,RoutineName)
+         call SetErrStat( ErrID_Fatal,'WvKinBlockSize must be greater than zero when WvKinBlockMod=True.',ErrStat,ErrMsg,RoutineName)
          return
       end if
       if ( InputFileData%WaveMod == WaveMod_ExtFull ) then
-         call SetErrStat( ErrID_Fatal,'WvKinBlockMod=1 cannot be used with WaveMod=6 (externally generated full wave-kinematics data).',ErrStat,ErrMsg,RoutineName)
+         call SetErrStat( ErrID_Fatal,'WvKinBlockMod=True cannot be used with WaveMod=6 (externally generated full wave-kinematics data).',ErrStat,ErrMsg,RoutineName)
          return
       end if
    end if
