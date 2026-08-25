@@ -488,7 +488,10 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    if (EqualRealNos(m%VRel_xd,0.0_SiKi)) then
       m%lambda = 0.0_SiKi
    else
-      m%lambda = real((u%RotSpeed * p%RotorRad),SiKi) / abs(m%VRel_xd)
+      ! MirrorRotor: the rotor speed arrives physical, and the table is defined in the
+      ! clockwise convention, so feed it the clockwise value to keep the tip-speed ratio
+      ! positive and inside the tabulated range.
+      m%lambda = real((p%RotDir * u%RotSpeed * p%RotorRad),SiKi) / abs(m%VRel_xd)
    endif
    if (EqualRealNos(m%VRel,0.0_SiKi)) then
       m%Chi = 0.0_SiKi
@@ -518,7 +521,9 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    else
       m%x_hat = x_hatDisk
       m%y_hat = tmp3 / tmp1
-      m%z_hat = cross_product( VRel_vec, x_hatDisk ) / tmp1
+      ! MirrorRotor: a cross product of two true vectors is a pseudovector, so without
+      ! this the skew-aligned triad comes out left-handed on a mirrored rotor.
+      m%z_hat = p%RotDir * cross_product( VRel_vec, x_hatDisk ) / tmp1
    endif
 
    !---------------
@@ -533,7 +538,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    !-------------------------------------------
    !> Interpolate Force and Moment coefficients
-   call ADskTableInterp(p%AeroTable, p%UseTSR, m%lambda, real(u%RotSpeed,SiKi), m%VRel_xd, real(u%BlPitch,SiKi), m%Chi, m%idx_last, m%C_F, m%C_M, ErrStat2, ErrMsg2)
+   call ADskTableInterp(p%AeroTable, p%UseTSR, m%lambda, real(p%RotDir*u%RotSpeed,SiKi), m%VRel_xd, real(u%BlPitch,SiKi), m%Chi, m%idx_last, m%C_F, m%C_M, ErrStat2, ErrMsg2)
       if (Failed()) return
 
    !> Apply skew if not in table
@@ -553,9 +558,20 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ M_x = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,x}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    !! - \f$ M_y = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,y}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    !! - \f$ M_z = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,z}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
+   ! MirrorRotor: the coefficients come out of the table in the clockwise convention and
+   ! are reflected here as they become physical loads. The skew-aligned triad above is
+   ! built so that all three basis vectors mirror as true vectors, which is what the
+   ! RotDir on z_hat achieves. Taking components against that triad, a true vector such
+   ! as force keeps every component, since both the vector and the basis vector reflect
+   ! together, while a pseudovector such as moment reverses every one. C_F and C_M are
+   ! left alone, since the Ct and Cq outputs report the rotor's own convention.
    tmp1 = real(p%halfRhoA,SiKi) * m%VRel_xd * m%VRel_xd
-   m%Force(1:3)  = tmp1 * m%C_F(1:3)
-   m%Moment(1:3) = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1:3)
+   m%Force(1)    = tmp1 * m%C_F(1)
+   m%Force(2)    = tmp1 * m%C_F(2)
+   m%Force(3)    = tmp1 * m%C_F(3)
+   m%Moment(1)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1) * real(p%RotDir,SiKi)
+   m%Moment(2)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(2) * real(p%RotDir,SiKi)
+   m%Moment(3)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(3) * real(p%RotDir,SiKi)
 
 
 

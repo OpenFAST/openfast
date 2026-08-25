@@ -559,6 +559,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, err
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
          call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
+         InitInp%AD%rotors(iWT)%MirrorRotor = wt%MirrorRotor
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -741,6 +742,7 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
    real(ReKi) :: bldMotion(3)  ! Pitch, Pitch speed, Pitch Acc
    real(ReKi) :: timeState(5)  ! HWindSpeed, PLExp, RotSpeed, Pitch, yaw
    real(ReKi) :: rotSpeedPrev  ! Used for backward compatibility
+   real(ReKi) :: rotDirDvr     ! +1 normal, -1 when the rotor rotation is mirrored
    real(R8Ki) :: orientation(3,3)
    real(R8Ki) :: orientation_loc(3,3)
    real(DbKi) :: time, timePrev
@@ -885,13 +887,17 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          print*,'Unknown hun motion type, should never happen'
          STOP
       endif
-      theta(1) = wt%hub%azimuth*D2R + dvr%dt * wt%hub%rotSpeed
+      ! MirrorRotor: the driver stands in for ElastoDyn, so it prescribes the mirrored hub
+      ! kinematics here; hub%azimuth and hub%rotSpeed stay in the rotor's own convention.
+      rotDirDvr = 1.0_ReKi
+      if (wt%MirrorRotor) rotDirDvr = -1.0_ReKi
+      theta(1) = rotDirDvr * (wt%hub%azimuth*D2R + dvr%dt * wt%hub%rotSpeed)
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
       orientation_loc = EulerConstruct( theta )
       y_ED%HubPtMotion%Orientation(:,:,1) = matmul(orientation_loc, y_ED%HubPtMotion%Orientation(:,:,1))
-      y_ED%HubPtMotion%RotationVel(  :,1) = y_ED%HubPtMotion%RotationVel(:,1) + y_ED%HubPtMotion%Orientation(1,:,1) * wt%hub%rotSpeed
-      y_ED%HubPtMotion%RotationAcc(  :,1) = y_ED%HubPtMotion%RotationAcc(:,1) + y_ED%HubPtMotion%Orientation(1,:,1) * wt%hub%rotAcc
+      y_ED%HubPtMotion%RotationVel(  :,1) = y_ED%HubPtMotion%RotationVel(:,1) + y_ED%HubPtMotion%Orientation(1,:,1) * rotDirDvr * wt%hub%rotSpeed
+      y_ED%HubPtMotion%RotationAcc(  :,1) = y_ED%HubPtMotion%RotationAcc(:,1) + y_ED%HubPtMotion%Orientation(1,:,1) * rotDirDvr * wt%hub%rotAcc
 
       ! --- Blade motion
       ! Hub 2 blade root
@@ -904,13 +910,15 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          elseif (wt%bld(iB)%motionType==idBldMotionVariable) then
             call interpTimeValue(wt%bld(iB)%motion, time, wt%bld(iB)%iMotion, bldMotion)
             wt%bld(iB)%pitch =bldMotion(1)
-            y_ED%BladeRootMotion(iB)%RotationVel(:,1) = y_ED%BladeRootMotion(iB)%RotationVel(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(2))
-            y_ED%BladeRootMotion(iB)%RotationAcc(:,1) = y_ED%BladeRootMotion(iB)%RotationAcc(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(3))
+            y_ED%BladeRootMotion(iB)%RotationVel(:,1) = y_ED%BladeRootMotion(iB)%RotationVel(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-rotDirDvr*bldMotion(2))
+            y_ED%BladeRootMotion(iB)%RotationAcc(:,1) = y_ED%BladeRootMotion(iB)%RotationAcc(:,1) + y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-rotDirDvr*bldMotion(3))
          else
             print*,'Unknown blade motion type, should never happen'
             STOP
          endif
-         theta(3) = - wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
+         ! MirrorRotor: pitch is supplied in the CW convention and mirrored here, matching
+         ! the blade twist that was negated on read.
+         theta(3) = - rotDirDvr * wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
          orientation_loc = EulerConstruct(theta)
          y_ED%BladeRootMotion(iB)%Orientation(:,:,1) = matmul(orientation_loc, y_ED%BladeRootMotion(iB)%Orientation(:,:,1))
       enddo
@@ -1072,6 +1080,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          wt%projMod = -1
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'MirrorRotor'//sWT        , wt%MirrorRotor           , errStat2, errMsg2, unEc); if(Failed()) return
 
       ! Basic init
       wt%hub%azimuth  = myNan

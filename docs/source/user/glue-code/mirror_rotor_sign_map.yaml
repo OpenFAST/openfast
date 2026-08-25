@@ -1,0 +1,1220 @@
+# Measured mirror sign map -- GENERATED, do not edit by hand.
+# Regenerate with:
+#   python3 reg_tests/otherTests/emit_sign_table.py --tol 0.005 --emit-map
+#
+# Every entry is observed by running a registered clockwise/mirrored
+# pair and comparing the channel against its counterpart.  Nothing here
+# is inferred from reading the source.
+tolerance: 0.005
+noise_floor: 1e-08
+behaviours:
+  S: {name: "identical", meaning: "v' = v"}
+  F: {name: "sign-flipped", meaning: "v' = -v"}
+  A: {name: "mirrored angle", meaning: "v' = -v, wrapped"}
+  negligible: {name: "below the noise floor", meaning: "indistinguishable from zero everywhere"}
+  "?": {name: "unresolved", meaning: "measured but not classified"}
+  mooring: {name: "set aside", meaning: "pairing is layout-specific"}
+channels:
+  AB1N001Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N001Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Fx: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N001Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N001Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Mm: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N001Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001STVx: {behaviour: negligible, measured_in: [OLAF free wake]}
+  AB1N001STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001STVz: {behaviour: negligible, measured_in: [OLAF free wake]}
+  AB1N001Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N001TnInd: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N001VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N001Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001VRel: {behaviour: S, measured_in: [OLAF free wake]}
+  AB1N001Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N001VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N001VUndy: {behaviour: F, measured_in: [OLAF free wake]}
+  AB1N001VUndz: {behaviour: S, measured_in: [OLAF free wake]}
+  AB1N002Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N002Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N002Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002STVx: {behaviour: negligible, measured_in: [OLAF free wake]}
+  AB1N002STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002STVz: {behaviour: negligible, measured_in: [OLAF free wake]}
+  AB1N002Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002VRel: {behaviour: S, measured_in: [OLAF free wake]}
+  AB1N002Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N002VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  AB1N002VUndy: {behaviour: F, measured_in: [OLAF free wake]}
+  AB1N002VUndz: {behaviour: S, measured_in: [OLAF free wake]}
+  AB1N003Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N003Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N003VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N004Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N004VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N005Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N005VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N006Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N006VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N007Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N007VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N008Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N008VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N009Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N009VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N010Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N010VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N011Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N011VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N012Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N012VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N013Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N013VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N014Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N014VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N015Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N015VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N016Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N016VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N017Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N017VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N018Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N018VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N019Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N019VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N020Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N020VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N021Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N021VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N022Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N022VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N023Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N023VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N024Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N024VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N025Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N025VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N026Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N026VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N027Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N027VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N028Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N028VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Phi: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029TnInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Vindy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N029Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N029VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Alpha: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030AxInd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Ct: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Cy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Fd: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Fl: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Fn: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Ft: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Fx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Fy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Gam: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Mm: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Phi: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N030STVy: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Theta: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030TnInd: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N030VDisx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Vindx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Vindy: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  AB1N030Vrel: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  AB1N030VUndx: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  ADCp: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADCq: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADCt: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADFx: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADFxi: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADFy: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADFyi: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADFz: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADFzi: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADMx: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADMxi: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADMy: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADMyi: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADMz: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADMzi: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADPitch: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADPower: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADSkew: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADSpeed: {behaviour: F, measured_in: [AeroDisk, yawed]}
+  ADSTVx: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADSTVxi: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADSTVy: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADSTVyi: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADSTVz: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADSTVzi: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADTSR: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADVRel: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADVWindx: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADVWindxi: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADVWindy: {behaviour: S, measured_in: [AeroDisk, yawed]}
+  ADVWindyi: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADVWindz: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADVWindzi: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ADYawErr: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  ANCHTEN1: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  ANCHTEN2: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  ANCHTEN3: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  ANCHTEN4: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  Azimuth: {behaviour: S, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn, OLAF free wake, Twin-rotor semisubmersible]}
+  B1AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1FldFz: {behaviour: S, measured_in: [MHK buoyancy]}
+  B1N1Alpha: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N1Cd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Cl: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Cm: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Cn: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Ct: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Cx: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Cy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Fd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Fl: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Fn: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N1Ft: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N1Fx: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Fy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1Theta: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N1VIndx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N1VIndy: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Alpha: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N2Cd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Cl: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Cm: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Cn: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Ct: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Cx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Cy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Fd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Fl: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Fn: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N2Ft: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N2Fx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Fy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2Mbn: {behaviour: F, measured_in: [MHK buoyancy]}
+  B1N2SgCav: {behaviour: S, measured_in: [MHK buoyancy]}
+  B1N2Theta: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N2VIndx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N2VIndy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Alpha: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N3Cd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Cl: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Clrnc: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  B1N3Cm: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Cn: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Ct: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Cx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Cy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Fd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Fl: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Fn: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N3Ft: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N3Fx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3Fy: {behaviour: F, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3SigCr: {behaviour: S, measured_in: [MHK buoyancy]}
+  B1N3Theta: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  B1N3VIndx: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1N3VIndy: {behaviour: negligible, measured_in: [ElastoDyn + AeroDyn]}
+  B1N6Mbs: {behaviour: F, measured_in: [MHK buoyancy]}
+  B1N7Fbt: {behaviour: F, measured_in: [MHK buoyancy]}
+  B1RootFxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B1RootFyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1RootFzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B1RootMxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1RootMyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B1RootMzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1TipRDxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1TipRDyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B1TipRDzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1TipTDxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B1TipTDyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B1TipTDzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B2FldMx: {behaviour: F, measured_in: [MHK buoyancy]}
+  B2N3Clrnc: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  B2N3Mbt: {behaviour: S, measured_in: [MHK buoyancy]}
+  B2N4Fbn: {behaviour: S, measured_in: [MHK buoyancy]}
+  B2N5SigCr: {behaviour: S, measured_in: [MHK buoyancy]}
+  B2N6SgCav: {behaviour: S, measured_in: [MHK buoyancy]}
+  B2N8Fbs: {behaviour: S, measured_in: [MHK buoyancy]}
+  B2RootFxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2RootFyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2RootFzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2RootMxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2RootMyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2RootMzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2TipRDxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2TipRDyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2TipRDzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2TipTDxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B2TipTDyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B2TipTDzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B3N3Clrnc: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  B3RootFxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3RootFyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3RootFzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3RootMxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3RootMyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3RootMzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3TipRDxr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3TipRDyr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3TipRDzr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3TipTDxr: {behaviour: S, measured_in: [BeamDyn blades]}
+  B3TipTDyr: {behaviour: F, measured_in: [BeamDyn blades]}
+  B3TipTDzr: {behaviour: S, measured_in: [BeamDyn blades]}
+  BldPitch1: {behaviour: negligible, measured_in: [AeroDyn nodal outputs, OLAF free wake, Twin-rotor semisubmersible]}
+  BldPitch2: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  BldPitch3: {behaviour: negligible, measured_in: [AeroDyn nodal outputs]}
+  BlPitch1: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  BlPitch2: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  BlPitch3: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  Case: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  CON10PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON10PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON10PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON11PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON11PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON11PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON1FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON1FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON1FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON2FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON2FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON2FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON3FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON3FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON3FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON4FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON4FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON4FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON5PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON6PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON7PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8FX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8FY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8FZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON8PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON9PX: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON9PY: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  CON9PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  FAIRTEN1: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  FAIRTEN2: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  FAIRTEN3: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  FAIRTEN4: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  GenAcc: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  GenAccel: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  GenPwr: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  GenSpeed: {behaviour: S, measured_in: [AeroDisk, yawed, BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  GenTq: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  HbFbx: {behaviour: S, measured_in: [MHK buoyancy]}
+  HbFby: {behaviour: F, measured_in: [MHK buoyancy]}
+  HbFbz: {behaviour: S, measured_in: [MHK buoyancy]}
+  HbMbx: {behaviour: F, measured_in: [MHK buoyancy]}
+  HbMby: {behaviour: S, measured_in: [MHK buoyancy]}
+  HbMbz: {behaviour: F, measured_in: [MHK buoyancy]}
+  HSShftPwr: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  HSShftTq: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  HWindSpeedX: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  HWindSpeedY: {behaviour: negligible, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  HWindSpeedZ: {behaviour: negligible, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  HydroFxi: {behaviour: S, measured_in: [MHK buoyancy]}
+  HydroFyi: {behaviour: F, measured_in: [MHK buoyancy]}
+  HydroFzi: {behaviour: S, measured_in: [MHK buoyancy]}
+  IPDefl1: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  IPDefl2: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  IPDefl3: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  L1N10PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N11PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N12PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N13PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N14PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N15PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N16PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N17PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N18PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N19PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N1PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N20PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N21PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N22PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N23PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N24PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N25PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N26PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N27PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N28PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N29PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N2PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N30PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N31PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N32PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N33PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N34PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N35PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N36PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N37PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N38PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N39PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N3PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N40PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N4PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N5PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N6PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N7PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N8PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L1N9PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N10PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N11PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N12PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N13PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N14PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N15PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N16PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N17PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N18PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N19PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N1PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N20PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N21PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N22PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N23PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N24PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N25PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N26PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N27PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N28PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N29PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N2PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N30PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N31PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N32PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N33PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N34PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N35PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N36PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N37PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N38PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N39PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N3PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N40PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N4PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N5PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N6PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N7PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N8PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  L3N9PZ: {behaviour: mooring, measured_in: [MHK buoyancy]}
+  LSSGagMxa: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSGagMya: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  LSSGagMza: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  LSShftFxa: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSShftFya: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSShftFza: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSShftMxa: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSShftTq: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSTipAxa: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSTipMya: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSTipMza: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSTipPxa: {behaviour: A, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  LSSTipVxa: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  NcFbx: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  NcFby: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  NcFbz: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  NcIMUTAxs: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  NcIMUTAys: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  NcIMUTAzs: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  NcMbx: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  NcMby: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  NcMbz: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  OoPDefl1: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, MHK buoyancy, Twin-rotor semisubmersible]}
+  OoPDefl2: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  OoPDefl3: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  PtfmHeave: {behaviour: S, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  PtfmPitch: {behaviour: S, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  PtfmRoll: {behaviour: F, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  PtfmSurge: {behaviour: S, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  PtfmSway: {behaviour: F, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  PtfmYaw: {behaviour: F, measured_in: [AeroDyn nodal outputs, MHK buoyancy, OLAF free wake, Twin-rotor semisubmersible]}
+  RootFxb1: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  RootFxc1: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RootFyb1: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  RootFyc1: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RootFzb1: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  RootFzc1: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  RootMxb1: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  RootMxc1: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RootMxc2: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RootMxc3: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RootMyb1: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  RootMyc1: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RootMyc2: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RootMyc3: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RootMzb1: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  RootMzc1: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RotAcc: {behaviour: negligible, measured_in: [AeroDisk, yawed]}
+  RotAccel: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RotPwr: {behaviour: S, measured_in: [AeroDisk, yawed, BeamDyn blades, ElastoDyn + AeroDyn]}
+  RotSpeed: {behaviour: S, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn, OLAF free wake, Twin-rotor semisubmersible]}
+  RotThrust: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  RotTorq: {behaviour: S, measured_in: [AeroDisk, yawed, BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroCp: {behaviour: S, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn]}
+  RtAeroCq: {behaviour: F, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn]}
+  RtAeroCt: {behaviour: S, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn]}
+  RtAeroFxh: {behaviour: S, measured_in: [AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroFyh: {behaviour: F, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroFzh: {behaviour: S, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroMxh: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroMyh: {behaviour: S, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroMzh: {behaviour: F, measured_in: [ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  RtAeroPwr: {behaviour: S, measured_in: [AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  RtArea: {behaviour: S, measured_in: [AeroDyn nodal outputs, Twin-rotor semisubmersible]}
+  RtFldFxh: {behaviour: S, measured_in: [MHK buoyancy]}
+  RtFldFyh: {behaviour: F, measured_in: [MHK buoyancy]}
+  RtFldFzg: {behaviour: S, measured_in: [MHK buoyancy]}
+  RtFldMxh: {behaviour: F, measured_in: [MHK buoyancy]}
+  RtFldMyg: {behaviour: S, measured_in: [MHK buoyancy]}
+  RtFldMzh: {behaviour: F, measured_in: [MHK buoyancy]}
+  RtSkew: {behaviour: S, measured_in: [AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  RtSpeed: {behaviour: S, measured_in: [AeroDyn nodal outputs, ElastoDyn + AeroDyn]}
+  RtTSR: {behaviour: S, measured_in: [AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  RtVAvgxh: {behaviour: S, measured_in: [AeroDyn nodal outputs, Twin-rotor semisubmersible]}
+  RtVAvgyh: {behaviour: F, measured_in: [AeroDyn nodal outputs]}
+  RtVAvgzh: {behaviour: S, measured_in: [AeroDyn nodal outputs]}
+  ShearExp: {behaviour: S, measured_in: [AeroDyn nodal outputs, OLAF free wake]}
+  Time: {behaviour: S, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn, MHK buoyancy, OLAF free wake]}
+  TipDxc1: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  TipDyc1: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
+  TTDspFA: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  TTDspSS: {behaviour: F, measured_in: [Twin-rotor semisubmersible]}
+  TTDspTwst: {behaviour: negligible, measured_in: [Twin-rotor semisubmersible]}
+  TwN1Fbx: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwN1Mbx: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwN2Mby: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwN3Fby: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwN3Mbz: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwN4Fbz: {behaviour: negligible, measured_in: [MHK buoyancy]}
+  TwrBsFxt: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  TwrBsFyt: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  TwrBsFzt: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
+  TwrBsMxt: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  TwrBsMyt: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  TwrBsMzt: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  TwrTpTDxi: {behaviour: S, measured_in: [MHK buoyancy]}
+  TwrTpTDyi: {behaviour: F, measured_in: [MHK buoyancy]}
+  TwrTpTDzi: {behaviour: S, measured_in: [MHK buoyancy]}
+  TwstDefl1: {behaviour: negligible, measured_in: [Twin-rotor semisubmersible]}
+  Wave1Elev: {behaviour: S, measured_in: [MHK buoyancy]}
+  Wind1VelX: {behaviour: S, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  Wind1VelY: {behaviour: negligible, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  Wind1VelZ: {behaviour: negligible, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn]}
+  Yaw: {behaviour: F, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, OLAF free wake]}
+  YawBrFxp: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawBrFyp: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawBrFzp: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawBrMxp: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawBrMyp: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawBrMzp: {behaviour: F, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn, Twin-rotor semisubmersible]}
+  YawRate: {behaviour: negligible, measured_in: [AeroDisk, yawed]}

@@ -137,7 +137,10 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, RotInflow, x, m, m_AD, y, OtherState, x
       omega = m%BEMT_u(indx)%omega
    else
       rmax  = Calc_MaxRadius(p, u)
-      omega = Calc_Omega(u)
+      ! MirrorRotor: present omega in the same clockwise-equivalent convention that
+      ! BEMT supplies above, since RtSpeed, RtTSR and the power channels below are
+      ! shared between the two wake models and cannot carry two conventions at once.
+      omega = p%RotDir * Calc_Omega(u)
    endif
 
    
@@ -330,7 +333,7 @@ CONTAINS
          if (k<=size(BAeroFxi)) then
             ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( BAeroPwr(k) ) = omega * tmp(1)
+            m%AllOuts( BAeroPwr(k) ) = p%RotDir * omega * tmp(1)
             
             ! In global, wrt hub! 
             m%AllOuts( BAeroFxi(k) ) = m%HubLoad%force(1,1)
@@ -359,7 +362,7 @@ CONTAINS
       m%AllOuts( RtAeroMyh ) = tmp(2)
       m%AllOuts( RtAeroMzh ) = tmp(3)
       
-      m%AllOuts( RtAeroPwr ) = omega * m%AllOuts( RtAeroMxh )
+      m%AllOuts( RtAeroPwr ) = p%RotDir * omega * m%AllOuts( RtAeroMxh )
       
      
    
@@ -420,6 +423,7 @@ CONTAINS
       REAL(ReKi)                                   :: denom !, rmax
       REAL(ReKi)                                   :: ct, st ! cosine, sine of theta
       REAL(ReKi)                                   :: cp, sp ! cosine, sine of phi
+      REAL(ReKi)                                   :: Xcw, Ycw ! blade node forces in the CW-equivalent (BEMT) frame
  
 
       ! Induced velocity in Global
@@ -450,7 +454,7 @@ CONTAINS
             m%AllOuts( BNM(    beta,k) ) = m%BEMT_y%Vrel(j,k) / p%SpdSound
 
             m%AllOuts( BNVIndx(beta,k) ) = - m%BEMT_u(indx)%Vx(j,k) * m%BEMT_y%axInduction( j,k)
-            m%AllOuts( BNVIndy(beta,k) ) =   m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
+            m%AllOuts( BNVIndy(beta,k) ) =   p%RotDir * m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
 
             m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
             m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
@@ -469,22 +473,26 @@ CONTAINS
             sp=sin(m%BEMT_y%phi(j,k))
             m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp
             m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp
-            m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)
+            m%AllOuts( BNCm(   beta,k) ) = p%RotDir * m%BEMT_y%Cm(j,k)
             m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)
-            m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k)
+            m%AllOuts( BNCy(   beta,k) ) = p%RotDir * m%BEMT_y%Cy(j,k)
 
             ct=cos(m%BEMT_u(indx)%theta(j,k))
             st=sin(m%BEMT_u(indx)%theta(j,k))
-            m%AllOuts( BNCn(   beta,k) ) = m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
+            m%AllOuts( BNCn(   beta,k) ) =            m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
+            m%AllOuts( BNCt(   beta,k) ) = p%RotDir*(-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct)
 
-            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+            ! MirrorRotor: m%X/m%Y are in the mirrored frame while phi and theta are the
+            ! CW-equivalent BEMT values, so convert the forces back before combining them.
+            Xcw =            m%X(j,k)
+            Ycw = p%RotDir * m%Y(j,k)
+            m%AllOuts( BNFl(   beta,k) ) =  Xcw*cp - Ycw*sp
+            m%AllOuts( BNFd(   beta,k) ) =  Xcw*sp + Ycw*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
-            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
-            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( BNFn(   beta,k) ) =            Xcw*ct - Ycw*st
+            m%AllOuts( BNFt(   beta,k) ) = p%RotDir*(-Xcw*st - Ycw*ct)
 
             m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) * m%BEMT_y%Cl(j,k) ! "Gam" [m^2/s]
             
@@ -512,6 +520,7 @@ CONTAINS
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       integer    :: iW
+      real(ReKi) :: Xcw, Ycw   ! blade-element loads converted back to the clockwise frame
 
       ! Induced velocity in global
       ! FVW already return this, we do a simple copy from Wings to Blades
@@ -537,36 +546,40 @@ CONTAINS
             m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j) / p%SpdSound
 
             m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,j) * m_AD%FVW%W(iW)%BN_AxInd(j)
-            m%AllOuts( BNVIndy(beta,k) ) =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,j) * m_AD%FVW%W(iW)%BN_TanInd(j)
+            ! MirrorRotor: the FVW quantities below are clockwise-frame, as BEMT's are,
+            ! so this block now carries the same RotDir factors as its BEMT counterpart.
+            m%AllOuts( BNVIndy(beta,k) ) =  p%RotDir * m_AD%FVW%W(iW)%BN_UrelWind_s(2,j) * m_AD%FVW%W(iW)%BN_TanInd(j)
 
             m%AllOuts( BNAxInd(beta,k) ) = m_AD%FVW%W(iW)%BN_AxInd(j)
             m%AllOuts( BNTnInd(beta,k) ) = m_AD%FVW%W(iW)%BN_TanInd(j)
 
             m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%W(iW)%BN_alpha(j)*R2D
-            m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
+            m%AllOuts( BNTheta(beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%PitchAndTwist(j)*R2D
             m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(iW)%BN_phi(j)*R2D
 
             m%AllOuts( BNCpmin(beta,k) ) = m_AD%FVW%W(iW)%BN_Cpmin(j)
             m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cl(j)
             m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cd(j)
-            m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cm(j)
+            m%AllOuts( BNCm(   beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%BN_Cm(j)
             m%AllOuts( BNCx(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)
-            m%AllOuts( BNCy(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cy(j)
+            m%AllOuts( BNCy(   beta,k) ) = p%RotDir * m_AD%FVW%W(iW)%BN_Cy(j)
 
-            ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! cos(theta)
-            st=sin(m_AD%FVW%W(iW)%PitchAndTwist(j))    ! sin(theta)
+            ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(j))    ! cos(theta)
+            st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(j))    ! sin(theta)
             m%AllOuts( BNCn(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cx(j)*ct + m_AD%FVW%W(iW)%BN_Cy(j)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m_AD%FVW%W(iW)%BN_Cx(j)*st + m_AD%FVW%W(iW)%BN_Cy(j)*ct
+            m%AllOuts( BNCt(   beta,k) ) = p%RotDir*(-m_AD%FVW%W(iW)%BN_Cx(j)*st + m_AD%FVW%W(iW)%BN_Cy(j)*ct)
 
             cp=cos(m_AD%FVW%W(iW)%BN_phi(j))
             sp=sin(m_AD%FVW%W(iW)%BN_phi(j))
-            m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
-            m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+            Xcw = m%X(j,k)
+            Ycw = p%RotDir * m%Y(j,k)
+            m%AllOuts( BNFl(   beta,k) ) =  Xcw*cp - Ycw*sp
+            m%AllOuts( BNFd(   beta,k) ) =  Xcw*sp + Ycw*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
-            m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
-            m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
+            m%AllOuts( BNFn(   beta,k) ) =  Xcw*ct - Ycw*st
+            m%AllOuts( BNFt(   beta,k) ) = p%RotDir*(-Xcw*st - Ycw*ct)
 
             m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
@@ -2478,7 +2491,7 @@ subroutine AD_SetVTKSurface(InitOutData_AD, u_AD, VTK_Surface, errStat, errMsg)
          do K=1, nBlades
             tipNode  = u_AD%rotors(iWT)%BladeMotion(K)%NNodes
             cylNode  = min(3,u_AD%rotors(iWT)%BladeMotion(K)%Nnodes)
-            call AD_SetVTKDefaultBladeParams(u_AD%rotors(iWT)%BladeMotion(K), VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, errStat2, errMsg2, BlChord=InitOutData_AD%rotors(iWT)%BladeProps(k)%BlChord); if (Failed()) return
+            call AD_SetVTKDefaultBladeParams(u_AD%rotors(iWT)%BladeMotion(K), VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, InitOutData_AD%rotors(iWT)%RotDir, errStat2, errMsg2, BlChord=InitOutData_AD%rotors(iWT)%BladeProps(k)%BlChord); if (Failed()) return
          end do                           
       endif
    enddo ! iWT, turbines
@@ -2594,15 +2607,17 @@ subroutine AD_WrVTK_LinesPoints(u_AD, y_AD, RefPoint, VTK_count, OutFileRoot, tW
 end subroutine AD_WrVTK_LinesPoints
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
-SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, errStat, errMsg, BlChord)
+SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, RotDir, errStat, errMsg, BlChord)
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
    TYPE(AD_VTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
    INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
+   REAL(ReKi),                   INTENT(IN   ) :: RotDir           !< MirrorRotor: +1 normal, -1 mirrored.  See the comment on the chordwise term below.
    INTEGER(IntKi),               INTENT(  OUT) :: errStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: errMsg           !< Error message if errStat /= ErrID_None
    REAL(ReKi),  OPTIONAL,        INTENT(IN   ) :: BlChord(:)
+   REAL(SiKi)                                  :: chordSign        !< RotDir as SiKi
    REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
    REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities               
    REAL(SiKi)                                  :: cylinderLength, x, y, angle               
@@ -2614,6 +2629,7 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
    ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:   
    real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
    real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
+   chordSign = real(RotDir, SiKi)
    call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', errStat2, errMsg2)
       CALL SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
       IF (errStat >= AbortErrLev) RETURN
@@ -2644,8 +2660,13 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
             y = xc(j) - 0.5
             angle = ATAN2( y, x)
                ! x,y coordinates for cylinder
-            BladeShape%AirfoilCoords(1,j,i) = chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
-            BladeShape%AirfoilCoords(2,j,i) = chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+            ! MirrorRotor: MeshWrVTK_Ln2Surface places these as matmul(xyz, Orientation),
+            ! so component 1 rides row 1 of the node's direction cosine matrix and
+            ! component 2 rides row 2.  Under R' = S R S row 1 becomes S*row1 while row 2
+            ! becomes -S*row2, so the chordwise term carries the sign and the thickness
+            ! term does not.  Visualisation only.
+            BladeShape%AirfoilCoords(1,j,i) =             chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
          END DO                                                     
       ELSE
          ! create an airfoil for this node
@@ -2654,8 +2675,8 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
             x = yc(j)
             y = xc(j) - pitchAxis
                ! x,y coordinates for airfoil
-            BladeShape%AirfoilCoords(1,j,i) =  chord*x
-            BladeShape%AirfoilCoords(2,j,i) =  chord*y                        
+            BladeShape%AirfoilCoords(1,j,i) =             chord*x
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*y
          END DO
       END IF
    END DO ! nodes on mesh

@@ -146,6 +146,7 @@ IMPLICIT NONE
     TYPE(TwrData)  :: twr      !<  [-]
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !<  [-]
     LOGICAL  :: basicHAWTFormat = .false.      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
+    LOGICAL  :: MirrorRotor = .FALSE.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
     LOGICAL  :: hasTower = .false.      !<  [-]
     INTEGER(IntKi)  :: projMod = 0_IntKi      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Switch for different BEM implementations [-]
@@ -911,6 +912,7 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
    if (ErrStat >= AbortErrLev) return
    DstWTDataData%numBlades = SrcWTDataData%numBlades
    DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
+   DstWTDataData%MirrorRotor = SrcWTDataData%MirrorRotor
    DstWTDataData%hasTower = SrcWTDataData%hasTower
    DstWTDataData%projMod = SrcWTDataData%projMod
    DstWTDataData%BEM_Mod = SrcWTDataData%BEM_Mod
@@ -1046,6 +1048,7 @@ subroutine AD_Dvr_PackWTData(RF, Indata)
    call AD_Dvr_PackTwrData(RF, InData%twr) 
    call RegPack(RF, InData%numBlades)
    call RegPack(RF, InData%basicHAWTFormat)
+   call RegPack(RF, InData%MirrorRotor)
    call RegPack(RF, InData%hasTower)
    call RegPack(RF, InData%projMod)
    call RegPack(RF, InData%BEM_Mod)
@@ -1107,6 +1110,7 @@ subroutine AD_Dvr_UnPackWTData(RF, OutData)
    call AD_Dvr_UnpackTwrData(RF, OutData%twr) ! twr 
    call RegUnpack(RF, OutData%numBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%basicHAWTFormat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%hasTower); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%projMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return

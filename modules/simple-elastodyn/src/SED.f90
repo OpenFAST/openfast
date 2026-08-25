@@ -165,7 +165,10 @@ contains
       p%GenDOF       = InputFileData%GenDOF
       p%YawDOF       = InputFileData%YawDOF
       p%InitYaw      = InputFileData%NacYaw
-      p%InitAzimuth  = InputFileData%Azimuth
+      p%RotDir       = 1.0_ReKi
+      if (InitInp%MirrorRotor)   p%RotDir = -1.0_ReKi
+      ! MirrorRotor: the azimuth state is physical, the input is in the CW convention.
+      p%InitAzimuth  = p%RotDir * InputFileData%Azimuth
 
       ! geometry
       p%NumBl        = InputFileData%NumBl
@@ -215,8 +218,10 @@ contains
       call AllocAry( x%QDT, 1, 'x%QDT', ErrStat3, ErrMsg3);    if (ErrStat3 >= AbortErrLev) return
 
       ! Set initial conditions
-      x%QT( DOF_Az)  = InputFileData%Azimuth
-      x%QDT(DOF_Az)  = InputFileData%RotSpeed
+      ! MirrorRotor: Azimuth and RotSpeed are supplied in the CW convention (RotSpeed is
+      ! validated non-negative) and mirrored here; the states themselves are physical.
+      x%QT( DOF_Az)  = p%RotDir * InputFileData%Azimuth
+      x%QDT(DOF_Az)  = p%RotDir * InputFileData%RotSpeed
 
       ! Unused states
       xd%DummyDiscreteState      = 0.0_ReKi
@@ -519,7 +524,7 @@ contains
 
       call AllocAry( InitOut%BlPitch, p%NumBl, 'InitOut%BlPitch', ErrStat3, ErrMsg3 );    if (errStat3 >= AbortErrLev) return
       InitOut%BlPitch      = InputFileData%BlPitch
-      InitOut%RotSpeed     = x%QDT(DOF_Az)
+      InitOut%RotSpeed     = p%RotDir * x%QDT(DOF_Az)
       InitOut%PlatformPos(1:3)   = real(y%PlatformPtMesh%Position(1:3,1), ReKi) + real(y%PlatformPtMesh%TranslationDisp(1:3,1), ReKi)
       theta(1:3) = GetSmllRotAngs(y%PlatformPtMesh%Orientation(1:3,1:3,1), ErrStat3, ErrMsg3); if (errStat3 >= AbortErrLev) return
       InitOut%PlatformPos(4:6)   = real(theta, ReKi)
@@ -842,7 +847,9 @@ subroutine SED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
    ! interpolate u to find u_interp = u(t)
    call SED_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 );  if (Failed()) return
-   OtherState%HSSBrTrq = u_interp%HSSBrTrqC
+   ! The brake opposes the direction of rotation, as in AB4/ABM4. Without the sign it
+   ! would drive a shaft that is turning backwards.
+   OtherState%HSSBrTrq = SIGN( u_interp%HSSBrTrqC, real(x%qdt(DOF_Az),ReKi) )
 
    ! find xdot at t
    call SED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
@@ -987,7 +994,9 @@ subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
 
    ! Find the force required to produce RqdQD2Az from the equations of
    !   motion using the new accelerations:
-   GenTrqLSS = p%GBoxRatio * u%GenTrq
+   ! MirrorRotor: GenTrq arrives in the CW convention, so RotDir puts it on the physical
+   ! shaft axis. HSSBrTrqC is already signed by the rotation direction and must not be.
+   GenTrqLSS = p%RotDir * p%GBoxRatio * u%GenTrq
    BrkTrqLSS = p%GBoxRatio * OtherState%HSSBrTrqC
    AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
    RqdFrcAz = RqdQD2Az * p%J_DT - AeroTrq + GenTrqLSS + BrkTrqLSS
@@ -1051,8 +1060,8 @@ function SignLSSTrq( u, p, m )
    real(ReKi)                             :: BrkTrqLSS         ! HSS brake torque, expressed on LSS
    real(ReKi)                             :: AeroTrq           ! AeroDynamic torque -- passed in on HubPt
 
-   GenTrqLSS = p%GBoxRatio * u%GenTrq
-   BrkTrqLSS = p%GBoxRatio * u%HSSBrTrqC
+   GenTrqLSS = p%RotDir * p%GBoxRatio * u%GenTrq
+   BrkTrqLSS = p%RotDir * p%GBoxRatio * u%HSSBrTrqC
    AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
    MomLPRot  = AeroTrq - GenTrqLSS - BrkTrqLSS
 
@@ -1308,6 +1317,7 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(ReKi)                                      :: YawRotVel(3)
    real(ReKi)                                      :: YawAng
    real(ReKi)                                      :: AzRotVel(3)
+   real(ReKi)                                      :: BlPitchPhys    !< Blade pitch on the physical rotor
    integer(IntKi)                                  :: i              !< Generic counter
    logical                                         :: CalcWriteOutput
    type(SED_ContinuousStateType)                   :: dxdt           !< Derivatives of continuous states at t
@@ -1404,7 +1414,9 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       R33(1:3,1:3) = SkewSymMat( y%BladeRootMotion(i)%Orientation(3,1:3,1) )  ! blade z-axis
       call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
       ! Rodrigues formula for rotation about a vector (NOTE: BlPitch does not follow right hand rule)
-      Orient = Orient + sin(real(-u%BlPitchCom(i),R8Ki)) * R33 + (1-cos(real(-u%BlPitchCom(i),R8Ki))) * matmul(R33,R33)
+      ! MirrorRotor: BlPitchCom arrives in the CW convention, so mirror it here.
+      BlPitchPhys = p%RotDir * u%BlPitchCom(i)
+      Orient = Orient + sin(real(-BlPitchPhys,R8Ki)) * R33 + (1-cos(real(-BlPitchPhys,R8Ki))) * matmul(R33,R33)
       y%BladeRootMotion(i)%Orientation(1:3,1:3,1)   = matmul(y%BladeRootMotion(i)%Orientation(1:3,1:3,1),transpose(Orient))
 
       ! We don't have a blade pitching rate, so we will not include it here
@@ -1416,15 +1428,17 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
 
    !--------------------
    ! Other outputs
-   y%LSSTipPxa =  x%QT( DOF_Az)
+   ! MirrorRotor: the states are physical; these are reported in the rotor's own (CW)
+   ! convention, so a mirrored rotor turning its design direction still reads positive.
+   y%LSSTipPxa =  p%RotDir * x%QT( DOF_Az)
    call Zero2TwoPi(y%LSSTipPxa)  ! Modulo
    y%RotSpeed  = x%QDT(DOF_Az)
-   y%HSS_Spd   = x%QDT(DOF_Az)    * p%GBoxRatio
+   y%HSS_Spd   = p%RotDir * x%QDT(DOF_Az)    * p%GBoxRatio
    ! Rotor torque is the torque applied to the LSS shaft by the rotor.
    !  NOTE: this is equivalent to the reactionary torque of the generator due to its torque and inertia.
-   y%RotTrq    = p%GBoxRatio * u%GenTrq + dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio * p%GenIner + p%GBoxRatio * OtherState%HSSBrTrq
+   y%RotTrq    = p%GBoxRatio * u%GenTrq + p%RotDir * (dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio * p%GenIner + p%GBoxRatio * OtherState%HSSBrTrq)
    ! y%RotTrq    = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3)) - dxdt%QDT(DOF_Az) * RPS2RPM * p%RotIner   ! this equation is somehow wrong.
-   y%RotPwr    = x%QDT(DOF_Az)    * y%RotTrq 
+   y%RotPwr    = p%RotDir * x%QDT(DOF_Az)    * y%RotTrq 
 
    ! Simply pass the yaw cammend through as the current yaw
    y%Yaw     = u%YawPosCom
@@ -1509,7 +1523,7 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    !!    -  \f$Q_b = n_g Q_{b,\text{HSS}}\f$ is the HSS brake torque projected to the LSS
    !!
    if (p%GenDOF) then
-      GenTrqLSS = p%GBoxRatio * u%GenTrq
+      GenTrqLSS = p%RotDir * p%GBoxRatio * u%GenTrq
       BrkTrqLSS = p%GBoxRatio * OtherState%HSSBrTrq
       AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
       dxdt%QDT(DOF_Az)  = real((AeroTrq - GenTrqLSS - BrkTrqLSS)/p%J_DT, R8Ki)

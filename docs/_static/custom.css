@@ -1,0 +1,28 @@
+/* Set the screen width maximum a bit wider than default.  Improves readability on wide screens, but still scales down in width on smaller screen */
+.wy-nav-content {
+    max-width: 1200px !important; /* the default was 800.  allowing full width is too much on super wide screens */
+}
+
+
+/* Target the last column of any table and force word-wrapping */
+table.docutils td:last-child, 
+table.citation td:last-child {
+    white-space: normal !important;
+    word-break: break-word;
+    min-width: 300px; /* Adjust this to match your ~100 character preference */
+}
+
+/* rather than the above, for a targetted table approach, use the below one by adding the following at the table
+.. csv-table:: My Table Name
+   :class: wrap-last
+   :headers: "Command", "Description", "Very Long Comment"
+   :widths: 20, 20, 60
+*/
+/* Target only tables explicitly marked with the 'wrap-last' class */
+table.wrap-last td:last-child {
+    white-space: normal !important;
+    word-break: break-word;
+    min-width: 300px;
+}
+
+   

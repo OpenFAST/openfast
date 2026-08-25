@@ -76,6 +76,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubOrientation = 0.0_R8Ki      !< Hub orientation [-]
     REAL(ReKi)  :: defAirDens = 0.0_ReKi      !< Default atmospheric density from the driver; may be overwritten [kg/m^3]
     LOGICAL  :: Linearize = .false.      !< this module cannot be linearized at present [-]
+    LOGICAL  :: MirrorRotor = .false.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
@@ -139,6 +140,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: halfRhoA = 0.0_ReKi      !< half air density times rotor swept area [kg/m]
     TYPE(ADsk_AeroTable)  :: AeroTable      !< Data table [-]
     LOGICAL  :: UseTSR = .false.      !< Use TSR values from table instead of VRel + RtSpd [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotation direction: +1 normal, -1 for a mirrored rotor [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DiskWindPosRel      !< Disk locations for sampling to get disk avarage velocity (relative to hub) [m]
@@ -530,6 +532,7 @@ subroutine ADsk_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%HubOrientation = SrcInitInputData%HubOrientation
    DstInitInputData%defAirDens = SrcInitInputData%defAirDens
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%MirrorRotor = SrcInitInputData%MirrorRotor
    DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
    call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -564,6 +567,7 @@ subroutine ADsk_PackInitInput(RF, Indata)
    call RegPack(RF, InData%HubOrientation)
    call RegPack(RF, InData%defAirDens)
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%MirrorRotor)
    call RegPack(RF, InData%UseInputFile)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileData) 
    call RegPack(RF, associated(InData%FlowField))
@@ -593,6 +597,7 @@ subroutine ADsk_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%HubOrientation); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defAirDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileData) ! PassedFileData 
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
@@ -1021,6 +1026,7 @@ subroutine ADsk_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%UseTSR = SrcParamData%UseTSR
+   DstParamData%RotDir = SrcParamData%RotDir
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
       UB(1:1) = ubound(SrcParamData%OutParam)
@@ -1096,6 +1102,7 @@ subroutine ADsk_PackParam(RF, Indata)
    call RegPack(RF, InData%halfRhoA)
    call ADsk_PackAeroTable(RF, InData%AeroTable) 
    call RegPack(RF, InData%UseTSR)
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -1135,6 +1142,7 @@ subroutine ADsk_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%halfRhoA); if (RegCheckErr(RF, RoutineName)) return
    call ADsk_UnpackAeroTable(RF, OutData%AeroTable) ! AeroTable 
    call RegUnpack(RF, OutData%UseTSR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

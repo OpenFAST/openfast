@@ -971,10 +971,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    
    m%AllOuts(   LSSTipVxa) =      (     x%QDT (DOF_GeAz) +          x%QDT (DOF_DrTr) )*RPS2RPM
    m%AllOuts(   LSSTipAxa) = ( m%QD2T(DOF_GeAz) + m%QD2T(DOF_DrTr) )*R2D
+
+      ! Rotor-convention counterparts: azimuth increases and speed is positive while the
+      ! rotor turns its design direction, whichever way it was built.
+   m%AllOuts(   AzimuthRC) = p%RotDir*y%LSSTipPxa
+   if (.not. m%IgnoreMod) CALL Zero2TwoPi(m%AllOuts(AzimuthRC))
+   m%AllOuts(   AzimuthRC) = m%AllOuts(AzimuthRC)*R2D
+   m%AllOuts(  RotSpeedRC) = p%RotDir*m%AllOuts(LSSTipVxa)
+   m%AllOuts(  RotAccelRC) = p%RotDir*m%AllOuts(LSSTipAxa)
    m%AllOuts(   LSSGagVxa) =            x%QDT (DOF_GeAz)                              *RPS2RPM
    m%AllOuts(   LSSGagAxa) =   m%QD2T(DOF_GeAz)                              *R2D
-   m%AllOuts(     HSShftV) = ABS(p%GBRatio)*m%AllOuts(LSSGagVxa)
-   m%AllOuts(     HSShftA) = ABS(p%GBRatio)*m%AllOuts(LSSGagAxa)
+      ! MirrorRotor: the generator side keeps its own convention, so these stay positive
+      ! while the rotor turns its design direction (CONVENTIONS section 4).
+   m%AllOuts(     HSShftV) = p%RotDir*ABS(p%GBRatio)*m%AllOuts(LSSGagVxa)
+   m%AllOuts(     HSShftA) = p%RotDir*ABS(p%GBRatio)*m%AllOuts(LSSGagAxa)
 
    !IF ( .NOT. EqualRealNos( m%AllOuts(WindVxi), 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equation is not zero.
    !   m%AllOuts(TipSpdRat) =      ( x%QDT (DOF_GeAz) + x%QDT (DOF_DrTr) )*p%AvgNrmTpRd / m%AllOuts(  WindVxi)
@@ -1221,6 +1231,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    m%AllOuts(LSShftFys) = -DOT_PRODUCT(  FrcPRot, m%CoordSys%c3 )
    m%AllOuts(LSShftFzs) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%c2 )
    m%AllOuts(LSShftMxa) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e1 )
+   m%AllOuts(RotTorqRC) =  p%RotDir*m%AllOuts(LSShftMxa)
    m%AllOuts(LSSTipMya) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e2 )
    m%AllOuts(LSSTipMza) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e3 )
    m%AllOuts(LSSTipMys) = -DOT_PRODUCT( MomLPRot, m%CoordSys%c3 )
@@ -1268,9 +1279,11 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Generator and High-Speed Shaft Loads:
 
-   m%AllOuts( HSShftTq)  = m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
-   m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
-   m%AllOuts(HSSBrTq)    = OtherState%HSSBrTrq*0.001_ReKi
+      ! MirrorRotor: LSShftMxa is the physical component about the shaft axis, while the
+      ! high-speed shaft torque and power are reported in the rotor's own convention.
+   m%AllOuts( HSShftTq)  = p%RotDir*m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
+   m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*p%RotDir*x%QDT(DOF_GeAz)
+   m%AllOuts(HSSBrTq)    = p%RotDir*OtherState%HSSBrTrq*0.001_ReKi
 
 
    !IF ( .NOT. EqualRealNos( ComDenom, 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equations is not zero (ComDenom is the same as it is calculated above).
@@ -1871,15 +1884,16 @@ END IF
    y%YawAngle = x%QT( DOF_Yaw) + x%QT(DOF_Y)  !crude approximation for yaw error... (without subtracting it from the wind direction)
    DO K=1,p%NumBl
       IF ( p%DOF_Flag(DOF_BP(K)) ) THEN
-         y%BlPRate(K) = x%QDT( DOF_BP(K) )
-         y%BlPitch(K) = x%QT(  DOF_BP(K) )
+         ! MirrorRotor: reported in the pitch command's convention, as in the branch below.
+         y%BlPRate(K) = p%RotDir * x%QDT( DOF_BP(K) )
+         y%BlPitch(K) = p%RotDir * x%QT(  DOF_BP(K) )
       ELSE
          y%BlPRate(K) = 0.0_ReKi
          y%BlPitch(K) = u%BlPitchCom(K)
       END IF
    END DO
    y%LSS_Spd  = x%QDT(DOF_GeAz)
-   y%HSS_Spd  = ABS(p%GBRatio)*x%QDT(DOF_GeAz)
+   y%HSS_Spd  = p%RotDir*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
    y%RotSpeed = x%QDT(DOF_GeAz) + x%QDT(DOF_DrTr)
    
    IF ( t > 0.0_DbKi  )  THEN
@@ -2753,6 +2767,10 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
       
    end if
    
+   ! MirrorRotor: the blade is mirrored about the rotor XZ plane, so the structural twist
+   ! reverses. This only orients the mode shapes; a rigid blade is unaffected.
+   p%ThetaS  = p%RotDir * p%ThetaS
+
    p%CThetaS = COS(REAL(p%ThetaS,R8Ki))
    p%SThetaS = SIN(REAL(p%ThetaS,R8Ki))
    
@@ -3390,6 +3408,17 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmXZIner = InputFileData%PtfmXZIner
    p%GBoxEff   = InputFileData%GBoxEff
    p%GBRatio   = InputFileData%GBRatio
+   p%RotDir    = 1.0_ReKi
+   if (InitInp%MirrorRotor) then
+      p%RotDir = -1.0_ReKi
+      ! A furling machine is deliberately one-sided, and that geometry is not mirrored.
+      if (InputFileData%Furling) then
+         CALL SetErrStat( ErrID_Warn, 'MirrorRotor has not been fully tested for a furling turbine. '// &
+              'The rotor is mirrored but the furl geometry is not, so the tail and furl inputs must be '// &
+              'mirrored as well for the result to be the mirror image of the clockwise turbine.', &
+              ErrStat, ErrMsg, 'SetPrimaryParameters' )
+      end if
+   end if
    p%DTTorSpr  = InputFileData%DTTorSpr
    p%DTTorDmp  = InputFileData%DTTorDmp
 
@@ -3544,7 +3573,9 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    !p%PtfmPDOF  = InputFileData%PtfmPDOF
    !p%PtfmYDOF  = InputFileData%PtfmYDOF
    !p%Azimuth   = InputFileData%Azimuth
-   p%RotSpeed  = InputFileData%RotSpeed
+   ! MirrorRotor: RotSpeed is supplied in the CW convention (validated non-negative) and
+   ! mirrored here; the state itself is the physical shaft speed about +x.
+   p%RotSpeed  = p%RotDir * InputFileData%RotSpeed
    !p%TTDspFA   = InputFileData%TTDspFA
    !p%TTDspSS   = InputFileData%TTDspSS
    !p%PtfmSurge = InputFileData%PtfmSurge
@@ -3605,7 +3636,7 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
       InitQE1 = 0.0_ReKi
    END IF
    
-   x%QT ( DOF_BP(1:p%NumBl  ) ) = InputFileData%BlPitch(1:p%NumBl)
+   x%QT ( DOF_BP(1:p%NumBl  ) ) = p%RotDir * InputFileData%BlPitch(1:p%NumBl)
    x%QT ( DOF_BF(1:p%NumBl,1) ) = InitQF1   ! These come from InitBlDefl().
    x%QT ( DOF_BF(1:p%NumBl,2) ) = InitQF2   ! These come from InitBlDefl().
    x%QT ( DOF_BE(1:p%NumBl,1) ) = InitQE1   ! These come from InitBlDefl().
@@ -3633,7 +3664,7 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
    !JASON: CHANGE THESE MOD() FUNCTIONS INTO MODULO() FUNCTIONS SO THAT YOU CAN ELIMINATE ADDING 360:
 !   x%QT (DOF_GeAz) = MOD( (InputFileData%Azimuth - p%AzimB1Up)*R2D + 270.0 + 360.0, 360.0 )*D2R   ! Internal position of blade 1
    
-   x%QT (DOF_GeAz) = REAL(InputFileData%Azimuth, R8Ki) - p%AzimB1Up - REAL(Piby2_D, R8Ki)
+   x%QT (DOF_GeAz) = p%RotDir * REAL(InputFileData%Azimuth, R8Ki) - p%AzimB1Up - REAL(Piby2_D, R8Ki)
    CALL Zero2TwoPi( x%QT (DOF_GeAz) )
    x%QDT(DOF_GeAz) = p%RotSpeed                                               ! Rotor speed in rad/sec.
 
@@ -4022,14 +4053,14 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                "YAWFRIMOM ","YAWFRIMZ  ","YAWPOS    ","YAWPZN    ","YAWPZP    ","YAWRATE   ","YAWVZN    ", &
                                "YAWVZP    "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(1121) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                 LSSTipPxa ,   BldPAcc1 ,   BldPAcc2 ,   BldPAcc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
+                                 AzimuthRC ,   BldPAcc1 ,   BldPAcc2 ,   BldPAcc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
                                  BldPRate1 ,  BldPRate2 ,  BldPRate3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,   dOmegaYF , &
                                    HSShftA ,    HSShftV ,    HSSBrTq ,    HSShftA ,  HSShftPwr ,   HSShftTq ,    HSShftV , &
                                    TipDyc1 ,    TipDyc2 ,    TipDyc3 ,  LSSGagAxa ,  LSSGagAxa ,  LSSGagAxa ,  LSShftFxa , &
                                  LSShftFxa ,  LSShftFya ,  LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa , &
                                  LSSGagMya ,  LSSGagMys ,  LSSGagMza ,  LSSGagMzs ,  LSSGagPxa ,  LSSGagPxa ,  LSSGagPxa , &
                                  LSSGagVxa ,  LSSGagVxa ,  LSSGagVxa ,  LSShftFxa ,  LSShftFxa ,  LSShftFya ,  LSShftFys , &
-                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  LSShftMxa ,  LSSTipAxa , &
+                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  RotTorqRC ,  LSSTipAxa , &
                                  LSSTipAxa ,  LSSTipAxa ,  LSSTipMya ,  LSSTipMys ,  LSSTipMza ,  LSSTipMzs ,  LSSTipPxa , &
                                  LSSTipPxa ,  LSSTipPxa ,  LSSTipVxa ,  LSSTipVxa ,  LSSTipVxa ,     YawPzn ,     YawAzn , &
                                     YawPzn ,     YawVzn ,  NcIMURAxs ,  NcIMURAys ,  NcIMURAzs ,  NcIMURVxs ,  NcIMURVys , &
@@ -4060,9 +4091,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 ,   RootMyc1 , &
                                   RootMyc2 ,   RootMyc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMxc1 ,   RootMxc2 , &
                                   RootMxc3 ,   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMyc1 ,   RootMyc2 ,   RootMyc3 , &
-                                  RootMzc1 ,   RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 ,  LSSTipAxa , &
-                                  RotFurlP ,   RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr ,  LSSTipVxa ,    TeetAya , &
-                                   TeetPya ,    TeetVya ,  LSShftFxa ,  LSShftMxa , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , &
+                                  RootMzc1 ,   RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 , RotAccelRC , &
+                                  RotFurlP ,   RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr , RotSpeedRC ,    TeetAya , &
+                                   TeetPya ,    TeetVya ,  LSShftFxa ,  RotTorqRC , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , &
                                 Spn1ALgyb1 , Spn1ALgyb2 , Spn1ALgyb3 , Spn1ALgzb1 , Spn1ALgzb2 , Spn1ALgzb3 ,  Spn1ALxb1 , &
                                  Spn1ALxb2 ,  Spn1ALxb3 ,  Spn1ALyb1 ,  Spn1ALyb2 ,  Spn1ALyb3 ,  Spn1ALzb1 ,  Spn1ALzb2 , &
                                  Spn1ALzb3 ,  Spn1FLxb1 ,  Spn1FLxb2 ,  Spn1FLxb3 ,  Spn1FLyb1 ,  Spn1FLyb2 ,  Spn1FLyb3 , &
@@ -6257,8 +6288,10 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
          CosPitch = COS( x%QT(DOF_BP(K)) )
          SinPitch = SIN( x%QT(DOF_BP(K)) )
       ELSE
-         CosPitch = COS( REAL(BlPitch(K),R8Ki) )
-         SinPitch = SIN( REAL(BlPitch(K),R8Ki) )
+         ! MirrorRotor: the pitch command is in the CW convention (the pitch DOF state
+         ! above is already physical), so mirror it here.
+         CosPitch = COS( REAL(p%RotDir*BlPitch(K),R8Ki) )
+         SinPitch = SIN( REAL(p%RotDir*BlPitch(K),R8Ki) )
       END IF
 
       CoordSys%j1(K,:) = CosPitch*CoordSys%i1(K,:) - SinPitch*CoordSys%i2(K,:)      ! j1(K,:) = vector / direction j1 for blade K (=  xbK from the IEC coord. system).
@@ -6672,7 +6705,10 @@ FUNCTION SignLSSTrq( p, m )
       ! MomLProt has now been found.  Now dot this with e1 to get the
       !   low-speed shaft torque and take the SIGN of the result:
 
-   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, DOT_PRODUCT( MomLPRot, m%CoordSys%e1 ) ) )
+      ! MirrorRotor: the gearbox efficiency factor depends on which way power flows, not
+      ! on the sign of the torque about +x. A mirrored rotor generates with a negative
+      ! shaft torque, so without RotDir the loss would be inverted into a gain.
+   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, p%RotDir*DOT_PRODUCT( MomLPRot, m%CoordSys%e1 ) ) )
 
 END FUNCTION SignLSSTrq
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -8235,7 +8271,10 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
       ! Initialize the matrix:
       
    AugMat      = 0.0
-   GBoxTrq    = ( u%GenTrq + HSSBrTrq )*ABS(p%GBRatio) ! bjj: do we use HSSBrTrqC or HSSBrTrq?
+   ! MirrorRotor: GenTrq arrives from ServoDyn in the CW convention and needs RotDir to put
+   ! it on the physical shaft. HSSBrTrq is already signed by the rotation direction
+   ! (SIGN(HSSBrTrqC, qdt) below), so mirroring the bracket would make the brake drive the rotor.
+   GBoxTrq    = ( p%RotDir*u%GenTrq + HSSBrTrq )*ABS(p%GBRatio) ! bjj: do we use HSSBrTrqC or HSSBrTrq?
    
    DO K = 1,p%NumBl ! Loop through all blades
    

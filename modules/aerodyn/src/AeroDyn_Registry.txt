@@ -106,6 +106,7 @@ typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference positio
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
 typedef	^	RotInitInputType	ReKi	RotSpeed	-	-	0	"Rotor speed used when AeroDyn is computing aero maps"	"rad/s"
+typedef	^	RotInitInputType	Logical	MirrorRotor	-	.FALSE.	-	"Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)"	-
 
 typedef	^	InitInputType	RotInitInputType rotors	{:}	-	-	"Init Input Types for rotors"	-
 typedef	^	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
@@ -155,6 +156,7 @@ typedef	^	RotInitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	RotInitOutputType	AD_BladeShape	BladeShape	{:}	-	-	"airfoil coordinates for each blade"	m
+typedef	^	RotInitOutputType	ReKi	RotDir	-	1.0	-	"Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW). Needed alongside BladeShape so the VTK surface fallback can mirror the generic section."	-
 typedef	^	RotInitOutputType	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
 typedef	^	RotInitOutputType	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
@@ -367,6 +369,7 @@ typedef ^   RotParameterType    ReKi    WtrDpth -  -   -     "Water depth" m
 typedef ^   RotParameterType    ReKi    MSL2SWL -  -   -     "Offset between still-water level and mean sea level" m
 typedef	^	RotParameterType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
 typedef	^	RotParameterType	IntKi	BEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
+typedef	^	RotParameterType	ReKi	RotDir   	-	1.0	-	"Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW)"	-
 # parameters for output
 typedef	^	RotParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	RotParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-

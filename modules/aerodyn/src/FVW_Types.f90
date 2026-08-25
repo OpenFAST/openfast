@@ -128,6 +128,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: s_LL      !< Spanwise coordinate of LL elements [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: s_CP      !< Spanwise coordinate of LL CP [m]
     INTEGER(IntKi)  :: iRotor = 0      !< Index of rotor the wing belong to [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotation direction of the rotor the wing belongs to: +1 clockwise, -1 mirrored (counter-clockwise viewed from upwind) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: AFindx      !< Index to the airfoils from AD15 [BladeNode,BladeIndex=1] [-]
     INTEGER(IntKi)  :: nSpan = 0      !< TODO, should be defined per wing. Number of spanwise element [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PrescribedCirculation      !< Prescribed circulation on all lifting lines [m/s]
@@ -343,6 +344,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: chord      !< Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RElm      !< radius of center of each element [-]
     INTEGER(IntKi)  :: iRotor = 0_IntKi      !< Index of rotor the wing belong to [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotation direction of the rotor the wing belongs to: +1 clockwise, -1 mirrored (counter-clockwise viewed from upwind) [-]
     INTEGER(IntKi)  :: UAOff_innerNode = 0_IntKi      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi)  :: UAOff_outerNode = 0_IntKi      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
   END TYPE Wng_InitInputType
@@ -1392,6 +1394,7 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
       DstWng_ParameterTypeData%s_CP = SrcWng_ParameterTypeData%s_CP
    end if
    DstWng_ParameterTypeData%iRotor = SrcWng_ParameterTypeData%iRotor
+   DstWng_ParameterTypeData%RotDir = SrcWng_ParameterTypeData%RotDir
    if (allocated(SrcWng_ParameterTypeData%AFindx)) then
       LB(1:2) = lbound(SrcWng_ParameterTypeData%AFindx)
       UB(1:2) = ubound(SrcWng_ParameterTypeData%AFindx)
@@ -1456,6 +1459,7 @@ subroutine FVW_PackWng_ParameterType(RF, Indata)
    call RegPackAlloc(RF, InData%s_LL)
    call RegPackAlloc(RF, InData%s_CP)
    call RegPack(RF, InData%iRotor)
+   call RegPack(RF, InData%RotDir)
    call RegPackAlloc(RF, InData%AFindx)
    call RegPack(RF, InData%nSpan)
    call RegPackAlloc(RF, InData%PrescribedCirculation)
@@ -1475,6 +1479,7 @@ subroutine FVW_UnPackWng_ParameterType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%s_LL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%s_CP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iRotor); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AFindx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nSpan); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PrescribedCirculation); if (RegCheckErr(RF, RoutineName)) return
@@ -3974,6 +3979,7 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
       DstWng_InitInputTypeData%RElm = SrcWng_InitInputTypeData%RElm
    end if
    DstWng_InitInputTypeData%iRotor = SrcWng_InitInputTypeData%iRotor
+   DstWng_InitInputTypeData%RotDir = SrcWng_InitInputTypeData%RotDir
    DstWng_InitInputTypeData%UAOff_innerNode = SrcWng_InitInputTypeData%UAOff_innerNode
    DstWng_InitInputTypeData%UAOff_outerNode = SrcWng_InitInputTypeData%UAOff_outerNode
 end subroutine
@@ -4005,6 +4011,7 @@ subroutine FVW_PackWng_InitInputType(RF, Indata)
    call RegPackAlloc(RF, InData%chord)
    call RegPackAlloc(RF, InData%RElm)
    call RegPack(RF, InData%iRotor)
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, InData%UAOff_innerNode)
    call RegPack(RF, InData%UAOff_outerNode)
    if (RegCheckErr(RF, RoutineName)) return
@@ -4022,6 +4029,7 @@ subroutine FVW_UnPackWng_InitInputType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%chord); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RElm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iRotor); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UAOff_innerNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UAOff_outerNode); if (RegCheckErr(RF, RoutineName)) return
 end subroutine

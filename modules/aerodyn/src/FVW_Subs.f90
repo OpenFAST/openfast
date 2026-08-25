@@ -1699,11 +1699,12 @@ end subroutine FakeGroundEffect
 !! - some transformation matrices
 !!      - M_ag : from global to airfoil (this is well defined, also called "n-t" system in AeroDyn)
 !!      - M_sg : from global to section (this is ill-defined), this coordinate is used to define the "axial" and "tangential" inductions
-subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, &
+subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, RotDir, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, &
                          AxInd, TanInd, Vrel_norm, phi, alpha, Re, Urel_s, ErrStat, ErrMsg )
    real(R8Ki),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
    real(R8Ki),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
    real(ReKi),             intent(in   )  :: PitchAndTwist           ! Pitch and twist of section
+   real(ReKi),             intent(in   )  :: RotDir                  ! +1 clockwise rotor, -1 mirrored (counter-clockwise)
    real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
    real(ReKi),             intent(in   )  :: Vind_g(3)               ! Induced wind velocity                                  global  coord
    real(ReKi),             intent(in   )  :: Vwnd_g(3)               ! Disturbed inflow                                       global  coord
@@ -1739,14 +1740,19 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
    Vtot_g    = Vwnd_g - Vstr_g + Vind_g
    Vtot_a    = matmul(M_ag, Vtot_g)
+   ! MirrorRotor: the airfoil tables describe the clockwise section, so the angles are
+   ! taken in the clockwise-equivalent frame. Reflecting about the rotor xz plane sends
+   ! a true vector's components in the airfoil and section frames to (v1, -v2, v3), so
+   ! RotDir applies to the chordwise and tangential components and to nothing else.
+   Vtot_a(2) = RotDir * Vtot_a(2)
    alpha     = atan2( Vtot_a(1), Vtot_a(2) )
    Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
    Re        = Chord * Vrel_norm / KinVisc       ! Reynolds number (not in million)
 
    ! Section coordinates: used to define axial induction andflow angle
-   Vstr_s = matmul(M_sg, Vstr_g)
-   Vind_s = matmul(M_sg, Vind_g)
-   Vwnd_s = matmul(M_sg, Vwnd_g)
+   Vstr_s = matmul(M_sg, Vstr_g); Vstr_s(2) = RotDir * Vstr_s(2)
+   Vind_s = matmul(M_sg, Vind_g); Vind_s(2) = RotDir * Vind_s(2)
+   Vwnd_s = matmul(M_sg, Vwnd_g); Vwnd_s(2) = RotDir * Vwnd_s(2)
    Urel_s = Vwnd_s - Vstr_s          ! relative wind
    Vtot_s = Vwnd_s - Vstr_s + Vind_s
    if (EqualRealNos(Urel_s(1),0.0_ReKi)) then
@@ -1765,8 +1771,9 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
 end subroutine FVW_AeroOuts
 
 !> Generic function to compute alpha, Vrel and Re based on global data
-subroutine AlphaVrel_Generic(M_ag, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel_norm, alpha, Re)
+subroutine AlphaVrel_Generic(M_ag, RotDir, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel_norm, alpha, Re)
    real(R8Ki),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
+   real(ReKi),             intent(in   )  :: RotDir                  ! +1 clockwise rotor, -1 mirrored (counter-clockwise)
    real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
    real(ReKi),             intent(in   )  :: Vind_g(3)               ! Induced wind velocity                                  global  coord
    real(ReKi),             intent(in   )  :: Vwnd_g(3)               ! Disturbed inflow                                       global  coord
@@ -1781,6 +1788,7 @@ subroutine AlphaVrel_Generic(M_ag, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, Vrel
    ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
    Vtot_g    = Vwnd_g - Vstr_g + Vind_g
    Vtot_a    = matmul(M_ag, Vtot_g)
+   Vtot_a(2) = RotDir * Vtot_a(2)                ! MirrorRotor: see FVW_AeroOuts
    alpha     = atan2( Vtot_a(1), Vtot_a(2) )
    Vrel_norm = sqrt(Vtot_a(1)**2 + Vtot_a(2)**2) ! NOTE: z component shoudn't be used
    Re        = Chord * Vrel_norm / KinVisc       ! Reynolds number NOTE: not in million

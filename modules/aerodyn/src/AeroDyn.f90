@@ -145,9 +145,16 @@ subroutine AD_SetInitOut(MHK, WtrDpth, p, p_AD, InputFileData, AA_InitOut, InitO
    
    
 ! set visualization data:
-      ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil 
+      ! MirrorRotor: the rotation direction travels with the visualisation data because
+      ! the blade surface is not always built here.  When the airfoil files carry no
+      ! coordinates, or carry differing numbers of them, BladeShape is left unallocated
+      ! and the caller synthesises a generic section instead; that fallback needs the
+      ! same sign this routine applies below.
+   InitOut%RotDir = p%RotDir
+
+      ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil
       ! tables have the same number of coordinates.
-   if ( allocated(p_AD%AFI) ) then  
+   if ( allocated(p_AD%AFI) ) then
       
       if ( p_AD%AFI(1)%NumCoords > 0 ) then
          NumCoords = p_AD%AFI(1)%NumCoords
@@ -179,10 +186,20 @@ subroutine AD_SetInitOut(MHK, WtrDpth, p, p_AD, InputFileData, AA_InitOut, InitO
                do j=1,InputFileData%BladeProps(k)%NumBlNds
                   f = InputFileData%BladeProps(k)%BlAFID(j)
                   
-                  do i=1,NumCoords-1                                                     
-                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%Y_Coord(i+1) - p_AD%AFI(f)%Y_Coord(1) )
-                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%X_Coord(i+1) - p_AD%AFI(f)%X_Coord(1) )
-                  end do                  
+                  ! MirrorRotor: these vertices are placed by MeshWrVTK_Ln2Surface as
+                  ! matmul(xyz, Orientation), so component 1 rides row 1 of the node's
+                  ! direction cosine matrix and component 2 rides row 2.  Under the
+                  ! mirror R' = S R S the rows do not transform alike: row 1 becomes
+                  ! S*row1 while row 2 becomes -S*row2.  RotDir therefore belongs on
+                  ! component 2 alone, so that the two negations cancel and the leading
+                  ! edge stays the leading edge while the section is drawn as the mirror
+                  ! image of the tabulated airfoil, which is how it is being used.
+                  ! Putting the factor on component 1, or on both, was measured and is
+                  ! wrong.  Visualisation only; these coordinates never reach the loads.
+                  do i=1,NumCoords-1
+                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) =            InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%Y_Coord(i+1) - p_AD%AFI(f)%Y_Coord(1) )
+                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = p%RotDir * InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%X_Coord(i+1) - p_AD%AFI(f)%X_Coord(1) )
+                  end do
                end do
                                  
             end do
@@ -401,6 +418,19 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          k = k + 1
       end do
    end do
+
+      ! MirrorRotor: mirror the blade geometry about the rotor XZ plane. Twist is a rotation
+      ! about the span axis and sweep is the in-plane offset, so both flip; curvature (out of
+      ! plane) does not. This must follow setCantAngle, which derives BlCrvAng from BlTwist.
+      ! BlCenBt is the MHK centre-of-buoyancy offset in the same in-plane direction as sweep.
+   do iR = 1, nRotors
+      if (.not. InitInp%rotors(iR)%MirrorRotor) cycle
+      do I=1,NumBlades(iR)
+         InputFileData%rotors(iR)%BladeProps(I)%BlTwist = -InputFileData%rotors(iR)%BladeProps(I)%BlTwist
+         InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC = -InputFileData%rotors(iR)%BladeProps(I)%BlSwpAC
+         InputFileData%rotors(iR)%BladeProps(I)%BlCenBt = -InputFileData%rotors(iR)%BladeProps(I)%BlCenBt
+      end do
+   end do
    
       !............................................................................................
       ! Define parameters
@@ -420,6 +450,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%Wake_Mod      = InputFileData%Wake_Mod
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
+      p%rotors(iR)%RotDir      = 1.0_ReKi
+      if (InitInp%rotors(iR)%MirrorRotor) then
+         p%rotors(iR)%RotDir = -1.0_ReKi
+         ! Not yet worked through for the acoustics model.
+         if (InputFileData%CompAA) then
+            call SetErrStat(ErrID_Fatal, 'MirrorRotor is not yet supported with the AeroAcoustics model.', ErrStat, ErrMsg, RoutineName)
+         end if
+         if (ErrStat >= AbortErrLev) return
+      end if
       call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
@@ -3453,7 +3492,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    m%tilt = tilt
      
    ! "Angular velocity of rotor" rad/s
-   m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
+   ! MirrorRotor: BEMT is always presented a CW-equivalent problem; see mirror_rotor docs.
+   m%BEMT_u(indx)%omega   = p%RotDir * dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
    
    ! "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad 
    denom = TwoNorm( m%V_diskAvg )
@@ -3476,7 +3516,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       endif
 
       if (p%BEM_Mod /= BEMMod_2D) then ! TODO
-         m%BEMT_u(indx)%chi0 = sign( m%BEMT_u(indx)%chi0, signOfAngle )
+         ! MirrorRotor: SkewVec is a pseudovector, so RotDir keeps the reported skew
+         ! angle in the rotor's own convention, matching the BEMMod_2D path above.
+         m%BEMT_u(indx)%chi0 = sign( m%BEMT_u(indx)%chi0, p%RotDir * signOfAngle )
       endif
    end if
 
@@ -3486,6 +3528,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
+      ! Azimuth is measured in the skew-aligned disk frame, which DiskAvgValues already
+      ! keeps in the CW-equivalent orientation, so no further mirroring here.
       m%BEMT_u(indx)%psi_s = Azimuth
    elseif (p%AeroProjMod==APM_BEM_Polar) then
 
@@ -3496,7 +3540,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          ! Extract azimuth angle for blade k
          ! NOTE: EB, this might need improvements (express wrt hub, also deal with case hubRad=0). This is likely not psi_skew. 
          theta = -EulerExtract( transpose(orientationBladeAzimuth(:,:,1)) )
-         m%BEMT_u(indx)%psi_s(k) = theta(1)
+         m%BEMT_u(indx)%psi_s(k) = p%RotDir * theta(1)
       end do !k=blades
          
       ! Find the most-downwind azimuth angle needed by the skewed wake correction model
@@ -3506,7 +3550,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%psiSkewOffset = PiBy2
       else
          ! Assemble blade azimuth unit vectors and orientation matrix
-         z_vec = windCrossDisk / windCrossDiskMag
+         ! MirrorRotor: windCrossDisk is a pseudovector; RotDir keeps this triad
+         ! right-handed so it mirrors as S*R*S and theta(1) simply negates.
+         z_vec = p%RotDir * windCrossDisk / windCrossDiskMag
          x_vec = x_hat_disk
          y_vec = cross_product( z_vec, x_vec )
          orientation(1,:) = x_vec
@@ -3514,7 +3560,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          orientation(3,:) = z_vec
          ! Extract azimuth angle for most down-wind blade orientation
          theta = -EulerExtract( transpose(orientation) )
-         m%BEMT_u(indx)%psiSkewOffset = theta(1)+PiBy2  ! cross-product of wind vector and rotor axis will lead downwind blade azimuth by 90 degrees
+         m%BEMT_u(indx)%psiSkewOffset = p%RotDir * theta(1)+PiBy2  ! cross-product of wind vector and rotor axis will lead downwind blade azimuth by 90 degrees
       end if
 
 
@@ -3597,7 +3643,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       ! Local and instantaneous blade twist+pitch (aerodynamic + elastic), cant and toe (include elastic deformation)
       do k=1,p%NumBlades
          do j=1,p%NumBlNds         
-            m%BEMT_u(indx)%theta(j,k) = thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+            m%BEMT_u(indx)%theta(j,k) = p%RotDir * thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
 
             ! NOTE: curve computed by Calculate_MeshOrientation_*
             m%BEMT_u(indx)%toeAngle(j,k)  = 0.0_ReKi
@@ -3607,8 +3653,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    elseif (p%AeroProjMod==APM_BEM_Polar) then
          do k=1,p%NumBlades
             do j=1,p%NumBlNds
-               m%BEMT_u(indx)%theta(j,k)     = thetaBladeNds(j,k)
-               m%BEMT_u(indx)%toeAngle(j,k)  = m%Toe(j,k)
+               m%BEMT_u(indx)%theta(j,k)     = p%RotDir * thetaBladeNds(j,k)
+               m%BEMT_u(indx)%toeAngle(j,k)  = p%RotDir * m%Toe(j,k)
                m%BEMT_u(indx)%cantAngle(j,k) = m%Cant(j,k)
             end do !j=nodes
          end do !k=blades
@@ -3629,7 +3675,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          endif
          ! Velocity in "p" or "w" system (depending) on AeroProjMod
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, m%orientationAnnulus(1,:,j,k) ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-         m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
+         m%BEMT_u(indx)%Vy(j,k) = p%RotDir * dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vz(j,k) = dot_product( tmp, m%orientationAnnulus(3,:,j,k) ) ! radial component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          ! NOTE: We'll likely remove that:
@@ -3646,7 +3692,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
       do j=1,p%NumBlNds
          ! inputs for CUA (and CDBEMT):
          ! TODO Here we should take the rotation in the airfoil coordinate system instead of the "l" or "w" system
-         m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+         m%BEMT_u(indx)%omega_z(j,k)       = p%RotDir * dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
       end do !j=nodes
    end do !k=blades
@@ -3736,7 +3782,10 @@ subroutine DiskAvgValues(p, u, RotInflow, m, x_hat_disk, y_hat_disk, z_hat_disk,
          z_hat_disk = u%HubMotion%Orientation(3,:,1)
       else
         y_hat_disk = tmp / tmp_sz
-        z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
+        ! MirrorRotor: this cross product is a pseudovector, so without RotDir the
+        ! skew-aligned frame would flip handedness and Azimuth would come out as
+        ! pi-Azimuth instead of the CW-equivalent value the skew model expects.
+        z_hat_disk = p%RotDir * cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
      end if
 
          ! "Azimuth angle" rad
@@ -4119,26 +4168,28 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
          Cya = -Cl*sin(aoa) + Cd*cos(aoa)
 
          ! Dimensionalize the aero forces and moment
+         ! MirrorRotor: BEMT returns CW-frame coefficients; RotDir maps the y-component of
+         ! forces and the x/z-components of moments back into the mirrored rotor frame.
          q = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2              ! dynamic pressure of the jth node in the kth blade
          c = p%BEMT%chord(j,k)
          forceAirfoil(1)  = Cxa * q * c
-         forceAirfoil(2)  = Cya * q * c
+         forceAirfoil(2)  = p%RotDir * Cya * q * c
          forceAirfoil(3)  = 0.0_reki
          momentAirfoil(1) = 0.0_reki
          momentAirfoil(2) = 0.0_reki
-         momentAirfoil(3) = Cm * q * c**2
+         momentAirfoil(3) = p%RotDir * Cm * q * c**2
          m%M(j,k) = momentAirfoil(3)     ! TODO EB     
          
          ! NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE! - NOTE!
          !EAM (fix this!)  These output variables are possibly not what they should be 
          ! relative to the original AeroDyn manual and intent !!!!
          force(1) =  m%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-         force(2) = -m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+         force(2) = -p%RotDir * m%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          force(3) =  m%BEMT_y%cz(j,k) * q * p%BEMT%chord(j,k)     ! Z = axial force per unit length of the jth node in the kth blade
 
-         moment(1)=  m%BEMT_y%Cmx(j,k) * q * p%BEMT%chord(j,k)**2  ! Mx = pitching moment (x-component) per unit length of the jth node in the kth blade
+         moment(1)=  p%RotDir * m%BEMT_y%Cmx(j,k) * q * p%BEMT%chord(j,k)**2  ! Mx = pitching moment (x-component) per unit length of the jth node in the kth blade
          moment(2)=  m%BEMT_y%Cmy(j,k) * q * p%BEMT%chord(j,k)**2  ! My = pitching moment (y-component) per unit length of the jth node in the kth blade
-         moment(3)=  m%BEMT_y%Cmz(j,k) * q * p%BEMT%chord(j,k)**2  ! Mz = pitching moment (z-component) per unit length of the jth node in the kth blade
+         moment(3)=  p%RotDir * m%BEMT_y%Cmz(j,k) * q * p%BEMT%chord(j,k)**2  ! Mz = pitching moment (z-component) per unit length of the jth node in the kth blade
          
             ! save these values for possible output later:
          m%X(j,k) = force(1)
@@ -4222,7 +4273,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Vwnd = m%rotors(iR)%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
             theta = m%FVW%W(iW)%PitchAndTwist(j) ! TODO
             call FVW_AeroOuts( m%rotors(iR)%orientationAnnulus(1:3,1:3,j,k), u%rotors(iR)%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
-                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
+                        theta, p%rotors(iR)%RotDir, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
 
@@ -4262,9 +4313,13 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cy = Cl_dyn*sp - Cd_dyn*cp
 
             q = 0.5 * p%rotors(iR)%airDens * Vrel**2                ! dynamic pressure of the jth node in the kth blade
+            ! MirrorRotor: Cx, Cy and Cm_dyn are clockwise-frame coefficients, exactly as
+            ! BEMT returns them, so RotDir maps the tangential force and the pitching
+            ! moment back into the mirrored rotor frame before they are applied through
+            ! the physical annulus orientation. See SetOutputsFromBEMT.
             force(1) =  Cx * q * p%FVW%W(iW)%chord_LL(j)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-            force(2) = -Cy * q * p%FVW%W(iW)%chord_LL(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-            moment(3)=  Cm_dyn * q * p%FVW%W(iW)%chord_LL(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
+            force(2) = -p%rotors(iR)%RotDir * Cy * q * p%FVW%W(iW)%chord_LL(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+            moment(3)=  p%rotors(iR)%RotDir * Cm_dyn * q * p%FVW%W(iW)%chord_LL(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
 
                ! save these values for possible output later:
             m%rotors(iR)%X(j,k) = force(1)
@@ -5205,6 +5260,9 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
       do iB=1,p%rotors(iR)%numBlades
          iW=iW_incr+iB
          InitInp%W(iW)%iRotor = iR ! Indicate OLAF which wing belongs to which rotor
+         ! MirrorRotor: OLAF holds every rotor's wings in one shared wake, so the
+         ! rotation direction has to travel per wing rather than per simulation.
+         InitInp%W(iW)%RotDir = p%rotors(iR)%RotDir
 
          call AllocAry(InitInp%W(iW)%Chord, InitInp%numBladeNodes,  'chord', ErrStat2,ErrMsg2); if(Failed()) return
          call AllocAry(InitInp%W(iW)%AFindx,InitInp%numBladeNodes,1,'AFindx',ErrStat2,ErrMsg2); if(Failed()) return
