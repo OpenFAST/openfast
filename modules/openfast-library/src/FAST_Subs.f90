@@ -2211,6 +2211,14 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
 
    end if
 
+      ! FAST.Farm drives one OpenFAST instance per turbine, and every rotor reference in
+      ! FASTWrapper is rotors(1). A multi-rotor instance would therefore simulate the
+      ! first rotor and silently ignore the rest, which is worse than refusing it.
+      ! FASTWrapper is the only thing that sets FarmIntegration.
+   if (p%FarmIntegration .and. p%NRotors > 1) then
+      CALL SetErrStat( ErrID_Fatal, 'Only one rotor per OpenFAST instance is supported with FAST.Farm.', ErrStat, ErrMsg, RoutineName )
+   end if
+
       ! Combinations not yet supported with a mirrored (counter-clockwise) rotor. Each of
       ! these is removed as the corresponding module is worked through.
    if (allocated(p%MirrorRotor)) then
