@@ -61,6 +61,9 @@ mkvariant aa_mirror    True  False 1 True
 
 run lin_mirror  "not yet supported with linearization"      yes
 run lin_cw      "not yet supported with linearization"      no
-run olaf_mirror "not yet supported with the OLAF"            yes
-run olaf_cw     "not yet supported with the OLAF"            no
 run aa_mirror   "not yet supported with the AeroAcoustics"   yes
+
+# The free wake is supported, so these two check that the restriction stays gone
+# rather than that it fires. If someone reintroduces a refusal for OLAF, both fail.
+run olaf_mirror "not yet supported with the OLAF"            no
+run olaf_cw     "not yet supported with the OLAF"            no
