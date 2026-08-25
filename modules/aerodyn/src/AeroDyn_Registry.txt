@@ -156,6 +156,7 @@ typedef	^	RotInitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	RotInitOutputType	AD_BladeShape	BladeShape	{:}	-	-	"airfoil coordinates for each blade"	m
+typedef	^	RotInitOutputType	ReKi	RotDir	-	1.0	-	"Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW). Needed alongside BladeShape so the VTK surface fallback can mirror the generic section."	-
 typedef	^	RotInitOutputType	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
 typedef	^	RotInitOutputType	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m

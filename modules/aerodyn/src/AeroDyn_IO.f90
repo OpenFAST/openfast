@@ -2491,7 +2491,7 @@ subroutine AD_SetVTKSurface(InitOutData_AD, u_AD, VTK_Surface, errStat, errMsg)
          do K=1, nBlades
             tipNode  = u_AD%rotors(iWT)%BladeMotion(K)%NNodes
             cylNode  = min(3,u_AD%rotors(iWT)%BladeMotion(K)%Nnodes)
-            call AD_SetVTKDefaultBladeParams(u_AD%rotors(iWT)%BladeMotion(K), VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, errStat2, errMsg2, BlChord=InitOutData_AD%rotors(iWT)%BladeProps(k)%BlChord); if (Failed()) return
+            call AD_SetVTKDefaultBladeParams(u_AD%rotors(iWT)%BladeMotion(K), VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, InitOutData_AD%rotors(iWT)%RotDir, errStat2, errMsg2, BlChord=InitOutData_AD%rotors(iWT)%BladeProps(k)%BlChord); if (Failed()) return
          end do                           
       endif
    enddo ! iWT, turbines
@@ -2607,15 +2607,17 @@ subroutine AD_WrVTK_LinesPoints(u_AD, y_AD, RefPoint, VTK_count, OutFileRoot, tW
 end subroutine AD_WrVTK_LinesPoints
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
-SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, errStat, errMsg, BlChord)
+SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, RotDir, errStat, errMsg, BlChord)
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
    TYPE(AD_VTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
    INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
+   REAL(ReKi),                   INTENT(IN   ) :: RotDir           !< MirrorRotor: +1 normal, -1 mirrored.  See the comment on the chordwise term below.
    INTEGER(IntKi),               INTENT(  OUT) :: errStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: errMsg           !< Error message if errStat /= ErrID_None
    REAL(ReKi),  OPTIONAL,        INTENT(IN   ) :: BlChord(:)
+   REAL(SiKi)                                  :: chordSign        !< RotDir as SiKi
    REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
    REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities               
    REAL(SiKi)                                  :: cylinderLength, x, y, angle               
@@ -2627,6 +2629,7 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
    ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:   
    real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
    real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
+   chordSign = real(RotDir, SiKi)
    call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', errStat2, errMsg2)
       CALL SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
       IF (errStat >= AbortErrLev) RETURN
@@ -2657,8 +2660,13 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
             y = xc(j) - 0.5
             angle = ATAN2( y, x)
                ! x,y coordinates for cylinder
-            BladeShape%AirfoilCoords(1,j,i) = chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
-            BladeShape%AirfoilCoords(2,j,i) = chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+            ! MirrorRotor: MeshWrVTK_Ln2Surface places these as matmul(xyz, Orientation),
+            ! so component 1 rides row 1 of the node's direction cosine matrix and
+            ! component 2 rides row 2.  Under R' = S R S row 1 becomes S*row1 while row 2
+            ! becomes -S*row2, so the chordwise term carries the sign and the thickness
+            ! term does not.  Visualisation only.
+            BladeShape%AirfoilCoords(1,j,i) =             chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
          END DO                                                     
       ELSE
          ! create an airfoil for this node
@@ -2667,8 +2675,8 @@ SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode
             x = yc(j)
             y = xc(j) - pitchAxis
                ! x,y coordinates for airfoil
-            BladeShape%AirfoilCoords(1,j,i) =  chord*x
-            BladeShape%AirfoilCoords(2,j,i) =  chord*y                        
+            BladeShape%AirfoilCoords(1,j,i) =             chord*x
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*y
          END DO
       END IF
    END DO ! nodes on mesh

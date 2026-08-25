@@ -16,9 +16,27 @@ the rows do not transform alike -- row 1 becomes ``S*row1`` and row 2 becomes
 ``-S*row2`` -- so the coordinates need ``RotDir`` on component 2 alone for the
 two negations to cancel.  See ``AD_SetInitOut`` in ``modules/aerodyn/src/AeroDyn.f90``.
 
+Three configurations are checked, because the surface is drawn three different
+ways and each carries the sign separately:
+
+``coords``
+    The airfoil files supply coordinates, and ``AD_SetInitOut`` builds the
+    section.  This is the normal case.
+``nocoords``
+    ``NumCoords = 0``, so ``BladeShape`` is never allocated and the glue code
+    synthesises a generic S809 section instead.  The same fallback is reached
+    when the airfoil files merely disagree on how many coordinates they have,
+    which the code itself calls an overly restrictive check.
+``noaero``
+    ``CompAero = 0``, so the blades come from BeamDyn and the fallback draws a
+    rectangle.  Nearly symmetric, so nearly immune -- but only nearly: the
+    closing vertex of the rectangle sits at the midpoint of one long edge and
+    its mirror lies on the opposite edge, which displaces one vertex per node.
+
 Run it directly, or through ``run_guards.sh``::
 
     python3 check_vtk_surface_mirror.py
+    python3 check_vtk_surface_mirror.py --only coords
     python3 check_vtk_surface_mirror.py --keep   # leave the runs in place
 
 It clones the registered pair `5MW_Land_BD_DLL_WTurb` and
@@ -52,13 +70,39 @@ PAIRS = {"1": "1", "2": "3", "3": "2"}
 # demonstrated below 1e-5 m no matter how exact the arithmetic is.
 TOL = 2.0e-5
 
+# Each draws the surface a different way, and each carries the sign separately.
+MODES = ("coords", "nocoords", "noaero")
+
 
 def repo_root():
     here = os.path.dirname(os.path.abspath(__file__))
     return os.environ.get("OPENFAST_REPO", os.path.abspath(os.path.join(here, "..", "..")))
 
 
-def stage(repo, work, tmax):
+def strip_coords(work, airfoil_src, aero_deck):
+    """Copy the airfoil files with NumCoords switched off and point the deck at them.
+
+    Setting NumCoords to 0 is what a user does when they have no profile geometry
+    to hand, and it sends the surface down the generic-shape fallback.
+    """
+    dst = os.path.join(work, "Airfoils_nocoords")
+    os.makedirs(dst, exist_ok=True)
+    for fn in os.listdir(airfoil_src):
+        if not fn.endswith(".dat"):
+            continue
+        with open(os.path.join(airfoil_src, fn)) as fh:
+            text = fh.read()
+        text = re.sub(r'^@"[^"]*"(\s+NumCoords)', r"0\1", text, flags=re.M)
+        with open(os.path.join(dst, fn), "w") as fh:
+            fh.write(text)
+    with open(aero_deck) as fh:
+        text = fh.read()
+    text = text.replace('"../5MW_Baseline/Airfoils/', '"../Airfoils_nocoords/')
+    with open(aero_deck, "w") as fh:
+        fh.write(text)
+
+
+def stage(repo, work, tmax, mode):
     """Clone both cases from the staged build tree and turn on surface VTK."""
     built = os.path.join(repo, "build-docker-double", "reg_tests", "glue-codes", "openfast")
     baseline = os.path.join(built, "5MW_Baseline")
@@ -82,8 +126,19 @@ def stage(repo, work, tmax):
         text = re.sub(r"^(\s*)\d+(\s+WrVTK\s)", r"\g<1>2\g<2>", text, flags=re.M)
         text = re.sub(r"^(\s*)\d+(\s+VTK_type\s)", r"\g<1>1\g<2>", text, flags=re.M)
         text = re.sub(r"^(\s*)[\d.]+(\s+TMax\s)", rf"\g<1>{tmax}\g<2>", text, flags=re.M)
+        if mode == "noaero":
+            # No AeroDyn at all, so the blades come from BeamDyn and the fallback
+            # draws a rectangle.  ServoDyn goes too, since its controller expects
+            # aerodynamic torque.
+            text = re.sub(r"^(\s*)\d+(\s+CompAero\s)", r"\g<1>0\g<2>", text, flags=re.M)
+            text = re.sub(r"^(\s*)\d+(\s+CompServo\s)", r"\g<1>0\g<2>", text, flags=re.M)
         with open(fst, "w") as fh:
             fh.write(text)
+
+    if mode == "nocoords":
+        strip_coords(work,
+                     os.path.join(baseline, "Airfoils"),
+                     os.path.join(work, CW, "NRELOffshrBsline5MW_Onshore_AeroDyn.dat"))
 
 
 def run(repo, work, case):
@@ -115,49 +170,57 @@ def main(argv=None):
     ap.add_argument("--tmax", type=float, default=2.0, help="run length (s), default 2")
     ap.add_argument("--tol", type=float, default=TOL, help=f"tolerance (m), default {TOL}")
     ap.add_argument("--keep", action="store_true", help="keep the run directories")
+    ap.add_argument("--only", choices=MODES, help="check just one configuration")
     args = ap.parse_args(argv)
 
     repo = repo_root()
-    work = tempfile.mkdtemp(prefix="vtk_surface_mirror_")
+    modes = (args.only,) if args.only else MODES
     ok = True
-    try:
-        stage(repo, work, args.tmax)
-        for case in (CW, MR):
-            run(repo, work, case)
 
-        for i, j in PAIRS.items():
-            a_files = surfaces(work, CW, i)
-            b_files = surfaces(work, MR, j)
-            if not a_files:
-                print(f"FAIL  blade {i}: no surface files written -- is VTK_type = 1 set, "
-                      "and do the airfoils supply coordinates?")
-                ok = False
-                continue
-            if len(a_files) != len(b_files):
-                print(f"FAIL  blade {i}->{j}: {len(a_files)} frames vs {len(b_files)}")
-                ok = False
-                continue
+    for mode in modes:
+        work = tempfile.mkdtemp(prefix=f"vtk_surface_{mode}_")
+        try:
+            stage(repo, work, args.tmax, mode)
+            for case in (CW, MR):
+                run(repo, work, case)
 
-            worst = 0.0
-            for pa, pb in zip(a_files, b_files):
-                a = read_vtp(pa)["points"] @ S.T
-                b = read_vtp(pb)["points"]
-                if a.shape != b.shape:
-                    print(f"FAIL  blade {i}->{j}: vertex counts differ, "
-                          f"{a.shape[0]} vs {b.shape[0]}")
+            for i, j in PAIRS.items():
+                a_files = surfaces(work, CW, i)
+                b_files = surfaces(work, MR, j)
+                if not a_files:
+                    print(f"FAIL  {mode:9s} blade {i}: no surface files written")
                     ok = False
-                    break
-                worst = max(worst, float(np.abs(a - b).max()))
-            else:
-                verdict = "PASS" if worst <= args.tol else "FAIL"
-                ok &= worst <= args.tol
-                print(f"{verdict}  blade {i}->{j}  {len(a_files)} frames  "
+                    continue
+                if len(a_files) != len(b_files):
+                    print(f"FAIL  {mode:9s} blade {i}->{j}: "
+                          f"{len(a_files)} frames vs {len(b_files)}")
+                    ok = False
+                    continue
+
+                worst = 0.0
+                bad = False
+                for pa, pb in zip(a_files, b_files):
+                    a = read_vtp(pa)["points"] @ S.T
+                    b = read_vtp(pb)["points"]
+                    if a.shape != b.shape:
+                        print(f"FAIL  {mode:9s} blade {i}->{j}: vertex counts differ, "
+                              f"{a.shape[0]} vs {b.shape[0]}")
+                        ok = False
+                        bad = True
+                        break
+                    worst = max(worst, float(np.abs(a - b).max()))
+                if bad:
+                    continue
+                good = worst <= args.tol
+                ok &= good
+                print(f"{'PASS' if good else 'FAIL'}  {mode:9s} blade {i}->{j}  "
+                      f"{len(a_files)} frames  {a_files and len(read_vtp(a_files[0])['points'])} verts  "
                       f"max separation {worst:.3e} m  (tol {args.tol:.1e})")
-    finally:
-        if args.keep:
-            print(f"runs kept in {work}")
-        else:
-            shutil.rmtree(work, ignore_errors=True)
+        finally:
+            if args.keep:
+                print(f"  runs kept in {work}")
+            else:
+                shutil.rmtree(work, ignore_errors=True)
 
     return 0 if ok else 1
 

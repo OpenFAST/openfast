@@ -209,7 +209,29 @@ worth recording, because it is the one part of the mirrored geometry that no
 output channel and no node comparison can police.  It was found by looking at a
 rendered case, not by any tolerance: the aerofoils were drawn 2.33 m from where
 they belonged while every channel and every node position agreed exactly.
-``reg_tests/otherTests/check_vtk_surface_mirror.py`` guards it.
+
+The surface is drawn three different ways, and each carries the sign separately.
+When the airfoil files supply coordinates, ``AD_SetInitOut`` builds the section.
+When they do not, ``BladeShape`` is left unallocated and a generic section is
+synthesised instead — an S809 by ``SetVTKDefaultBladeParams`` when AeroDyn is in
+use, or a rectangle when the blades come from BeamDyn or ElastoDyn without it.
+A surface is written either way; it is never skipped.  Note that the fallback is
+reached not only when ``NumCoords = 0`` but also when the airfoil files merely
+disagree on how many coordinates they have, a check the code itself describes as
+overly restrictive, so a blade mixing airfoil families can land there without the
+user intending it.  The rotation direction reaches the fallback through ``RotDir``
+in AeroDyn's initialisation output, and through ``p_FAST%MirrorRotor`` in the glue
+code.
+
+The generic shapes are not exempt.  Before the sign was applied the S809 fallback
+was drawn 1.611 m out and the rectangle 0.615 m; the rectangle is nearly immune,
+being symmetric about its own chord line, but only nearly, because its closing
+vertex sits at the midpoint of one long edge and its mirror lies on the opposite
+edge, displacing exactly one vertex per node.  Simplified ElastoDyn is the one
+configuration that writes no blade surface at all, having no blade mesh.
+
+``reg_tests/otherTests/check_vtk_surface_mirror.py`` guards all three paths, and
+has been shown to fail on each when the sign is removed.
 
 .. _glue-code-mirror-rotor-beamdyn:
 

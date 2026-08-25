@@ -176,6 +176,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(AD_BladeShape) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< airfoil coordinates for each blade [m]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW). Needed alongside BladeShape so the VTK surface fallback can mirror the generic section. [-]
     TYPE(AD_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrElev      !< Elevation at tower node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrDiam      !< Diameter of tower at node [m]
@@ -1611,6 +1612,7 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstRotInitOutputTypeData%RotDir = SrcRotInitOutputTypeData%RotDir
    if (allocated(SrcRotInitOutputTypeData%BladeProps)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%BladeProps)
       UB(1:1) = ubound(SrcRotInitOutputTypeData%BladeProps)
@@ -1718,6 +1720,7 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
          call AD_PackBladeShape(RF, InData%BladeShape(i1)) 
       end do
    end if
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, allocated(InData%BladeProps))
    if (allocated(InData%BladeProps)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeProps), ubound(InData%BladeProps))
@@ -1758,6 +1761,7 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
          call AD_UnpackBladeShape(RF, OutData%BladeShape(i1)) ! BladeShape 
       end do
    end if
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BladeProps)) deallocate(OutData%BladeProps)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

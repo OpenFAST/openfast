@@ -3851,6 +3851,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
    REAL(SiKi)                              :: x, y
    REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
    REAL(SiKi)                              :: BladeLength, HubRad
+   REAL(ReKi)                              :: VTKRotDir
    INTEGER(IntKi)                          :: topNode, baseNode
    INTEGER(IntKi)                          :: NumBl, k, Indx
    LOGICAL                                 :: UseADtwr
@@ -4012,6 +4013,14 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
       return
    end if
 
+      ! MirrorRotor: the generic blade shapes below are synthesised here rather than taken
+      ! from AeroDyn, so they need the rotation direction to be drawn the right way round.
+      ! Only rotor 1 is visualised by this routine, as the TODOs below record.
+   VTKRotDir = 1.0_ReKi
+   if (allocated(p_FAST%MirrorRotor)) then
+      if (p_FAST%MirrorRotor(1)) VTKRotDir = -1.0_ReKi
+   end if
+
    IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
 
       IF (ALLOCATED(InitOutData_AD%rotors(1)%BladeShape)) THEN
@@ -4028,7 +4037,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
             tipNode  = AD%Input(1)%rotors(1)%BladeMotion(K)%NNodes
             cylNode  = min(3,AD%Input(1)%rotors(1)%BladeMotion(K)%Nnodes)
 
-            call SetVTKDefaultBladeParams(AD%Input(1)%rotors(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 1, ErrStat2, ErrMsg2)
+            call SetVTKDefaultBladeParams(AD%Input(1)%rotors(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 1, VTKRotDir, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF (ErrStat >= AbortErrLev) RETURN
          END DO
@@ -4041,7 +4050,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
          tipNode  = BD%y(k)%BldMotion%NNodes
          cylNode  = min(3,BD%y(k)%BldMotion%NNodes)
 
-         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, VTKRotDir, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
@@ -4056,7 +4065,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
          tipNode  = ED%y(1)%BladeLn2Mesh(K)%NNodes-1
          cylNode  = min(2,ED%y(1)%BladeLn2Mesh(K)%NNodes)
 
-         call SetVTKDefaultBladeParams(ED%y(1)%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(ED%y(1)%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, VTKRotDir, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
@@ -4094,7 +4103,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
 END SUBROUTINE SetVTKParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
-SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, iShape, ErrStat, ErrMsg)
+SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, iShape, RotDir, ErrStat, ErrMsg)
 
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
    TYPE(FAST_VTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
@@ -4102,6 +4111,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
    INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
    INTEGER(IntKi),               INTENT(IN   ) :: iShape           !< 1: S809, 2: circle, 3: square, 4: rectangle
+   REAL(ReKi),                   INTENT(IN   ) :: RotDir           !< MirrorRotor: +1 normal, -1 mirrored
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
@@ -4109,6 +4119,13 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
    REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
    REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities
    REAL(SiKi)                                  :: cylinderLength, x, y, angle
+   ! MirrorRotor: MeshWrVTK_Ln2Surface places these vertices as matmul(xyz, Orientation),
+   ! so component 1 rides row 1 of the node's direction cosine matrix and component 2
+   ! rides row 2.  Under R' = S R S row 1 becomes S*row1 while row 2 becomes -S*row2, so
+   ! the chordwise term carries the sign and the thickness term does not.  Without it a
+   ! mirrored rotor is drawn with its sections back to front about the pitch axis.
+   ! Visualisation only; these coordinates never reach the loads.
+   REAL(SiKi)                                  :: chordSign
    INTEGER(IntKi)                              :: i, j
    INTEGER(IntKi)                              :: ErrStat2
    CHARACTER(ErrMsgLen)                        :: ErrMsg2
@@ -4118,6 +4135,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+   chordSign = real(RotDir, SiKi)
 
    select case (iShape)
    case (1)
@@ -4181,8 +4199,8 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
             x = yc(j)
             y = xc(j) - 0.5
                ! x,y coordinates for cylinder
-            BladeShape%AirfoilCoords(1,j,i) = chord*x
-            BladeShape%AirfoilCoords(2,j,i) = chord*y
+            BladeShape%AirfoilCoords(1,j,i) =             chord*x
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*y
          END DO
       enddo
       return ! We exit this routine
@@ -4214,8 +4232,8 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
             angle = ATAN2( y, x)
 
                ! x,y coordinates for cylinder
-            BladeShape%AirfoilCoords(1,j,i) = chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
-            BladeShape%AirfoilCoords(2,j,i) = chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(1,j,i) =             chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
          END DO
 
       ELSE
@@ -4227,8 +4245,8 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
             y = xc(j) - pitchAxis
 
                ! x,y coordinates for airfoil
-            BladeShape%AirfoilCoords(1,j,i) =  chord*x
-            BladeShape%AirfoilCoords(2,j,i) =  chord*y
+            BladeShape%AirfoilCoords(1,j,i) =             chord*x
+            BladeShape%AirfoilCoords(2,j,i) = chordSign * chord*y
          END DO
 
       END IF

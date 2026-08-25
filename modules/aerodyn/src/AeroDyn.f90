@@ -145,9 +145,16 @@ subroutine AD_SetInitOut(MHK, WtrDpth, p, p_AD, InputFileData, AA_InitOut, InitO
    
    
 ! set visualization data:
-      ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil 
+      ! MirrorRotor: the rotation direction travels with the visualisation data because
+      ! the blade surface is not always built here.  When the airfoil files carry no
+      ! coordinates, or carry differing numbers of them, BladeShape is left unallocated
+      ! and the caller synthesises a generic section instead; that fallback needs the
+      ! same sign this routine applies below.
+   InitOut%RotDir = p%RotDir
+
+      ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil
       ! tables have the same number of coordinates.
-   if ( allocated(p_AD%AFI) ) then  
+   if ( allocated(p_AD%AFI) ) then
       
       if ( p_AD%AFI(1)%NumCoords > 0 ) then
          NumCoords = p_AD%AFI(1)%NumCoords
