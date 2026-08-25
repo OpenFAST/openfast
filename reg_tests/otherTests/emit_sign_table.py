@@ -94,11 +94,137 @@ def measure(a, na, b, nb, nblades, tol, floor):
     return out
 
 
+
+# The behaviour codes, in the order they are presented everywhere else.
+BEHAVIOUR = (
+    ("S", "identical", "v' = v"),
+    ("F", "sign-flipped", "v' = -v"),
+    ("A", "mirrored angle", "v' = -v, wrapped"),
+    ("negligible", "below the noise floor", "indistinguishable from zero everywhere"),
+    ("?", "unresolved", "measured but not classified"),
+)
+
+
+def emit_map(groups, mooring, origin, conflicts, tol, floor):
+    """Write the per-channel sign map into docs/source.
+
+    Two artefacts from one measurement: a YAML file for anything that wants to
+    consume the map, and a reStructuredText page that renders it for a reader.
+    Both are generated -- neither should be hand-edited, because the map is
+    measured on every run and a hand edit would be silently overwritten or,
+    worse, silently disagree with what the code actually does.
+    """
+    docs = os.path.join(REPO_ROOT, "docs", "source", "user", "glue-code")
+    labels = {k: lbl for k, lbl, _ in BEHAVIOUR}
+
+    rows = []
+    for k, lbl, _ in BEHAVIOUR:
+        for n in sorted(groups.get(k, [])):
+            rows.append((n, k, lbl, sorted(origin[n])))
+    for n in sorted(mooring):
+        rows.append((n, "mooring", "set aside, layout-specific",
+                     sorted(origin[n])))
+    rows.sort(key=lambda r: r[0].upper())
+
+    yml = os.path.join(docs, "mirror_rotor_sign_map.yaml")
+    with open(yml, "w") as fh:
+        fh.write("# Measured mirror sign map -- GENERATED, do not edit by hand.\n")
+        fh.write("# Regenerate with:\n")
+        fh.write("#   python3 reg_tests/otherTests/emit_sign_table.py "
+                 f"--tol {tol} --emit-map\n")
+        fh.write("#\n")
+        fh.write("# Every entry is observed by running a registered clockwise/mirrored\n")
+        fh.write("# pair and comparing the channel against its counterpart.  Nothing here\n")
+        fh.write("# is inferred from reading the source.\n")
+        fh.write(f"tolerance: {tol}\n")
+        fh.write(f"noise_floor: {floor}\n")
+        fh.write("behaviours:\n")
+        for k, lbl, meaning in BEHAVIOUR:
+            # "?" is a YAML indicator character; quote the key so every parser
+            # reads it as the scalar it is meant to be.
+            key = f'"{k}"' if k == "?" else k
+            fh.write(f'  {key}: {{name: "{lbl}", meaning: "{meaning}"}}\n')
+        fh.write('  mooring: {name: "set aside", '
+                 'meaning: "pairing is layout-specific"}\n')
+        fh.write("channels:\n")
+        for n, k, lbl, src in rows:
+            fh.write(f'  {n}: {{behaviour: {k}, measured_in: [{", ".join(src)}]}}\n')
+
+    rst = os.path.join(docs, "mirror_rotor_sign_map.rst")
+    with open(rst, "w") as fh:
+        fh.write(""".. _glue-code-mirror-rotor-sign-map:
+
+Mirror-rotor sign map
+=====================
+
+.. warning::
+   This page is **generated**.  Do not edit it by hand; regenerate it with
+
+   .. code-block:: bash
+
+      python3 reg_tests/otherTests/emit_sign_table.py --tol """ + str(tol) + """ --emit-map
+
+Every entry below is **measured**, not asserted.  Each registered
+clockwise/mirrored pair is run and every output channel is compared against its
+counterpart, so this records behaviour that is observed rather than behaviour
+expected from reading the source.  A channel seen in more than one pair must
+agree across them; a disagreement is reported rather than silently resolved.
+
+The grouped, prose form of the same information is in
+:ref:`glue-code-mirror-rotor-verification`, which is the better place to start.
+This page exists for looking a single channel up, and for anything that wants to
+consume the map as data -- see ``mirror_rotor_sign_map.yaml`` beside this file.
+
+**Read it correctly.**  This records how the two runs of a *symmetric* comparison
+relate to each other, which is how the implementation is verified.  It is **not**
+a claim that these channels change sign whenever the flag is set: in an ordinary
+simulation the tower, support structure and inflow are not mirrored, so a
+quantity such as ``TwrBsMxt`` is simply the response of an unchanged structure to
+a counter-clockwise rotor.
+
+Blade 1 lies on the mirror plane and blades 2 and 3 exchange, so a mirrored
+blade 2 is compared against the clockwise blade 3.  Mooring channels are set
+aside because which line pairs with which depends on the layout.
+
+""")
+        fh.write(f"Measured at a relative tolerance of ``{tol}`` with a noise floor of "
+                 f"``{floor}``, across {len(rows)} channels.\n\n")
+        for k, lbl, meaning in BEHAVIOUR:
+            n = len(groups.get(k, []))
+            if n:
+                fh.write(f"* **{lbl}** ({n}) -- {meaning}\n")
+        fh.write(f"* **set aside** ({len(mooring)}) -- mooring, pairing is "
+                 "layout-specific\n\n")
+        if conflicts:
+            fh.write(".. warning::\n   Channels observed behaving differently in "
+                     "different pairs:\n\n")
+            for n, cl, src in conflicts:
+                fh.write(f"   * ``{n}``: {cl}, seen in {src}\n")
+            fh.write("\n")
+        fh.write(""".. list-table::
+   :header-rows: 1
+   :widths: 30 25 45
+
+   * - Channel
+     - Behaviour
+     - Measured in
+""")
+        for n, k, lbl, src in rows:
+            fh.write(f"   * - ``{n}``\n     - {lbl}\n     - {', '.join(src)}\n")
+
+    print(f"\nwrote {yml}")
+    print(f"wrote {rst}")
+    print(f"  {len(rows)} channels")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tol", type=float, default=2e-3)
     ap.add_argument("--floor", type=float, default=1e-8)
     ap.add_argument("--show-unresolved", action="store_true")
+    ap.add_argument("--emit-map", action="store_true",
+                    help="write the per-channel sign map into docs/source as YAML "
+                         "and as a reStructuredText table")
     a = ap.parse_args()
 
     seen = defaultdict(set)
@@ -196,6 +322,9 @@ def main():
                    ("A", "MIRRORED ANGLE")):
         print(f"\n=== {lbl}")
         print("  " + ", ".join(groups[k]))
+
+    if a.emit_map:
+        emit_map(groups, mooring, origin, conflicts, a.tol, a.floor)
 
 
 if __name__ == "__main__":
