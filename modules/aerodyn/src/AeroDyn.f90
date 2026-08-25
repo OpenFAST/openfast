@@ -179,10 +179,20 @@ subroutine AD_SetInitOut(MHK, WtrDpth, p, p_AD, InputFileData, AA_InitOut, InitO
                do j=1,InputFileData%BladeProps(k)%NumBlNds
                   f = InputFileData%BladeProps(k)%BlAFID(j)
                   
-                  do i=1,NumCoords-1                                                     
-                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%Y_Coord(i+1) - p_AD%AFI(f)%Y_Coord(1) )
-                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%X_Coord(i+1) - p_AD%AFI(f)%X_Coord(1) )
-                  end do                  
+                  ! MirrorRotor: these vertices are placed by MeshWrVTK_Ln2Surface as
+                  ! matmul(xyz, Orientation), so component 1 rides row 1 of the node's
+                  ! direction cosine matrix and component 2 rides row 2.  Under the
+                  ! mirror R' = S R S the rows do not transform alike: row 1 becomes
+                  ! S*row1 while row 2 becomes -S*row2.  RotDir therefore belongs on
+                  ! component 2 alone, so that the two negations cancel and the leading
+                  ! edge stays the leading edge while the section is drawn as the mirror
+                  ! image of the tabulated airfoil, which is how it is being used.
+                  ! Putting the factor on component 1, or on both, was measured and is
+                  ! wrong.  Visualisation only; these coordinates never reach the loads.
+                  do i=1,NumCoords-1
+                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) =            InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%Y_Coord(i+1) - p_AD%AFI(f)%Y_Coord(1) )
+                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = p%RotDir * InputFileData%BladeProps(k)%BlChord(j)*( p_AD%AFI(f)%X_Coord(i+1) - p_AD%AFI(f)%X_Coord(1) )
+                  end do
                end do
                                  
             end do

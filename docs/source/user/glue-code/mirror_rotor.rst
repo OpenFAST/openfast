@@ -187,6 +187,30 @@ Both describe the same angle.  The panel normal is a cross product of two true
 vectors and so is a pseudovector, while the rows of a direction cosine matrix
 are not; the two carry opposite signs under the reflection.
 
+.. _glue-code-mirror-rotor-vtk:
+
+Visualisation surfaces
+----------------------
+
+The blade surface written for ``VTK_type = 1`` is built from the airfoil
+coordinate files rather than from the mesh, so it carries its own sign.
+``MeshWrVTK_Ln2Surface`` places each vertex at
+``Position + TranslationDisp + matmul(xyz, Orientation)``, which puts
+``AirfoilCoords`` component 1 along row 1 of the node's direction cosine matrix
+and component 2 along row 2.  Under :math:`R' = S R S` the rows do not transform
+alike: row 1 becomes :math:`S\,r_1` while row 2 becomes :math:`-S\,r_2`.  The
+coordinates therefore carry ``RotDir`` on **component 2 alone**, so that the two
+negations cancel and the leading edge remains the leading edge while the section
+is drawn as the mirror image of the tabulated aerofoil, which is how it is being
+used.  Putting the factor on component 1, or on both, was measured and is wrong.
+
+This is visualisation only — these coordinates never reach the loads — but it is
+worth recording, because it is the one part of the mirrored geometry that no
+output channel and no node comparison can police.  It was found by looking at a
+rendered case, not by any tolerance: the aerofoils were drawn 2.33 m from where
+they belonged while every channel and every node position agreed exactly.
+``reg_tests/otherTests/check_vtk_surface_mirror.py`` guards it.
+
 .. _glue-code-mirror-rotor-beamdyn:
 
 BeamDyn blades

@@ -67,3 +67,10 @@ run aa_mirror   "not yet supported with the AeroAcoustics"   yes
 # rather than that it fires. If someone reintroduces a refusal for OLAF, both fail.
 run olaf_mirror "not yet supported with the OLAF"            no
 run olaf_cw     "not yet supported with the OLAF"            no
+
+# The VTK blade surfaces are built from the airfoil coordinate files rather than
+# from the mesh, so they carry a sign of their own that no channel comparison and
+# no node comparison can reach. This uses the release build and takes about 12 s.
+echo
+echo "=== VTK surface mirror ==="
+python3 "$HERE/check_vtk_surface_mirror.py"
