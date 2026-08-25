@@ -481,6 +481,14 @@ through.
      - ``CompAero = 3``
    * - AeroAcoustics
      - ``CompAA = True`` in the AeroDyn input file
+   * - FAST.Farm
+     - Any turbine in a farm.  The mirror is confined to its own OpenFAST
+       instance and the blade surfaces render correctly, since each turbine is a
+       separate single-rotor instance, but the wake coupling has not been
+       verified: ``FWrap_CalcOutput`` builds the skew angle from a cross product
+       of the disk-averaged wind with the disk normal, which is the pseudovector
+       pattern that carries a sign at every other module boundary here, and the
+       curled-wake model encodes a swirl direction of its own.
 
 .. _glue-code-mirror-rotor-verification:
 

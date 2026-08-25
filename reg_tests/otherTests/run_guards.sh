@@ -138,10 +138,12 @@ mkdir -p "$FG"
 ln -sfn "$FSRC/WAT_MannBoxDB" "$FG/WAT_MannBoxDB"
 ln -sfn "$FSRC/5MW_Baseline"  "$FG/5MW_Baseline"
 
+MIRROR_MSG="MirrorRotor is not yet supported with FAST.Farm."
 NROTOR_MSG="Only one rotor per OpenFAST instance is supported with FAST.Farm."
 
 # Control: one rotor, not mirrored.  Neither guard may fire, and it must run.
 mkfarm farm_control
+runfarm farm_control "$MIRROR_MSG" no
 runfarm farm_control "$NROTOR_MSG" no
 runfarm farm_control "FAST.Farm terminated normally." yes
 
@@ -164,3 +166,12 @@ awk '/^---------------------- OUTPUT/ && !ins {
     && mv "$FG/farm_multirotor/.tmp" "$FG/farm_multirotor/FFTest_WT1.fst"
 runfarm farm_multirotor "$NROTOR_MSG" yes
 
+# A mirrored turbine in a farm.  The mirror is confined to its own OpenFAST
+# instance and the blade surfaces do render correctly, but the wake coupling has
+# never been measured: FWrap_CalcOutput builds the skew angle from a cross
+# product of the disk-averaged wind with the disk normal, which is the
+# pseudovector pattern that carries a sign at every other module boundary here.
+# Until that is checked the combination is refused rather than run quietly.
+mkfarm farm_mirror
+sed -i -E 's/^([[:space:]]*)F([[:space:]]+MirrorRotor)/\1       True\2/' "$FG/farm_mirror/FFTest_WT1.fst"
+runfarm farm_mirror "$MIRROR_MSG" yes

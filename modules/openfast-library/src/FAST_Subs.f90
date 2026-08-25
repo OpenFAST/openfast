@@ -2226,6 +2226,14 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
          if (p%Linearize)                     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with linearization.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAeroMaps)                  CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with the steady-state (aero map) solver.', ErrStat, ErrMsg, RoutineName )
          if (p%CompAero  == Module_ExtLd)     CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with ExtLoads.', ErrStat, ErrMsg, RoutineName )
+            ! The mirror itself is confined to this instance, and the blade surfaces do
+            ! render correctly, since each turbine is its own single-rotor instance. What
+            ! is not verified is the wake coupling: FWrap_CalcOutput forms the skew angle
+            ! from a cross product of the disk-averaged wind with the disk normal, which is
+            ! the pseudovector pattern that carries a sign at every other module boundary
+            ! here, and the curled-wake model encodes a swirl direction of its own. Neither
+            ! has been measured. See Phase 6 in the plan.
+         if (p%FarmIntegration)               CALL SetErrStat( ErrID_Fatal, 'MirrorRotor is not yet supported with FAST.Farm.', ErrStat, ErrMsg, RoutineName )
       end if
    end if
 
