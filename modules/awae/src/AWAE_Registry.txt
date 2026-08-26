@@ -210,6 +210,8 @@ typedef   ^ ParameterType  IntKi            DirIndexLen      -  - -    "Number o
 typedef   ^ ParameterType  IntKi            DirStartNum      -  - -    "Starting directory index number for AMReX wind"
 typedef   ^ ParameterType  IntKi            DirIndexDeltaLow -  - -    "Directory index delta for low-resolution AMReX wind"
 typedef   ^ ParameterType  IntKi            DirIndexDeltaHigh -  - -   "Directory index delta for high-resolution AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexLow     {:} - -    "AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n" -
+typedef   ^ ParameterType  IntKi            DirIndexHigh    {:} - -    "AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes" -
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts           -  - -   "Number of parameters in the output list (number of outputs requested)"      -

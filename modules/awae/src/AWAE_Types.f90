@@ -238,6 +238,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DirStartNum = 0_IntKi      !< Starting directory index number for AMReX wind [-]
     INTEGER(IntKi)  :: DirIndexDeltaLow = 0_IntKi      !< Directory index delta for low-resolution AMReX wind [-]
     INTEGER(IntKi)  :: DirIndexDeltaHigh = 0_IntKi      !< Directory index delta for high-resolution AMReX wind [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexLow      !< AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexHigh      !< AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
     INTEGER(IntKi)  :: WrDisSkp1 = 0_IntKi      !< Number of time steps to skip plus one [-]
     LOGICAL  :: WrDisWind = .false.      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
@@ -2078,6 +2080,30 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%DirStartNum = SrcParamData%DirStartNum
    DstParamData%DirIndexDeltaLow = SrcParamData%DirIndexDeltaLow
    DstParamData%DirIndexDeltaHigh = SrcParamData%DirIndexDeltaHigh
+   if (allocated(SrcParamData%DirIndexLow)) then
+      LB(1:1) = lbound(SrcParamData%DirIndexLow)
+      UB(1:1) = ubound(SrcParamData%DirIndexLow)
+      if (.not. allocated(DstParamData%DirIndexLow)) then
+         allocate(DstParamData%DirIndexLow(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DirIndexLow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%DirIndexLow = SrcParamData%DirIndexLow
+   end if
+   if (allocated(SrcParamData%DirIndexHigh)) then
+      LB(1:1) = lbound(SrcParamData%DirIndexHigh)
+      UB(1:1) = ubound(SrcParamData%DirIndexHigh)
+      if (.not. allocated(DstParamData%DirIndexHigh)) then
+         allocate(DstParamData%DirIndexHigh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DirIndexHigh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%DirIndexHigh = SrcParamData%DirIndexHigh
+   end if
    if (allocated(SrcParamData%IfW)) then
       LB(1:1) = lbound(SrcParamData%IfW)
       UB(1:1) = ubound(SrcParamData%IfW)
@@ -2206,6 +2232,12 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%z)) then
       deallocate(ParamData%z)
    end if
+   if (allocated(ParamData%DirIndexLow)) then
+      deallocate(ParamData%DirIndexLow)
+   end if
+   if (allocated(ParamData%DirIndexHigh)) then
+      deallocate(ParamData%DirIndexHigh)
+   end if
    if (allocated(ParamData%IfW)) then
       LB(1:1) = lbound(ParamData%IfW)
       UB(1:1) = ubound(ParamData%IfW)
@@ -2277,6 +2309,8 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%DirStartNum)
    call RegPack(RF, InData%DirIndexDeltaLow)
    call RegPack(RF, InData%DirIndexDeltaHigh)
+   call RegPackAlloc(RF, InData%DirIndexLow)
+   call RegPackAlloc(RF, InData%DirIndexHigh)
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
       call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
@@ -2359,6 +2393,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%DirStartNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirIndexDeltaLow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirIndexDeltaHigh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DirIndexLow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DirIndexHigh); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%IfW)) deallocate(OutData%IfW)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
