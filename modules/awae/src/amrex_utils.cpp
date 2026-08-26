@@ -347,15 +347,16 @@ extern "C"
             dims[i] = gridHi[i] - gridLo[i] + 1;
         }
 
-        // Get the variable names
-        const auto var_names = pf->varNames();
+        // Read every component in one pass. The per-variable overload re-reads the level once per
+        // variable, and the cost of a read is dominated by the number of boxes rather than by the
+        // volume of data, so three passes cost three times as much. Measured on a low-resolution
+        // sub-volume written with 93456 boxes: 65 s for three named reads against 17 s for one.
+        const auto &mf = pf->get(fine_level);
 
-        // Loop through variables
+        // Components are taken positionally, matching amrex_read_header_c's requirement that the
+        // first three are the X, Y and Z velocity in that order.
         for (int ivar = 0; ivar < 3; ++ivar)
         {
-            // Get data for variable at given level
-            const auto &mf = pf->get(fine_level, var_names[ivar]);
-
             // Loop through boxes of data
             for (MFIter mfi(mf); mfi.isValid(); ++mfi)
             {
@@ -384,7 +385,7 @@ extern "C"
                         {
                             const auto gi = i - gridLo[0];
                             const auto di = get_grid_data_index(ivar, gi, gj, gk, 3, dims[0], dims[1]);
-                            const auto v = fab(i, j, k);
+                            const auto v = fab(i, j, k, ivar);
                             data[di] = static_cast<float>(v);
                         }
                     }
