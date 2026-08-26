@@ -191,16 +191,20 @@ contains
       integer(IntKi), parameter  :: NumSteps = 5
       character(*), parameter    :: StartIndex = "00000"
 
-      integer(IntKi)             :: FirstIndex, IndexDelta
-      integer(IntKi)             :: ErrStat
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [0, 6, 12, 18, 24]
+      integer(IntKi)             :: ErrStat, i
       character(ErrMsgLen)       :: ErrMsg
 
       call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
-                              FirstIndex, IndexDelta, ErrStat, ErrMsg)
+                              DirIndices, ErrStat, ErrMsg)
       call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
 
-      call check(error, FirstIndex, 0); if (allocated(error)) return
-      call check(error, IndexDelta, 6); if (allocated(error)) return
+      call check(error, lbound(DirIndices,1), 0, more="lbound"); if (allocated(error)) return
+      call check(error, ubound(DirIndices,1), NumSteps-1, more="ubound"); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
 
    end subroutine
 
@@ -214,16 +218,18 @@ contains
       integer(IntKi), parameter  :: NumSteps = 3
       character(*), parameter    :: StartIndex = "00016"
 
-      integer(IntKi)             :: FirstIndex, IndexDelta
-      integer(IntKi)             :: ErrStat
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [16, 24, 32]
+      integer(IntKi)             :: ErrStat, i
       character(ErrMsgLen)       :: ErrMsg
 
       call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
-                              FirstIndex, IndexDelta, ErrStat, ErrMsg)
+                              DirIndices, ErrStat, ErrMsg)
       call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
 
-      call check(error, FirstIndex, 16); if (allocated(error)) return
-      call check(error, IndexDelta, 8); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
 
    end subroutine
 
@@ -238,16 +244,18 @@ contains
       integer(IntKi), parameter  :: NumSteps = 3
       character(*), parameter    :: StartIndex = "00006"
 
-      integer(IntKi)             :: FirstIndex, IndexDelta
-      integer(IntKi)             :: ErrStat
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [6, 18, 30]
+      integer(IntKi)             :: ErrStat, i
       character(ErrMsgLen)       :: ErrMsg
 
       call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
-                              FirstIndex, IndexDelta, ErrStat, ErrMsg)
+                              DirIndices, ErrStat, ErrMsg)
       call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
 
-      call check(error, FirstIndex, 6, more="FirstIndex"); if (allocated(error)) return
-      call check(error, IndexDelta, 12, more="IndexDelta"); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
 
    end subroutine
 

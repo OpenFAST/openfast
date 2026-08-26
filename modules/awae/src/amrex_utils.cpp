@@ -266,24 +266,38 @@ extern "C"
         }
     }
 
-    // Search for AMReX directories based on given directory prefix, subvolume number, time step, total number of steps,
-    // and the starting index string (e.g. `00000`). This function returns first index as a number, and the delta 
-    // between successive directory indices. It also checks that a sufficient number of directories are available,
-    // that the data matches the requested time step, and the grid properties are consistent (size, origin, spacing).
+    // Search for AMReX plotfile directories matching the given prefix and sub-volume number, and
+    // return the directory index to use for each of the `num_steps` requested time steps.
+    //
+    // Directories are matched to time steps by the simulation time recorded in each plotfile
+    // Header, NOT by any assumed stride between directory indices: the step claimed by a
+    // directory is round((header_time - start_time)/dt). This supports precursor data written
+    // with a varying solver time step -- for example an AMR-Wind run that transitions from
+    // time.initial_dt to fixed_dt, where the index stride changes but the output interval in
+    // time does not.
+    //
+    // Every step in [0, num_steps) must be claimed by exactly one directory; a step claimed by
+    // none (missing data) or by more than one (e.g. overlapping output from a restart) is a
+    // fatal error. Grid properties (size, origin, spacing) must be consistent across all steps.
+    //
+    // `dir_indices` must point to storage for at least num_steps ints.
     void amrex_find_subvols_c(char const *dir_prefix, int &subvol, double &dt, int &num_steps, char const *start_index,
-                              int &first_index, int &index_delta, int &err_stat, char *err_msg, int &err_msg_len)
+                              int *dir_indices, int &err_stat, char *err_msg, int &err_msg_len)
     {
         const std::string routine{"amrex_find_subvols_c"};
 
         // Initialize error status and message to no error
         set_err(ErrID_None, "", routine, err_stat, err_msg, err_msg_len);
 
+        if (num_steps < 1)
+        {
+            set_err(ErrID_Fatal, "number of time steps must be at least 1, got " + std::to_string(num_steps),
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
+
         // Construct path prefix based on directory prefix and subvolume number
         const std::filesystem::path path_prefix{std::string{dir_prefix} + "_" + std::to_string(subvol) + "_"};
-
-        // Vector of index strings that match directory prefix and are
-        // greater than or equal to starting index
-        std::vector<int> indices;
 
         //----------------------------------------------------------------------
         // Starting subvolume path
@@ -295,7 +309,7 @@ extern "C"
         // If file does not exist, return error
         if (!std::filesystem::exists(first_path))
         {
-            set_err(ErrID_Fatal, first_path + ": directory does not exist",
+            set_err(ErrID_Fatal, std::filesystem::absolute(first_path).string() + ": directory does not exist",
                     routine, err_stat, err_msg, err_msg_len);
             return;
         }
@@ -319,20 +333,60 @@ extern "C"
                     routine, err_stat, err_msg, err_msg_len);
             return;
         }
-        first_index = static_cast<int>(first_index_num);
-
-        // Add first index to list of valid indices
-        indices.emplace_back(first_index);
 
         //----------------------------------------------------------------------
-        // Subsequent subvolume paths
+        // Time step matching tolerance
         //----------------------------------------------------------------------
+
+        // Tolerance on how far a directory's header time may sit from an exact multiple of dt.
+        // The error being absorbed is the drift a solver accumulates by summing its time step,
+        // which grows with absolute simulated time -- a precursor restarted at t = 3e4 s carries
+        // far more of it than one starting at zero -- so the tolerance is relative, with an
+        // absolute floor that preserves the historical behavior for runs starting near t = 0.
+        const auto step_tol = [&](double t) {
+            return std::max(1.0e-6, 1.0e-9 * (std::abs(start_time) + std::abs(t)));
+        };
+
+        // If the tolerance is an appreciable fraction of dt, step assignment is ambiguous and the
+        // caller should be told rather than silently given a clamped tolerance.
+        if (step_tol(start_time + static_cast<double>(num_steps) * dt) >= 0.25 * dt)
+        {
+            set_err(ErrID_Fatal, path_prefix.string() + ": time step (" + std::to_string(dt) +
+                                     " s) is too small relative to the simulation time (" + std::to_string(start_time) +
+                                     " s) to identify time steps unambiguously",
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
+
+        //----------------------------------------------------------------------
+        // Assign each directory to the time step its header time corresponds to
+        //----------------------------------------------------------------------
+
+        // Directory index claiming each step, -1 if unclaimed
+        std::vector<long long> idx_of_step(num_steps, -1);
+        std::vector<std::string> path_of_step(num_steps);
+        std::vector<double> time_of_step(num_steps, 0.0);
+
+        // Closest directory that failed the residual test for each step, kept for diagnostics:
+        // when a step ends up unclaimed this is usually the file the user expected to fill it.
+        struct NearMiss
+        {
+            bool have{false};
+            std::string path;
+            double time{0.0};
+            double resid{0.0};
+        };
+        std::vector<NearMiss> near_miss(num_steps);
+
+        int n_before_start{0}, n_beyond_window{0};
+
+        // Seed step 0 from the start directory
+        idx_of_step[0] = first_index_num;
+        path_of_step[0] = first_path;
+        time_of_step[0] = start_time;
 
         // If path prefix has parent directory use it, otherwise assume current directory
         const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : ".";
-
-        // Calculate maximum length of time from start time
-        const auto max_time = static_cast<double>(num_steps) * dt;
 
         // Loop through entries in the parent directory
         for (auto const &dir_entry : std::filesystem::directory_iterator{parent_path})
@@ -379,22 +433,39 @@ extern "C"
                 return;
             }
 
-            // Get time delta from start time
-            const auto delta_time{time - start_time};
+            const auto delta_time = time - start_time;
+            const auto tol = step_tol(time);
 
-            // If the delta time is greater than the max time plus dt (for safety), continue
-            if (delta_time > (max_time + dt / 4.))
+            if (delta_time < -tol)
             {
+                ++n_before_start;
                 continue;
             }
 
-            // If delta time is not a multiple of dt, continue
-            // (remainder must be nearly zero or nearly equal to dt)
-            // A tolerance of 1e-6 seconds seems reasonable
-            const auto remainder{std::fmod(delta_time, dt)};
-            if (!((std::abs(remainder - 0.0) <= 1e-6) ||
-                  ((std::abs(remainder - dt) <= 1e-6))))
+            // Nearest time step, and how far this directory sits from it
+            const auto step = std::lround(delta_time / dt);
+            const auto resid = std::abs(delta_time - static_cast<double>(step) * dt);
+
+            if (step < 0)
             {
+                ++n_before_start;
+                continue;
+            }
+            if (step >= static_cast<long>(num_steps))
+            {
+                ++n_beyond_window;
+                continue;
+            }
+
+            // Not on a step boundary. This is how deliberately decimated output is skipped: when
+            // dt is a multiple of the file cadence, the intermediate files land here.
+            if (resid > tol)
+            {
+                auto &nm = near_miss[step];
+                if (!nm.have || resid < nm.resid)
+                {
+                    nm = NearMiss{true, dir_path, time, resid};
+                }
                 continue;
             }
 
@@ -425,64 +496,68 @@ extern "C"
                 return;
             }
 
-            // Add index to list of indices
-            indices.emplace_back(static_cast<int>(index));
-        }
-
-        //----------------------------------------------------------------------
-        // Check indices
-        //----------------------------------------------------------------------
-
-        // Check that more than one index was found
-        if (indices.size() < 2)
-        {
-            set_err(ErrID_Fatal, path_prefix.string() + ": only 1 subvolume found, at least 2 required",
-                    routine, err_stat, err_msg, err_msg_len);
-            return;
-        }
-
-        // Sort indices in ascending order
-        std::sort(indices.begin(), indices.end());
-
-        // If more indices found that requested steps, discard extra
-        if (indices.size() > num_steps)
-        {
-            indices.resize(num_steps);
-        }
-
-        // Calculate delta between first two indices
-        const auto first_index_delta = indices[1] - indices[0];
-
-        // If fewer indices found than requested steps, return error
-        if (indices.size() < num_steps)
-        {
-            std::string msg{path_prefix.string() + ": "};
-            msg += "found " + std::to_string(indices.size()) + " dirs, ";
-            msg += std::to_string(num_steps) + " dirs were requested ";
-            msg += "with a dt of " + std::to_string(dt) + " seconds (";
-            msg += "first index=" + std::to_string(indices[0]) + ", ";
-            msg += "last index=" + std::to_string(indices.back()) + ", ";
-            msg += "index step=" + std::to_string(first_index_delta) + ")";
-            set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
-            return;
-        }
-
-        // Loop through indices and check that none are missing
-        // ie, same delta between all adjacent indicies
-        for (auto i = 1; i < indices.size(); ++i)
-        {
-            // Calculate index delta between current and previous indices
-            index_delta = indices[i] - indices[i - 1];
-
-            // If delta doesn't match first delta, return error
-            if (index_delta != first_index_delta)
+            // Two directories cannot represent the same instant in time
+            if (idx_of_step[step] >= 0)
             {
-                std::string msg{path_prefix.string() + ": "};
-                msg += "inconsistent delta between indices '" + std::to_string(indices[i - 1]);
-                msg += "' and '" + std::to_string(indices[i]) + "'";
+                std::string msg{path_prefix.string() + ": two sub-volume directories claim time step "};
+                msg += std::to_string(step) + " (expected header time " + std::to_string(start_time + static_cast<double>(step) * dt) + " s): '";
+                msg += path_of_step[step] + "' (header t = " + std::to_string(time_of_step[step]) + " s) and '";
+                msg += dir_path + "' (header t = " + std::to_string(time) + " s). Each time step must be represented by ";
+                msg += "exactly one directory; this usually means output from two different runs (e.g. a restart that ";
+                msg += "re-wrote overlapping times) is present. Remove or move the stale directories.";
                 set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
                 return;
             }
+
+            idx_of_step[step] = index;
+            path_of_step[step] = dir_path;
+            time_of_step[step] = time;
+        }
+
+        //----------------------------------------------------------------------
+        // Every step must be accounted for
+        //----------------------------------------------------------------------
+
+        for (int s = 0; s < num_steps; ++s)
+        {
+            if (idx_of_step[s] >= 0)
+            {
+                dir_indices[s] = static_cast<int>(idx_of_step[s]);
+                continue;
+            }
+
+            const auto want_time = start_time + static_cast<double>(s) * dt;
+
+            std::string msg{path_prefix.string() + ": no sub-volume directory was found for time step "};
+            msg += std::to_string(s) + " of " + std::to_string(num_steps) + ". Expected header time ";
+            msg += std::to_string(want_time) + " s = " + std::to_string(start_time) + " s (start directory '";
+            msg += first_path + "') + " + std::to_string(s) + " * dt (" + std::to_string(dt) + " s), matched to ";
+            msg += "within " + std::to_string(step_tol(want_time)) + " s.";
+
+            if (near_miss[s].have)
+            {
+                msg += " Directory '" + near_miss[s].path + "' exists with header time ";
+                msg += std::to_string(near_miss[s].time) + " s, which is " + std::to_string(near_miss[s].resid);
+                msg += " s (" + std::to_string(near_miss[s].resid / dt) + " * dt) from the expected time -- outside ";
+                msg += "the matching tolerance.";
+            }
+
+            msg += " Sub-volume directories are matched to FAST.Farm time steps by the simulation time recorded in ";
+            msg += "their Header; the directory index stride is irrelevant and may vary.";
+
+            if (n_before_start > 0)
+            {
+                msg += " (" + std::to_string(n_before_start) + " directories were skipped because their header time ";
+                msg += "precedes the start directory.)";
+            }
+            if (n_beyond_window > 0)
+            {
+                msg += " (" + std::to_string(n_beyond_window) + " directories were skipped because their header time ";
+                msg += "is past the end of the requested window.)";
+            }
+
+            set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
+            return;
         }
     }
 }

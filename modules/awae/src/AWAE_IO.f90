@@ -251,8 +251,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: nChunksX, nChunksY
    integer(IntKi)                             :: nChunkPointsX, nChunkPointsY
    integer(IntKi), allocatable                :: ChunkIndicesX(:,:), ChunkIndicesY(:,:)
-   integer(IntKi)                             :: StartIndexNum, IndexDelta
    integer(IntKi)                             :: NumStepHigh          ! Number of high-res time slices required
+   integer(IntKi), allocatable                :: DirIndexTmp(:)       ! Per-sub-volume index table, for cross-checking
 
    errStat = ErrID_None
    errMsg  = ""
@@ -299,10 +299,14 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! Search directory for time slices of this sub-volume
-      call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, p%DirStartIndex, &
-                              StartIndexNum, p%DirIndexDeltaLow, ErrStat2, ErrMsg2)
+      ! Build the time step -> directory index table for the low-resolution sub-volume
+      call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, trim(p%DirStartIndex), &
+                              p%DirIndexLow, ErrStat2, ErrMsg2)
       if (Failed()) return
+
+      ! Legacy stride, retained for the arithmetic name construction in ReadWindAMReX until
+      ! it is switched over to the table. Only meaningful for uniformly strided output.
+      p%DirIndexDeltaLow = p%DirIndexLow(1) - p%DirIndexLow(0)
 
    end select
 
@@ -509,19 +513,35 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          ! therefore (NumDT-1)*n_high_low, so (NumDT-1)*n_high_low + 1 slices are needed.
          NumStepHigh = (p%NumDT - 1)*p%n_high_low + 1
 
-         ! Search directory for time slices of this sub-volume
-         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, NumStepHigh, p%DirStartIndex, &
-                                 StartIndexNum, IndexDelta, ErrStat2, ErrMsg2)
+         ! Build the time step -> directory index table for this sub-volume
+         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, NumStepHigh, trim(p%DirStartIndex), &
+                                 DirIndexTmp, ErrStat2, ErrMsg2)
          if (Failed()) return
 
-         ! If first turbine, save index delta, otherwise ensure that it is the same
+         ! All high-resolution sub-volumes must be written at the same simulation times: FAST.Farm
+         ! has a single DT_High for the whole farm, so a sub-volume on a different set of times
+         ! would silently supply the wrong instant to its turbine. Keep sub-volume 1's table and
+         ! verify the rest match it element by element -- comparing only the stride, as was done
+         ! previously, accepts a sequence uniformly offset from the others.
          if (nt == 1) then
-            p%DirIndexDeltaHigh = IndexDelta
-         else if (p%DirIndexDeltaHigh /= IndexDelta) then
-            call SetErrStat(ErrID_Fatal, "got different index delta for sub-volume "//trim(Num2LStr(nt))//" than for sub-volume 1", &
-                            ErrStat, ErrMsg, RoutineName)
-            return
+            call move_alloc(DirIndexTmp, p%DirIndexHigh)
+         else
+            do n = 0, NumStepHigh - 1
+               if (DirIndexTmp(n) /= p%DirIndexHigh(n)) then
+                  call SetErrStat(ErrID_Fatal, "high-resolution AMReX sub-volume "//trim(Num2LStr(nt))// &
+                                  " is not written at the same simulation times as sub-volume 1. At high-resolution"// &
+                                  " time step "//trim(Num2LStr(n))//" sub-volume "//trim(Num2LStr(nt))// &
+                                  " uses directory index "//trim(Num2LStr(DirIndexTmp(n)))//" but sub-volume 1 uses "// &
+                                  trim(Num2LStr(p%DirIndexHigh(n)))//". All sub-volumes must be output at the same times.", &
+                                  ErrStat, ErrMsg, RoutineName)
+                  return
+               end if
+            end do
+            deallocate(DirIndexTmp)
          end if
+
+         ! Legacy stride, see the low-resolution branch above
+         p%DirIndexDeltaHigh = p%DirIndexHigh(1) - p%DirIndexHigh(0)
 
       end select
 
