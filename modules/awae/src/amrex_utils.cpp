@@ -6,6 +6,8 @@
 #include <limits>
 #include <cmath>
 #include <optional>
+#include <fstream>
+#include <sstream>
 
 #include <AMReX_PlotFileUtil.H>
 
@@ -92,6 +94,131 @@ bool parse_dir_index(const std::string &path, long long &index)
     try
     {
         index = std::stoll(suffix);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+// Grid metadata for one plotfile, as needed by the sub-volume search.
+struct HeaderInfo
+{
+    double time{0.0};
+    std::array<int, 3> dims{};
+    std::array<double, 3> dx{};
+    std::array<double, 3> origin{};
+    int level_steps{-1};
+};
+
+// Read a single-level plotfile Header directly, without constructing a PlotFileData.
+//
+// PlotFileData additionally opens Level_0/Cell_H and builds a DistributionMapping, which is
+// wasted work when all that is wanted is the grid metadata; the sub-volume search does this once
+// per directory, so on a large dataset the difference is hours. Everything needed is in the
+// Header text:
+//
+//   1              version
+//   2              ncomp
+//   3 .. 2+ncomp   variable names
+//   3+ncomp        spacedim
+//   4+ncomp        time
+//   5+ncomp        finest_level
+//   6+ncomp        prob_lo
+//   7+ncomp        prob_hi
+//   8+ncomp        ref_ratio          (blank when finest_level is 0)
+//   9+ncomp        domain box, "((lo) (hi) (typ))"
+//   10+ncomp       level_steps        (equals the directory index suffix)
+//   11+ncomp       cell size
+//
+// Returns false if anything does not parse, so the caller can fall back to amrex_read_header_c
+// rather than guessing. Touches no AMReX state, so unlike PlotFileData it is safe to call from
+// several threads at once.
+bool parse_header_text(const std::string &dir, HeaderInfo &info)
+{
+    std::ifstream f(dir + "/Header");
+    if (!f)
+    {
+        return false;
+    }
+
+    std::vector<std::string> line;
+    std::string s;
+    while (std::getline(f, s))
+    {
+        line.push_back(s);
+        if (line.size() > 64)   // everything of interest is near the top
+        {
+            break;
+        }
+    }
+
+    try
+    {
+        if (line.size() < 2 || line[0].rfind("HyperCLaw", 0) != 0)
+        {
+            return false;
+        }
+
+        const int ncomp = std::stoi(line[1]);
+        if (ncomp < 1)
+        {
+            return false;
+        }
+
+        // 1-based line number -> 0-based index
+        const auto at = [&](int n) -> const std::string & { return line.at(n - 1); };
+
+        if (std::stoi(at(3 + ncomp)) != 3)      // spacedim
+        {
+            return false;
+        }
+        info.time = std::stod(at(4 + ncomp));
+        if (std::stoi(at(5 + ncomp)) != 0)      // finest_level; the reader requires single level
+        {
+            return false;
+        }
+
+        {
+            std::istringstream is(at(6 + ncomp));
+            if (!(is >> info.origin[0] >> info.origin[1] >> info.origin[2]))
+            {
+                return false;
+            }
+        }
+
+        // Domain box: "((0,0,0) (527,471,30) (0,0,0))" -> lo and hi index triples
+        {
+            auto b = at(9 + ncomp);
+            std::replace_if(b.begin(), b.end(), [](char c) { return c == '(' || c == ')' || c == ','; }, ' ');
+            std::istringstream is(b);
+            std::array<int, 3> lo{}, hi{};
+            if (!(is >> lo[0] >> lo[1] >> lo[2] >> hi[0] >> hi[1] >> hi[2]))
+            {
+                return false;
+            }
+
+            info.level_steps = std::stoi(at(10 + ncomp));
+
+            std::istringstream ds(at(11 + ncomp));
+            if (!(ds >> info.dx[0] >> info.dx[1] >> info.dx[2]))
+            {
+                return false;
+            }
+
+            for (auto i = 0; i < 3; ++i)
+            {
+                if (hi[i] < lo[i])
+                {
+                    return false;
+                }
+                info.dims[i] = hi[i] - lo[i] + 1;
+                // Match amrex_read_header_c: problem origin + (grid index + 1/2) * cell size
+                info.origin[i] += (static_cast<double>(lo[i]) + 0.5) * info.dx[i];
+            }
+        }
     }
     catch (...)
     {
@@ -325,6 +452,28 @@ extern "C"
             return;
         }
 
+        // The remaining directories are read with the much cheaper text parse. Confirm on this one
+        // directory that it agrees with the authoritative reader before trusting it for the rest.
+        // The two can in principle disagree: amrex_read_header_c takes the union of the box array
+        // in Level_0/Cell_H, whereas the Header records the domain box. They coincide for a
+        // single-level plotfile whose boxes tile its geometry, which is what the sub-volume writer
+        // produces -- but if that ever stops holding, fail loudly here rather than silently
+        // mismatching every subsequent directory.
+        bool use_fast_header = false;
+        {
+            HeaderInfo probe;
+            if (parse_header_text(first_path, probe))
+            {
+                use_fast_header = (probe.dims == start_dims) &&
+                                  (std::abs(probe.time - start_time) <= 1e-9 * std::max(1.0, std::abs(start_time)));
+                for (auto i = 0; i < 3 && use_fast_header; ++i)
+                {
+                    use_fast_header = (std::abs(probe.dx[i] - start_dx[i]) <= 1e-8) &&
+                                      (std::abs(probe.origin[i] - start_origin[i]) <= 1e-8);
+                }
+            }
+        }
+
         // Save integer value of start index
         long long first_index_num{0};
         if (!parse_dir_index(first_path, first_index_num))
@@ -388,7 +537,12 @@ extern "C"
         // If path prefix has parent directory use it, otherwise assume current directory
         const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : ".";
 
-        // Loop through entries in the parent directory
+        // Collect the candidate directories in one pass, then walk them in ascending index order.
+        // Ordering matters for cost, not correctness: simulation time increases with the step
+        // counter, so once a directory lands past the requested window every later one does too
+        // and the walk can stop. Without that the search reads a header for every directory the
+        // LES ever wrote, however short the FAST.Farm run.
+        std::vector<std::pair<long long, std::string>> candidates;
         for (auto const &dir_entry : std::filesystem::directory_iterator{parent_path})
         {
             // If entry is not a directory, continue
@@ -422,15 +576,38 @@ extern "C"
                 continue;
             }
 
+            candidates.emplace_back(index, dir_path);
+        }
+
+        std::sort(candidates.begin(), candidates.end());
+
+        std::size_t visited = 0;
+        for (auto const &cand : candidates)
+        {
+            ++visited;
+            const auto index = cand.first;
+            const auto &dir_path = cand.second;
+
             // Read the header
             double time{0.};
             std::array<int, 3> dims;
             std::array<double, 3> dx, origin;
-            amrex_read_header_c(dir_path.c_str(), time, dims.data(),
-                                dx.data(), origin.data(), err_stat, err_msg, err_msg_len);
-            if (err_stat != ErrID_None)
+            HeaderInfo hdr;
+            if (use_fast_header && parse_header_text(dir_path, hdr))
             {
-                return;
+                time = hdr.time;
+                dims = hdr.dims;
+                dx = hdr.dx;
+                origin = hdr.origin;
+            }
+            else
+            {
+                amrex_read_header_c(dir_path.c_str(), time, dims.data(),
+                                    dx.data(), origin.data(), err_stat, err_msg, err_msg_len);
+                if (err_stat != ErrID_None)
+                {
+                    return;
+                }
             }
 
             const auto delta_time = time - start_time;
@@ -453,8 +630,10 @@ extern "C"
             }
             if (step >= static_cast<long>(num_steps))
             {
-                ++n_beyond_window;
-                continue;
+                // Candidates are in ascending index order and simulation time rises with the step
+                // counter, so nothing after this one can fall inside the window either.
+                n_beyond_window = static_cast<int>(candidates.size() - visited) + 1;
+                break;
             }
 
             // Not on a step boundary. This is how deliberately decimated output is skipped: when
