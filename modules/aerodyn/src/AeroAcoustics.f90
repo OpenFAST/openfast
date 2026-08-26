@@ -35,7 +35,6 @@ module AeroAcoustics
    use AeroAcoustics_Types
    use AeroAcoustics_IO
    use NWTC_LAPACK
-   USE NWTC_FFTPACK
    implicit none
 
    private
