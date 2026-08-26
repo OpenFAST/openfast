@@ -250,7 +250,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: nChunkPointsX, nChunkPointsY
    integer(IntKi), allocatable                :: ChunkIndicesX(:,:), ChunkIndicesY(:,:)
    integer(IntKi)                             :: StartIndexNum, IndexDelta
-   
+   integer(IntKi)                             :: NumStepHigh          ! Number of high-res time slices required
+
    errStat = ErrID_None
    errMsg  = ""
    
@@ -500,8 +501,14 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
          if (Failed()) return
 
+         ! Number of high-resolution time slices actually read by AWAE_UpdateStates:
+         ! indices n*n_high_low + i_hl for n = 0..NumDT-1 and i_hl = 0..n_high_low, where
+         ! i_hl is forced to 0 on the final low-res step.  The largest index reached is
+         ! therefore (NumDT-1)*n_high_low, so (NumDT-1)*n_high_low + 1 slices are needed.
+         NumStepHigh = (p%NumDT - 1)*p%n_high_low + 1
+
          ! Search directory for time slices of this sub-volume
-         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low-1, p%DirStartIndex, &
+         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, NumStepHigh, p%DirStartIndex, &
                                  StartIndexNum, IndexDelta, ErrStat2, ErrMsg2)
          if (Failed()) return
 
