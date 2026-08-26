@@ -69,6 +69,38 @@ void get_grid_bounds(const PlotFileData &pf, int level,
 // Define the variable names
 // const std::array<std::string, 3> var_names{"x_velocity", "y_velocity", "z_velocity"};
 
+// Extract the trailing directory index from a sub-volume path, e.g. "ffboxes_1_031150" -> 31150.
+// Returns false if the suffix after the final '_' is not a plain non-negative integer, so that
+// unrelated sibling directories (backups, renamed copies) are skipped rather than aborting the run.
+// NOTE: the index must be compared numerically, never lexicographically: AMReX pads to a *minimum*
+// width, so once a run passes 99999 steps a six-digit index sorts before a five-digit one as text.
+bool parse_dir_index(const std::string &path, long long &index)
+{
+    const auto pos = path.find_last_of('_');
+    if (pos == std::string::npos)
+    {
+        return false;
+    }
+
+    const auto suffix = path.substr(pos + 1);
+    if (suffix.empty() ||
+        suffix.find_first_not_of("0123456789") != std::string::npos)
+    {
+        return false;
+    }
+
+    try
+    {
+        index = std::stoll(suffix);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 extern "C"
 {
     // Read the header information for the AMReX grid and return it.
@@ -280,7 +312,14 @@ extern "C"
         }
 
         // Save integer value of start index
-        first_index = std::stoi(start_index);
+        long long first_index_num{0};
+        if (!parse_dir_index(first_path, first_index_num))
+        {
+            set_err(ErrID_Fatal, std::string{start_index} + ": starting directory index must be a non-negative integer",
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
+        first_index = static_cast<int>(first_index_num);
 
         // Add first index to list of valid indices
         indices.emplace_back(first_index);
@@ -307,17 +346,24 @@ extern "C"
             // Convert entry to path string
             const auto dir_path{dir_entry.path().string()};
 
-            // If path doesn't contain the prefix, continue
-            if (dir_path.find(path_prefix.string()) == std::string::npos)
+            // If path doesn't start with the prefix, continue. Anchored at position 0 so that
+            // an unrelated directory merely containing the prefix is not picked up.
+            if (dir_path.rfind(path_prefix.string(), 0) != 0)
             {
                 continue;
             }
 
-            // Get the index string
-            const auto index = dir_path.substr(dir_path.find_last_of("_") + 1);
+            // Get the index, skipping entries whose suffix is not a plain integer
+            long long index{0};
+            if (!parse_dir_index(dir_path, index))
+            {
+                continue;
+            }
 
-            // If index string is less than starting index, continue
-            if (index.compare(start_index) <= 0)
+            // If index is not greater than the starting index, continue. This comparison must be
+            // numeric: a lexicographic compare drops every index wider than the starting index
+            // (e.g. "100030" sorts before "27150"), silently discarding data that is present.
+            if (index <= first_index_num)
             {
                 continue;
             }
@@ -380,7 +426,7 @@ extern "C"
             }
 
             // Add index to list of indices
-            indices.emplace_back(std::stoi(index));
+            indices.emplace_back(static_cast<int>(index));
         }
 
         //----------------------------------------------------------------------
