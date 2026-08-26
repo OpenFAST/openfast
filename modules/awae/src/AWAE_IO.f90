@@ -172,23 +172,25 @@ subroutine ReadWindAMReX(sv, n, p, Vamb, ErrStat, ErrMsg)
    character(*),             intent(  out)  :: ErrMsg          !< Error message if errStat /= ErrID_None
   
    character(len=2048) :: FileName       ! Name of output file
-   character(len=12)   :: DirIndex       ! Directory index suffix 
-   integer(IntKi)      :: i
+   character(len=16)   :: DirIndex       ! Directory index suffix
+   character(len=16)   :: NumStr         ! Directory index without padding
+   integer(IntKi)      :: DirIndexNum    ! Directory index for this time step
 
    ! If sub-volume is 0 then this is low-resolution file
    if (sv == 0) then
-      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaLow * n
+      DirIndexNum = p%DirStartNum + p%DirIndexDeltaLow * n
    else
-      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaHigh * n
+      DirIndexNum = p%DirStartNum + p%DirIndexDeltaHigh * n
    end if
 
-   ! Prepend zeros in front of index number
-   do i = 1, p%DirIndexLen
-      if (DirIndex(i:i) /= " ") exit
-      DirIndex(i:i) = '0'
-   end do
+   ! Left-pad the index with zeros to DirIndexLen characters, widening the field when the
+   ! index needs more digits.  DirIndexLen is a *minimum* width, matching amrex::Concatenate,
+   ! which pads with setw(mindigits); a fixed-width edit descriptor would overflow to '****'
+   ! once a run passes 10**DirIndexLen steps.
+   write(NumStr,'(I0)') DirIndexNum
+   DirIndex = repeat('0', max(0, p%DirIndexLen - len_trim(NumStr)))//trim(NumStr)
 
-   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//DirIndex(1:p%DirIndexLen)
+   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//trim(DirIndex)
    call amrex_read_data(FileName, Vamb, ErrStat, ErrMsg)
 
 end subroutine
