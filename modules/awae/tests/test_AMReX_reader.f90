@@ -14,7 +14,12 @@ contains
                   new_unittest("AMReX_test_read_subvol_1", AMReX_test_read_subvol_1), &
                   new_unittest("AMReX_test_amrex_find_subvols_1", AMReX_test_amrex_find_subvols_1), &
                   new_unittest("AMReX_test_amrex_find_subvols_2", AMReX_test_amrex_find_subvols_2), &
-                  new_unittest("AMReX_test_amrex_find_subvols_3", AMReX_test_amrex_find_subvols_3) &
+                  new_unittest("AMReX_test_amrex_find_subvols_3", AMReX_test_amrex_find_subvols_3), &
+                  new_unittest("AMReX_test_find_subvols_variable_stride", AMReX_test_find_subvols_variable_stride), &
+                  new_unittest("AMReX_test_find_subvols_missing_step", AMReX_test_find_subvols_missing_step), &
+                  new_unittest("AMReX_test_find_subvols_duplicate_step", AMReX_test_find_subvols_duplicate_step), &
+                  new_unittest("AMReX_test_find_subvols_out_of_tolerance", AMReX_test_find_subvols_out_of_tolerance), &
+                  new_unittest("AMReX_test_find_subvols_wide_index", AMReX_test_find_subvols_wide_index) &
                   ]
    end subroutine
 
@@ -246,6 +251,125 @@ contains
 
       integer(IntKi), allocatable :: DirIndices(:)
       integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [6, 18, 30]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
+
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   ! Sub-volume directories written with a varying solver time step: the output interval is a
+   ! uniform 0.1 s but the step index stride changes from 4 to 2 part way through, as happens when
+   ! AMR-Wind transitions from time.initial_dt to fixed_dt. Header times carry the floating-point
+   ! drift observed in real data. Before directories were matched by time this failed with
+   ! "inconsistent delta between indices '00008' and '00010'".
+   subroutine AMReX_test_find_subvols_variable_stride(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolvardt"
+      integer(IntKi), parameter  :: SubVol = 0
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 5
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [0, 4, 8, 10, 12]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call check(error, lbound(DirIndices,1), 0, more="lbound"); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   ! Asking for one step more than exists must name the missing step, not report a bare count
+   subroutine AMReX_test_find_subvols_missing_step(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolvardt"
+      integer(IntKi), parameter  :: SubVol = 0
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 6
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "time step 5") > 0, .true., &
+                 more="message should name the missing step: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! Two directories whose header times land on the same step is ambiguous and must be rejected
+   subroutine AMReX_test_find_subvols_duplicate_step(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolvardt"
+      integer(IntKi), parameter  :: SubVol = 1
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 2
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "claim time step 1") > 0, .true., &
+                 more="message should report the duplicated step: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! A directory sitting off the step grid by more than the tolerance should be reported as a
+   ! near miss, so the user is pointed at the file rather than left with a bare count mismatch
+   subroutine AMReX_test_find_subvols_out_of_tolerance(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolvardt"
+      integer(IntKi), parameter  :: SubVol = 2
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 2
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "outside") > 0, .true., &
+                 more="message should flag the near miss: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! Directory indices that grow past the width of DirStartIndex. AMReX pads to a minimum width and
+   ! widens beyond it, so a six-digit index follows a five-digit one. Comparing the suffixes as text
+   ! silently drops those directories, because "100000" sorts before "99998".
+   subroutine AMReX_test_find_subvols_wide_index(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolwide"
+      integer(IntKi), parameter  :: SubVol = 0
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 3
+      character(*), parameter    :: StartIndex = "99998"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [99998, 100000, 100002]
       integer(IntKi)             :: ErrStat, i
       character(ErrMsgLen)       :: ErrMsg
 
