@@ -171,16 +171,49 @@ subroutine ReadWindAMReX(sv, n, p, Vamb, ErrStat, ErrMsg)
    integer(IntKi),           intent(  out)  :: ErrStat         !< Error status of the operation
    character(*),             intent(  out)  :: ErrMsg          !< Error message if errStat /= ErrID_None
   
+   character(*), parameter :: RoutineName = 'ReadWindAMReX'
    character(len=2048) :: FileName       ! Name of output file
    character(len=16)   :: DirIndex       ! Directory index suffix
    character(len=16)   :: NumStr         ! Directory index without padding
    integer(IntKi)      :: DirIndexNum    ! Directory index for this time step
+   integer(IntKi)      :: nLo, nHi       ! Bounds of the index table
 
-   ! If sub-volume is 0 then this is low-resolution file
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Look up the directory index for this time step. Sub-volume 0 is the low-resolution domain,
+   ! sub-volume 1+ is turbine sv's high-resolution domain. Both tables are indexed by the 0-based
+   ! time step number and were built in AWAE_IO_InitGridInfo by matching header times, so they
+   ! carry no assumption that the LES advanced at a constant time step.
    if (sv == 0) then
-      DirIndexNum = p%DirStartNum + p%DirIndexDeltaLow * n
+      if (.not. allocated(p%DirIndexLow)) then
+         call SetErrStat(ErrID_Fatal, 'the low-resolution AMReX directory table was never populated; '// &
+                         'AWAE_IO_InitGridInfo did not complete successfully.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      nLo = lbound(p%DirIndexLow, 1);  nHi = ubound(p%DirIndexLow, 1)
+      if (n < nLo .or. n > nHi) then
+         call SetErrStat(ErrID_Fatal, 'requested low-resolution AMReX time step '//trim(Num2LStr(n))// &
+                         ', but only steps '//trim(Num2LStr(nLo))//' through '//trim(Num2LStr(nHi))// &
+                         ' were located during initialization.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      DirIndexNum = p%DirIndexLow(n)
    else
-      DirIndexNum = p%DirStartNum + p%DirIndexDeltaHigh * n
+      if (.not. allocated(p%DirIndexHigh)) then
+         call SetErrStat(ErrID_Fatal, 'the high-resolution AMReX directory table was never populated; '// &
+                         'AWAE_IO_InitGridInfo did not complete successfully.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      nLo = lbound(p%DirIndexHigh, 1);  nHi = ubound(p%DirIndexHigh, 1)
+      if (n < nLo .or. n > nHi) then
+         call SetErrStat(ErrID_Fatal, 'requested high-resolution AMReX time step '//trim(Num2LStr(n))// &
+                         ' for sub-volume '//trim(Num2LStr(sv))//', but only steps '//trim(Num2LStr(nLo))// &
+                         ' through '//trim(Num2LStr(nHi))//' were located during initialization.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      DirIndexNum = p%DirIndexHigh(n)
    end if
 
    ! Left-pad the index with zeros to DirIndexLen characters, widening the field when the
