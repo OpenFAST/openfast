@@ -337,10 +337,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
                               p%DirIndexLow, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! Legacy stride, retained for the arithmetic name construction in ReadWindAMReX until
-      ! it is switched over to the table. Only meaningful for uniformly strided output.
-      p%DirIndexDeltaLow = p%DirIndexLow(1) - p%DirIndexLow(0)
-
    end select
 
    !----------------------------------------------------------------------------
@@ -572,9 +568,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
             end do
             deallocate(DirIndexTmp)
          end if
-
-         ! Legacy stride, see the low-resolution branch above
-         p%DirIndexDeltaHigh = p%DirIndexHigh(1) - p%DirIndexHigh(0)
 
       end select
 

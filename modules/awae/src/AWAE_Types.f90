@@ -235,9 +235,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_Projection = 0_IntKi      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
     character(12)  :: DirStartIndex      !< Starting directory index suffix for AMReX wind [-]
     INTEGER(IntKi)  :: DirIndexLen = 0_IntKi      !< Number of characters in directory index [-]
-    INTEGER(IntKi)  :: DirStartNum = 0_IntKi      !< Starting directory index number for AMReX wind [-]
-    INTEGER(IntKi)  :: DirIndexDeltaLow = 0_IntKi      !< Directory index delta for low-resolution AMReX wind [-]
-    INTEGER(IntKi)  :: DirIndexDeltaHigh = 0_IntKi      !< Directory index delta for high-resolution AMReX wind [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexLow      !< AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexHigh      !< AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
@@ -2077,9 +2074,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
    DstParamData%DirStartIndex = SrcParamData%DirStartIndex
    DstParamData%DirIndexLen = SrcParamData%DirIndexLen
-   DstParamData%DirStartNum = SrcParamData%DirStartNum
-   DstParamData%DirIndexDeltaLow = SrcParamData%DirIndexDeltaLow
-   DstParamData%DirIndexDeltaHigh = SrcParamData%DirIndexDeltaHigh
    if (allocated(SrcParamData%DirIndexLow)) then
       LB(1:1) = lbound(SrcParamData%DirIndexLow)
       UB(1:1) = ubound(SrcParamData%DirIndexLow)
@@ -2306,9 +2300,6 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%Mod_Projection)
    call RegPack(RF, InData%DirStartIndex)
    call RegPack(RF, InData%DirIndexLen)
-   call RegPack(RF, InData%DirStartNum)
-   call RegPack(RF, InData%DirIndexDeltaLow)
-   call RegPack(RF, InData%DirIndexDeltaHigh)
    call RegPackAlloc(RF, InData%DirIndexLow)
    call RegPackAlloc(RF, InData%DirIndexHigh)
    call RegPack(RF, allocated(InData%IfW))
@@ -2390,9 +2381,6 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Mod_Projection); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirStartIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirIndexLen); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirStartNum); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirIndexDeltaLow); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirIndexDeltaHigh); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DirIndexLow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DirIndexHigh); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%IfW)) deallocate(OutData%IfW)

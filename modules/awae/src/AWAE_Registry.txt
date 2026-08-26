@@ -207,9 +207,6 @@ typedef   ^ ParameterType  ReKi             C_ScaleDiam      -  - -   "Normalize
 typedef   ^ ParameterType  IntKi            Mod_Projection   -  - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
 typedef   ^ ParameterType  character(12)    DirStartIndex    -  - -    "Starting directory index suffix for AMReX wind" -
 typedef   ^ ParameterType  IntKi            DirIndexLen      -  - -    "Number of characters in directory index"
-typedef   ^ ParameterType  IntKi            DirStartNum      -  - -    "Starting directory index number for AMReX wind"
-typedef   ^ ParameterType  IntKi            DirIndexDeltaLow -  - -    "Directory index delta for low-resolution AMReX wind"
-typedef   ^ ParameterType  IntKi            DirIndexDeltaHigh -  - -   "Directory index delta for high-resolution AMReX wind"
 typedef   ^ ParameterType  IntKi            DirIndexLow     {:} - -    "AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n" -
 typedef   ^ ParameterType  IntKi            DirIndexHigh    {:} - -    "AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes" -
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -

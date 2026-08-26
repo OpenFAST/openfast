@@ -1240,7 +1240,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! AMReX Wind Parameters
    p%DirStartIndex    = InitInp%InputFileData%DirStartIndex
    p%DirIndexLen      = len_trim(InitInp%InputFileData%DirStartIndex)
-   read(p%DirStartIndex, *) p%DirStartNum
 
    ! Wake Added Turbulence (WAT) Parameters
    p%WAT_Enabled = InitInp%WAT_Enabled
