@@ -69,3 +69,6 @@ openfast_io/openfast_io/_version.py
 *.code-workspace
 docker-compose.yml
 .devcontainer/
+
+# AI steering files for specific users
+.kiro/*
