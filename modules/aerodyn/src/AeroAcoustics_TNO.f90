@@ -10,6 +10,12 @@ MODULE TNO
 
    INTEGER,       PARAMETER :: TNOKi = ReKi
 
+   ! NOTE (bjj): The variables declared at module scope below are effectively SAVEd state. They are how the integrand
+   ! functions f_int1/f_int2/Pressure receive their parameters, because slatec_qk61 only accepts a function of one
+   ! variable. SPL_integrate() sets all of them on entry, so sequential calls (including calls for different rotors or
+   ! different blade nodes) are safe. This module is NOT reentrant, however: it must not be called from more than one
+   ! thread at a time, or one thread will overwrite another thread's flow conditions mid-integration.
+
    REAL (TNOKi),  PARAMETER :: Cnuk = 5.5
    REAL (TNOKi),  PARAMETER :: kappa = 0.41
    REAL (TNOKi),  PARAMETER :: Cmu = 0.09
@@ -123,13 +129,32 @@ FUNCTION f_int1(x2)
       delta = d99(2)
       Uo=Mach_TNO*co*edgevel(2)
    endif
-   if (Cfin .le. 0.) then
-      write(*,*) 'Cf is less than zero, Cf = ',Cfin
-      stop
+   ! bjj: Bail out (contributing nothing to the integral) instead of producing NaN/Inf or killing the program.
+   !  - Cf <= 0 used to execute a bare "stop", which aborts without OpenFAST's error handling and without closing
+   !    output files. TBLTE_TNO already skips the side whose Cf is non-positive, so this is a backstop.
+   !  - delta (d99) can be zero for unconverged entries in the pre-tabulated boundary-layer files. That makes L = 0/0
+   !    and pi*x2/delta infinite below.
+   !  - u_star is zero when the edge velocity ratio or the Mach number is zero, and log(u_star*x2/nu) is then -Inf,
+   !    so U evaluates to 0*(-Inf) = NaN.
+   !  - L is zero at x2 = 0 (the lower integration limit), which makes ke = sqrt(pi)/L infinite.
+   if (Cfin .le. 0. .or. delta .le. 0. .or. x2 .le. 0.) then
+      f_int1 = 0.
+      RETURN
    endif
+   
    u_star = Uo*sqrt(Cfin/2.)
    
+   if (u_star .le. 0.) then
+      f_int1 = 0.
+      RETURN
+   endif
+   
    L = 0.085*delta*tanh(kappa*x2/(0.085*delta))
+   
+   if (L .le. 0.) then
+      f_int1 = 0.
+      RETURN
+   endif
    
    if (x2 .gt. delta)then
       U = Uo
@@ -165,6 +190,15 @@ END FUNCTION f_int1
 FUNCTION f_int2(k1_in)  ! changed name from 'int2' to avoid conflicts with intrinsic of same name
    REAL (TNOKi), intent(in)  :: k1_in
    REAL (TNOKi) :: f_int2
+   
+   ! bjj: The lower integration limit passed to slatec_qk61 is exactly zero. The 61-point Gauss-Kronrod rule does not
+   ! evaluate the integrand at the interval end points, so k1_in is not zero in practice, but guard the 1/k1_in here
+   ! (and the k1**2/(k1**2+k3**2) = 0/0 in Pressure) so this does not depend on the internals of the quadrature rule.
+   if (k1_in .le. 0.0_TNOKi) then
+      f_int2 = 0.0_TNOKi
+      RETURN
+   endif
+   
    f_int2 = Omega_TNO/co/k1_in*Pressure(k1_in)
    RETURN 
 END FUNCTION f_int2

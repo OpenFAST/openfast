@@ -367,7 +367,12 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
 
         DO k=1,size(AFInfo) ! for each airfoil interpolation 
 
-            ! find index where LE is found
+            ! NOTE: AFInfo(k)%X_Coord(1)/Y_Coord(1) is the aerodynamic center, NOT a point on the airfoil surface.
+            !       The airfoil surface coordinates are therefore indices 2:NumCoords, and the surface is traversed
+            !       from the trailing edge, around the leading edge, and back to the trailing edge.
+
+            ! find index where LE is found (i.e., the first index where the x-coordinate starts increasing again)
+            iLE = -1 ! initialize to an invalid index so we can tell whether the search below succeeded
             DO i=3,size(AFInfo(k)%X_Coord)
                IF (AFInfo(k)%X_Coord(i) - AFInfo(k)%X_Coord(i-1) > 0.) THEN
                   iLE = i
@@ -375,7 +380,21 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
                ENDIF
             ENDDO
 
-            ! From LE toward TE
+            ! bjj: guard against the search failing; without this, iLE (and the indices derived from it) would be
+            !      used uninitialized, which produces garbage airfoil thicknesses (and thus garbage inflow noise)
+            !      that changes from run to run.
+            IF ( iLE < 3 .OR. iLE >= size(AFInfo(k)%X_Coord) ) THEN
+               call SetErrStat( ErrID_Fatal, 'Unable to locate the leading edge in the coordinates of airfoil '// &
+                    trim(num2lstr(k))//'. The Full Guidati inflow-noise model (InflowMod=2) requires airfoil coordinates '// &
+                    'that start at the trailing edge, wrap around the leading edge, and return to the trailing edge.', &
+                    ErrStat, ErrMsg, RoutineName )
+               return
+            ENDIF
+
+            ! From LE toward TE: find the points closest to 1% and 10% chord.
+            ! Seed the search with the LE point itself so that i1_1/i10_1 are always valid indices.
+            i1_1   = iLE
+            i10_1  = iLE
             dist1  = ABS( AFInfo(k)%X_Coord(iLE) - 0.01)
             dist10 = ABS( AFInfo(k)%X_Coord(iLE) - 0.10)
             DO i=iLE+1,size(AFInfo(k)%X_Coord)
@@ -389,10 +408,15 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
                 ENDIF
             ENDDO
 
-            ! From TE to LE
-            dist1  = 0.99
-            dist10 = 0.90
-            DO i=1,iLE-1
+            ! From TE to LE: find the points closest to 1% and 10% chord.
+            ! Start at index 2 (index 1 is the aerodynamic center, not a surface point) and seed the search with
+            ! that point so that i1_2/i10_2 are always valid indices. (The previous code seeded the search with
+            ! the arbitrary thresholds 0.99/0.90 and could leave these indices undefined.)
+            i1_2   = 2
+            i10_2  = 2
+            dist1  = ABS( AFInfo(k)%X_Coord(2) - 0.01)
+            dist10 = ABS( AFInfo(k)%X_Coord(2) - 0.10)
+            DO i=3,iLE-1
                 IF (ABS(AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
                     i1_2 = i
                     dist1 = ABS(AFInfo(k)%X_Coord(i) - 0.01)
@@ -541,17 +565,35 @@ subroutine Init_MiscVars(m, p, errStat, errMsg)
     call AllocAry(m%PtotalFreq         , size(p%FreqList)       , p%NrObsLoc                                                                   , 'm%PtotalFreq'         , errStat2 , errMsg2); if(Failed()) return
     call AllocAry(m%OASPL              , p%NrObsLoc             , p%NumBlNds                , p%NumBlades                                      , 'm%OASPL'              , errStat2 , errMsg2); if(Failed()) return
 
+    ! bjj: initialize every allocated array here. Most of these are overwritten on each call to AA_CalcOutput before
+    ! they are read, but m%ChordAngleLE/m%SpanAngleLE and the SPL* arrays were previously left with whatever happened
+    ! to be in the freshly allocated memory, which is a latent source of run-to-run differences.
     m%ChordAngleTE = 0.0_ReKi
     m%SpanAngleTE  = 0.0_ReKi
+    m%ChordAngleLE = 0.0_ReKi
+    m%SpanAngleLE  = 0.0_ReKi
     m%rTEtoObserve = 0.0_ReKi
     m%rLEtoObserve = 0.0_ReKi
 
+    m%SPLLBL       = 0.0_ReKi
+    m%SPLP         = 0.0_ReKi
+    m%SPLS         = 0.0_ReKi
+    m%SPLALPH      = 0.0_ReKi
+    m%SPLBLUNT     = 0.0_ReKi
+    m%SPLTIP       = 0.0_ReKi
+    m%SPLTI        = 0.0_ReKi
     m%SPLTIGui     = 0.0_ReKi
+
     m%CfVar        = 0.0_ReKi
     m%d99Var       = 0.0_ReKi
     m%dstarVar     = 0.0_ReKi
     m%EdgeVelVar   = 0.0_ReKi
     m%LE_Location  = 0.0_ReKi
+
+    m%DirectiviOutput = 0.0_ReKi
+    m%SumSpecNoiseSep = 0.0_ReKi
+    m%PtotalFreq      = 0.0_ReKi
+    m%OASPL           = 0.0_ReKi
 contains
     logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
@@ -643,6 +685,14 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
                
                OtherState%allregcounter(k_minus1,rco_minus1) = OtherState%allregcounter(k_minus1,rco_minus1) + 1    ! increase the sample amount in that specific bin
                
+               ! bjj: This counter only ever increases, so on a long enough simulation it would overflow IntKi and go
+               ! negative, which would make the circular-buffer index below zero or negative (an out-of-bounds access).
+               ! Once we are past the first full window, subtracting exactly Num_total_sampleTI keeps the counter
+               ! bounded without changing either the test below or the mod() phase of the buffer index.
+               if ( OtherState%allregcounter(k_minus1,rco_minus1) > 2*p%Num_total_sampleTI ) then
+                  OtherState%allregcounter(k_minus1,rco_minus1) = OtherState%allregcounter(k_minus1,rco_minus1) - p%Num_total_sampleTI
+               end if
+               
                InflowNorm = TwoNorm( u%Inflow(:,j,i) )
                !note: p%Num_total_sampleTI = size(xd%RegVxStor,1)
                ! with storage region dependent moving average and TI
@@ -650,7 +700,10 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
                    xd%RegVxStor(OtherState%allregcounter(k_minus1,rco_minus1),k_minus1,rco_minus1) = InflowNorm
                    xd%TIVx(j,i) = 0
                ELSE
-                   xd%RegVxStor( mod( OtherState%allregcounter(k_minus1,rco_minus1), p%Num_total_sampleTI )+1, k_minus1, rco_minus1)=InflowNorm
+                   ! bjj: use mod(counter-1, N)+1 so that the circular buffer advances in lock step with the counter.
+                   ! The previous expression, mod(counter, N)+1, skipped slot 1 on the first pass, so the very first
+                   ! sample stayed in the window for two full windows instead of one.
+                   xd%RegVxStor( mod( OtherState%allregcounter(k_minus1,rco_minus1)-1, p%Num_total_sampleTI )+1, k_minus1, rco_minus1)=InflowNorm
                    meanInflow = SUM( xd%RegVxStor(:,k_minus1,rco_minus1) ) /p%Num_total_sampleTI
 
                    if ( EqualRealNos(meanInflow,0.0_ReKi)) then
@@ -668,7 +721,12 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd, OtherState, errStat, errMsg )
            do j=1,p%NumBlNds
                ! We scale the incident turbulence intensity by the ratio of average to incident wind speed
                 ! The scaled TI is used by the Amiet model
-                xd%TIVx(j,i)=p%TI * p%avgV/u%Vrel(J,I) 
+                ! bjj: Vrel can be zero (e.g., before the rotor starts spinning, or at an inboard node), which would
+                ! make TIVx infinite. InflowNoise() takes 10*log10(TIVx**2), so an Inf here shows up as a huge spike in
+                ! the inflow-turbulence noise. Apply the same lower bound on relative velocity that AA_CalcOutput uses.
+                InflowNorm = u%Vrel(J,I)
+                IF (abs(InflowNorm) < AA_u_min) InflowNorm = SIGN(AA_u_min, InflowNorm)
+                xd%TIVx(j,i)=p%TI * p%avgV/InflowNorm
            enddo
        enddo
    endif
@@ -1489,11 +1547,12 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP)
     UM    = MM * p%SpdSound                                       ! Eq 65 from BPM Airfoil Self-noise and Prediction paper   
     TERM  = M*M*MM**3*L**2*DBARH/R**2                             ! TERM = M^2 * M_max^5 *l^2 *D / r^2 according to Semi-Empirical Aeroacoustic Noise Prediction Code for Wind Turbines paper
                                                                   ! Term is correct according to Eq 61 from BPM Airfoil self-noise and Prediction paper
-    IF (TERM .NE. 0.0) THEN                                       
-        SCALE = 10.*LOG10(TERM)
-    ELSE
-        SCALE = 0.0
-    ENDIF
+    ! bjj: Use Log10AA here instead of a "TERM /= 0" test around LOG10:
+    !  (1) TERM is negative when U (and therefore M and MM) is negative, and LOG10 of a negative number returns NaN.
+    !  (2) The old ELSE branch set SCALE = 0, which left SPLTIP near 126 dB when the directivity DBARH was zero --
+    !      i.e., it reported a large tip noise level precisely where there should be none. Every other noise mechanism
+    !      in this module treats DBARH <= 0 as "no contribution", and Log10AA now gives that behavior here too.
+    SCALE = 10.*Log10AA(TERM)
     DO I=1,size(p%FreqList)
         STPP      = p%FreqList(I) * L / UM                       ! Eq 62 from BPM Airfoil Self-noise and Prediction paper   
         SPLTIP(I) = 126.-30.5*(LOG10AA(STPP)+.3)**2 + SCALE        ! Eq 61 from BPM Airfoil Self-noise and Prediction paper
@@ -1792,6 +1851,15 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
     
     ! Compute average displacement thickness
     DSTRAVG = (DSTRS + DSTRP) / 2.
+    
+    ! bjj: When the boundary layer properties are read from tables (X_BLMethod_Tables), DSTRS and DSTRP can be zero
+    ! (e.g., for table entries that were not converged). Without this check, HDSTAR becomes Inf (or NaN if H is also
+    ! zero), which then propagates through G5COMP into SPLBLUNT and on into the summed noise levels.
+    IF (DSTRAVG <= 0. .OR. H <= 0.) THEN
+        SPLBLUNT = -100.  ! same floor used by the other noise mechanisms; effectively no contribution
+        RETURN
+    ENDIF
+    
     HDSTAR  = H / DSTRAVG
     DSTARH = 1. /HDSTAR
     ! Compute directivity function
@@ -1877,13 +1945,16 @@ REAL(ReKi) FUNCTION G5COMP(HDSTAR,ETA) result(G5)
     
     ETA0 = -SQRT((M*M*MU**4)/(6.25+M*M*MU*MU))                                   ! eq 80 from BPM Airfoil Self-noise and Prediction paper
     
+    ! bjj: the arguments of the SQRT calls below are guarded with MAX(0,...): they are all analytically non-negative
+    ! over the range of each branch, but the third branch in particular has a radicand that is exactly zero at the
+    ! branch boundary (SQRT(1.5625/1194.99) = 0.03615995), so round-off can make it slightly negative and return NaN.
     IF (ETA .LE. ETA0) then
-       K  = 2.5*SQRT(1.-(ETA0/MU)**2)-2.5-M*ETA0                                 ! eq 81 from BPM Airfoil Self-noise and Prediction paper
+       K  = 2.5*SQRT(MAX(0.0_ReKi, 1.-(ETA0/MU)**2))-2.5-M*ETA0                  ! eq 81 from BPM Airfoil Self-noise and Prediction paper
        G5 = M * ETA + K                     ! begin eq 76 from BPM Airfoil Self-noise and Prediction paper
     elseif (ETA .LE. 0.) then
-       G5 = 2.5*SQRT(1.-(ETA/MU)**2)-2.5
+       G5 = 2.5*SQRT(MAX(0.0_ReKi, 1.-(ETA/MU)**2))-2.5
     elseif (ETA .LE. 0.03615995) then
-       G5 = SQRT(1.5625-1194.99*ETA**2)-1.25
+       G5 = SQRT(MAX(0.0_ReKi, 1.5625-1194.99*ETA**2))-1.25
     else
        G5 = -155.543 * ETA + 4.375
     end if
@@ -2178,8 +2249,10 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
     n_freq  = size(p%FreqList)
     freq    = p%FreqList
     
-    SPLS = 0.0_ReKi ! initialize in case Cfall(1) <= 0
-    SPLP = 0.0_ReKi ! initialize in case Cfall(2) <= 0
+    ! bjj: -100 dB (the floor used elsewhere in this module) means "no contribution". The previous value of 0 dB
+    ! actually adds unit mean-square pressure at every frequency when Cfall <= 0.
+    SPLS = -100.0_ReKi ! initialize in case Cfall(1) <= 0
+    SPLP = -100.0_ReKi ! initialize in case Cfall(2) <= 0
     
     ! Body of TNO 
     band_ratio = 2.**(1./3.)
@@ -2193,18 +2266,25 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
     do i_omega = 1,n_freq
         omega = TwoPi*p%FreqList(i_omega)
         !integration limits
+        ! bjj: use ABS(Mach) so that the upper limit stays above the lower limit. U (and therefore Mach) carries the
+        ! sign of Vrel, and a negative upper limit would reverse the integration interval and return a bogus spectrum.
         int_limits(1) = 0.0e0
-        int_limits(2) = 10*omega/(Mach*p%SpdSound)
+        int_limits(2) = 10*omega/(ABS(Mach)*p%SpdSound)
         ! Convert to third octave
         band_width = 2. * omega * (sqrt(band_ratio)-1./sqrt(band_ratio))
         
+        ! bjj: The log10 calls below were unguarded. "answer" is the result of a fixed-order Gauss-Kronrod quadrature
+        ! of an integrand that underflows to zero at high frequency and can also return a small negative value through
+        ! round-off cancellation. log10(0) is -Inf and log10(negative) is NaN, and the "SPL < -100" floor below does not
+        ! catch NaN (any comparison with NaN is false), so a NaN would propagate silently into the summed noise levels.
+        ! Log10AA() floors the argument at AA_EPSILON, which maps both cases to "no contribution".
         IF (Cfall(1) .GT. 0.) THEN
             answer = SPL_integrate(omega=omega,limits=int_limits,ISSUCTION=.true.,        &
                      Mach=Mach,SpdSound=p%SpdSound,AirDens=p%AirDens,KinVisc=p%KinVisc,   &
                      Cfall=Cfall,d99all=d99all,EdgeVelAll=EdgeVelAll)
             Spectrum = D/(4.*pi*R**2)*answer
-            SPL_suction = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
-            SPLS(i_omega) = SPL_suction + 10.*log10(band_width)
+            SPL_suction = 10.*Log10AA(Spectrum*DBARH/2.e-5/2.e-5)
+            SPLS(i_omega) = SPL_suction + 10.*Log10AA(band_width)
         ENDIF
 
         IF (Cfall(2) .GT. 0.) THEN
@@ -2212,8 +2292,8 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
                      Mach=Mach,SpdSound=p%SpdSound,AirDens=p%AirDens,KinVisc=p%KinVisc,   &
                      Cfall=Cfall,d99all=d99all,EdgeVelAll=EdgeVelAll)
             Spectrum = D/(4.*pi*R**2)*answer
-            SPL_press = 10.*log10(Spectrum*DBARH/2.e-5/2.e-5)
-            SPLP(i_omega) = SPL_press + 10.*log10(band_width)
+            SPL_press = 10.*Log10AA(Spectrum*DBARH/2.e-5/2.e-5)
+            SPLP(i_omega) = SPL_press + 10.*Log10AA(band_width)
         ENDIF
 
         ! Sum the noise sources SPLALPH is BPM value
