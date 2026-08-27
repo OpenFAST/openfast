@@ -2,6 +2,8 @@ module test_AMReX_reader
    use testdrive, only: new_unittest, unittest_type, error_type, check
    use NWTC_Library
    use amrex_utils
+   use AWAE_Types, only: AWAE_ParameterType
+   use AWAE_IO, only: ReadWindAMReX
  
    implicit none
 
@@ -19,7 +21,11 @@ contains
                   new_unittest("AMReX_test_find_subvols_missing_step", AMReX_test_find_subvols_missing_step), &
                   new_unittest("AMReX_test_find_subvols_duplicate_step", AMReX_test_find_subvols_duplicate_step), &
                   new_unittest("AMReX_test_find_subvols_out_of_tolerance", AMReX_test_find_subvols_out_of_tolerance), &
-                  new_unittest("AMReX_test_find_subvols_wide_index", AMReX_test_find_subvols_wide_index) &
+                  new_unittest("AMReX_test_find_subvols_wide_index", AMReX_test_find_subvols_wide_index), &
+                  new_unittest("AMReX_test_ReadWindAMReX_lookup", AMReX_test_ReadWindAMReX_lookup), &
+                  new_unittest("AMReX_test_ReadWindAMReX_out_of_range", AMReX_test_ReadWindAMReX_out_of_range), &
+                  new_unittest("AMReX_test_ReadWindAMReX_wide_index", AMReX_test_ReadWindAMReX_wide_index), &
+                  new_unittest("AMReX_test_ReadWindAMReX_no_table", AMReX_test_ReadWindAMReX_no_table) &
                   ]
    end subroutine
 
@@ -380,6 +386,115 @@ contains
       do i = 0, NumSteps-1
          call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
       end do
+
+   end subroutine
+
+   ! ---------------------------------------------------------------------------------------
+   ! ReadWindAMReX: resolving a time step to a directory
+   !
+   ! These cover the contract between the index table built during initialization and the
+   ! read itself: the table is indexed by the 0-based FAST.Farm time step, and the directory
+   ! suffix is zero-padded to at least DirIndexLen characters and widened beyond it when the
+   ! index needs more digits.
+   ! ---------------------------------------------------------------------------------------
+
+   ! Step n must resolve to the directory the table names for it, not to a computed index.
+   ! Table [0, 6, 12] means step 1 is directory 00006; read it and compare against reading
+   ! that directory directly.
+   subroutine AMReX_test_ReadWindAMReX_lookup(error)
+      type(error_type), allocatable, intent(out) :: error
+      type(AWAE_ParameterType)   :: p
+      real(SiKi), allocatable    :: viaTable(:,:,:,:), direct(:,:,:,:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      ! Sub-volume 0 of the subvolmultiple fixture set is a 3x4x5 grid
+      allocate(viaTable(3,3,4,5)); allocate(direct(3,3,4,5))
+
+      p%WindFilePath = "data/subvolmultiple"
+      p%DirIndexLen  = 5
+      allocate(p%DirIndexLow(0:2))
+      p%DirIndexLow = [0, 6, 12]
+
+      call ReadWindAMReX(0, 1, p, viaTable, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="ReadWindAMReX: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call amrex_read_data("data/subvolmultiple_0_00006", direct, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_data: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call check(error, all(viaTable == direct), .true., &
+                 more="step 1 did not resolve to directory 00006"); if (allocated(error)) return
+
+   end subroutine
+
+   ! A step outside the table is a hard error. It must never be clamped to the nearest
+   ! entry, which would silently freeze the inflow for the rest of the run.
+   subroutine AMReX_test_ReadWindAMReX_out_of_range(error)
+      type(error_type), allocatable, intent(out) :: error
+      type(AWAE_ParameterType)   :: p
+      real(SiKi), allocatable    :: dat(:,:,:,:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      allocate(dat(3,3,4,5))
+      p%WindFilePath = "data/subvolmultiple"
+      p%DirIndexLen  = 5
+      allocate(p%DirIndexLow(0:2))
+      p%DirIndexLow = [0, 6, 12]
+
+      call ReadWindAMReX(0, 3, p, dat, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "only steps 0 through 2") > 0, .true., &
+                 more="message should report the available range: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! An index needing more digits than DirIndexLen must widen the field rather than overflow
+   ! it. The subvolwide fixtures run 99998 -> 100000 -> 100002 with a five-character start
+   ! index, so step 1 can only be read if the suffix widened to six digits; a fixed-width
+   ! write would have produced '*****' and failed to open anything.
+   subroutine AMReX_test_ReadWindAMReX_wide_index(error)
+      type(error_type), allocatable, intent(out) :: error
+      type(AWAE_ParameterType)   :: p
+      real(SiKi), allocatable    :: viaTable(:,:,:,:), direct(:,:,:,:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      allocate(viaTable(3,3,4,5)); allocate(direct(3,3,4,5))
+
+      p%WindFilePath = "data/subvolwide"
+      p%DirIndexLen  = 5
+      allocate(p%DirIndexLow(0:2))
+      p%DirIndexLow = [99998, 100000, 100002]
+
+      call ReadWindAMReX(0, 1, p, viaTable, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="ReadWindAMReX: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call amrex_read_data("data/subvolwide_0_100000", direct, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_data: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call check(error, all(viaTable == direct), .true., &
+                 more="six-digit index did not resolve to directory 100000"); if (allocated(error)) return
+
+   end subroutine
+
+   ! If initialization never populated the table, say so instead of reading whatever a
+   ! zero-filled lookup would point at.
+   subroutine AMReX_test_ReadWindAMReX_no_table(error)
+      type(error_type), allocatable, intent(out) :: error
+      type(AWAE_ParameterType)   :: p
+      real(SiKi), allocatable    :: dat(:,:,:,:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      allocate(dat(3,3,4,5))
+      p%WindFilePath = "data/subvolmultiple"
+      p%DirIndexLen  = 5
+
+      call ReadWindAMReX(0, 0, p, dat, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "never populated") > 0, .true., &
+                 more="message should name the cause: "//trim(ErrMsg)); if (allocated(error)) return
 
    end subroutine
 
