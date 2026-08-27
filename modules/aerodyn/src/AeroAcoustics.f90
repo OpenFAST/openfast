@@ -271,20 +271,32 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
     p%BlSpn   = InitInp%BlSpn
     p%BlChord = InitInp%BlChord
 
-    ! Calculate last element size as percentage of blade span
+    ! Calculate last element size as percentage of blade span, and warn if BldPrcnt is smaller than that.
+    ! bjj: This check only has meaning for a blade with more than one node. A single node is an explicitly supported
+    ! configuration (AA_Init requires only NumBlNds >= 1, and the standalone AeroAcoustics driver uses exactly
+    ! one node): that one element spans the whole blade, so there is no "last element" for BldPrcnt to be smaller
+    ! than. LastElemPct is 100.0 for a single node, so the warning fired on every single-node
+    ! run with BldPrcnt < 100 and told the user to refine an AeroDyn blade mesh that has nothing to refine.
+    LastElemPct = 100.0_ReKi  ! a single element spans the entire blade
     IF (p%NumBlNds > 1) THEN
-        LastElemPct = 100.0 * (p%BlSpn(p%NumBlNds,1) - p%BlSpn(p%NumBlNds-1,1)) / p%BlSpn(p%NumBlNds,1)
-    ELSE
-        LastElemPct = 100.0  ! Single node means element spans entire blade
-    ENDIF
+    
+        ! bjj: guard the divide. This would be rare, and an indication that the calling program has an error.
+        IF (p%BlSpn(p%NumBlNds,1) > 0.0_ReKi) THEN
+            LastElemPct = 100.0 * (p%BlSpn(p%NumBlNds,1) - p%BlSpn(p%NumBlNds-1,1)) / p%BlSpn(p%NumBlNds,1)
+        ELSE
+            CALL SetErrStat(ErrID_Fatal, 'The outermost blade node is at zero span, which is invalid.', ErrStat2, ErrMsg2, RoutineName )
+            if(Failed()) return 
+        ENDIF
 
-    IF (InputFileData%AA_Bl_Prcntge .lt. LastElemPct) THEN
-        CALL SetErrStat(ErrID_Warn, 'BldPrcnt is smaller than the last blade element size. '// &
-            'OpenFAST will move on assuming the last blade element, which is the minimum blade span used for noise calculations. '// &
-            'Either increase BldPrcnt in your aeroacoustic input file '// &
-            'or refine the aerodynamic mesh in your blade AeroDyn input file.', ErrStat2, ErrMsg2, RoutineName )
-        if(Failed()) return
-    endif
+        if (InputFileData%AA_Bl_Prcntge < LastElemPct) then
+            CALL SetErrStat(ErrID_Warn, 'BldPrcnt is smaller than the last blade element size. '// &
+                'OpenFAST will move on assuming the last blade element, which is the minimum blade span used for noise calculations. '// &
+                'Either increase BldPrcnt in your aeroacoustic input file '// &
+                'or refine the aerodynamic mesh in your blade AeroDyn input file.', ErrStat2, ErrMsg2, RoutineName )
+            if(Failed()) return
+        endif
+        
+    ENDIF
 
     p%startnode = min(p%NumBlNds, 2)
     BladeSpanUsedForNoise = p%BlSpn(p%NumBlNds,1)*(1.0 - InputFileData%AA_Bl_Prcntge/100.0)
@@ -300,11 +312,12 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
    DO I = 1,p%numBlades
       DO J = p%startnode,p%NumBlNds  ! starts loop from startnode. 
          IF (J < 2) THEN
+            ! bjj: J == 1 is reachable only when NumBlNds == 1 (otherwise startnode >= 2).
             p%BlElemSpn(J,I) = p%BlSpn(J,I) !assume this is the innermost node
          ELSEIF (J .EQ. p%NumBlNds) THEN
             p%BlElemSpn(J,I) =   p%BlSpn(J,I)-p%BlSpn(J-1,I)
          ELSE
-            p%BlElemSpn(J,I) =   (p%BlSpn(J,I)-p%BlSpn(J-1,I))/2 + (p%BlSpn(J+1,I)-p%BlSpn(J,I))/2 ! this is the average element size around this node, equivalent to (p%BlSpn(J+1,I) - p%BlSpn(J-1,I))/2
+            p%BlElemSpn(J,I) =   (p%BlSpn(J+1,I) - p%BlSpn(J-1,I)) / 2 ! this is the average element size around this node
          ENDIF
       end do
    end do
@@ -1048,7 +1061,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
             
             
             !--------Tip Noise--------------------------------------------------------------!
-            IF ( (p%ITIP == ITIP_ON) .AND. (J .EQ. p%NumBlNds) ) THEN ! calculate m%SPLTIP(1:nFreq)
+            IF ( (p%ITIP == ITIP_ON) .AND. (J == p%NumBlNds) ) THEN ! calculate m%SPLTIP(1:nFreq)
                CALL TIPNOIS(AlphaNoise_Deg,p%ALpRAT,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                   m%rTEtoObserve(K,J,I), p, m%SPLTIP)
                
