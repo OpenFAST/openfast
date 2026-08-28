@@ -539,10 +539,13 @@ extern "C"
         const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : ".";
 
         // Collect the candidate directories in one pass, then walk them in ascending index order.
-        // Ordering matters for cost, not correctness: simulation time increases with the step
-        // counter, so once a directory lands past the requested window every later one does too
-        // and the walk can stop. Without that the search reads a header for every directory the
-        // LES ever wrote, however short the FAST.Farm run.
+        // Ordering matters for cost, not correctness: within one run simulation time rises with the
+        // step counter, so once every step is claimed and a directory lands past the window, the
+        // remaining directories cannot add anything and the walk stops. Without that the search
+        // reads a header for every directory the LES ever wrote, however short the FAST.Farm run.
+        // The stop is conditional on the table being complete: leftovers from an earlier run with
+        // a different time step can put a later time on a lower index, and stopping on one of
+        // those would skip valid data that sorts after it.
         std::vector<std::pair<long long, std::string>> candidates;
         for (auto const &dir_entry : std::filesystem::directory_iterator{parent_path})
         {
@@ -581,6 +584,11 @@ extern "C"
         }
 
         std::sort(candidates.begin(), candidates.end());
+
+        const auto all_steps_claimed = [&]() {
+            for (int s = 0; s < num_steps; ++s) { if (idx_of_step[s] < 0) { return false; } }
+            return true;
+        };
 
         std::size_t visited = 0;
         for (auto const &cand : candidates)
@@ -631,10 +639,17 @@ extern "C"
             }
             if (step >= static_cast<long>(num_steps))
             {
-                // Candidates are in ascending index order and simulation time rises with the step
-                // counter, so nothing after this one can fall inside the window either.
-                n_beyond_window = static_cast<int>(candidates.size() - visited) + 1;
-                break;
+                ++n_beyond_window;
+                if (all_steps_claimed())
+                {
+                    // Table complete and this directory is past the window: nothing after it in
+                    // ascending index order can be needed. Count the rest as skipped and stop.
+                    n_beyond_window += static_cast<int>(candidates.size() - visited);
+                    break;
+                }
+                // Something is still missing, so do not trust index order to imply time order;
+                // keep walking and let a genuinely missing step be reported after the full scan.
+                continue;
             }
 
             // Not on a step boundary. This is how deliberately decimated output is skipped: when

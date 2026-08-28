@@ -25,7 +25,8 @@ contains
                   new_unittest("AMReX_test_ReadWindAMReX_lookup", AMReX_test_ReadWindAMReX_lookup), &
                   new_unittest("AMReX_test_ReadWindAMReX_out_of_range", AMReX_test_ReadWindAMReX_out_of_range), &
                   new_unittest("AMReX_test_ReadWindAMReX_wide_index", AMReX_test_ReadWindAMReX_wide_index), &
-                  new_unittest("AMReX_test_ReadWindAMReX_no_table", AMReX_test_ReadWindAMReX_no_table) &
+                  new_unittest("AMReX_test_ReadWindAMReX_no_table", AMReX_test_ReadWindAMReX_no_table), &
+                  new_unittest("AMReX_test_find_subvols_stale_beyond_window", AMReX_test_find_subvols_stale_beyond_window) &
                   ]
    end subroutine
 
@@ -495,6 +496,36 @@ contains
       call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
       call check(error, index(ErrMsg, "never populated") > 0, .true., &
                  more="message should name the cause: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! ---------------------------------------------------------------------------------------
+   ! Scan robustness and the fast header path
+   ! ---------------------------------------------------------------------------------------
+
+   ! A leftover directory from an earlier run can carry a time far past the window on a LOWER
+   ! index than valid data (different time step, same index base). The ascending-index walk
+   ! must not stop there while steps are still unclaimed: 00002 has t = 5.0 but 00004 and
+   ! 00008 hold steps 1 and 2.
+   subroutine AMReX_test_find_subvols_stale_beyond_window(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolstale"
+      integer(IntKi), parameter  :: SubVol = 0
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 3
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [0, 4, 8]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
 
    end subroutine
 
