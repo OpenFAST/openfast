@@ -240,6 +240,26 @@ bool parse_header_text(const std::string &dir, HeaderInfo &info, long long expec
 
 extern "C"
 {
+    // Parse the plotfile Header text directly (the fast path used by the sub-volume search) and
+    // return the grid information it yields. `ok` is 1 if the parse succeeded, 0 otherwise. This
+    // exists so the text parser can be tested against amrex_read_header_c on real plotfiles.
+    void amrex_header_text_c(char const *dir, double &time, int dims[3], double dx[3], double origin[3], int &ok)
+    {
+        HeaderInfo info;
+        ok = parse_header_text(std::string{dir}, info) ? 1 : 0;
+        if (ok == 0)
+        {
+            return;
+        }
+        time = info.time;
+        for (auto i = 0; i < 3; ++i)
+        {
+            dims[i] = info.dims[i];
+            dx[i] = info.dx[i];
+            origin[i] = info.origin[i];
+        }
+    }
+
     // Read the header information for the AMReX grid and return it.
     void amrex_read_header_c(char const *dir, double &time, int dims[3], double dx[3],
                              double origin[3], int &err_stat, char *err_msg, int &err_msg_len)

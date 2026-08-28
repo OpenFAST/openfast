@@ -26,7 +26,11 @@ contains
                   new_unittest("AMReX_test_ReadWindAMReX_out_of_range", AMReX_test_ReadWindAMReX_out_of_range), &
                   new_unittest("AMReX_test_ReadWindAMReX_wide_index", AMReX_test_ReadWindAMReX_wide_index), &
                   new_unittest("AMReX_test_ReadWindAMReX_no_table", AMReX_test_ReadWindAMReX_no_table), &
-                  new_unittest("AMReX_test_find_subvols_stale_beyond_window", AMReX_test_find_subvols_stale_beyond_window) &
+                  new_unittest("AMReX_test_find_subvols_stale_beyond_window", AMReX_test_find_subvols_stale_beyond_window), &
+                  new_unittest("AMReX_test_find_subvols_real_tiled", AMReX_test_find_subvols_real_tiled), &
+                  new_unittest("AMReX_test_read_real_tiled", AMReX_test_read_real_tiled), &
+                  new_unittest("AMReX_test_header_text_agrees_on_tiled", AMReX_test_header_text_agrees_on_tiled), &
+                  new_unittest("AMReX_test_header_text_disagrees_on_subset", AMReX_test_header_text_disagrees_on_subset) &
                   ]
    end subroutine
 
@@ -526,6 +530,112 @@ contains
       do i = 0, NumSteps-1
          call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
       end do
+
+   end subroutine
+
+   ! Real Kynema/AMR-Wind sub-volume output layout: one FAB tiling the domain box, three masked
+   ! velocity components, headers exactly as written by the sampler. Unlike the hand-built
+   ! subvolmultiple fixtures, the Header domain box equals the Cell_H box union here, so the
+   ! text-parse fast path engages. The FAB payloads were replaced by a known field
+   ! (u = 1+i, v = 2+j, w = 3+k in 0-based cell indices) so the read can be checked exactly.
+   subroutine AMReX_test_find_subvols_real_tiled(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvoltiled"
+      integer(IntKi), parameter  :: SubVol = 1
+      real(DbKi), parameter      :: DT = 0.1_DbKi
+      integer(IntKi), parameter  :: NumSteps = 3
+      character(*), parameter    :: StartIndex = "31220"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [31220, 31224, 31228]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   subroutine AMReX_test_read_real_tiled(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter :: DirPath = "data/subvoltiled_1_31220"
+      real(SiKi), allocatable :: data(:,:,:,:)
+      integer(IntKi)          :: ErrStat, dims(3)
+      character(ErrMsgLen)    :: ErrMsg
+      real(DbKi)              :: time
+      real(ReKi)              :: origin(3), gridSpacing(3)
+
+      call amrex_read_header(DirPath, time, dims, gridSpacing, origin, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_header: "//trim(ErrMsg)); if (allocated(error)) return
+      call check(error, dims(1), 18, more="dims(1)"); if (allocated(error)) return
+      call check(error, dims(2), 18, more="dims(2)"); if (allocated(error)) return
+      call check(error, dims(3), 19, more="dims(3)"); if (allocated(error)) return
+      call check(error, gridSpacing(1), 8.0_ReKi, thr=1.0e-6_ReKi, more="dx"); if (allocated(error)) return
+
+      allocate(data(3, dims(1), dims(2), dims(3)))
+      call amrex_read_data(DirPath, data, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_data: "//trim(ErrMsg)); if (allocated(error)) return
+      ! Known payload: u = 1+i, v = 2+j, w = 3+k with 0-based cell indices, checked at the corners
+      ! and an interior point. This also pins the component order and the x-fastest layout.
+      call check(error, data(1,1,1,1),    1.0_SiKi, thr=1.0e-6_SiKi, more="u(0,0,0)");    if (allocated(error)) return
+      call check(error, data(2,1,1,1),    2.0_SiKi, thr=1.0e-6_SiKi, more="v(0,0,0)");    if (allocated(error)) return
+      call check(error, data(3,1,1,1),    3.0_SiKi, thr=1.0e-6_SiKi, more="w(0,0,0)");    if (allocated(error)) return
+      call check(error, data(1,18,1,1),  18.0_SiKi, thr=1.0e-6_SiKi, more="u(17,0,0)");   if (allocated(error)) return
+      call check(error, data(2,1,18,1),  19.0_SiKi, thr=1.0e-6_SiKi, more="v(0,17,0)");   if (allocated(error)) return
+      call check(error, data(3,1,1,19),  21.0_SiKi, thr=1.0e-6_SiKi, more="w(0,0,18)");   if (allocated(error)) return
+      call check(error, data(1,5,7,9),    5.0_SiKi, thr=1.0e-6_SiKi, more="u(4,6,8)");    if (allocated(error)) return
+      call check(error, data(2,5,7,9),    8.0_SiKi, thr=1.0e-6_SiKi, more="v(4,6,8)");    if (allocated(error)) return
+      call check(error, data(3,5,7,9),   11.0_SiKi, thr=1.0e-6_SiKi, more="w(4,6,8)");    if (allocated(error)) return
+
+   end subroutine
+
+   ! The fast path is only trusted after the text parse agrees with amrex_read_header on the
+   ! starting directory. On real sub-volume output it must agree exactly.
+   subroutine AMReX_test_header_text_agrees_on_tiled(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter :: DirPath = "data/subvoltiled_1_31220"
+      logical                 :: ok
+      integer(IntKi)          :: ErrStat, dimsA(3), dimsT(3), i
+      character(ErrMsgLen)    :: ErrMsg
+      real(DbKi)              :: timeA, timeT
+      real(ReKi)              :: originA(3), dxA(3), originT(3), dxT(3)
+
+      call amrex_read_header(DirPath, timeA, dimsA, dxA, originA, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_header: "//trim(ErrMsg)); if (allocated(error)) return
+      call amrex_parse_header_text(DirPath, ok, timeT, dimsT, dxT, originT)
+      call check(error, ok, .true., more="text parse should succeed on real output"); if (allocated(error)) return
+      call check(error, timeT, timeA, thr=1.0e-9_DbKi, more="time"); if (allocated(error)) return
+      do i = 1, 3
+         call check(error, dimsT(i), dimsA(i), more="dims"); if (allocated(error)) return
+         call check(error, dxT(i), dxA(i), thr=1.0e-6_ReKi, more="dx"); if (allocated(error)) return
+         call check(error, originT(i), originA(i), thr=1.0e-3_ReKi, more="origin"); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   ! The hand-built fixtures store a small box array inside a much larger domain box, so the
+   ! text parse (domain) and amrex_read_header (box union) disagree on dims. That disagreement
+   ! is exactly what makes the search fall back to the slow path for them -- record it.
+   subroutine AMReX_test_header_text_disagrees_on_subset(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter :: DirPath = "data/subvolmultiple_0_00006"
+      logical                 :: ok
+      integer(IntKi)          :: ErrStat, dimsA(3), dimsT(3)
+      character(ErrMsgLen)    :: ErrMsg
+      real(DbKi)              :: timeA, timeT
+      real(ReKi)              :: originA(3), dxA(3), originT(3), dxT(3)
+
+      call amrex_read_header(DirPath, timeA, dimsA, dxA, originA, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_read_header: "//trim(ErrMsg)); if (allocated(error)) return
+      call amrex_parse_header_text(DirPath, ok, timeT, dimsT, dxT, originT)
+      call check(error, ok, .true., more="text parse should succeed"); if (allocated(error)) return
+      call check(error, timeT, timeA, thr=1.0e-9_DbKi, more="time agrees"); if (allocated(error)) return
+      call check(error, dimsT(1), 256, more="text dims are the domain box"); if (allocated(error)) return
+      call check(error, dimsA(1), 3, more="reader dims are the box union"); if (allocated(error)) return
 
    end subroutine
 

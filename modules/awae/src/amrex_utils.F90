@@ -34,6 +34,17 @@ interface
       integer(kind=c_int), intent(in)       :: err_msg_len
    end subroutine
    
+   subroutine amrex_header_text_c(dir_path, t, dims, dx, origin, ok) bind(c)
+      import
+      implicit none
+      character(kind=c_char), intent(in)    :: dir_path(*)
+      real(kind=c_double), intent(out)      :: t
+      integer(kind=c_int), intent(out)      :: dims(3)
+      real(kind=c_double), intent(out)      :: dx(3)
+      real(kind=c_double), intent(out)      :: origin(3)
+      integer(kind=c_int), intent(out)      :: ok
+   end subroutine
+
    subroutine amrex_find_subvols_c(dir_path, subvol, dt, num_step, start_index, dir_indices, &
                                    err_stat, err_msg, err_msg_len) bind(c)
       import
@@ -51,7 +62,7 @@ interface
 end interface
 
 public :: amrex_init, amrex_finalize
-public :: amrex_read_header, amrex_read_data, amrex_find_subvols
+public :: amrex_read_header, amrex_read_data, amrex_find_subvols, amrex_parse_header_text
 
 contains
 
@@ -231,6 +242,39 @@ subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
 
 #else
    call SetErrStat(ErrID_Fatal, "AMReX library unavailable. Enable with -DAMREX_READER during compile with cmake on Linux, or change FAST.Farm Mod_AmbWind type", ErrStat, ErrMsg, RoutineName)
+#endif
+end subroutine
+
+! Parse a plotfile Header directly, without AMReX, and return the grid information it holds.
+! This is the fast path the sub-volume search uses once it has verified, on the starting
+! directory, that the text agrees with amrex_read_header. Exposed so that agreement can be
+! tested on real plotfiles. Ok is .false. if the header could not be parsed or describes a
+! plotfile this reader does not accept.
+subroutine amrex_parse_header_text(DirPath, Ok, Time, nXYZ, dXYZ, oXYZ)
+   character(*), intent(in)      :: DirPath
+   logical, intent(out)          :: Ok
+   real(DbKi), intent(out)       :: Time
+   integer(IntKi), intent(out)   :: nXYZ(3)
+   real(ReKi), intent(out)       :: dXYZ(3)
+   real(ReKi), intent(out)       :: oXYZ(3)
+
+   character(c_char), allocatable :: dir_path(:)
+   integer(c_int)    :: ok_c, dims(3)
+   real(c_double)    :: t, origin(3), gridSpacing(3)
+
+   Ok = .false.; Time = 0.0_DbKi; nXYZ = 0; dXYZ = 0.0_ReKi; oXYZ = 0.0_ReKi
+
+#ifdef ENABLE_AMREX_LIB
+   allocate(dir_path(len_trim(DirPath) + 1))
+   dir_path = transfer(trim(DirPath) // c_null_char, dir_path)
+   call amrex_header_text_c(dir_path, t, dims, gridSpacing, origin, ok_c)
+   Ok = (ok_c /= 0)
+   if (Ok) then
+      Time = real(t, DbKi)
+      nXYZ = int(dims, IntKi)
+      dXYZ = real(gridSpacing, ReKi)
+      oXYZ = real(origin, ReKi)
+   end if
 #endif
 end subroutine
 
