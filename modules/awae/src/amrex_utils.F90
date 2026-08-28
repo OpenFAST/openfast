@@ -83,6 +83,9 @@ subroutine amrex_read_header(DirPath, time, nXYZ, dXYZ, oXYZ, ErrStat, ErrMsg)
    real(c_double)    :: t, origin(3), gridSpacing(3)
    integer(IntKi)    :: i
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
 #ifdef ENABLE_AMREX_LIB
 
    ! Convert directory path to C type
@@ -119,6 +122,9 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
    integer(c_int)    :: err_stat_c
    character(c_char) :: err_msg_c(ErrMsgLen)
    integer(IntKi)    :: i
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
 #ifdef ENABLE_AMREX_LIB
 
@@ -170,10 +176,10 @@ subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
    character(c_char)              :: err_msg_c(ErrMsgLen)
    integer(IntKi)                 :: i, stat
 
-#ifdef ENABLE_AMREX_LIB
-
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
+
+#ifdef ENABLE_AMREX_LIB
 
    if (NumStep < 1) then
       call SetErrStat(ErrID_Fatal, "number of time steps must be at least 1", ErrStat, ErrMsg, RoutineName)
