@@ -78,11 +78,19 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
    ! Determine if acceleration should be calculated and returned
    OutputAccel = allocated(AccelUVW)
-   ! Cubic velocity interpolation also requires a valid acceleration field, since its
-   ! formula uses the derivative data even when acceleration output is not requested.
+   ! Cubic velocity interpolation also requires a valid acceleration field,
+   ! since its formula uses the derivative data even when acceleration output is not requested.
    if ((OutputAccel .or. FF%VelInterpCubic) .and. .not. FF%AccFieldValid) then
-      call SetErrStat(ErrID_Fatal, "Accel output requested, but accel field is not valid", &
-                      ErrStat, ErrMsg, RoutineName)
+      if (OutputAccel .and. FF%VelInterpCubic) then
+         call SetErrStat(ErrID_Fatal, "Acceleration output and cubic velocity interpolation both require a valid acceleration field, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      else if (OutputAccel) then
+         call SetErrStat(ErrID_Fatal, "Acceleration output requested, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      else  ! FF%VelInterpCubic
+         call SetErrStat(ErrID_Fatal, "Cubic velocity interpolation requires a valid acceleration field, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      end if
       return
    end if
 
