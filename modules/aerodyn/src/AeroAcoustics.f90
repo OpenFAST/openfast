@@ -48,6 +48,9 @@ module AeroAcoustics
    
    REAL(ReKi), parameter :: AA_u_min = 0.1_ReKi
    REAL(ReKi), parameter :: AA_EPSILON = 1.E-16 ! EPSILON(AA_EPSILON)
+   REAL(ReKi), parameter :: AA_max_exp = log10(huge(1.0_ReKi))-8.0 ! bjj: I picked 8 here somewhat randomly...in debugging, later calculations
+                                                                   ! with the results of this function multiplied by factors of 1E6
+                                                                   ! so I removed a couple more orders of magnitude (1E8)
    
    REAL(ReKi), parameter :: RotorRegionAlph_delta = 60.0_ReKi ! degrees : size of bin, must be a number that evenly divides 360 degrees
    REAL(ReKi), parameter :: RotorRegionRad_delta  =  5.0_ReKi ! meters : size of bin along blade span (rotor radius)
@@ -526,8 +529,8 @@ subroutine Init_y(y, m, p, errStat, errMsg)
     end if
 
     call AllocAry(y%WriteOutput      , p%numOutsAll(1), 'y%WriteOutput'        , errStat2 , errMsg2); if(Failed()) return
-    call AllocAry(y%WriteOutputSep   , p%numOutsAll(3), 'y%WriteOutputSep'     , errStat2 , errMsg2); if(Failed()) return
     call AllocAry(y%WriteOutputForPE , p%numOutsAll(2), 'y%WriteOutputForPE'   , errStat2 , errMsg2); if(Failed()) return
+    call AllocAry(y%WriteOutputSep   , p%numOutsAll(3), 'y%WriteOutputSep'     , errStat2 , errMsg2); if(Failed()) return
     call AllocAry(y%WriteOutputNodes , p%numOutsAll(4), 'y%WriteOutputSepFreq' , errStat2 , errMsg2); if(Failed()) return
 
     y%WriteOutput      = 0.0_reki
@@ -849,6 +852,13 @@ REAL(ReKi) FUNCTION Log10AA(X) RESULT(F)
     F = LOG10( MAX(AA_EPSILON, X) )
     
 END FUNCTION Log10AA
+!----------------------------------------------------------------------------------------------------------------------------------
+REAL(ReKi) FUNCTION Power10AA(X) RESULT(F)
+   REAL(ReKi),INTENT(IN) :: X
+   
+    F = 10.0_ReKi ** min(X, AA_max_exp)
+    
+END FUNCTION Power10AA
 !----------------------------------------------------------------------------------------------------------------------------------!
 SUBROUTINE Calc_LE_Location_Array(p,m,u)
     TYPE(AA_ParameterType),              intent(in   ) :: p       !< Parameters
@@ -1161,7 +1171,7 @@ contains
                   
       do III=1,size(p%FreqList)   ! Loops through each 1/3rd octave center frequency 
 
-         Pt = 10.0_ReKi**(SPL(III)/10.0_ReKi)                                           ! SPL to P Conversion for III Frequency
+         Pt = Power10AA(SPL(III)/10.0_ReKi)                                           ! SPL to P Conversion for III Frequency
                         
          P_SumAllFreq = P_SumAllFreq + Pt                                               ! Sum for Running Total
          m%SumSpecNoiseSep(NoiseMech,III,K) = m%SumSpecNoiseSep(NoiseMech,III,K) + Pt   ! Running sum of observer and frequency dependent sound pressure
@@ -1235,13 +1245,13 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
     else
        ST1PRIM = .28
     end if
-    STPKPRM  = 10.**(-.04*ALPSTAR) * ST1PRIM                            ! Eq 56 from BPM Airfoil Self-noise and Prediction paper
+    STPKPRM  = Power10AA(-.04*ALPSTAR) * ST1PRIM                            ! Eq 56 from BPM Airfoil Self-noise and Prediction paper
 
     ! compute reference reynolds number                                 ! Eq 59 from BPM Airfoil Self-noise and Prediction paper
     IF (ALPSTAR .LE. 3.0) then
-       RC0=10.**(.215*ALPSTAR+4.978)
+       RC0=Power10AA(.215*ALPSTAR+4.978)
     else
-       RC0=10.**(.120*ALPSTAR+5.263)
+       RC0=Power10AA(.120*ALPSTAR+5.263)
     end if
     
     ! compute peak scaled spectrum level
@@ -1390,7 +1400,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     IF  (ALPSTAR .LE. 1.333) then
        ST2 = ST1
     elseif (ALPSTAR .LE. StallVal) then
-       ST2 = ST1*10.**(.0054*(ALPSTAR-1.333)**2)
+       ST2 = ST1*Power10AA(.0054*(ALPSTAR-1.333)**2)
     else
        ST2 = 4.72 * ST1
     end if
@@ -1501,9 +1511,9 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
         IF (SPLS(I)    .LT. -100.) SPLS(I)    = -100.                      ! Similar to Eq 29 of BPM Airfoil Self-noise and Prediction paper      
         IF (SPLALPH(I) .LT. -100.) SPLALPH(I) = -100.                      ! Eq 30 of BPM Airfoil Self-noise and Prediction paper recommends SPLALPH = 10log(stuff) + A' + K2, where A' is calculated same as A but with x3 Rc   
 
-        !P1  = 10.**(SPLP(I) / 10.)            ! SPL_Pressure
-        !P2  = 10.**(SPLS(I) / 10.)            ! SPL_Suction
-        !P4  = 10.**(SPLALPH(I) / 10.)         ! SPL_AoA   
+        !P1  = Power10AA(SPLP(I) / 10.)            ! SPL_Pressure
+        !P2  = Power10AA(SPLS(I) / 10.)            ! SPL_Suction
+        !P4  = Power10AA(SPLALPH(I) / 10.)         ! SPL_AoA   
         !SPLTBL(I) = 10. * LOG10AA(P1 + P2 + P4)                                     ! Eq 24 from BPM Airfoil Self-noise and Prediction paper
 
 
@@ -1911,11 +1921,11 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         
         G5(I) = G50 + .0714 * PSI * (G514-G50)                                   ! interpolate G5 from G50 and G514
         IF (G5(I) .GT. 0.) G5(I) = 0.
-        G5Sum = 10**(G5(I)/10)+G5Sum     ! to be subtracted
+        G5Sum = Power10AA(G5(I)/10)+G5Sum     ! to be subtracted
         if ( G5Sum .ne. 0) then
-            LogVal = MAX(AA_EPSILON,1/G5Sum)
+           LogVal = MAX(AA_EPSILON,1/G5Sum)
         else
-           LogVal = 1
+           LogVal = AA_max_exp
         end if
         SPLBLUNT(I) = G4 + G5(I) + SCALE - 10*log10(LogVal)  ! equation mentioned there is plus but it is stated subtract, thus ''- 10*log10(1/G5Sum)'' 
     end do
@@ -2089,12 +2099,12 @@ SUBROUTINE THICK(C,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal)
     LogRC = LOG10AA( RC )
     
     ! Boundary layer thickness
-    DELTA0                     = 10.**(1.6569-0.9045*LogRC+0.0596*LogRC**2)*C ! (untripped)         Eq. (5) of [1]
-    IF (p%ITRIP /= ITRIP_None) DELTA0 = 10.**(1.892 -0.9045*LogRC+0.0596*LogRC**2)*C ! (heavily tripped)   Eq. (2) of [1]
+    DELTA0                     = Power10AA(1.6569-0.9045*LogRC+0.0596*LogRC**2)*C ! (untripped)         Eq. (5) of [1]
+    IF (p%ITRIP /= ITRIP_None) DELTA0 = Power10AA(1.892 -0.9045*LogRC+0.0596*LogRC**2)*C ! (heavily tripped)   Eq. (2) of [1]
     IF (p%ITRIP .EQ. ITRIP_Light) DELTA0=.6*DELTA0
     
     ! Pressure side boundary layer thickness, Eq (8) of [1]
-    DELTAP   = 10.**(-.04175*ALPSTAR+.00106*ALPSTAR**2)*DELTA0
+    DELTAP   = Power10AA(-.04175*ALPSTAR+.00106*ALPSTAR**2)*DELTA0
     
     ! Compute zero angle of attack displacement thickness
     IF (p%ITRIP /= ITRIP_None) THEN
@@ -2102,37 +2112,37 @@ SUBROUTINE THICK(C,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal)
         IF (RC .LE. .3E+06) THEN
            DSTR0 = .0601 * RC **(-.114)*C
         ELSE
-           DSTR0=10.**(3.411-1.5397*LogRC+.1059*LogRC**2)*C
+           DSTR0=Power10AA(3.411-1.5397*LogRC+.1059*LogRC**2)*C
         END IF
         ! Lightly tripped
         IF (p%ITRIP .EQ. ITRIP_Light) DSTR0 = DSTR0 * .6
     ELSE
         ! Untripped, Eq. (6) of [1]
-        DSTR0=10.**(3.0187-1.5397*LogRC+.1059*LogRC**2)*C
+        DSTR0=Power10AA(3.0187-1.5397*LogRC+.1059*LogRC**2)*C
     ENDIF
     
     ! Pressure side displacement thickness, Eq. (9) of [1]
-   DSTRP   = 10.**(-.0432*ALPSTAR+.00113*ALPSTAR**2)*DSTR0
+   DSTRP   = Power10AA(-.0432*ALPSTAR+.00113*ALPSTAR**2)*DSTR0
     !      IF (p%ITRIP .EQ. 3) DSTRP = DSTRP * 1.48 ! commented since itrip is never 3 check if meant 2.(EB_DTU)
 
     ! Suction side displacement thickness
    IF (p%ITRIP .EQ. ITRIP_Heavy) THEN
       ! Heavily tripped, Eq. (12) of [1]
       IF (ALPSTAR .LE. 5.) THEN
-         DSTRS=10.**(.0679*ALPSTAR)*DSTR0
+         DSTRS=Power10AA(.0679*ALPSTAR)*DSTR0
       ELSEIF (ALPSTAR .LE. StallVal) THEN
-         DSTRS = 0.381 * 10.**(.1516*ALPSTAR)*DSTR0
+         DSTRS = 0.381 * Power10AA(.1516*ALPSTAR)*DSTR0
       ELSE
-         DSTRS = 14.296 * 10.**(.0258*ALPSTAR)*DSTR0
+         DSTRS = 14.296 * Power10AA(.0258*ALPSTAR)*DSTR0
       ENDIF
    ELSE
         ! Untripped or lightly tripped, Eq. (15) of [1]
       IF (ALPSTAR .LE. 7.5) THEN
-         DSTRS =10.**(.0679*ALPSTAR)*DSTR0
+         DSTRS =Power10AA(.0679*ALPSTAR)*DSTR0
       ELSEIF(ALPSTAR .LE. StallVal) THEN
-         DSTRS = .0162*10.**(.3066*ALPSTAR)*DSTR0
+         DSTRS = .0162*Power10AA(.3066*ALPSTAR)*DSTR0
       ELSE
-         DSTRS = 52.42*10.**(.0258*ALPSTAR)*DSTR0
+         DSTRS = 52.42*Power10AA(.0258*ALPSTAR)*DSTR0
       ENDIF
    ENDIF
    
@@ -2313,9 +2323,9 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
         IF (SPLP(i_omega)    .LT. -100.) SPLP(i_omega)    = -100.
         IF (SPLS(i_omega)    .LT. -100.) SPLS(i_omega)    = -100.
 
-        !P1  = 10.**(SPLP(i_omega) / 10.)
-        !P2  = 10.**(SPLS(i_omega) / 10.)
-        !P4  = 10.**(SPLALPH(i_omega) / 10.)
+        !P1  = Power10AA(SPLP(i_omega) / 10.)
+        !P2  = Power10AA(SPLS(i_omega) / 10.)
+        !P4  = Power10AA(SPLALPH(i_omega) / 10.)
         !
         !SPLTBL(i_omega) = 10. * LOG10(P1 + P2 + P4)
     enddo
