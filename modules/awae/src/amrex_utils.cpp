@@ -133,10 +133,11 @@ struct HeaderInfo
 //   10+ncomp       level_steps        (equals the directory index suffix)
 //   11+ncomp       cell size
 //
-// Returns false if anything does not parse, so the caller can fall back to amrex_read_header_c
-// rather than guessing. Touches no AMReX state, so unlike PlotFileData it is safe to call from
-// several threads at once.
-bool parse_header_text(const std::string &dir, HeaderInfo &info)
+// Returns false if anything does not parse -- or if the plotfile is not one this reader accepts
+// (exactly three components, single level, level_steps matching the directory index when one is
+// given) -- so the caller falls back to amrex_read_header_c, which reports the problem properly
+// instead of guessing. Touches no AMReX global state.
+bool parse_header_text(const std::string &dir, HeaderInfo &info, long long expect_index = -1)
 {
     std::ifstream f(dir + "/Header");
     if (!f)
@@ -162,8 +163,10 @@ bool parse_header_text(const std::string &dir, HeaderInfo &info)
             return false;
         }
 
+        // The reader takes the first three components positionally as velocity and requires
+        // exactly three. Anything else must be rejected loudly by amrex_read_header_c, not read.
         const int ncomp = std::stoi(line[1]);
-        if (ncomp < 1)
+        if (ncomp != 3)
         {
             return false;
         }
@@ -200,7 +203,14 @@ bool parse_header_text(const std::string &dir, HeaderInfo &info)
                 return false;
             }
 
+            // level_steps is the solver step at which the plotfile was written and is what the
+            // directory suffix is generated from; a mismatch means the directory name does not
+            // describe its contents, so let the authoritative reader deal with it.
             info.level_steps = std::stoi(at(10 + ncomp));
+            if (expect_index >= 0 && info.level_steps != expect_index)
+            {
+                return false;
+            }
 
             std::istringstream ds(at(11 + ncomp));
             if (!(ds >> info.dx[0] >> info.dx[1] >> info.dx[2]))
@@ -335,6 +345,15 @@ extern "C"
         if (fine_level != 0)
         {
             set_err(ErrID_Fatal, std::string{dir} + ": finest level must be 0, got " + std::to_string(fine_level),
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
+
+        // Exactly three components are read positionally below; fewer would index past the FAB
+        const int ncomp = pf->nComp();
+        if (ncomp != 3)
+        {
+            set_err(ErrID_Fatal, std::string{dir} + ": data dimensionality must be 3, got " + std::to_string(ncomp),
                     routine, err_stat, err_msg, err_msg_len);
             return;
         }
@@ -483,6 +502,12 @@ extern "C"
                     routine, err_stat, err_msg, err_msg_len);
             return;
         }
+        if (first_index_num > std::numeric_limits<int>::max())
+        {
+            set_err(ErrID_Fatal, std::string{start_index} + ": directory index exceeds the 32-bit range of the index table",
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
 
         //----------------------------------------------------------------------
         // Time step matching tolerance
@@ -602,7 +627,7 @@ extern "C"
             std::array<int, 3> dims;
             std::array<double, 3> dx, origin;
             HeaderInfo hdr;
-            if (use_fast_header && parse_header_text(dir_path, hdr))
+            if (use_fast_header && parse_header_text(dir_path, hdr, index))
             {
                 time = hdr.time;
                 dims = hdr.dims;
@@ -717,6 +742,12 @@ extern "C"
         {
             if (idx_of_step[s] >= 0)
             {
+                if (idx_of_step[s] > std::numeric_limits<int>::max())
+                {
+                    set_err(ErrID_Fatal, path_of_step[s] + ": directory index exceeds the 32-bit range of the index table",
+                            routine, err_stat, err_msg, err_msg_len);
+                    return;
+                }
                 dir_indices[s] = static_cast<int>(idx_of_step[s]);
                 continue;
             }
