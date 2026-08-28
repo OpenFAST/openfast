@@ -107,9 +107,8 @@ if (AMREX_READER AND BUILD_FASTFARM)
   target_link_libraries(amrex_reader_utest awaelib nwtclibs testdrivelib)
   # Both sources are Fortran and main is a Fortran program, but awaelib pulls in the C++
   # awaelib_c, so CMake picks the C++ driver to link with and its crt1.o then looks for a
-  # C main. Pin the linker to Fortran and pull in the C++ runtime explicitly.
+  # C main. Pin the linker to Fortran, as glue-codes/fast-farm does for the same reason.
   set_target_properties(amrex_reader_utest PROPERTIES LINKER_LANGUAGE Fortran)
-  target_link_options(amrex_reader_utest PRIVATE -cxxlib)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
   add_dependencies(amrex_reader_utest copy_amrex_reader_utest_files)     # copy input files needed for this test
   add_dependencies(unit_tests amrex_reader_utest)     # add to the unit_tests target
