@@ -1217,8 +1217,8 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
     integer(intKi) :: I        ! I A generic index for DO loops.
     
     !compute reynolds number and mach number
-    M          = U  / p%SpdSound        ! MACH NUMBER
-    RC         = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
+    M          = abs(U  / p%SpdSound)        ! MACH NUMBER
+    RC         = abs(U  * C/p%KinVisc)       ! REYNOLDS NUMBER BASED ON  CHORD
     
     ! compute boundary layer thicknesses
     IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
@@ -1368,8 +1368,8 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     LOGICAL     :: SWITCH  !!LOGICAL FOR COMPUTATION OF ANGLE OF ATTACK CONTRIBUTION  
 
     ! Compute reynolds number and mach number
-    M          = U  / p%SpdSound
-    RC         = U  * C/p%KinVisc
+    M          = abs(U  / p%SpdSound)
+    RC         = abs(U  * C/p%KinVisc)
     
     ! Compute boundary layer thicknesses
     IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
@@ -1390,8 +1390,8 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     !          RETURN
     !      ENDIF
     ! Calculate the reynolds numbers based on pressure and suction displacement thickness
-    RDSTRS = DSTRS * U  / p%KinVisc
-    RDSTRP = DSTRP * U  / p%KinVisc
+    RDSTRS = abs(DSTRS * U  / p%KinVisc) !bjj: should this be absolute value?
+    RDSTRP = abs(DSTRP * U  / p%KinVisc)
     
     ! Determine peak strouhal numbers to be used for 'a' and 'b' curve calculations
     ST1    = .02 * M ** (-.6)                                                          ! Eq 32 from BPM Airfoil Self-noise and Prediction paper
@@ -1554,7 +1554,7 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP)
     ENDIF
     !! used to be  ALPTIPP = ALPHTIP * ALPRAT2
     ALPTIPP = ABS(ALPHTIP) * ALPRAT2
-    M          = U  / p%SpdSound ! MACH NUMBER
+    M          = abs(U  / p%SpdSound) ! MACH NUMBER
     ! Compute directivity function
     DBARH = DIRECTH_TE(M,THETA,PHI)
     IF (p%ROUND) THEN
@@ -1617,7 +1617,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,TINoise,p,SPLti)
   INTEGER(intKi)           :: I        !I A generic index for DO loops.
 
    !!!--- NAF NOISE IDENTICAL
-   Mach = U/p%SpdSound
+   Mach = abs(U/p%SpdSound)
    
    ! This part is recently added for height and surface roughness dependent estimation of turbulence intensity and turbulence scales
    !%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));              !% Gives larger  length scale
@@ -1861,8 +1861,8 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
   real(ReKi)                             :: LogVal   ! temp variable to help us not take log10(0)    ---
 
     ! Reynolds number and mach number
-        M          = U  / p%SpdSound
-        RC         = U  * C/p%KinVisc
+        M          = abs(U  / p%SpdSound)
+        RC         = abs(U  * C/p%KinVisc)
     ! Compute boundary layer thicknesses
     IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
         DELTAP = d99Var2
@@ -2281,7 +2281,7 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
     band_ratio = 2.**(1./3.)
 
     ! Mach number
-    Mach = U  / p%SpdSound
+    Mach = abs(U  / p%SpdSound)
 
     ! Directivity function
     DBARH = DIRECTH_TE(REAL(Mach,ReKi),THETA,PHI)
@@ -2292,7 +2292,7 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS)
         ! bjj: use ABS(Mach) so that the upper limit stays above the lower limit. U (and therefore Mach) carries the
         ! sign of Vrel, and a negative upper limit would reverse the integration interval and return a bogus spectrum.
         int_limits(1) = 0.0e0
-        int_limits(2) = 10*omega/(ABS(Mach)*p%SpdSound)
+        int_limits(2) = 10*omega/(Mach*p%SpdSound)
         ! Convert to third octave
         band_width = 2. * omega * (sqrt(band_ratio)-1./sqrt(band_ratio))
         
@@ -2358,7 +2358,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise_Deg,C,whichAirfoil)
 
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
-   RC = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
+   RC = abs(U  * C/p%KinVisc)       ! REYNOLDS NUMBER BASED ON  CHORD
 
 
       ! find the indices into the arrays representing coordinates of each dimension:
