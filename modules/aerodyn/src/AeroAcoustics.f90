@@ -206,8 +206,8 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
         ! if tno is on or one of the guidati models is on, check if we have airfoil coordinates
         DO k=1,size(AFInfo) ! if any of the airfoil coordinates are missing change calculation method
             IF( AFInfo(k)%NumCoords .lt. 5 )then
-               CALL WrScr( 'Airfoil coordinates are missing: If Full or Simplified Guidati or Bl Calculation is on coordinates are needed ' )
-               CALL WrScr( 'Calculation methods enforced as BPM for TBLTE and only Amiet for inflow ' )
+               CALL WrScr( 'Airfoil coordinates are missing: If Full or Simplified Guidati or Bl Calculation are used, coordinates are needed.' )
+               CALL WrScr( 'Calculation methods have been changed: BPM for TBLTE and only Amiet (BPM) for inflow ' )
                p%ITURB   = ITURB_BPM
                p%IInflow = IInflow_BPM
                exit ! stop checking do loop
