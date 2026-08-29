@@ -856,6 +856,19 @@ END FUNCTION Log10AA
 REAL(ReKi) FUNCTION Power10AA(X) RESULT(F)
    REAL(ReKi),INTENT(IN) :: X
    
+   !note that this "SAVE" is a deviation from standard OpenFAST code. Because it is used only to throw a warning if we ever
+   ! trigger numerical overflow, I'm not concerned about it getting reset per instance. If we don't like this behavior,
+   ! we could store this FirstWarning as a misc var and thread it into every call, or just remove the warning alltogether.
+   LOGICAL, SAVE :: FirstWarning = .TRUE.
+   
+   if (FirstWarning) then
+      if (X > AA_max_exp) then
+         call WrScr(' WARNING: noise predictions are extremely large. Use caution in interpreting results.')
+         FirstWarning = .FALSE.
+      end if
+   end if
+   
+   
     F = 10.0_ReKi ** min(X, AA_max_exp)
     
 END FUNCTION Power10AA
@@ -1006,11 +1019,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
    DO I = 1,p%numBlades
       DO J = p%startnode,p%NumBlNds  ! starts loop from startnode. 
          !------------------------------!!------------------------------!!------------------------------!!------------------------------!
-
-         Unoise =  u%Vrel(J,I) 
-         IF (abs(Unoise) < AA_u_min) then
-            Unoise = SIGN(AA_u_min, Unoise)
-         ENDIF
+         Unoise = max(abs(u%Vrel(J,I)), AA_u_min)
             
          AlphaNoise= u%AoANoise(J,I)
          call MPi2Pi(AlphaNoise) ! make sure this is in an appropriate range [-pi,pi]
@@ -1390,8 +1399,8 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     !          RETURN
     !      ENDIF
     ! Calculate the reynolds numbers based on pressure and suction displacement thickness
-    RDSTRS = abs(DSTRS * U  / p%KinVisc) !bjj: should this be absolute value?
-    RDSTRP = abs(DSTRP * U  / p%KinVisc)
+    RDSTRS = DSTRS * U  / p%KinVisc
+    RDSTRP = DSTRP * U  / p%KinVisc
     
     ! Determine peak strouhal numbers to be used for 'a' and 'b' curve calculations
     ST1    = .02 * M ** (-.6)                                                          ! Eq 32 from BPM Airfoil Self-noise and Prediction paper
@@ -1925,7 +1934,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         if ( G5Sum .ne. 0) then
            LogVal = MAX(AA_EPSILON,1/G5Sum)
         else
-           LogVal = AA_max_exp
+           LogVal = 1.0_ReKi ! note that this is reached only when the accumulated bluntness contribution is already ~ 10^-69
         end if
         SPLBLUNT(I) = G4 + G5(I) + SCALE - 10*log10(LogVal)  ! equation mentioned there is plus but it is stated subtract, thus ''- 10*log10(1/G5Sum)'' 
     end do
