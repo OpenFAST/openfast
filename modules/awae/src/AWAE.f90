@@ -800,9 +800,10 @@ subroutine ValidateTerrainSlices( p, InputFileData, ErrStat, ErrMsg )
 
          do iSrc = 1, nSrc
             iOut = iOut + 1
-            if (all(abs(gNrm) < 1.0e-6_ReKi) .and. allocated(srcNrm)) then
-               ! Use per-facet normal from STL
-               xyz = srcPts(:,iSrc) + o * srcNrm(:,iSrc)
+            if (all(abs(gNrm) < 1.0e-6_ReKi)) then
+               ! Default: pure vertical (Z) offset above the surface
+               xyz = srcPts(:,iSrc)
+               xyz(3) = xyz(3) + o
             else
                xyz = srcPts(:,iSrc) + o * gNrm
             end if

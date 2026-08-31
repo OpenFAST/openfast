@@ -937,8 +937,8 @@ Terrain-Following Sampling
 This optional block lets the user emit an arbitrary number of point
 clouds sampled from an STL surface or a plain-text/CSV point list.
 Each source can be lifted to multiple offset "sheets" along a
-user-provided normal, or along the per-facet normal read from an STL
-file. Typical use cases: a mountain surface sampled at three
+user-provided direction, or purely vertically (Z) when the keyword
+``default`` is used. Typical use cases: a mountain surface sampled at three
 rotor-tip heights, or a hand-authored hub-height sample grid over an
 irregular farm layout.
 
@@ -967,10 +967,10 @@ The block begins with the section header
    list is equivalent to a single ``0``.
 
    **OffsetNormal** — 3-vector, or the keyword ``default``.  Unit
-   vector along which the offsets are applied.  When ``default`` and
-   **SourceType** is ``STL``, the per-facet normal from the STL is
-   used instead.  An explicit vector is required when **SourceType**
-   is ``Point``.
+   vector along which the offsets are applied.  When ``default``,
+   offsets are applied as a pure vertical (Z) translation.
+   An explicit vector is required when a non-vertical offset
+   direction is desired.
 
    **SourceType** — keyword.  ``STL`` reads an ASCII or binary STL
    file and uses each facet's three vertices as sample points (no
