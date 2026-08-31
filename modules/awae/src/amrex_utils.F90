@@ -24,11 +24,12 @@ interface
       integer(kind=c_int), intent(in)       :: err_msg_len
    end subroutine
 
-   subroutine amrex_read_data_c(dir_path, data, err_stat, err_msg, err_msg_len) bind(c)
+   subroutine amrex_read_data_c(dir_path, data, dims_expected, err_stat, err_msg, err_msg_len) bind(c)
       import
       implicit none
       character(kind=c_char), intent(in)    :: dir_path(*)
       real(kind=c_float), intent(out)       :: data(*)
+      integer(kind=c_int), intent(in)       :: dims_expected(3)
       integer(kind=c_int), intent(out)      :: err_stat
       character(kind=c_char), intent(out)   :: err_msg(*)
       integer(kind=c_int), intent(in)       :: err_msg_len
@@ -129,8 +130,10 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
    integer(IntKi), intent(out)   :: ErrStat
    character(*), intent(out)     :: ErrMsg
 
+   character(*), parameter        :: RoutineName = 'amrex_read_data'
    character(c_char), allocatable :: dir_path(:)
    integer(c_int)    :: err_stat_c
+   integer(c_int)    :: dims_expected(3)
    character(c_char) :: err_msg_c(ErrMsgLen)
    integer(IntKi)    :: i
 
@@ -139,12 +142,21 @@ subroutine amrex_read_data(DirPath, gridData, ErrStat, ErrMsg)
 
 #ifdef ENABLE_AMREX_LIB
 
+   ! The C routine writes gridData by grid index, so it needs the extent of the destination to
+   ! stay inside it. The first dimension is the three velocity components.
+   if (size(gridData, 1) /= 3) then
+      call SetErrStat(ErrID_Fatal, "gridData must have 3 velocity components, got "// &
+                      trim(Num2LStr(size(gridData, 1))), ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+   dims_expected = int([size(gridData, 2), size(gridData, 3), size(gridData, 4)], c_int)
+
    ! Convert directory path to C type
    allocate(dir_path(len_trim(DirPath) + 1))
    dir_path = transfer(trim(DirPath) // c_null_char, dir_path) 
 
-   ! Call C++ function to read header
-   call amrex_read_data_c(dir_path, gridData, err_stat_c, err_msg_c, ErrMsgLen)
+   ! Call C++ function to read the grid data
+   call amrex_read_data_c(dir_path, gridData, dims_expected, err_stat_c, err_msg_c, ErrMsgLen)
 
    ! Transfer outputs back to fortran types
    ErrStat = int(err_stat_c, IntKi)
@@ -164,8 +176,8 @@ end subroutine
 ! simulation time recorded in their Header; no constant stride between
 ! successive directory indices is assumed, so LES output written with a varying
 ! solver time step is supported. Also checks that every requested step is
-! represented exactly once and that the grid properties are consistent
-! (size, origin, spacing).
+! represented -- and, among the directories scanned, represented only once --
+! and that the grid properties are consistent (size, origin, spacing).
 subroutine amrex_find_subvols(DirPath, SubVol, DT, NumStep, StartIndex, &
                               DirIndices, ErrStat, ErrMsg)
    character(*), intent(in)                   :: DirPath

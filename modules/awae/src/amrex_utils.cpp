@@ -339,7 +339,13 @@ extern "C"
 
     // Read the XYZ velocity grid data into the FAST.Farm ambient wind data array [XYZ,NX,NY,NZ].
     // This function cannot be called in parallel due to internal restrictions of the AMReX library.
-    void amrex_read_data_c(char const *dir, float *data, int &err_stat, char *err_msg, int &err_msg_len)
+    //
+    // `dims_expected` is the [NX,NY,NZ] extent of the caller's array. The plotfile must describe
+    // exactly that grid and must cover every cell of it: `data` is written by grid index, so a
+    // larger plotfile would write past the end of the caller's array, and one whose boxes leave
+    // holes would leave part of it holding whatever it held before.
+    void amrex_read_data_c(char const *dir, float *data, int const dims_expected[3],
+                           int &err_stat, char *err_msg, int &err_msg_len)
     {
         const std::string routine{"amrex_read_data_c"};
 
@@ -384,6 +390,40 @@ extern "C"
         for (auto i = 0; i < 3; ++i)
         {
             dims[i] = gridHi[i] - gridLo[i] + 1;
+        }
+
+        // The grid must be exactly the one the caller allocated for. amrex_find_subvols_c checks
+        // this at initialization for every directory it matches, but it may have used the Header
+        // text fast path, which reads the domain box rather than the box array; re-check here
+        // against the destination array so a plotfile that disagrees can never be written out of
+        // bounds or leave the destination partly unwritten.
+        if ((dims[0] != dims_expected[0]) || (dims[1] != dims_expected[1]) || (dims[2] != dims_expected[2]))
+        {
+            const auto dims_str = "(" + std::to_string(dims[0]) + ", " + std::to_string(dims[1]) + ", " + std::to_string(dims[2]) + ")";
+            const auto want_str = "(" + std::to_string(dims_expected[0]) + ", " + std::to_string(dims_expected[1]) + ", " + std::to_string(dims_expected[2]) + ")";
+            set_err(ErrID_Fatal, std::string{dir} + ": grid dimensions " + dims_str + " do not match the " + want_str +
+                                     " grid established during initialization",
+                    routine, err_stat, err_msg, err_msg_len);
+            return;
+        }
+
+        // The boxes of a plotfile box array are disjoint, so they tile the grid exactly when their
+        // volumes sum to its volume. Anything less leaves cells of `data` unwritten.
+        {
+            const auto ba = pf->boxArray(fine_level);
+            long long covered = 0;
+            for (auto i = 0; i < ba.size(); ++i)
+            {
+                covered += static_cast<long long>(ba[i].numPts());
+            }
+            const auto total = static_cast<long long>(dims[0]) * dims[1] * dims[2];
+            if (covered != total)
+            {
+                set_err(ErrID_Fatal, std::string{dir} + ": box array covers " + std::to_string(covered) + " of " +
+                                         std::to_string(total) + " grid cells; the plotfile does not tile its grid",
+                        routine, err_stat, err_msg, err_msg_len);
+                return;
+            }
         }
 
         // Read every component in one pass. The per-variable overload re-reads the level once per
@@ -443,9 +483,12 @@ extern "C"
     // time.initial_dt to fixed_dt, where the index stride changes but the output interval in
     // time does not.
     //
-    // Every step in [0, num_steps) must be claimed by exactly one directory; a step claimed by
-    // none (missing data) or by more than one (e.g. overlapping output from a restart) is a
-    // fatal error. Grid properties (size, origin, spacing) must be consistent across all steps.
+    // Every step in [0, num_steps) must be claimed by a directory; a step claimed by none
+    // (missing data) is a fatal error, as is a step claimed twice (e.g. overlapping output from a
+    // restart) among the directories actually scanned. Note that the duplicate check is best
+    // effort rather than exhaustive: the walk stops once the table is complete and a directory
+    // lands past the window, so a stale duplicate at a higher index than that one is never read.
+    // Grid properties (size, origin, spacing) must be consistent across all steps.
     //
     // `dir_indices` must point to storage for at least num_steps ints.
     void amrex_find_subvols_c(char const *dir_prefix, int &subvol, double &dt, int &num_steps, char const *start_index,
@@ -570,6 +613,7 @@ extern "C"
             std::string path;
             double time{0.0};
             double resid{0.0};
+            double tol{0.0};
         };
         std::vector<NearMiss> near_miss(num_steps);
 
@@ -580,8 +624,12 @@ extern "C"
         path_of_step[0] = first_path;
         time_of_step[0] = start_time;
 
-        // If path prefix has parent directory use it, otherwise assume current directory
-        const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : ".";
+        // If path prefix has parent directory use it, otherwise assume current directory. The
+        // directory is scanned by name, so keep the final component of the prefix separately: an
+        // iterator over "." yields "./name", which does not begin with a prefix that has no
+        // directory of its own.
+        const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : std::filesystem::path{"."};
+        const auto prefix_name = path_prefix.filename().string();
 
         // Collect the candidate directories in one pass, then walk them in ascending index order.
         // Ordering matters for cost, not correctness: within one run simulation time rises with the
@@ -603,9 +651,12 @@ extern "C"
             // Convert entry to path string
             const auto dir_path{dir_entry.path().string()};
 
-            // If path doesn't start with the prefix, continue. Anchored at position 0 so that
-            // an unrelated directory merely containing the prefix is not picked up.
-            if (dir_path.rfind(path_prefix.string(), 0) != 0)
+            // If the name doesn't start with the prefix, continue. Anchored at position 0 so that
+            // an unrelated directory merely containing the prefix is not picked up. Compared on the
+            // final component only: when the prefix carries no directory of its own the iterator
+            // still yields entries as "./name", which no anchored compare against a bare prefix
+            // would ever match.
+            if (dir_entry.path().filename().string().rfind(prefix_name, 0) != 0)
             {
                 continue;
             }
@@ -630,10 +681,8 @@ extern "C"
 
         std::sort(candidates.begin(), candidates.end());
 
-        const auto all_steps_claimed = [&]() {
-            for (int s = 0; s < num_steps; ++s) { if (idx_of_step[s] < 0) { return false; } }
-            return true;
-        };
+        // Step 0 is already claimed by the start directory
+        int n_claimed = 1;
 
         std::size_t visited = 0;
         for (auto const &cand : candidates)
@@ -685,7 +734,7 @@ extern "C"
             if (step >= static_cast<long>(num_steps))
             {
                 ++n_beyond_window;
-                if (all_steps_claimed())
+                if (n_claimed == num_steps)
                 {
                     // Table complete and this directory is past the window: nothing after it in
                     // ascending index order can be needed. Count the rest as skipped and stop.
@@ -704,7 +753,7 @@ extern "C"
                 auto &nm = near_miss[step];
                 if (!nm.have || resid < nm.resid)
                 {
-                    nm = NearMiss{true, dir_path, time, resid};
+                    nm = NearMiss{true, dir_path, time, resid, tol};
                 }
                 continue;
             }
@@ -752,6 +801,7 @@ extern "C"
             idx_of_step[step] = index;
             path_of_step[step] = dir_path;
             time_of_step[step] = time;
+            ++n_claimed;
         }
 
         //----------------------------------------------------------------------
@@ -785,7 +835,7 @@ extern "C"
                 msg += " Directory '" + near_miss[s].path + "' exists with header time ";
                 msg += std::to_string(near_miss[s].time) + " s, which is " + std::to_string(near_miss[s].resid);
                 msg += " s (" + std::to_string(near_miss[s].resid / dt) + " * dt) from the expected time -- outside ";
-                msg += "the matching tolerance.";
+                msg += "the " + std::to_string(near_miss[s].tol) + " s tolerance applied to it.";
             }
 
             msg += " Sub-volume directories are matched to FAST.Farm time steps by the simulation time recorded in ";

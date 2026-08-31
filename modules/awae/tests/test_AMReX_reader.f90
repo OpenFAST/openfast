@@ -30,7 +30,9 @@ contains
                   new_unittest("AMReX_test_find_subvols_real_tiled", AMReX_test_find_subvols_real_tiled), &
                   new_unittest("AMReX_test_read_real_tiled", AMReX_test_read_real_tiled), &
                   new_unittest("AMReX_test_header_text_agrees_on_tiled", AMReX_test_header_text_agrees_on_tiled), &
-                  new_unittest("AMReX_test_header_text_disagrees_on_subset", AMReX_test_header_text_disagrees_on_subset) &
+                  new_unittest("AMReX_test_header_text_disagrees_on_subset", AMReX_test_header_text_disagrees_on_subset), &
+                  new_unittest("AMReX_test_find_subvols_prefix_form", AMReX_test_find_subvols_prefix_form), &
+                  new_unittest("AMReX_test_read_data_wrong_dims", AMReX_test_read_data_wrong_dims) &
                   ]
    end subroutine
 
@@ -638,6 +640,51 @@ contains
       call check(error, timeT, timeA, thr=1.0e-9_DbKi, more="time agrees"); if (allocated(error)) return
       call check(error, dimsT(1), 256, more="text dims are the domain box"); if (allocated(error)) return
       call check(error, dimsA(1), 3, more="reader dims are the box union"); if (allocated(error)) return
+
+   end subroutine
+
+   ! The scan lists the parent directory and matches its entries against the prefix. The entry
+   ! paths the iterator hands back are not textually the prefix the caller passed -- a prefix with
+   ! no directory of its own comes back as "./name", and a redundant separator is normalized away
+   ! -- so the comparison has to be made on the final path component. Matching the whole path
+   ! instead finds nothing beyond the starting directory even though every directory is present.
+   subroutine AMReX_test_find_subvols_prefix_form(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data//subvolmultiple"
+      integer(IntKi), parameter  :: SubVol = 0
+      real(DbKi), parameter      :: DT = 0.6_DbKi
+      integer(IntKi), parameter  :: NumSteps = 5
+      character(*), parameter    :: StartIndex = "00000"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [0, 6, 12, 18, 24]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      call amrex_find_subvols(DirPath, SubVol, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="amrex_find_subvols: "//trim(ErrMsg)); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   ! amrex_read_data writes the destination by grid index, so a plotfile describing a different
+   ! grid must be rejected rather than written past the end of the caller's array. The fixture
+   ! grid is 3x4x5; ask for it into a 3x4x4 array.
+   subroutine AMReX_test_read_data_wrong_dims(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter :: DirPath = "data/subvolmultiple_0_00006"
+      real(SiKi), allocatable :: dat(:,:,:,:)
+      integer(IntKi)          :: ErrStat
+      character(ErrMsgLen)    :: ErrMsg
+
+      allocate(dat(3,3,4,4))
+      call amrex_read_data(DirPath, dat, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "do not match") > 0, .true., &
+                 more="message should report the dimension mismatch: "//trim(ErrMsg)); if (allocated(error)) return
 
    end subroutine
 

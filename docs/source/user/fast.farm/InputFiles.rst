@@ -1163,16 +1163,20 @@ Having obtained the grid properties from the starting sub-volume of each
 domain (low-resolution sub-volume 0 and each high-resolution sub-volume 1
 through **NumTurbines**), FAST.Farm verifies:
 
--  That every required time step is represented by exactly one directory:
-   steps 0 through **NumDT** - 1 for the low-resolution domain, and steps 0
+-  That every required time step is represented by a directory: steps 0
+   through **NumDT** - 1 for the low-resolution domain, and steps 0
    through (**NumDT** - 1) x (**DT_Low-AMReX** / **DT_High-AMReX**) for each
    high-resolution domain. A time step matched by no directory (missing
-   data) or by more than one (for example, overlapping output left behind
-   by a restart) is a fatal error naming the time step and its expected
-   simulation time. Directories whose header time falls between two
-   required steps are ignored, so the LES may write its sub-volumes at a
-   finer cadence than FAST.Farm reads them, provided the FAST.Farm time
-   step is an integer multiple of the output interval.
+   data) is a fatal error naming the time step and its expected simulation
+   time, as is a time step matched by more than one of the directories
+   scanned (for example, overlapping output left behind by a restart). The
+   duplicate check is not exhaustive: the scan stops early once every
+   required step has been matched, so a stale duplicate at a higher
+   directory index than the first directory past the simulation window is
+   not read. Directories whose header time falls between two required
+   steps are ignored, so the LES may write its sub-volumes at a finer
+   cadence than FAST.Farm reads them, provided the FAST.Farm time step is
+   an integer multiple of the output interval.
 
 -  That the grid dimensions, origin, and spacing are identical across
    all time steps for a given sub-volume.
