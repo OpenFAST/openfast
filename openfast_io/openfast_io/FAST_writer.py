@@ -617,7 +617,7 @@ class InputWriter_OpenFAST(object):
             blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
         else:
             EDbld_dict = self.fst_vt['ElastoDynBlade'][bldInd]
-            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile'+(bldInd+1)])
+            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile'+ str(bldInd+1)])
 
         f = open(blade_file, 'w')
 

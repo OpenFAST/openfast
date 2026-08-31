@@ -54,9 +54,9 @@ MODULE SysSubs
        MODULE PROCEDURE NWTC_gammaR8
     END INTERFACE
  
-    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
+    INTEGER, PARAMETER            :: ConRecL     = 180                               ! The record length for console output (maximum number of characters that can be written in WrOver(), must be larger than MaxWrScrLen)
     INTEGER, PUBLIC               :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
-    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
+    INTEGER, PARAMETER            :: MaxWrScrLen = ConRecL-1                         ! The maximum number of characters allowed to be written to a line in WrScr, must be smaller than ConRecL
     LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
     CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
     CHARACTER(*),  PARAMETER      :: OS_Desc     = 'GNU Fortran for Linux'           ! Description of the language/OS

@@ -38,6 +38,11 @@ if (AMREX_READER)
   target_compile_definitions(awaelib PRIVATE ENABLE_AMREX_LIB)
 endif()
 
+if (FASTFARM_TIMING_PRINTS)
+  target_sources(awaelib PRIVATE src/AWAE_timings.f90)
+  target_compile_definitions(awaelib PRIVATE FF_TIMING_PRINTS)
+endif()
+
 install(TARGETS awaelib awaelib_c
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin

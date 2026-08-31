@@ -1795,6 +1795,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry( memberLoads%F_If   , 6, member%NElements+1, 'memberLoads%F_If' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_WMG  , 6, member%NElements+1, 'memberLoads%F_WMG', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_IMG  , 6, member%NElements+1, 'memberLoads%F_IMG', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_sum  , 6, member%NElements+1, 'memberLoads%F_sum', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
 
    ! Shape dependent variables
    if (member%MSecGeom == MSecGeom_Cyl) then
@@ -1876,6 +1877,8 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    memberLoads%F_If     = 0.0_ReKi
    memberLoads%F_WMG    = 0.0_ReKi
    memberLoads%F_IMG    = 0.0_ReKi
+   memberLoads%F_sum    = 0.0_ReKi
+   memberLoads%F_tot    = 0.0_ReKi
 
    if (member%MSecGeom == MSecGeom_Cyl) then
       member%dRdl_mg       = 0.0_ReKi
@@ -2804,6 +2807,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NJoints    = InitInp%NJoints
    p%NumOuts    = InitInp%NumOuts
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
+   p%OutAll     = InitInp%OutAll
    p%WaveDisp   = InitInp%WaveDisp
    p%AMMod      = InitInp%AMMod
    p%HstMod     = InitInp%HstMod
@@ -3419,6 +3423,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( m%F_D_End      ,    3, p%NJoints, 'm%F_D_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_B_End      ,    6, p%NJoints, 'm%F_B_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_IMG_End    ,    6, p%NJoints, 'm%F_IMG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_tot_End    ,    6, p%NJoints, 'm%F_tot_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%I_MG_End     , 3, 3, p%NJoints, 'p%I_MG_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%F_WMG_End    ,    3, p%NJoints, 'p%F_WMG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%Mass_MG_End  ,       p%NJoints, 'p%Mass_MG_End'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -3448,6 +3453,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    m%F_D_End        = 0.0
    m%F_B_End        = 0.0
    m%F_IMG_End      = 0.0
+   m%F_tot_End      = 0.0
    p%DP_Const_End   = 0.0
    p%I_MG_End       = 0.0
    p%Mass_MG_End    = 0.0
@@ -4521,6 +4527,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !                                External Hydrodynamic Side Loads - End                               !
       !-----------------------------------------------------------------------------------------------------!
 
+      ! Compute total member force and moment about PRP if OutAll
+      !   Cannot use mesh force and moment above because multiple members can share the same end joints
+      !   Todo: Restructure the code above to avoid having to sum the load components twice.
+      !         This is ok for now because we only do this if p%OutAll = true
+      if (p%OutAll) then
+         m%memberLoads(im)%F_tot = 0.0_ReKi
+         do i = 1,N+1
+            m%memberLoads(im)%F_sum(:,i) = m%memberLoads(im)%F_D(:,i)   + m%memberLoads(im)%F_I(:,i)   + m%memberLoads(im)%F_A(:,i)  + &
+                                           m%memberLoads(im)%F_B(:,i)   + m%memberLoads(im)%F_BF(:,i)  + m%memberLoads(im)%F_IF(:,i) + &
+                                           m%memberLoads(im)%F_WMG(:,i) + m%memberLoads(im)%F_IMG(:,i)
+            m%memberLoads(im)%F_tot = m%memberLoads(im)%F_tot + m%memberLoads(im)%F_sum(:,i)
+            m%memberLoads(im)%F_tot(4:6) = m%memberLoads(im)%F_tot(4:6) + &
+                     cross_product( u%Mesh%Position(:,mem%NodeIndx(i))+u%Mesh%TranslationDisp(:,mem%NodeIndx(i))-u%PRP, &
+                                    m%memberLoads(im)%F_sum(1:3,i))
+         end do
+      end if
+
       !-----------------------------------------------------------------------------------------------------!
       !             Any end plate loads that are modeled on a per-member basis: F_B and F_BF                !
       !-----------------------------------------------------------------------------------------------------!
@@ -4755,13 +4778,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                                           + p%DragLoFSc_End(j)  * An_End(i) * p%DragConst_End(j) * abs(vmag) *max(vmag, 0.0_ReKi)
                m%F_D_End(i,j) = 2.0_ReKi * m%F_D_End(i,j)
             END IF
-            
-            y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
+            m%F_tot_End(i,j)  = m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
+            y%Mesh%Force(i,j) = y%Mesh%Force(i,j) + m%F_tot_End(i,j)
          ELSE ! Three moment components
-            y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
+            m%F_tot_End(i,j)  = m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
+            y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_tot_End(i,j)
          END IF
       END DO  ! I=1,6
-         
+      ! Compute and save the joint total moment about PRP for output file
+      m%F_tot_End(4:6,j) = m%F_tot_End(4:6,j) + cross_product( u%Mesh%Position(:,j)+u%Mesh%TranslationDisp(:,j)-u%PRP, m%F_tot_End(1:3,j))
+
    END DO  ! J = 1, p%NJoints
 
    !---------------------------------------------------------------------------------------------------------------!

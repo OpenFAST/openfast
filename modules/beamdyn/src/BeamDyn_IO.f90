@@ -2057,7 +2057,7 @@ SUBROUTINE BD_PrintSum( p, x, OtherState, m, InitInp, ErrStat, ErrMsg )
    WRITE (UnSu, '("#", 6(2x,A))') '    -----------------','-----------------','-----------------','-----------------','-----------------','-----------------'
    DO i=1,p%elem_total
        WRITE (UnSu, '("#", 1x,A,I4)') 'Element number: ',i
-       call yaml_write_array(UnSu, 'Init_Nodes_E'//num2lstr(i), transpose(p%uuN0(1:6,:,i)), 'DummyFmt', ErrStat, ErrMsg, AllFmt='5(ES18.5,","),ES18.5')
+       call yaml_write_array(UnSu, 'Init_Nodes_E'//num2lstr(i), transpose(p%uuN0(1:6,:,i)), 'DummyFmt', ErrStat, ErrMsg, AllFmt=' 5(ES18.5, ","), ES18.5')
    ENDDO
 
    WRITE (UnSu,'(/,A)')  '# Quadrature points position and rotation vectors'
@@ -2065,7 +2065,7 @@ SUBROUTINE BD_PrintSum( p, x, OtherState, m, InitInp, ErrStat, ErrMsg )
    WRITE (UnSu, '("#", 6(2x,A))') '    -----------------','-----------------','-----------------','-----------------','-----------------','-----------------'
    DO i=1,p%elem_total
        WRITE (UnSu, '("#", 1x,A,I4)')  'Element number: ',i
-       call yaml_write_array(UnSu, 'Init_QP_E'//num2lstr(i), transpose(p%uu0(1:6,:,i)), 'DummyFmt', ErrStat, ErrMsg, AllFmt='5(ES18.5,","),ES18.5')
+       call yaml_write_array(UnSu, 'Init_QP_E'//num2lstr(i), transpose(p%uu0(1:6,:,i)), 'DummyFmt', ErrStat, ErrMsg, AllFmt=' 5(ES18.5, ","), ES18.5')
    ENDDO
 
    WRITE (UnSu,'(/,A)')  '# Sectional stiffness and mass matrices at quadrature points (in IEC coordinates)'

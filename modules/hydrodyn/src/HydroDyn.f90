@@ -584,7 +584,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
      
             ! Were visualization meshes requested?
          InputFileData%Morison%VisMeshes = p%VisMeshes
-        
+            ! Additional Morison inputs to be initialized just in case
+         u%Morison%PtfmRefY = 0.0_ReKi
+         u%Morison%PRP = [0.0_ReKi,0.0_ReKi,0.0_ReKi]
             ! Initialize the Morison Element Calculations 
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
@@ -1204,14 +1206,11 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
          DO i=1,nTime
             CALL Morison_CopyInput(Inputs(i)%Morison, Inputs_Morison(i), MESH_NEWCOPY, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            ! Inputs_Morison(i)%PtfmRefY = Inputs(i)%PtfmRefY
             Inputs_Morison(i)%PtfmRefY = xd%PtfmRefY(i)
+            Inputs_Morison(i)%PRP = Inputs(i)%PRPMesh%Position(:,1) + Inputs(i)%PRPMesh%TranslationDisp(:,1)
          END DO
          CALL Morison_CopyInput(Inputs(1)%Morison, u_Morison, MESH_NEWCOPY, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         ! u_Morison%PtfmRefY = Inputs(1)%PtfmRefY
-         u_Morison%PtfmRefY = xd%PtfmRefY(1)
- 
          CALL Morison_Input_ExtrapInterp(Inputs_Morison, InputTimes, u_Morison, t, ErrStat2, ErrMsg2) ! get inputs at time t
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -1762,6 +1761,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
       IF ( u%Morison%Mesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
          u%Morison%PtfmRefY = PtfmRefY
+         u%Morison%PRP = u%PRPMesh%Position(:,1)+u%PRPMesh%TranslationDisp(:,1)
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, x%Morison, xd%Morison,  &
                                  z%Morison, OtherState%Morison, y%Morison, m%Morison, &
                                  ErrStat2, ErrMsg2, calcMorisonHstLdsLocal )
@@ -1777,9 +1777,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       if (Failed()) return
 
          ! Aggregate the sub-module outputs 
-      IF (p%Morison%NumOuts > 0) THEN
+      IF (p%Morison%NumOuts > 0 .or. p%Morison%OutAll) THEN
          J = p%NumOuts + 1
-         DO I=1, p%Morison%NumOuts
+         DO I=1, size(p%Morison%OutParam)
             y%WriteOutput(J) = y%Morison%WriteOutput(I)
             J = J + 1
          END DO

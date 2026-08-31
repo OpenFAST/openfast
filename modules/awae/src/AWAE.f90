@@ -35,6 +35,9 @@ module AWAE
 #ifdef _OPENMP
    use OMP_LIB
 #endif
+#ifdef FF_TIMING_PRINTS
+   use AWAE_Timings
+#endif
 
    implicit none
 
@@ -49,6 +52,17 @@ module AWAE
                                                !   continuous states, and updating discrete states
    public :: AWAE_CalcOutput                     ! Routine for computing outputs
    public :: AWAE_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+#ifdef FF_TIMING_PRINTS
+   ! exposing the AWAE_timings module public subroutines for use in FAST.Farm
+   public :: AWAE_ResetTiming                    ! Reset compile-time timing accumulators
+   public :: AWAE_GetTimingData                  ! Retrieve compile-time timing accumulators
+   public :: AWAE_DrainTimingData                ! Retrieve and reset compile-time timing accumulators
+   public :: AWAE_SetTimingStage                 ! Set timing label prefix used by AWAE_CalcOutput timing
+   public :: AWAE_MaxTimingEntries
+   public :: AWAE_WallTime
+   public :: AWAE_AddTiming
+   public :: AWAE_AddStageTiming
+#endif
 
 
       ! Unit testing routines
@@ -2701,10 +2715,16 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    real(ReKi), allocatable    :: AccUVW(:,:)
    logical                    :: WriteWindVTK
    real(DbKi)                 :: t
-   
+#ifdef FF_TIMING_PRINTS
+   real(DbKi)                                      :: tmSer0, tmPar0
+#endif
+
    errStat = ErrID_None
    errMsg  = ""
-   
+
+#ifdef FF_TIMING_PRINTS
+   if (len_trim(AWAE_TimingPrefix) == 0) AWAE_TimingPrefix = 'US:AWAE:UpdateStates'
+#endif
    ! If last time step, don't populate high-resolution grid
    if (n == (p%NumDT - 1)) then
       n_high_low = 0
@@ -2718,6 +2738,11 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    !----------------------------------------------------------------------------
    ! Populate low resolution grids based on ambient wind source
    !----------------------------------------------------------------------------
+
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
 
    select case (p%Mod_AmbWind)
 
@@ -2749,9 +2774,18 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
 
    end select
 
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('PopulateLowRes', tmSer0, tmPar0)
+#endif
+
    !----------------------------------------------------------------------------
    ! Populate high-resolution grid based on ambient wind source
    !----------------------------------------------------------------------------
+
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
 
    select case (p%Mod_AmbWind)
 
@@ -2874,11 +2908,20 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
 
    end select
 
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('PopulateHighRes', tmSer0, tmPar0)
+#endif
+
    !----------------------------------------------------------------------------
    ! Propagate WAT tracer
    !----------------------------------------------------------------------------
 
    if (p%WAT_Enabled) then
+
+#ifdef FF_TIMING_PRINTS
+      call cpu_time(tmSer0)
+      tmPar0 = AWAE_WallTime()
+#endif
 
       ! Find mean velocity of all turbine disks
       xd%Ufarm = 0.0_ReKi
@@ -2889,6 +2932,10 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
 
       ! add mean velocity * dt to the tracer for the position of the WAT box
       xd%WAT_B_Box = xd%WAT_B_Box + xd%Ufarm*real(p%dt_low,ReKi)
+
+#ifdef FF_TIMING_PRINTS
+      call AWAE_AddStageTiming('PropagateWAT', tmSer0, tmPar0)
+#endif
    endif
 
 contains
@@ -2934,6 +2981,9 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    CHARACTER(1024)                                :: FileName
    INTEGER(IntKi)                                 :: Un          ! unit number of opened file
    logical                                        :: WriteWindVTK
+#ifdef FF_TIMING_PRINTS
+   real(DbKi)                                     :: tmSer0, tmPar0
+#endif
 
    errStat = ErrID_None
    errMsg  = ""
@@ -2941,7 +2991,14 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    ! some variables and indexing
    n = nint(t / p%dt_low)
    n_high =  n*p%n_high_low
-   call ComputeLocals(n, u, p, y, m, ErrStat2, ErrMsg2); if (Failed()) return;
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
+   call ComputeLocals(n, u, p, y, m, errStat2, errMsg2);                if (Failed()) return;
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('ComputeLocals', tmSer0, tmPar0)
+#endif
 
    ! Set flag to write wind VTK files if it's the correct step
    WriteWindVTK = mod(n, p%WrDisSkp1) == 0
@@ -2952,18 +3009,42 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    !  m%iPlaneTurbTurb(2,p%NumTurbines,p%NumTurbines) (High-res grid)
    !----------------------------------------------------------------------------
 
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
    call CalcWakePointTurbineGridInteractions(p, m, u)
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('CalcWakePointTurbineGridInteractions', tmSer0, tmPar0)
+#endif
 
-   ! High-resolution grid output
-   call HighResGridCalcOutput(n_high, u, p, xd, y, m, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   ! high-res
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
+   call HighResGridCalcOutput(n_high, u, p, xd, y, m, errStat2, errMsg2);   if (Failed()) return;
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('HighResGridCalcOutput', tmSer0, tmPar0)
+#endif
 
    ! Low-resolution grid output
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = AWAE_WallTime()
+#endif
    call LowResGridCalcOutput(n, u, p, xd, y, m, ErrStat2, ErrMsg2)
    if (Failed()) return
+#ifdef FF_TIMING_PRINTS
+   call AWAE_AddStageTiming('LowResGridCalcOutput', tmSer0, tmPar0)
+#endif
 
    ! If it's time to write wind VTK files
    if (WriteWindVTK) then
+#ifdef FF_TIMING_PRINTS
+      call cpu_time(tmSer0)
+      tmPar0 = AWAE_WallTime()
+#endif
 
       if (p%WrDisWind) then
          call WriteDisWindFiles(n, p%WrDisSkp1, p, y, m, ErrStat2, ErrMsg2)
@@ -3039,6 +3120,9 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call Write_Planes_Data(p, u, m, n, t, Tstr)
       endif
 
+#ifdef FF_TIMING_PRINTS
+      call AWAE_AddStageTiming('WriteDisWind', tmSer0, tmPar0)
+#endif
    end if
 
    ! Feature 2: axis-aligned planar sampling (extent-controlled, own sampling rate)

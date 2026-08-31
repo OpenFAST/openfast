@@ -53,6 +53,12 @@ INTEGER                               :: ProgStrtTime (8)   !< An array containi
 REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without initialization)
 REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with initialization)
 
+#ifdef FF_TIMING_PRINTS
+REAL(DbKi)                            :: tmSer0
+REAL(DbKi)                            :: tmPar0
+REAL(DbKi)                            :: tmPar1
+#endif
+
 ! these should probably go in the FAST.Farm registry:
 type(All_FastFarm_Data)               :: farm  
  
@@ -74,6 +80,10 @@ type(All_FastFarm_Data)               :: farm
    
    farm%p%NumTurbines = 0
    t = 0
+
+#ifdef FF_TIMING_PRINTS
+   call FarmTiming_Reset()
+#endif
    
    InputFileName = "" ! make sure we don't think this is a "default" inputFileName if not specified on command line
    CALL CheckArgs( InputFileName, ErrStat=ErrStat, Flag=FlagArg )
@@ -85,7 +95,15 @@ type(All_FastFarm_Data)               :: farm
    endif
 
    ! Initialize AMReX library
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = FarmTiming_WallTime()
+#endif
    call amrex_init(arg_parmparse=.false.)
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmPar1)
+   call FarmTiming_Add('AMREX:Init', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
 
    CALL FAST_ProgStart( Farm_Ver ) ! put this after CheckArgs because CheckArgs assumes we haven't called this routine, yet.
    
@@ -101,8 +119,16 @@ type(All_FastFarm_Data)               :: farm
       ! Initialization
       !............................................................................................................................... 
       
-      call Farm_Initialize( farm, InputFileName, ErrStat, ErrMsg )
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmSer0)
+       tmPar0 = FarmTiming_WallTime()
+#endif
+       call Farm_Initialize( farm, InputFileName, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, ErrMsg, 'during driver initialization' )
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmPar1)
+       call FarmTiming_Add('INIT', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
             
       !...............................................................................................................................
       ! Initial Calculate Output
@@ -110,8 +136,16 @@ type(All_FastFarm_Data)               :: farm
          
       CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, farm%p%TMax )
          
-      call FARM_InitialCO(farm, ErrStat, ErrMsg)   
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmSer0)
+       tmPar0 = FarmTiming_WallTime()
+#endif
+       call FARM_InitialCO(farm, ErrStat, ErrMsg)   
          CALL CheckError( ErrStat, ErrMsg, 'during initial calculate output' )
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmPar1)
+       call FarmTiming_Add('ICO', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
       
    END IF
    
@@ -140,16 +174,32 @@ type(All_FastFarm_Data)               :: farm
       t = n_t_global*farm%p%DT_low
       
 
-      CALL FARM_UpdateStates(t, n_t_global, farm, ErrStat, ErrMsg)   
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmSer0)
+       tmPar0 = FarmTiming_WallTime()
+#endif
+       CALL FARM_UpdateStates(t, n_t_global, farm, ErrStat, ErrMsg)   
      
       CALL CheckError( ErrStat, ErrMsg  )
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmPar1)
+       call FarmTiming_Add('US', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
    
       t = (n_t_global+1)*farm%p%DT_low
       
 
-      CALL FARM_CalcOutput(t, farm, ErrStat, ErrMsg)   
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmSer0)
+       tmPar0 = FarmTiming_WallTime()
+#endif
+       CALL FARM_CalcOutput(t, farm, ErrStat, ErrMsg)   
 
       CALL CheckError( ErrStat, ErrMsg  )
+#ifdef FF_TIMING_PRINTS
+       call cpu_time(tmPar1)
+       call FarmTiming_Add('CO', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
       
       CALL SimStatus( PrevSimTime, PrevClockTime, t, farm%p%TMax )
          
@@ -160,12 +210,32 @@ type(All_FastFarm_Data)               :: farm
    ! End:
    !...............................................................................................................................         
    
-   call FARM_End(farm, ErrStat, ErrMsg)
+#ifdef FF_TIMING_PRINTS
+    call cpu_time(tmSer0)
+    tmPar0 = FarmTiming_WallTime()
+#endif
+    call FARM_End(farm, ErrStat, ErrMsg)
+#ifdef FF_TIMING_PRINTS
+    call cpu_time(tmPar1)
+    call FarmTiming_Add('END', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
 
    ! Finalize AMReX library
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmSer0)
+   tmPar0 = FarmTiming_WallTime()
+#endif
    call amrex_finalize()
+#ifdef FF_TIMING_PRINTS
+   call cpu_time(tmPar1)
+   call FarmTiming_Add('AMREX:Finalize', tmPar1-tmSer0, FarmTiming_WallTime()-tmPar0)
+#endif
    
    CALL RunTimes( ProgStrtTime, ProgStrtCPU, SimStrtTime, SimStrtCPU, t )   
+
+#ifdef FF_TIMING_PRINTS
+    call FarmTiming_PrintSummary()
+#endif
    call NormStop()
    
 CONTAINS

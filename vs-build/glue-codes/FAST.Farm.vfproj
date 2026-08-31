@@ -79,6 +79,7 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm.f90"/>
 			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_timings.f90"/>
 			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO_Params.f90"/>
 			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Subs.f90"/>
 			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/>

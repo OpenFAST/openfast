@@ -490,7 +490,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
       ErrStat = ErrID_None
@@ -521,7 +521,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
       ErrStat = ErrID_None
@@ -681,7 +681,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_REAL))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -714,7 +714,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -747,7 +747,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -926,7 +926,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R4Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -957,7 +957,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -989,7 +989,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1021,7 +1021,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1054,7 +1054,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R4Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*int(AryDim4,B8Ki)*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1087,7 +1087,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R8Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*int(AryDim4,B8Ki)*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1121,7 +1121,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R4Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*int(AryDim4,B8Ki)*int(AryDim5,B8Ki)*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1155,7 +1155,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R8Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(int(AryDim1,B8Ki)*int(AryDim2,B8Ki)*int(AryDim3,B8Ki)*int(AryDim4,B8Ki)*int(AryDim5,B8Ki)*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -7845,7 +7845,7 @@ end subroutine ReadR8AryWDefault
    INTEGER                      :: MaxLen                                       ! Maximum number of columns to be written to the screen.
    INTEGER                      :: NewLineIndx                                  ! The string index where the NewLine character occurs
 
-   CHARACTER(10)                :: Frm                                          ! Format specifier for the output.
+   CHARACTER(11)                :: Frm                                          ! Format specifier for the output.
    CHARACTER(Len=:),allocatable :: Str                                          ! The next string to be processed
 
 
@@ -7872,8 +7872,8 @@ end subroutine ReadR8AryWDefault
    Indent = MIN( Indent, MaxLen-2 )                                              ! at least 2 characters per line
    MaxLen = MaxLen - Indent
    IF ( Indent > 0 )  THEN
-      Frm    = '(1X,  X,A)'
-      WRITE (Frm(5:6),'(I2)')  Indent
+      Frm    = '(1X,   X,A)'
+      WRITE (Frm(5:7),'(I3)')  Indent
    ELSE
       Frm    = '(1X,A)'
    END IF

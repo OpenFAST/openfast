@@ -45,8 +45,8 @@ module WakeDynamics
    public :: WD_WritePlaneOutputs              ! Routine for IO Operation
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
-   public :: WD_TEST_Axi2Cart
-   public :: WD_TEST_AddVelocityCurl
+   public :: AddVelocityCurl                  ! Exposed for unit testing
+   public :: Axisymmetric2CartesianVel         ! Exposed for unit testing
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -561,6 +561,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Ct_azavg_filt       = 0.0_ReKi
    xd%Cq_azavg_filt       = 0.0_ReKi
    OtherState%firstPass   = .true.     
+   OtherState%MaxPlanesWarned = .false.
    
       ! miscvars to avoid the allocation per timestep
       ! Cartesian eddy viscosity (allocated even for polar if plane outputs are requested)
@@ -731,6 +732,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
    real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
+   integer(IntKi)                               :: oobIdx(0:p%MaxNumPlanes)  ! One extra slot: allows all p%MaxNumPlanes planes can be simultaneously out-of-bounds (corner case)
+   integer(IntKi)                               :: nOOB, iOOB, jOOB
+   logical                                      :: merged
 
    errStat = ErrID_None
    errMsg  = ""
@@ -974,7 +978,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%NumPlanes = xd%NumPlanes + 1.0
    if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
       xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
-      call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+      if (.not. OtherState%MaxPlanesWarned) then
+         call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+         OtherState%MaxPlanesWarned = .true.
+      end if
    end if
    if ( NINT(xd%NumPlanes) < 2 ) then
       ! Check just in case following implementation plan; however, this should never happen. Consider removing in the future.
@@ -984,23 +991,35 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
 
    ! --------------------------------------------------------------------------------
-   ! Merge consecutive out-of-bounds planes that are within 2*dr of each other
-   ! TODO: this assumes that only sequential planes will be out of bounds.  We may need to modify this for drones.
+   ! Merge any out-of-bounds planes within 2*dr of each other (non-sequential)
    ! --------------------------------------------------------------------------------
    maxPln = NINT(xd%NumPlanes) - 1
-   i = maxPln
-   do while (i >= 1)
-      ! Check if plane i is out of domain in any dimension
+
+   ! Collect indices of all OOB planes
+   nOOB = 0
+   do i = 0, maxPln
       if (PlaneOutOfBounds(xd%p_plane(:,i))) then
-         ! Check if the adjacent lower-index plane (i-1) is also out of domain
-         if (PlaneOutOfBounds(xd%p_plane(:,i-1))) then
-            ! Check spatial proximity
-            if (TwoNorm(xd%p_plane(:,i) - xd%p_plane(:,i-1)) <= 2.0_ReKi * p%dr) then
-               call MergeWakePlanes(i-1, i)
-            end if
-         end if
+         nOOB = nOOB + 1
+         oobIdx(nOOB) = i
       end if
-      i = i - 1
+   end do
+
+   ! Check all OOB pairs for proximity; work backwards so shifts don't invalidate lower indices
+   iOOB = nOOB
+   do while (iOOB >= 2)
+      merged = .false.
+      do jOOB = iOOB - 1, 1, -1
+         if (TwoNorm(xd%p_plane(:,oobIdx(iOOB)) - xd%p_plane(:,oobIdx(jOOB))) <= 2.0_ReKi * p%dr) then
+            call MergeWakePlanes(oobIdx(jOOB), oobIdx(iOOB))
+            ! Remove entry iOOB and adjust indices above the dropped plane
+            call AdjustOobIndices(oobIdx, nOOB, iOOB)
+            ! nOOB has shrunk; clamp iOOB so it still refers to a valid, populated entry
+            iOOB = min(iOOB, nOOB)
+            merged = .true.
+            exit
+         end if
+      end do
+      if (.not. merged) iOOB = iOOB - 1
    end do
 
    ! --------------------------------------------------------------------------------
@@ -1082,6 +1101,21 @@ contains
       logical                :: outOfBounds
       outOfBounds = any(p_pos < p%LowResBounds(:,1)) .or. any(p_pos > p%LowResBounds(:,2))
    end function PlaneOutOfBounds
+
+   !> Remove entry iRemoved from oobIdx and decrement stored indices above the dropped plane.
+   subroutine AdjustOobIndices(oobIdx, nOOB, iRemoved)
+      integer(IntKi), intent(inout) :: oobIdx(0:), nOOB
+      integer(IntKi), intent(in)    :: iRemoved
+      integer(IntKi) :: droppedPlane, k
+      droppedPlane = oobIdx(iRemoved)
+      do k = iRemoved, nOOB - 1
+         oobIdx(k) = oobIdx(k+1)
+      end do
+      nOOB = nOOB - 1
+      do k = 1, nOOB
+         if (oobIdx(k) > droppedPlane) oobIdx(k) = oobIdx(k) - 1
+      end do
+   end subroutine AdjustOobIndices
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j
@@ -1357,28 +1391,6 @@ subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
    
 end subroutine AddSwirl
 
-!> Test the curled wake velocity curl function
-subroutine WD_TEST_AddVelocityCurl()
-  
-   real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
-   real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
-   real(ReKi) :: y(2)=(/ 0., 2./)
-   real(ReKi) :: z(2)=(/-1.,1./)
-   real(ReKi) :: Gamma0
-
-   call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
-      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
-
-   if (abs(Vy_curl(1,1)+0.217109)>1e-4) then
-      print*,'Test fail for vy'
-      !STOP
-   endif
-   if (abs(Vz_curl(2,2)+4.459746e-2)>1e-4) then
-      print*,'>>> Test fail for vz'
-      !STOP
-   endif
-end subroutine
-
 
 
 !> Weighted average of two angles
@@ -1553,40 +1565,6 @@ function exp_safe(x)
       exp_safe = exp(x)
    endif
 end function exp_safe
-
-subroutine WD_TEST_Axi2Cart()
-   real(ReKi) :: r(4)=(/0.,1.,2.,3./)
-!    real(ReKi) :: y(4)=(/-1.,0.,1.5,2./)
-!    real(ReKi) :: z(5)=(/-2.5,-1.5,0.,1.5,2./)
-   real(ReKi) :: y(4)=(/0.,1. ,1.5, 2./)
-   real(ReKi) :: z(5)=(/0.,0.5,1. ,1.5,2./)
-   real(ReKi) :: Vr_axi(4)
-   real(ReKi) :: Vx_axi(4)
-   real(ReKi) :: Vx(4,5)=0.0_ReKi
-   real(ReKi) :: Vy(4,5)=0.0_ReKi
-   real(ReKi) :: Vz(4,5)=0.0_ReKi
-   integer :: i,j 
-   real(ReKi) :: Vr, r_tmp
-   Vr_axi=4._ReKi*r
-   Vx_axi=3._ReKi*r
-   call Axisymmetric2CartesianVel(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
-
-   do i = 1,size(y)
-      do j = 1,size(z)
-         r_tmp = sqrt(y(i)**2+z(j)**2)
-         Vr    = sqrt(Vy(i,j)**2 + Vz(i,j)**2)
-         if (abs(Vr-4*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vr',Vr,4*r_tmp
-            STOP
-         endif
-         if (abs(Vx(i,j)-3*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vx',Vx(i,j),3*r_tmp
-            STOP
-         endif
-      enddo
-   enddo
-end subroutine 
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------

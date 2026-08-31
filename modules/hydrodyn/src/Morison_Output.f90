@@ -7924,7 +7924,24 @@ SUBROUTINE MrsnOut_MapOutputs( y, p, u, m )
       END DO
    
    END IF ! p%NumOuts > 0
-   
+
+   IF (.not.p%OutAll) RETURN
+
+   I = p%NumOuts
+   DO im = 1,p%NMembers
+      y%WriteOutput(I+1:I+6) = m%MemberLoads(im)%F_tot
+      I = I + 6_IntKi
+   END DO
+   DO im = 1,p%NJoints
+      y%WriteOutput(I+1:I+6) = m%F_tot_End(:,im)
+      I = I + 6_IntKi
+   END DO
+   DO im = 1,p%NNodes
+      y%WriteOutput(I+1:I+3) = y%Mesh%Force(:,im)
+      y%WriteOutput(I+4:I+6) = y%Mesh%Moment(:,im)
+      I = I + 6_IntKi
+   END DO
+
 END SUBROUTINE MrsnOut_MapOutputs
 
 
@@ -8008,20 +8025,22 @@ SUBROUTINE MrsnOut_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
    ! Check that the variables in OutList are valid      
    !-------------------------------------------------------------------------------------------------      
       
-!   MrsnOut_Data%NumOuts = HDO_InitData%NumOuts   
-if (p%NumOuts > 0 ) THEN 
-   CALL SetOutParam( InitInp%OutList, p, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-END IF   
+   ! MrsnOut_Data%NumOuts = HDO_InitData%NumOuts
+   IF ( (p%NumOuts > 0_IntKi) .or. p%OutAll ) THEN
+      CALL SetOutParam( InitInp%OutList, p, ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
 
    
    !-------------------------------------------------------------------------------------------------      
    ! Open the output file, if necessary, and write the header
    !-------------------------------------------------------------------------------------------------      
    
-   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
+   IF ( .not. allocated(p%OutParam) ) return
+
+   IF ( size(p%OutParam) > 0 ) THEN ! Output has been requested so let's open an output file
       
-      ALLOCATE( y%WriteOutput( p%NumOuts ),  STAT = ErrStat )
+      ALLOCATE( y%WriteOutput( size(p%OutParam) ),  STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutput array.'
          ErrStat = ErrID_Fatal
@@ -8056,14 +8075,14 @@ END IF
          ! These variables are to help follow the framework template, but the data in them is simply a copy of data
          ! already available in the OutParam data structure
       
-      ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts), STAT = ErrStat )
+      ALLOCATE ( InitOut%WriteOutputHdr(size(p%OutParam)), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
       
-      ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts), STAT = ErrStat )
+      ALLOCATE ( InitOut%WriteOutputUnt(size(p%OutParam)), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
          ErrStat = ErrID_Fatal
@@ -8072,7 +8091,7 @@ END IF
       
       
  
-      DO I = 1,p%NumOuts
+      DO I = 1,size(p%OutParam)
          
          InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
          InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
@@ -8942,8 +8961,11 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    ! Allocate and set index, name, and units for the output channels
    ! If a selected output channel is not available in this module, set error flag.
    !-------------------------------------------------------------------------------------------------
-
-   ALLOCATE ( p%OutParam(1:p%NumOuts) , STAT=ErrStat2 )
+   if (p%OutAll) then
+      ALLOCATE ( p%OutParam(1:(p%NumOuts + 6_IntKi*p%NMembers + 6_IntKi*p%NJoints + 6_IntKi*p%NNodes)) , STAT=ErrStat2 )
+   else
+      ALLOCATE ( p%OutParam(1:p%NumOuts) , STAT=ErrStat2 )
+   endif
    IF ( ErrStat2 /= 0_IntKi )  THEN
       CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the Morison OutParam array.", ErrStat, ErrMsg, RoutineName )
       RETURN
@@ -8984,6 +9006,67 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       END IF
 
    END DO
+
+   if (p%OutAll) then
+      k = p%NumOuts
+      do i = 1,p%NMembers
+         p%OutParam(k+1)%Name  = "M"//trim(num2lstr(i))//"TotFxi"
+         p%OutParam(k+1)%Units = "(N)"
+         p%OutParam(k+2)%Name  = "M"//trim(num2lstr(i))//"TotFyi"
+         p%OutParam(k+2)%Units = "(N)"
+         p%OutParam(k+3)%Name  = "M"//trim(num2lstr(i))//"TotFzi"
+         p%OutParam(k+3)%Units = "(N)"
+         p%OutParam(k+4)%Name  = "M"//trim(num2lstr(i))//"TotMxi"
+         p%OutParam(k+4)%Units = "(N-m)"
+         p%OutParam(k+5)%Name  = "M"//trim(num2lstr(i))//"TotMyi"
+         p%OutParam(k+5)%Units = "(N-m)"
+         p%OutParam(k+6)%Name  = "M"//trim(num2lstr(i))//"TotMzi"
+         p%OutParam(k+6)%Units = "(N-m)"
+         do j = 1,6
+            k = k + 1_IntKi
+            p%OutParam(k)%Indx  = -1_IntKi
+            p%OutParam(k)%SignM =  1_IntKi
+         end do
+      end do
+      do i = 1,p%NJoints
+         p%OutParam(k+1)%Name  = "J"//trim(num2lstr(i))//"TotFxi"
+         p%OutParam(k+1)%Units = "(N)"
+         p%OutParam(k+2)%Name  = "J"//trim(num2lstr(i))//"TotFyi"
+         p%OutParam(k+2)%Units = "(N)"
+         p%OutParam(k+3)%Name  = "J"//trim(num2lstr(i))//"TotFzi"
+         p%OutParam(k+3)%Units = "(N)"
+         p%OutParam(k+4)%Name  = "J"//trim(num2lstr(i))//"TotMxi"
+         p%OutParam(k+4)%Units = "(N-m)"
+         p%OutParam(k+5)%Name  = "J"//trim(num2lstr(i))//"TotMyi"
+         p%OutParam(k+5)%Units = "(N-m)"
+         p%OutParam(k+6)%Name  = "J"//trim(num2lstr(i))//"TotMzi"
+         p%OutParam(k+6)%Units = "(N-m)"
+         do j = 1,6
+            k = k + 1_IntKi
+            p%OutParam(k)%Indx  = -1_IntKi
+            p%OutParam(k)%SignM =  1_IntKi
+         end do
+      end do
+      do i = 1,p%NNodes
+         p%OutParam(k+1)%Name  = "N"//trim(num2lstr(i))//"TotFxi"
+         p%OutParam(k+1)%Units = "(N)"
+         p%OutParam(k+2)%Name  = "N"//trim(num2lstr(i))//"TotFyi"
+         p%OutParam(k+2)%Units = "(N)"
+         p%OutParam(k+3)%Name  = "N"//trim(num2lstr(i))//"TotFzi"
+         p%OutParam(k+3)%Units = "(N)"
+         p%OutParam(k+4)%Name  = "N"//trim(num2lstr(i))//"TotMxi"
+         p%OutParam(k+4)%Units = "(N-m)"
+         p%OutParam(k+5)%Name  = "N"//trim(num2lstr(i))//"TotMyi"
+         p%OutParam(k+5)%Units = "(N-m)"
+         p%OutParam(k+6)%Name  = "N"//trim(num2lstr(i))//"TotMzi"
+         p%OutParam(k+6)%Units = "(N-m)"
+         do j = 1,6
+            k = k + 1_IntKi
+            p%OutParam(k)%Indx  = -1_IntKi
+            p%OutParam(k)%SignM =  1_IntKi
+         end do
+      end do
+   end if
 
    RETURN
 END SUBROUTINE SetOutParam

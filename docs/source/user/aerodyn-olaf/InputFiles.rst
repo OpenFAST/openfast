@@ -312,6 +312,59 @@ of a box of shape 5x20x30 and dimension 1200x300x295.  The grid contains both th
 The two other grids are vertical and horizontal planes containing only the velocity.
 
 
+Non-equidistant grid points
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, grid points along each axis (X, Y, Z) are equidistant, defined by
+the ``Start``, ``End``, and ``n`` columns of the grid output table.
+
+Alternatively, a ``Start`` cell can be given as a quoted filename instead of a
+number. In that case, the corresponding axis uses an explicit, user-defined
+list of coordinates read from that file, and the ``End``/``n`` columns for
+that axis are ignored.
+
+This choice is made independently for each axis, so a single grid can mix
+equidistant and list-defined axes (e.g., equidistant in X and Z, list-defined
+in Y), and a filename can be given for ``XStart``, ``YStart``, ``ZStart``, or
+any combination of the three.
+
+The referenced file must:
+
+- contain exactly one coordinate value per line,
+- list values in strictly ascending order (no duplicates),
+- contain no comments or blank lines,
+- be located in the same directory as the main OLAF input file.
+
+Example, requesting a non-equidistant Y-axis::
+
+    GridName  GridType  TStart  TEnd     DTOut     XStart    XEnd   nX      YStart     YEnd    nY   ZStart   ZEnd   nZ
+    (-)         (-)      (s)     (s)      (s)        (m)      (m)   (-)       (m)       (m)   (-)    (m)      (m)  (-)
+    "Yline"      1     default default  default      90       90     1   "Ypoints.dat"   -     -     100      100   1
+
+with ``Ypoints.dat`` (located next to the OLAF input file) containing::
+
+    -125
+    -100
+    -75
+    -50
+    -37.5
+    -25
+    -12.5
+     0
+     12.5
+     25
+     37.5
+     50
+     75
+     100
+     125
+
+.. note::
+   Vorticity output (``GridType=2``) requires equidistant spacing
+   and is not available for a grid that uses a list-defined axis.
+   Use ``GridType=1`` (velocity only) for such grids.
+
+
 Advanced Options
 ~~~~~~~~~~~~~~~~
 

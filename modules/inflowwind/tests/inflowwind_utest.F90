@@ -3,6 +3,7 @@ use, intrinsic :: iso_fortran_env, only: error_unit
 use testdrive, only: run_testsuite, new_testsuite, testsuite_type
 
 use test_bladed_wind, only: test_bladed_wind_suite
+use test_grid3d_field, only: test_grid3d_field_suite
 use test_hawc_wind, only: test_hawc_wind_suite
 use test_outputs, only: test_outputs_suite
 use test_steady_wind, only: test_steady_wind_suite
@@ -21,6 +22,7 @@ call SetConstants()
 
 testsuites = [ &
              new_testsuite("Bladed Wind", test_bladed_wind_suite), &
+             new_testsuite("Grid3D Field", test_grid3d_field_suite), &
              new_testsuite("HAWC Wind", test_hawc_wind_suite), &
              new_testsuite("Outputs", test_outputs_suite), &
              new_testsuite("Steady Wind", test_steady_wind_suite), &

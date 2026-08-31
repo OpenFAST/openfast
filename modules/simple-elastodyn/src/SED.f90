@@ -190,6 +190,14 @@ contains
       ! system inertia
       p%J_DT   = p%RotIner + p%GBoxRatio**2_IntKi * p%GenIner
 
+      ! Check for zero inertia with GenDOF enabled (would cause division by zero in CalcContStateDeriv)
+      if (p%GenDOF .and. EqualRealNos(real(p%J_DT, ReKi), 0.0_ReKi)) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3 = 'GenDOF is enabled but drivetrain inertia (RotIner + GBoxRatio^2*GenIner) is zero. '// &
+                   'This would result in a division by zero. Set RotIner or GenIner to a non-zero value, or disable GenDOF.'
+         return
+      end if
+
       ! Set the outputs
       call SetOutParam(InputFileData%OutList, p, ErrStat3, ErrMsg3 )
    end subroutine SED_SetParameters

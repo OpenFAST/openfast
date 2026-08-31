@@ -20,19 +20,19 @@ MODULE SysSubs
 
    ! This module contains routines with system-specific logic and references, including all references to the console unit, CU.
    ! It also contains standard (but not system-specific) routines it uses.
-   ! SysIVF.f90 is specifically for the Intel Visual Fortran for Windows compiler.   
+   ! SysIVF.f90 is specifically for the Intel Visual Fortran for Windows compiler.
    ! It contains the following routines:
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_ERF( x )
-   !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.   
+   !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.
    !     SUBROUTINE  FlushOut ( Unit )
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     SUBROUTINE  MKDIR( new_directory_path )
    !     SUBROUTINE  OpenCon
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
-   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
    !     SUBROUTINE  UsrAlarm
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
@@ -43,11 +43,11 @@ MODULE SysSubs
    USE NWTC_Base
 
    IMPLICIT NONE
-   
+
    INTERFACE NWTC_ERF ! Returns the ERF value of its argument
       MODULE PROCEDURE NWTC_ERFR4
       MODULE PROCEDURE NWTC_ERFR8
-   END INTERFACE   
+   END INTERFACE
 
    INTERFACE NWTC_gamma ! Returns the gamma value of its argument
          ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
@@ -55,9 +55,9 @@ MODULE SysSubs
       MODULE PROCEDURE NWTC_gammaR8
    END INTERFACE
 
-   INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
+   INTEGER, PARAMETER            :: ConRecL     = 180                               ! The record length for console output (maximum number of characters that can be written in WrOver(), must be larger than MaxWrScrLen)
    INTEGER, PUBLIC               :: CU          = 7                                 ! The I/O unit for the console (Can be changed with SetConsoleUnit subroutine)
-   INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
+   INTEGER, PARAMETER            :: MaxWrScrLen = ConRecL-1                         ! The maximum number of characters allowed to be written to a line in WrScr, must be smaller than ConRecL
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]; Note: NewLine change to ACHAR(10) here on Windows to fix issues with C/Fortran interoperability using WrScr
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows'! Description of the language/OS
@@ -115,20 +115,20 @@ Is_NaN = IEEE_IS_NAN( DblNum )
 RETURN
 END FUNCTION Is_NaN ! ( DblNum )
 !=======================================================================
-!> This function returns the ERF value of its argument. The result has a value equal  
-!! to the Gauss error function: 
+!> This function returns the ERF value of its argument. The result has a value equal
+!! to the Gauss error function:
 !! \f{equation}{
 !! \mathrm{erf}(x)=\frac{2}{\sqrt{\pi}}\int_0^x e^{-t^2}\,dt
 !! \f} \n
 !! Use NWTC_ERF (syssubs::nwtc_erf) instead of directly calling a specific routine in the generic interface.
 FUNCTION NWTC_ERFR4( x )
 
-   ! Returns the ERF value of its argument. The result has a value equal  
-   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+   ! Returns the ERF value of its argument. The result has a value equal
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt.
 
-   REAL(SiKi), INTENT(IN)     :: x           !< input 
+   REAL(SiKi), INTENT(IN)     :: x           !< input
    REAL(SiKi)                 :: NWTC_ERFR4  !< \f$\mathrm{erf}(x)\f$
-   
+
    NWTC_ERFR4 = ERF( x )
 
 END FUNCTION NWTC_ERFR4
@@ -136,14 +136,14 @@ END FUNCTION NWTC_ERFR4
 !> \copydoc syssubs::nwtc_erfr4
 FUNCTION NWTC_ERFR8( x )
 
-   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki), INTENT(IN)     :: x             ! input
    REAL(R8Ki)                 :: NWTC_ERFR8    ! this function
-   
+
    NWTC_ERFR8 = ERF( x )
 
 END FUNCTION NWTC_ERFR8
 !=======================================================================
-!> Returns the gamma value of its argument. The result has a value equal  
+!> Returns the gamma value of its argument. The result has a value equal
 !! to a processor-dependent approximation to the gamma function of x:
 !! \f{equation}{
 !! \mathrm{ \Gamma }(x) = \int_0^\infty t^{x-1}e^{-t}\,dt
@@ -153,9 +153,9 @@ FUNCTION NWTC_GammaR4( x )
 
 ! \mathrm{ \Gamma }(x) = \int_0^\infinity t^{x-1}e^{-t}\,dt
 
-   REAL(SiKi), INTENT(IN)     :: x             !< input 
+   REAL(SiKi), INTENT(IN)     :: x             !< input
    REAL(SiKi)                 :: NWTC_GammaR4  !< \f$\mathrm{\Gamma}(x)\f$
-   
+
    NWTC_GammaR4 = gamma( x )
 
 END FUNCTION NWTC_GammaR4
@@ -163,9 +163,9 @@ END FUNCTION NWTC_GammaR4
 !> \copydoc syssubs::nwtc_gammar4
 FUNCTION NWTC_GammaR8( x )
 
-   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki), INTENT(IN)     :: x             ! input
    REAL(R8Ki)                 :: NWTC_GammaR8  ! result
-   
+
    NWTC_GammaR8 = gamma( x )
 
 END FUNCTION NWTC_GammaR8
@@ -230,7 +230,7 @@ SUBROUTINE OpenCon()
 END SUBROUTINE OpenCon
 !=======================================================================
 !> This routine opens a binary input file with data stored in Big Endian format (created on a UNIX machine.)
-!! Data are stored in RecLen-byte records. (This routine is used for 
+!! Data are stored in RecLen-byte records. (This routine is used for
 SUBROUTINE OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
 
    IMPLICIT NONE
@@ -265,7 +265,7 @@ SUBROUTINE ProgExit ( StatCode )
    INTEGER, INTENT(IN)          :: StatCode                                      ! The status code to pass to the OS.
 
    CALL EXIT ( StatCode )
-   
+
    ! IF ( StatCode == 0 ) THEN
    !    STOP 0
    ! ELSE
@@ -276,12 +276,12 @@ SUBROUTINE ProgExit ( StatCode )
    ! END IF
 END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-!> This routine sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
-!! values for not-a-number and infinity in sindle and double 
-!! precision) This uses standard F03 intrinsic routines,  
+!> This routine sets the values of NaN_D, Inf_D, NaN, Inf (IEEE
+!! values for not-a-number and infinity in single and double
+!! precision) This uses standard F03 intrinsic routines,
 !! however Gnu has not yet implemented it, so we've placed this
 !! routine in the system-specific code.
-SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
 
    USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
 
@@ -290,7 +290,7 @@ SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
 
    REAL(ReKi), INTENT(inout)           :: Inf            !< IEEE value for NaN (not-a-number)
    REAL(ReKi), INTENT(inout)           :: NaN            !< IEEE value for Inf (infinity)
-   
+
    REAL(SiKi), INTENT(inout)           :: Inf_S          !< IEEE value for NaN (not-a-number) in single precision
    REAL(SiKi), INTENT(inout)           :: NaN_S          !< IEEE value for Inf (infinity) in single precision
 
@@ -298,12 +298,12 @@ SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
    Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
 
    NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-   Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+   Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)
 
    NaN_S = ieee_value(0.0_SiKi, ieee_quiet_nan)
    Inf_S = ieee_value(0.0_SiKi, ieee_positive_inf)
 
-END SUBROUTINE Set_IEEE_Constants  
+END SUBROUTINE Set_IEEE_Constants
 !=======================================================================
 !> This routine generates an alarm to warn the user that something went wrong.
 SUBROUTINE UsrAlarm()
@@ -327,11 +327,11 @@ END SUBROUTINE WrNR ! ( Str )
 SUBROUTINE WrOver ( Str )
 
    CHARACTER(*), INTENT(IN)     :: Str                                          !< The string to write to the screen.
-   
+
    INTEGER                      :: MaxLen                                       !< maximum length of string to be written to the screen (cannot exceed ConRecL here)
 
    ! When the file is opened using CARRIAGECONTROL='FORTRAN', the "+" character allows writing over the previous line. However, the Fortran carriage control has been deleted from the Fortran standard.
-   
+
    MaxLen = min(ConRecL-1, len(Str))
    if (MaxLen > 0) then
       WRITE (CU,'("+",A)')  Str(1:MaxLen)
@@ -404,11 +404,11 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
    ErrMsg = ''
-         
+
       ! Get the procedure addresses:
    do i=1,NWTC_MAX_DLL_PROC
       if ( len_trim( DLL%ProcName(i) ) > 0 ) then
-   
+
          ProcAddr = GetProcAddress( DLL%FileAddr, TRIM(DLL%ProcName(i))//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
          DLL%ProcAddr(i) = TRANSFER(ProcAddr, DLL%ProcAddr(i))  !convert INTEGER(LPVOID) to INTEGER(C_FUNPTR) [used only for compatibility with gfortran]
 
@@ -417,7 +417,7 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
             ErrMsg  = 'The procedure '//TRIM(DLL%ProcName(i))//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
             RETURN
          END IF
-         
+
       end if
    end do
 
@@ -435,12 +435,12 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    INTEGER(HANDLE)                           :: FileAddr    ! The address of file FileName.  (RETURN value from LoadLibrary in kernel32.f90)
    INTEGER(BOOL)                             :: Success     ! Whether or not the call to FreeLibrary was successful
-   
+
    ErrStat = ErrID_None
    ErrMsg = ''
-   
+
    IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
-   
+
    FileAddr = TRANSFER(DLL%FileAddr, FileAddr) !convert INTEGER(C_INTPTR_T) to INTEGER(HANDLE) [used only for compatibility with gfortran]
 
       ! Free the DLL:

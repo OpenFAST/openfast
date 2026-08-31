@@ -51,6 +51,7 @@ add_test(NAME beamdyn_utest COMMAND beamdyn_utest)
 add_executable(inflowwind_utest 
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/inflowwind_utest.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_bladed_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_grid3d_field.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_hawc_wind.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_outputs.F90
   ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_steady_wind.F90
@@ -60,6 +61,17 @@ add_executable(inflowwind_utest
 )
 target_link_libraries(inflowwind_utest ifwlib versioninfolib testdrivelib)
 add_test(NAME inflowwind_utest COMMAND inflowwind_utest)
+
+# WakeDynamics Unit Tests
+add_executable(wakedynamics_utest 
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/wakedynamics_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_addvelocitycurl.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_axisymmetric2cartesian.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_oobidx.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_maxplanes_warning.F90
+)
+target_link_libraries(wakedynamics_utest wdlib versioninfolib testdrivelib)
+add_test(NAME wakedynamics_utest COMMAND wakedynamics_utest)
 
 # NWTC Library Unit Tests
 add_executable(nwtc_library_utest 
@@ -91,6 +103,7 @@ add_custom_target(
     beamdyn_utest 
     aerodyn_utest 
     inflowwind_utest 
+    wakedynamics_utest 
 )
 
 if (AMREX_READER AND BUILD_FASTFARM)
