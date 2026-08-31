@@ -171,24 +171,59 @@ subroutine ReadWindAMReX(sv, n, p, Vamb, ErrStat, ErrMsg)
    integer(IntKi),           intent(  out)  :: ErrStat         !< Error status of the operation
    character(*),             intent(  out)  :: ErrMsg          !< Error message if errStat /= ErrID_None
   
+   character(*), parameter :: RoutineName = 'ReadWindAMReX'
    character(len=2048) :: FileName       ! Name of output file
-   character(len=12)   :: DirIndex       ! Directory index suffix 
-   integer(IntKi)      :: i
+   character(len=16)   :: DirIndex       ! Directory index suffix
+   character(len=16)   :: NumStr         ! Directory index without padding
+   integer(IntKi)      :: DirIndexNum    ! Directory index for this time step
+   integer(IntKi)      :: nLo, nHi       ! Bounds of the index table
 
-   ! If sub-volume is 0 then this is low-resolution file
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Look up the directory index for this time step. Sub-volume 0 is the low-resolution domain,
+   ! sub-volume 1+ is turbine sv's high-resolution domain. Both tables are indexed by the 0-based
+   ! time step number and were built in AWAE_IO_InitGridInfo by matching header times, so they
+   ! carry no assumption that the LES advanced at a constant time step.
    if (sv == 0) then
-      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaLow * n
+      if (.not. allocated(p%DirIndexLow)) then
+         call SetErrStat(ErrID_Fatal, 'the low-resolution AMReX directory table was never populated; '// &
+                         'AWAE_IO_InitGridInfo did not complete successfully.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      nLo = lbound(p%DirIndexLow, 1);  nHi = ubound(p%DirIndexLow, 1)
+      if (n < nLo .or. n > nHi) then
+         call SetErrStat(ErrID_Fatal, 'requested low-resolution AMReX time step '//trim(Num2LStr(n))// &
+                         ', but only steps '//trim(Num2LStr(nLo))//' through '//trim(Num2LStr(nHi))// &
+                         ' were located during initialization.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      DirIndexNum = p%DirIndexLow(n)
    else
-      write(DirIndex,'(i'//trim(Num2LStr(p%DirIndexLen))//')') p%DirStartNum + p%DirIndexDeltaHigh * n
+      if (.not. allocated(p%DirIndexHigh)) then
+         call SetErrStat(ErrID_Fatal, 'the high-resolution AMReX directory table was never populated; '// &
+                         'AWAE_IO_InitGridInfo did not complete successfully.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      nLo = lbound(p%DirIndexHigh, 1);  nHi = ubound(p%DirIndexHigh, 1)
+      if (n < nLo .or. n > nHi) then
+         call SetErrStat(ErrID_Fatal, 'requested high-resolution AMReX time step '//trim(Num2LStr(n))// &
+                         ' for sub-volume '//trim(Num2LStr(sv))//', but only steps '//trim(Num2LStr(nLo))// &
+                         ' through '//trim(Num2LStr(nHi))//' were located during initialization.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      DirIndexNum = p%DirIndexHigh(n)
    end if
 
-   ! Prepend zeros in front of index number
-   do i = 1, p%DirIndexLen
-      if (DirIndex(i:i) /= " ") exit
-      DirIndex(i:i) = '0'
-   end do
+   ! Left-pad the index with zeros to DirIndexLen characters, widening the field when the
+   ! index needs more digits.  DirIndexLen is a *minimum* width, matching amrex::Concatenate,
+   ! which pads with setw(mindigits); a fixed-width edit descriptor would overflow to '****'
+   ! once a run passes 10**DirIndexLen steps.
+   write(NumStr,'(I0)') DirIndexNum
+   DirIndex = repeat('0', max(0, p%DirIndexLen - len_trim(NumStr)))//trim(NumStr)
 
-   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//DirIndex(1:p%DirIndexLen)
+   FileName = trim(p%WindFilePath)//"_"//trim(num2lstr(sv))//"_"//trim(DirIndex)
    call amrex_read_data(FileName, Vamb, ErrStat, ErrMsg)
 
 end subroutine
@@ -249,8 +284,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: nChunksX, nChunksY
    integer(IntKi)                             :: nChunkPointsX, nChunkPointsY
    integer(IntKi), allocatable                :: ChunkIndicesX(:,:), ChunkIndicesY(:,:)
-   integer(IntKi)                             :: StartIndexNum, IndexDelta
-   
+   integer(IntKi)                             :: NumStepHigh          ! Number of high-res time slices required
+   integer(IntKi), allocatable                :: DirIndexTmp(:)       ! Per-sub-volume index table, for cross-checking
+
    errStat = ErrID_None
    errMsg  = ""
    
@@ -296,9 +332,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! Search directory for time slices of this sub-volume
-      call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, p%DirStartIndex, &
-                              StartIndexNum, p%DirIndexDeltaLow, ErrStat2, ErrMsg2)
+      ! Build the time step -> directory index table for the low-resolution sub-volume
+      call amrex_find_subvols(p%WindFilePath, 0, p%dt_low, p%NumDT, trim(p%DirStartIndex), &
+                              p%DirIndexLow, ErrStat2, ErrMsg2)
       if (Failed()) return
 
    end select
@@ -499,18 +535,37 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          call amrex_read_header(FileName, Time, dims, gridSpacing, origin, ErrStat2, ErrMsg2)
          if (Failed()) return
 
-         ! Search directory for time slices of this sub-volume
-         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, p%NumDT*p%n_high_low-1, p%DirStartIndex, &
-                                 StartIndexNum, IndexDelta, ErrStat2, ErrMsg2)
+         ! Number of high-resolution time slices actually read by AWAE_UpdateStates:
+         ! indices n*n_high_low + i_hl for n = 0..NumDT-1 and i_hl = 0..n_high_low, where
+         ! i_hl is forced to 0 on the final low-res step.  The largest index reached is
+         ! therefore (NumDT-1)*n_high_low, so (NumDT-1)*n_high_low + 1 slices are needed.
+         NumStepHigh = (p%NumDT - 1)*p%n_high_low + 1
+
+         ! Build the time step -> directory index table for this sub-volume
+         call amrex_find_subvols(p%WindFilePath, nt, p%dt_high, NumStepHigh, trim(p%DirStartIndex), &
+                                 DirIndexTmp, ErrStat2, ErrMsg2)
          if (Failed()) return
 
-         ! If first turbine, save index delta, otherwise ensure that it is the same
+         ! All high-resolution sub-volumes must be written at the same simulation times: FAST.Farm
+         ! has a single DT_High for the whole farm, so a sub-volume on a different set of times
+         ! would silently supply the wrong instant to its turbine. Keep sub-volume 1's table and
+         ! verify the rest match it element by element -- comparing only the stride, as was done
+         ! previously, accepts a sequence uniformly offset from the others.
          if (nt == 1) then
-            p%DirIndexDeltaHigh = IndexDelta
-         else if (p%DirIndexDeltaHigh /= IndexDelta) then
-            call SetErrStat(ErrID_Fatal, "got different index delta for sub-volume "//trim(Num2LStr(nt))//" than for sub-volume 1", &
-                            ErrStat, ErrMsg, RoutineName)
-            return
+            call move_alloc(DirIndexTmp, p%DirIndexHigh)
+         else
+            do n = 0, NumStepHigh - 1
+               if (DirIndexTmp(n) /= p%DirIndexHigh(n)) then
+                  call SetErrStat(ErrID_Fatal, "high-resolution AMReX sub-volume "//trim(Num2LStr(nt))// &
+                                  " is not written at the same simulation times as sub-volume 1. At high-resolution"// &
+                                  " time step "//trim(Num2LStr(n))//" sub-volume "//trim(Num2LStr(nt))// &
+                                  " uses directory index "//trim(Num2LStr(DirIndexTmp(n)))//" but sub-volume 1 uses "// &
+                                  trim(Num2LStr(p%DirIndexHigh(n)))//". All sub-volumes must be output at the same times.", &
+                                  ErrStat, ErrMsg, RoutineName)
+                  return
+               end if
+            end do
+            deallocate(DirIndexTmp)
          end if
 
       end select
