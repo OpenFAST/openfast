@@ -154,13 +154,13 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: iPlaneTurbChunk      !< First and Last plane index by source turbine and destination chunk index [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: LowResChunkHasWake      !< Low-res gridFirst and Last plane index by source turbine and destination chunk index [-]
     REAL(ReKi)  :: MaxWakePointSep = 0.0_ReKi      !< Maximum separation between wake points [-]
-    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: parallelFlag      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_s      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_e      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_s      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_e      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_cs      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !<  [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: parallelFlag      !< Flag indicating whether adjacent wake planes np and np+1 are (numerically) parallel for each turbine; dims: (plane-pair index np, turbine index nt) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_s      !< Perpendicular distance from the start wake-plane center p_plane(:,np,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt) [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_e      !< Perpendicular distance from the end wake-plane center p_plane(:,np+1,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt) [m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_s      !< Unit vector lying in the start wake plane (np) pointing from the plane-plane intersection line toward the start plane center; dims: (XYZ component, plane-pair index np, turbine index nt) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_e      !< Unit vector lying in the end wake plane (np+1) pointing from the plane-plane intersection line toward the end plane center; dims: (XYZ component, plane-pair index np, turbine index nt) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_cs      !< Closest point on the plane-plane intersection line to the start wake-plane center, p_plane(:,np,nt) - r_s*rhat_s; dims: (XYZ component, plane-pair index np, turbine index nt) [m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !< Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane      !< An array holding the output data for a 2D visualization slice [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane      !< An array holding the output data for a 2D visualization slice [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane      !< An array holding the output data for a 2D visualization slice [-]
@@ -169,7 +169,8 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_IfW_Low      !< InflowWind module outputs for the low-resolution grid [-]
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: planeDomainExit      !< Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed [-]
+    INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: planeDomainExit      !< Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine] [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum] [-]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  LRGChunkType  =======
@@ -194,7 +195,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nPoints = 0_IntKi      !< Number of spatial nodes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GridPoints      !< XYZ components (global positions) of the spatial discretization of the grid [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Size = 0.0_ReKi      !< XYZ size of the grid [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: Center = 0.0_ReKi      !< XYZ coordinates of the grid center [m]
     TYPE(LRGChunkType) , DIMENSION(:), ALLOCATABLE  :: WakeChunks      !< Chunks for updating grid from wake [-]
   END TYPE LRGParamType
 ! =======================
@@ -235,9 +235,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_Projection = 0_IntKi      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
     character(12)  :: DirStartIndex      !< Starting directory index suffix for AMReX wind [-]
     INTEGER(IntKi)  :: DirIndexLen = 0_IntKi      !< Number of characters in directory index [-]
-    INTEGER(IntKi)  :: DirStartNum = 0_IntKi      !< Starting directory index number for AMReX wind [-]
-    INTEGER(IntKi)  :: DirIndexDeltaLow = 0_IntKi      !< Directory index delta for low-resolution AMReX wind [-]
-    INTEGER(IntKi)  :: DirIndexDeltaHigh = 0_IntKi      !< Directory index delta for high-resolution AMReX wind [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexLow      !< AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DirIndexHigh      !< AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
     INTEGER(IntKi)  :: WrDisSkp1 = 0_IntKi      !< Number of time steps to skip plus one [-]
     LOGICAL  :: WrDisWind = .false.      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
@@ -251,8 +250,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: OutDisWindYvalid      !< Valid XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
-    CHARACTER(1024)  :: OutFileVTKRoot      !< The root name for VTK outputs [-]
+    CHARACTER(1024)  :: OutFileFFvtkRoot      !< The root name for VTK outputs [-]
+    CHARACTER(1024)  :: OutFileFFvtkWakeRoot      !< The root name for VTK outputs for wake planes [-]
+    CHARACTER(1024)  :: OutFileFFvtkWakeNullData      !< Null data for an unpopulated wake plane [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
+    INTEGER(IntKi)  :: VTK_tWidthPlanes = 0      !< Number of charactes for the VTK plane numbers [-]
+    LOGICAL  :: WrPlanes = .false.      !< Write plane data out [-]
     LOGICAL  :: WAT_Enabled = .false.      !< Switch for turning on and off wake-added turbulence [-]
     TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
   END TYPE AWAE_ParameterType
@@ -1441,16 +1444,28 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%V_amb_low_disk = SrcMiscData%V_amb_low_disk
    end if
    if (allocated(SrcMiscData%planeDomainExit)) then
-      LB(1:2) = lbound(SrcMiscData%planeDomainExit)
-      UB(1:2) = ubound(SrcMiscData%planeDomainExit)
+      LB(1:3) = lbound(SrcMiscData%planeDomainExit)
+      UB(1:3) = ubound(SrcMiscData%planeDomainExit)
       if (.not. allocated(DstMiscData%planeDomainExit)) then
-         allocate(DstMiscData%planeDomainExit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstMiscData%planeDomainExit(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%planeDomainExit.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       DstMiscData%planeDomainExit = SrcMiscData%planeDomainExit
+   end if
+   if (allocated(SrcMiscData%WakeVTK_StartN)) then
+      LB(1:2) = lbound(SrcMiscData%WakeVTK_StartN)
+      UB(1:2) = ubound(SrcMiscData%WakeVTK_StartN)
+      if (.not. allocated(DstMiscData%WakeVTK_StartN)) then
+         allocate(DstMiscData%WakeVTK_StartN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WakeVTK_StartN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%WakeVTK_StartN = SrcMiscData%WakeVTK_StartN
    end if
 end subroutine
 
@@ -1564,6 +1579,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%planeDomainExit)) then
       deallocate(MiscData%planeDomainExit)
    end if
+   if (allocated(MiscData%WakeVTK_StartN)) then
+      deallocate(MiscData%WakeVTK_StartN)
+   end if
 end subroutine
 
 subroutine AWAE_PackMisc(RF, Indata)
@@ -1626,6 +1644,7 @@ subroutine AWAE_PackMisc(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%V_amb_low_disk)
    call RegPackAlloc(RF, InData%planeDomainExit)
+   call RegPackAlloc(RF, InData%WakeVTK_StartN)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1703,6 +1722,7 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%V_amb_low_disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%planeDomainExit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WakeVTK_StartN); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyLRGChunkType(SrcLRGChunkTypeData, DstLRGChunkTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1819,7 +1839,6 @@ subroutine AWAE_CopyLRGParamType(SrcLRGParamTypeData, DstLRGParamTypeData, CtrlC
       DstLRGParamTypeData%GridPoints = SrcLRGParamTypeData%GridPoints
    end if
    DstLRGParamTypeData%Size = SrcLRGParamTypeData%Size
-   DstLRGParamTypeData%Center = SrcLRGParamTypeData%Center
    if (allocated(SrcLRGParamTypeData%WakeChunks)) then
       LB(1:1) = lbound(SrcLRGParamTypeData%WakeChunks)
       UB(1:1) = ubound(SrcLRGParamTypeData%WakeChunks)
@@ -1876,7 +1895,6 @@ subroutine AWAE_PackLRGParamType(RF, Indata)
    call RegPack(RF, InData%nPoints)
    call RegPackAlloc(RF, InData%GridPoints)
    call RegPack(RF, InData%Size)
-   call RegPack(RF, InData%Center)
    call RegPack(RF, allocated(InData%WakeChunks))
    if (allocated(InData%WakeChunks)) then
       call RegPackBounds(RF, 1, lbound(InData%WakeChunks), ubound(InData%WakeChunks))
@@ -1904,7 +1922,6 @@ subroutine AWAE_UnPackLRGParamType(RF, OutData)
    call RegUnpack(RF, OutData%nPoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GridPoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Size); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Center); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%WakeChunks)) deallocate(OutData%WakeChunks)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -2075,9 +2092,30 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
    DstParamData%DirStartIndex = SrcParamData%DirStartIndex
    DstParamData%DirIndexLen = SrcParamData%DirIndexLen
-   DstParamData%DirStartNum = SrcParamData%DirStartNum
-   DstParamData%DirIndexDeltaLow = SrcParamData%DirIndexDeltaLow
-   DstParamData%DirIndexDeltaHigh = SrcParamData%DirIndexDeltaHigh
+   if (allocated(SrcParamData%DirIndexLow)) then
+      LB(1:1) = lbound(SrcParamData%DirIndexLow)
+      UB(1:1) = ubound(SrcParamData%DirIndexLow)
+      if (.not. allocated(DstParamData%DirIndexLow)) then
+         allocate(DstParamData%DirIndexLow(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DirIndexLow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%DirIndexLow = SrcParamData%DirIndexLow
+   end if
+   if (allocated(SrcParamData%DirIndexHigh)) then
+      LB(1:1) = lbound(SrcParamData%DirIndexHigh)
+      UB(1:1) = ubound(SrcParamData%DirIndexHigh)
+      if (.not. allocated(DstParamData%DirIndexHigh)) then
+         allocate(DstParamData%DirIndexHigh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%DirIndexHigh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%DirIndexHigh = SrcParamData%DirIndexHigh
+   end if
    if (allocated(SrcParamData%IfW)) then
       LB(1:1) = lbound(SrcParamData%IfW)
       UB(1:1) = ubound(SrcParamData%IfW)
@@ -2172,8 +2210,12 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%OutDisWindYvalid = SrcParamData%OutDisWindYvalid
    end if
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
-   DstParamData%OutFileVTKRoot = SrcParamData%OutFileVTKRoot
+   DstParamData%OutFileFFvtkRoot = SrcParamData%OutFileFFvtkRoot
+   DstParamData%OutFileFFvtkWakeRoot = SrcParamData%OutFileFFvtkWakeRoot
+   DstParamData%OutFileFFvtkWakeNullData = SrcParamData%OutFileFFvtkWakeNullData
    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
+   DstParamData%VTK_tWidthPlanes = SrcParamData%VTK_tWidthPlanes
+   DstParamData%WrPlanes = SrcParamData%WrPlanes
    DstParamData%WAT_Enabled = SrcParamData%WAT_Enabled
    DstParamData%WAT_FlowField => SrcParamData%WAT_FlowField
 end subroutine
@@ -2205,6 +2247,12 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%z)) then
       deallocate(ParamData%z)
+   end if
+   if (allocated(ParamData%DirIndexLow)) then
+      deallocate(ParamData%DirIndexLow)
+   end if
+   if (allocated(ParamData%DirIndexHigh)) then
+      deallocate(ParamData%DirIndexHigh)
    end if
    if (allocated(ParamData%IfW)) then
       LB(1:1) = lbound(ParamData%IfW)
@@ -2274,9 +2322,8 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%Mod_Projection)
    call RegPack(RF, InData%DirStartIndex)
    call RegPack(RF, InData%DirIndexLen)
-   call RegPack(RF, InData%DirStartNum)
-   call RegPack(RF, InData%DirIndexDeltaLow)
-   call RegPack(RF, InData%DirIndexDeltaHigh)
+   call RegPackAlloc(RF, InData%DirIndexLow)
+   call RegPackAlloc(RF, InData%DirIndexHigh)
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
       call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
@@ -2298,8 +2345,12 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%OutDisWindY)
    call RegPackAlloc(RF, InData%OutDisWindYvalid)
    call RegPack(RF, InData%OutFileRoot)
-   call RegPack(RF, InData%OutFileVTKRoot)
+   call RegPack(RF, InData%OutFileFFvtkRoot)
+   call RegPack(RF, InData%OutFileFFvtkWakeRoot)
+   call RegPack(RF, InData%OutFileFFvtkWakeNullData)
    call RegPack(RF, InData%VTK_tWidth)
+   call RegPack(RF, InData%VTK_tWidthPlanes)
+   call RegPack(RF, InData%WrPlanes)
    call RegPack(RF, InData%WAT_Enabled)
    call RegPack(RF, associated(InData%WAT_FlowField))
    if (associated(InData%WAT_FlowField)) then
@@ -2356,9 +2407,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Mod_Projection); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirStartIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DirIndexLen); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirStartNum); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirIndexDeltaLow); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DirIndexDeltaHigh); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DirIndexLow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DirIndexHigh); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%IfW)) deallocate(OutData%IfW)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -2384,8 +2434,12 @@ subroutine AWAE_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%OutDisWindY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindYvalid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%OutFileVTKRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkWakeRoot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFileFFvtkWakeNullData); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_tWidth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_tWidthPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_Enabled); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WAT_FlowField)) deallocate(OutData%WAT_FlowField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return

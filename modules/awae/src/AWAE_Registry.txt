@@ -127,13 +127,13 @@ typedef   ^ MiscVarType    IntKi       iPlaneTurbTurb        {:}{:}{:} - -  "Fir
 typedef   ^ MiscVarType    IntKi       iPlaneTurbChunk       {:}{:}{:} - -  "First and Last plane index by source turbine and destination chunk index" -
 typedef   ^ MiscVarType    Logical     LowResChunkHasWake          {:} - -  "Low-res gridFirst and Last plane index by source turbine and destination chunk index" -
 typedef   ^ MiscVarType    ReKi        MaxWakePointSep              -  - -  "Maximum separation between wake points" -
-typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
+typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "Flag indicating whether adjacent wake planes np and np+1 are (numerically) parallel for each turbine; dims: (plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "Perpendicular distance from the start wake-plane center p_plane(:,np,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "Perpendicular distance from the end wake-plane center p_plane(:,np+1,nt) to the intersection line of adjacent (non-parallel) wake planes np and np+1; dims: (plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "Unit vector lying in the start wake plane (np) pointing from the plane-plane intersection line toward the start plane center; dims: (XYZ component, plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "Unit vector lying in the end wake plane (np+1) pointing from the plane-plane intersection line toward the end plane center; dims: (XYZ component, plane-pair index np, turbine index nt)" -
+typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "Closest point on the plane-plane intersection line to the start wake-plane center, p_plane(:,np,nt) - r_s*rhat_s; dims: (XYZ component, plane-pair index np, turbine index nt)" m
+typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "Closest point on the plane-plane intersection line to the end wake-plane center, p_plane(:,np+1,nt) - r_e*rhat_e; dims: (XYZ component, plane-pair index np, turbine index nt)" m
 #
 typedef   ^ MiscVarType    SiKi     outVizXYPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
 typedef   ^ MiscVarType    SiKi     outVizYZPlane  {:}{:}{:}{:} - - "An array holding the output data for a 2D visualization slice" -
@@ -145,7 +145,10 @@ typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High {:} - -  "InflowWi
 
 #wake added turbulence
 typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
-typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:} 0 -  "Value indicates edge number (0: still in domain, +/-1: +/-X, +/-2: +/-Y, +/-3: +/-Z) the plane crossed" -
+typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:}{:} 0 -  "Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine]" -
+
+#visualization
+typedef   ^ MiscVarType    IntKi    WakeVTK_StartN       {:}{:} - - "Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum]" -
 
 # Low-resolution grid chunk data
 typedef   ^ LRGChunkType     IntKi    iChunk                  {3} -  -  "XYZ index of chunk" -
@@ -166,7 +169,6 @@ typedef   ^ LRGParamType     IntKi    nXYZ                    {3} -  -  "Number 
 typedef   ^ LRGParamType     IntKi    nPoints                  -  -  -  "Number of spatial nodes" -
 typedef   ^ LRGParamType     ReKi     GridPoints           {:}{:} -  -  "XYZ components (global positions) of the spatial discretization of the grid" m
 typedef   ^ LRGParamType     ReKi     Size                    {3} -  -  "XYZ size of the grid" m
-typedef   ^ LRGParamType     ReKi     Center                  {3} -  -  "XYZ coordinates of the grid center" m
 typedef   ^ LRGParamType     LRGChunkType  WakeChunks         {:} -  -  "Chunks for updating grid from wake" -
 
 
@@ -207,9 +209,8 @@ typedef   ^ ParameterType  ReKi             C_ScaleDiam      -  - -   "Normalize
 typedef   ^ ParameterType  IntKi            Mod_Projection   -  - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
 typedef   ^ ParameterType  character(12)    DirStartIndex    -  - -    "Starting directory index suffix for AMReX wind" -
 typedef   ^ ParameterType  IntKi            DirIndexLen      -  - -    "Number of characters in directory index"
-typedef   ^ ParameterType  IntKi            DirStartNum      -  - -    "Starting directory index number for AMReX wind"
-typedef   ^ ParameterType  IntKi            DirIndexDeltaLow -  - -    "Directory index delta for low-resolution AMReX wind"
-typedef   ^ ParameterType  IntKi            DirIndexDeltaHigh -  - -   "Directory index delta for high-resolution AMReX wind"
+typedef   ^ ParameterType  IntKi            DirIndexLow     {:} - -    "AMReX directory index for each low-resolution time step; 0-based, indexed by the time step number n" -
+typedef   ^ ParameterType  IntKi            DirIndexHigh    {:} - -    "AMReX directory index for each high-resolution time step; 0-based, shared by all high-resolution sub-volumes" -
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts           -  - -   "Number of parameters in the output list (number of outputs requested)"      -
@@ -225,8 +226,12 @@ typedef  ^  ParameterType  IntKi            NOutDisWindXZ      -  - -   "Number 
 typedef  ^  ParameterType  ReKi             OutDisWindY       {:} - -   "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^  ParameterType  LOGICAL          OutDisWindYvalid  {:}   - - "Valid XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" -
 typedef  ^  ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
-typedef  ^  ParameterType  CHARACTER(1024)  OutFileVTKRoot     -  - -   "The root name for VTK outputs" -
+typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkRoot   -  - -   "The root name for VTK outputs" -
+typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeRoot -  - -   "The root name for VTK outputs for wake planes" -
+typedef  ^  ParameterType  CHARACTER(1024)  OutFileFFvtkWakeNullData - - -   "Null data for an unpopulated wake plane" -
 typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number of characters for VTK timestamp outputs" -
+typedef  ^  ParameterType  IntKi            VTK_tWidthPlanes   -  0 -   "Number of charactes for the VTK plane numbers" -
+typedef  ^  ParameterType  LOGICAL          WrPlanes           - .false. - "Write plane data out" -
 #typedef  ^  ParameterType  OutParmType      OutParam          {:} - -  "Names and units (and other characteristics) of all requested output parameters"      -
 #wake added turbulence
 typedef  ^  ParameterType  Logical          WAT_Enabled        -  - -   "Switch for turning on and off wake-added turbulence" -

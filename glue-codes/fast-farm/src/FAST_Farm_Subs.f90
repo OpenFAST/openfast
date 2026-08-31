@@ -222,7 +222,11 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    call AllocAry( farm%p%MaxNumPlanes, farm%p%NumTurbines, 'farm%p%MaxNumPlanes', ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (Failed()) return
    do i=1,farm%p%NumTurbines
       ! Eventually, we will have different settings for different rotors
-      farm%p%MaxNumPlanes(i) = ceiling( 15.0 * ( WD_InitInput%InputFileData%NumDFull + WD_InitInput%InputFileData%NumDBuff ) / AWAE_InitInput%InputFileData%C_Meander )
+      if (WD_InitInput%InputFileData%Mod_Wake == Mod_Wake_Polar) then
+         farm%p%MaxNumPlanes(i) = ceiling( 18.0 * ( WD_InitInput%InputFileData%NumDFull + WD_InitInput%InputFileData%NumDBuff ) / AWAE_InitInput%InputFileData%C_Meander )
+      else
+         farm%p%MaxNumPlanes(i) = ceiling( 54.0 * ( WD_InitInput%InputFileData%NumDFull + WD_InitInput%InputFileData%NumDBuff ) )
+      endif
       farm%p%MaxNumPlanes(i) = max( 2, min( farm%p%MaxNumPlanes(i) , farm%p%n_TMax + 2 ) )
    end do
 
@@ -698,6 +702,12 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          WD_InitInp%TurbNum      = nt
          WD_InitInp%MaxNumPlanes = farm%p%MaxNumPlanes(nt)
          WD_InitInp%OutFileRoot  = farm%p%OutFileRoot
+         WD_InitInp%LowResBounds(1,1) = farm%p%X0_low
+         WD_InitInp%LowResBounds(2,1) = farm%p%Y0_low
+         WD_InitInp%LowResBounds(3,1) = farm%p%Z0_low
+         WD_InitInp%LowResBounds(1,2) = farm%p%X0_low + farm%p%dX_low * real(farm%p%nX_low - 1, ReKi)
+         WD_InitInp%LowResBounds(2,2) = farm%p%Y0_low + farm%p%dY_low * real(farm%p%nY_low - 1, ReKi)
+         WD_InitInp%LowResBounds(3,2) = farm%p%Z0_low + farm%p%dZ_low * real(farm%p%nZ_low - 1, ReKi)
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
