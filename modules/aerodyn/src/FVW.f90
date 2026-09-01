@@ -30,9 +30,6 @@ module FVW
    public   :: FVW_CalcOutput
    public   :: FVW_UpdateStates
 
-   ! parameter for deciding if enough time has elapsed (Wake calculation, and vtk output)
-   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
-
 contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
