@@ -249,6 +249,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
+   AWAE_InitInput%InputFileData%OutAllPlanes = WD_InitInput%InputFileData%OutAllPlanes
    AWAE_InitInput%MaxPlanes                  = MAXVAL(farm%p%MaxNumPlanes)
    AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low

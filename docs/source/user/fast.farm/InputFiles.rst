@@ -886,6 +886,9 @@ details on time-series results files.
 
 
 **OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+This controls both the Wake Dynamics plane files written to ``vtk_ff_planes`` and the
+wake-plane files written by the ambient wind and array effects module to ``vtk_ff/wakes``
+(see :numref:`FF:Output:Planes`).
 Note: this option requires intensive writing to disk and will drastically slow down the simulation.
 DEFAULT is False.
 

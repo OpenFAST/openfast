@@ -40,6 +40,7 @@ typedef  ^            ^                   ReKi            OutDisWindX       {:} 
 typedef  ^            ^                   IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            ^                   ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            ^                   DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
+typedef  ^            ^                   LOGICAL         OutAllPlanes   - .false. -  "Output all wake planes in VTK at all time steps" -
 typedef  ^            ^                   LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
 typedef  ^            ^                   IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2]" -
 typedef  ^            ^                   ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -

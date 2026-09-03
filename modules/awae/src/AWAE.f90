@@ -1261,9 +1261,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%VTK_tWidth = CEILING( log10( real(p%NumDT, ReKi)/real(p%WrDisSkp1, ReKi) ) + 1) ! Length for time stamp
    if (p%WrDisWind .or. p%NOutDisWindXY>0 .or. p%NOutDisWindYZ>0 .or. p%NOutDisWindXZ>0) then
       call MKDIR(OutFileVTKDir)
-      ! placeholder for writing planes -- this will eventually be an input (revise logic here then)
-      p%WrPlanes = .true.
    end if
+
+   ! Wake-plane VTK output is controlled solely by the OutAllPlanes input flag: it is
+   ! IO-intensive, so it must not be implied by any other VTK output request.
+   p%WrPlanes = InitInp%InputFileData%OutAllPlanes
 
    ! Setup wake plane writing
    if (p%WrPlanes) then

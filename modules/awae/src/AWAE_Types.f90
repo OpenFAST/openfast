@@ -65,6 +65,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NOutDisWindXZ = 0_IntKi      !< Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
     REAL(DbKi)  :: WrDisDT = 0.0_R8Ki      !< The time between vtk outputs [must be a multiple of the low resolution time step] [s]
+    LOGICAL  :: OutAllPlanes = .false.      !< Output all wake planes in VTK at all time steps [-]
     LOGICAL  :: ChkWndFiles = .false.      !< Check all the ambient wind files for data consistency (flag) [-]
     INTEGER(IntKi)  :: Mod_Meander = 0_IntKi      !< Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2] [-]
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
@@ -461,6 +462,7 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%OutDisWindY = SrcInputFileTypeData%OutDisWindY
    end if
    DstInputFileTypeData%WrDisDT = SrcInputFileTypeData%WrDisDT
+   DstInputFileTypeData%OutAllPlanes = SrcInputFileTypeData%OutAllPlanes
    DstInputFileTypeData%ChkWndFiles = SrcInputFileTypeData%ChkWndFiles
    DstInputFileTypeData%Mod_Meander = SrcInputFileTypeData%Mod_Meander
    DstInputFileTypeData%C_Meander = SrcInputFileTypeData%C_Meander
@@ -624,6 +626,7 @@ subroutine AWAE_PackInputFileType(RF, Indata)
    call RegPack(RF, InData%NOutDisWindXZ)
    call RegPackAlloc(RF, InData%OutDisWindY)
    call RegPack(RF, InData%WrDisDT)
+   call RegPack(RF, InData%OutAllPlanes)
    call RegPack(RF, InData%ChkWndFiles)
    call RegPack(RF, InData%Mod_Meander)
    call RegPack(RF, InData%C_Meander)
@@ -675,6 +678,7 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    call RegUnpack(RF, OutData%NOutDisWindXZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutDisWindY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrDisDT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutAllPlanes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ChkWndFiles); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Mod_Meander); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%C_Meander); if (RegCheckErr(RF, RoutineName)) return
