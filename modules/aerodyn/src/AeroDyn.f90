@@ -5605,8 +5605,9 @@ SUBROUTINE TwrInflArray( p, u, RotInflow, m, Positions, Inflow, ErrStat, ErrMsg 
    ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
+   ! FirstWarn_TowerStrike is firstprivate so each thread starts from the .false. set above (avoids reading uninitialized memory); ErrStat2/ErrMsg2 are private to avoid a data race
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,FirstWarn_TowerStrike,DisturbInflow,v) schedule(runtime)
+   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,DisturbInflow,v,ErrStat2,ErrMsg2) firstprivate(FirstWarn_TowerStrike) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          
