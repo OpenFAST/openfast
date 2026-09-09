@@ -30,9 +30,6 @@ module FVW
    public   :: FVW_CalcOutput
    public   :: FVW_UpdateStates
 
-   ! parameter for deciding if enough time has elapsed (Wake calculation, and vtk output)
-   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
-
 contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -603,7 +600,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       bReevaluation=.True.
    endif
    ! Compute Induced wake effects only if time since last compute is > DTfvw
-   if ( (( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon) )  then
+   if ( (( t - m%OldWakeTime ) >= p%DTfvw - 0.25_DbKi*p%DTaero) )  then
       m%OldWakeTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
    else
@@ -1584,7 +1581,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       do iW=1,p%nWings
          m%W(iW)%Vtot_CP = m%W(iW)%Vind_CP + m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
       enddo
-      if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
+      if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk - 0.25_DbKi*p%DTaero ))  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
@@ -1614,7 +1611,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
-         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon
+         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
          if (force .or. (bWithinTime .and. bTimeToOutput) )  then
             ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
             call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
