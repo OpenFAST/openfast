@@ -72,3 +72,9 @@ docker-compose.yml
 
 # AI steering files for specific users
 .kiro/*
+
+# vs-build files
+.vs
+*.user
+*.u2d
+gitVersionInfo.h
