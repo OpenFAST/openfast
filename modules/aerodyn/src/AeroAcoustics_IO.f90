@@ -46,7 +46,7 @@ MODULE AeroAcoustics_IO
 
    integer(intKi), parameter        :: ITURB_None           = 0  ! TBLTE noise is not calculated
    integer(intKi), parameter        :: ITURB_BPM            = 1  ! TBLTE noise is calculated with BPM
-   integer(intKi), parameter        :: ITURB_TNO            = 2  ! TBLTE noise is calculated with TNO
+   integer(intKi), parameter        :: ITURB_TNO            = 2  ! TBLTE noise is calculated with TNO (and part of BPM)
 
    integer(intKi), parameter        :: IInflow_None             = 0  ! IInflow noise is not calculated
    integer(intKi), parameter        :: IInflow_BPM              = 1  ! IInflow noise is calculated with BPM
@@ -452,7 +452,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    
    if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
        call SetErrStat ( ErrID_Fatal, &
-           'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName )
+           'IBLUNT must be '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName )
    endif
    if (InputFileData%ILAM /= ILAM_None .and. InputFileData%ilam /= ILAM_BPM) then
       call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
@@ -467,7 +467,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
            ' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%ITURB /= ITURB_None .and. InputFileData%ITURB /= ITURB_BPM .and. InputFileData%ITURB /= ITURB_TNO) then
-      call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName )
+      call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO with BPM alpha) .', ErrStat, ErrMsg, RoutineName )
    end if
    if (InputFileData%IInflow /= IInflow_None .and. InputFileData%IInflow /= IInflow_BPM &
        .and. InputFileData%IInflow /= IInflow_FullGuidati .and. InputFileData%IInflow /= IInflow_SimpleGuidati ) then
