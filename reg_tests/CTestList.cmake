@@ -456,6 +456,8 @@ ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem;mhk")
 ad_regression("ad_MHK_RM1_Floating"         "aerodyn;bem;mhk")
+ad_regression("ad_5MW_GSPotent"             "aerodyn;bem;GS")
+ad_regression("ad_AWT_GSShadow"             "aerodyn;bem;GS")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
