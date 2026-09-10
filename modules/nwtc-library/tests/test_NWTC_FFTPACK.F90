@@ -17,6 +17,7 @@ contains
 subroutine test_NWTC_FFTPACK_suite(testsuite)
    type(unittest_type), allocatable, intent(out) :: testsuite(:)
    testsuite = [ &
+      new_unittest("FFTPACK_real_kind", test_fftpack_real_kind), &
       new_unittest("FFT_roundtrip", test_fft_roundtrip), &
       new_unittest("FFT_forward_known", test_fft_forward_known), &
       new_unittest("FFT_forward_sign", test_fft_forward_sign), &
@@ -30,6 +31,17 @@ subroutine test_NWTC_FFTPACK_suite(testsuite)
       new_unittest("FFT2D_roundtrip", test_fft2d_roundtrip), &
       new_unittest("CFFT2D_roundtrip", test_cfft2d_roundtrip) &
    ]
+end subroutine
+
+! FFTPACK must be compiled with 4-byte default REAL, even in a DOUBLE_PRECISION
+! build: the NWTC_FFTPACK wrapper hands it REAL(SiKi) wSave/wWork buffers sized in
+! 4-byte elements.  A build that forgot to suppress default-real promotion for
+! fftpack5.1.f would have FFTPACK write 8-byte elements into them and corrupt memory.
+subroutine test_fftpack_real_kind(error)
+   type(error_type), allocatable, intent(out) :: error
+   integer, external :: FFTPACK_REALKIND
+
+   call check(error, FFTPACK_REALKIND(), SiKi)
 end subroutine
 
 ! Forward then backward (no normalization) gives x*N
