@@ -38,9 +38,11 @@ pure function PartRegFloorFactor(RegFunction) result(f)
    integer(IntKi), intent(in) :: RegFunction
    real(ReKi)                 :: f
    select case (RegFunction)
+   case (idRegNone)    ! Unregularized kernel: no extra core-based floor needed
+      f = 0.0_ReKi
    case (idRegCompact) ! Truly compact: exactly singular beyond rc = PART_REG_C2*RegParam
       f = PART_REG_C2
-   case default        ! Exponential (and none): conservative 2*rc floor
+   case default        ! Exponential: conservative 2*rc floor
       f = PART_REG_NRAD
    end select
 end function PartRegFloorFactor
