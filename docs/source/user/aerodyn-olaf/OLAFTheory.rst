@@ -489,8 +489,16 @@ refinement of this option will be considered in the future.
 
 .. _sec:RegularizationFunction:
 
-Implemented regularization functions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Segment regularization functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The regularization functions described in this section apply to the vortex
+*segments* used to represent both the bound (blade) vorticity and the wake
+vorticity, i.e., they regularize the segment Biot-Savart kernel of
+Eq. :eq:`eq:BiotSavartSegment`. They are selected with the input
+**RegFunction**. The corresponding regularization functions used by the
+vortex-particle representation of the wake are described separately in
+:numref:`sec:RegularizationFunctionPart`.
 
 Several regularization functions have been
 developed (:cite:`olaf-Rankine58_1,olaf-Scully75_1,olaf-Vatistas91_1`).  At present, five
@@ -562,7 +570,108 @@ Here, the singularity is removed by introducing an additive factor in the
 denominator of Eq. :eq:`eq:BiotSavartSegment`, proportional to the filament
 length :math:`r_0`. In this case, :math:`F_\nu=1`. This method is found in the
 work of van Garrel (:cite:`olaf-Garrel03_1`).
+.. _sec:RegularizationFunctionPart:
 
+Particle regularization functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The regularization functions of :numref:`sec:RegularizationFunction` apply to
+the vortex segments. When a particle-based velocity method is selected
+(**VelocityMethod=[3]**, the direct vortex-particle method, or
+**VelocityMethod=[2]**, the tree-accelerated particle method), the wake segments
+are converted into vortex particles and a separate set of regularization
+functions applies. The particle regularization function is selected with the
+input **RegFunctionPart**.
+
+Segment-to-particle conversion
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each wake segment of circulation :math:`\Gamma` and length vector
+:math:`\vec{l}=\vec{x}_2-\vec{x}_1` is divided into :math:`n_p`
+(**PartPerSegment**) equally spaced particles. The intensity of a particle
+:math:`\vec{\alpha}` (the vorticity integrated over the volume represented by
+the particle, :math:`\vec{\alpha}=\vec{\omega}\,dV`) is obtained from the parent
+segment as
+
+.. math::
+   \vec{\alpha} = \frac{\Gamma\,\vec{l}}{n_p}
+   :label: eq:SegToPart
+
+so that the :math:`n_p` particles of a segment sum to the total segment
+vorticity :math:`\Gamma\,\vec{l}`. The particles are placed at the centers of
+the :math:`n_p` sub-segments, and each particle inherits the regularization
+parameter (core radius :math:`r_c`) of its parent segment.
+
+Particle velocity kernel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The velocity induced at a point :math:`\vec{x}` by a vortex particle of
+intensity :math:`\vec{\alpha}` located at :math:`\vec{x}_p` is the regularized
+point-vortex kernel
+
+.. math::
+   \vec{v}(\vec{x}) = \frac{1}{4\pi}\, g(\bar{r})\,
+   \frac{\vec{\alpha}\times\vec{r}}{r^3}
+   ,\qquad \vec{r}=\vec{x}-\vec{x}_p,\quad r=|\vec{r}|,\quad \bar{r}=\frac{r}{r_c}
+   :label: eq:BiotSavartParticle
+
+where :math:`g` is the particle regularization factor (the particle-method
+analog of :math:`F_\nu`) and :math:`r_c` is the particle core radius. Away from
+the particle center the induced velocity decays as :math:`1/r^2`. If no
+correction is used (**RegFunctionPart=[0]**), :math:`g=1` and the singular
+point-vortex kernel is recovered.
+
+Exponential
+^^^^^^^^^^^
+
+If the exponential method is used (**RegFunctionPart=[1]**, the default), the
+regularization factor is
+
+.. math::
+   g(\bar{r}) = 1 - \exp\!\left(-\bar{r}^{\,3}\right)
+   :label: eq:PartExp
+
+For :math:`\bar{r} > 2` (beyond two core radii) the exponential term is
+negligible and :math:`g` is set to :math:`1`.
+
+Compact support
+^^^^^^^^^^^^^^^^
+
+If the compact-support method is used (**RegFunctionPart=[2]**), the kernel is
+*exactly* singular (:math:`g=1`) beyond a finite support radius
+:math:`r_c'=1.6\,r_c`, and inside the support it is given by a polynomial
+mollifier
+
+.. math::
+   g(\bar{r}') = \begin{cases}
+   \dfrac{35\,\bar{r}'^{3} - 42\,\bar{r}'^{5} + 15\,\bar{r}'^{7}}{8}
+   & 0 \le \bar{r}' < 1 \\[2mm]
+   1 & \bar{r}' \ge 1
+   \end{cases}
+   ,\qquad \bar{r}' = \frac{r}{r_c'} = \frac{r}{1.6\,r_c}
+   :label: eq:PartCompact
+
+The polynomial is smooth (:math:`C^\infty`) inside the support; the overall
+regularization factor is globally :math:`C^2`, its regularity being limited by
+the match to the singular kernel at the support boundary, where :math:`g=1`,
+:math:`g'=0`, and :math:`g''=0` but :math:`g'''\neq 0` at :math:`\bar{r}'=1`. At
+the center the mollifier vanishes as :math:`\bar{r}'^{3}`
+(:math:`g=g'=g''=0`), so the induced velocity is regular there. The
+support-radius factor :math:`1.6` makes the compact kernel roughly equivalent
+to the exponential kernel with the same :math:`r_c`. It matches the peak
+tangential (swirl) velocity *magnitude* of the two kernels, while being a
+reasonable compromise across three possible equivalence criteria:
+
+.. math::
+   \frac{r_c'}{r_c} \approx \begin{cases}
+   1.54 & \text{radius of peak tangential velocity} \\
+   1.60 & \text{peak tangential velocity magnitude} \\
+   1.65 & \text{second moment of the vorticity distribution}
+   \end{cases}
+
+Because the kernel is exactly equal to the singular kernel beyond :math:`r_c'`,
+the tree-accelerated particle method can apply an exact far-field cutoff at
+that radius.
 .. _sec:corerad:
 
 Time Evolution of the Regularization Parameter–Core Spreading Method
