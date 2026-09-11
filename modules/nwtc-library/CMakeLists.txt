@@ -106,20 +106,20 @@ set(NWTCLIBS_SOURCES
   src/NetLib/scalapack/NWTC_ScaLAPACK.f90
 
   # NetLib SLATEC sources
-  src/NetLib/slatec/NWTC_SLATEC.f90
-  src/NetLib/slatec/dqk61.f
-  src/NetLib/slatec/qk61.f
-  src/NetLib/slatec/d1mach.f
-  src/NetLib/slatec/r1mach.f
-  src/NetLib/slatec/xercnt.f
-  src/NetLib/slatec/xerhlt.f
-  src/NetLib/slatec/xerprn.f
-  src/NetLib/slatec/xersve.f
-  src/NetLib/slatec/fdump.f
-  src/NetLib/slatec/i1mach.f
-  src/NetLib/slatec/j4save.f
-  src/NetLib/slatec/xgetua.f
-  src/NetLib/slatec/xermsg.f  
+  #src/NetLib/slatec/NWTC_SLATEC.f90
+  #src/NetLib/slatec/dqk61.f
+  #src/NetLib/slatec/qk61.f
+  #src/NetLib/slatec/d1mach.f
+  #src/NetLib/slatec/r1mach.f
+  #src/NetLib/slatec/xercnt.f
+  #src/NetLib/slatec/xerhlt.f
+  #src/NetLib/slatec/xerprn.f
+  #src/NetLib/slatec/xersve.f
+  #src/NetLib/slatec/fdump.f
+  #src/NetLib/slatec/i1mach.f
+  #src/NetLib/slatec/j4save.f
+  #src/NetLib/slatec/xgetua.f
+  #src/NetLib/slatec/xermsg.f  
 )
 
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
