@@ -33,6 +33,11 @@ module FVW_VortexTools
 
    ! Tree parameters
    integer, parameter :: IK1 = selected_int_kind(1) ! to store particle branch number (from 1 to 8)
+   ! Particle-tree leaf termination (implements the "minimum cell size" TODO): once a cell is at/below the core
+   ! scale the singular-kernel multipole is invalid there anyway, so keep its particles as a direct leaf bucket.
+   ! This prunes useless deep nodes and lengthens the leaf loop so it vectorizes. Ncrit caps dense sub-core clumps.
+   real(ReKi), parameter :: TREE_LEAF_REGFACTOR = 1.0_ReKi !< Stop subdividing when cell radius <= this * maxRegParam
+   integer,    parameter :: TREE_LEAF_NCRIT     = 32       !< and particle count <= this (conservative; sized for SIMD leaves)
    integer,parameter :: M0 = 1, M1_1=2, M1_2=3, M1_3=4, M2_11=5, M2_21=6, M2_22=7, M2_31=8, M2_32=9, M2_33=10  ! For moment coefficients
    integer,parameter :: M0_000 = 1
    integer,parameter :: M1_100 = 2
@@ -587,6 +592,7 @@ contains
          node%radius=0
          node%center(1:3)=Part%P(1:3,1)
          node%Moments=0.0_ReKi
+         node%Moments(1:3,M0_000)=Part%Alpha(1:3,1) ! monopole, so a far MAC hit on this childless node is exact
          node%maxRegParam = Part%RegParam(1)
          nullify(node%iPart)
          nullify(node%branches)
@@ -719,6 +725,14 @@ contains
          node%Moments(1:3, 9) = node%Moments(1:3, 9) + PartAlpha*DeltaP(3)*DeltaP(2) ! j=3,k=2
          node%Moments(1:3,10) = node%Moments(1:3,10) + PartAlpha*DeltaP(3)*DeltaP(3) ! j=3,k=3
       end do
+
+      ! --- Early leaf termination: stop if a small bucket (nPart<=Ncrit, classic Barnes-Hut leaf -> longer SIMD loop) OR sub-core (radius<=core, bounds depth for dense/coincident clumps). Moments are kept either way so far CPs still use the node multipole (standard leaf MAC).
+      if (node%radius <= TREE_LEAF_REGFACTOR*node%maxRegParam .or. node%nPart <= TREE_LEAF_NCRIT) then
+         allocate(node%leaves(1:node%nPart))
+         node%leaves(1:node%nPart) = node%iPart(1:node%nPart)
+         if (associated(node%iPart)) deallocate(node%iPart)
+         return
+      end if
 
       ! --- Distributing particles to the 8 octants (based on the geometric center!)
       allocate (PartOctant(1:node%nPart))
@@ -1448,7 +1462,8 @@ contains
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
    subroutine ui_tree_part(Tree, icp_end, CPs, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-      use FVW_BiotSavart, only: ui_part_nograd_11, PartRegFloorFactor
+      use FVW_BiotSavart, only: PartRegFloorFactor
+      use FVW_BiotSavart, only: idRegNone, idRegExp, idRegCompact, PART_REG_C2, PART_REG_CUT3, MINNORM
       type(T_Tree), target,          intent(inout) :: Tree            !< 
       integer,                       intent(in   ) :: icp_end         !< Number of CPs to use <size(CPs,2)
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
@@ -1491,33 +1506,18 @@ contains
          real(ReKi),dimension(3) :: phi
          real(ReKi) :: ieqj
          integer :: i,j
-         integer :: iPart
          if (node%nPart<=0) then
             ! We skip the dead leaf
-         elseif (.not.associated(node%branches)) then
-            ! Loop on leaves
-            if(associated(node%leaves)) then
-               do i =1,size(node%leaves) 
-                  iPart=node%leaves(i)
-                  DeltaP = CP(1:3) - Part%P(1:3,iPart)
-                  call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
-                  Uind(1:3) = Uind(1:3) + Uloc
-               enddo
-            endif
          else
+            ! MAC on every non-empty node, childless leaf nodes included (they carry moments, so a far CP uses the multipole instead of direct-summing the bucket)
             distDirect = max(BranchFactor*node%radius + PartRegFloorFactor(Part%RegFunction)*node%maxRegParam, DistanceDirect) ! Direct eval. below this distance; floor = branch radius + (kernel support factor)*max(eps) in cell
             DeltaP  = - node%center + CP(1:3)                          ! Vector between the control point and the center of the branch
             r       = sqrt( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2)
-            ! Test if the control point is too close from the branch node so that a direct evaluation is needed 
+            ! Test if the control point is too close so that a direct evaluation is needed 
             if (r<distDirect) then
-               ! We are too close, perform direct evaluation using children (leaves and branches)
+               ! We are too close, perform direct evaluation of this node's leaves and recurse into branches
                if(associated(node%leaves)) then
-                  do i =1,size(node%leaves) 
-                     iPart=node%leaves(i)
-                     DeltaP = CP(1:3) - Part%P(1:3,iPart)
-                     call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
-                     Uind(1:3) = Uind(1:3) + Uloc
-                  enddo
+                  call ui_leaves_nograd(CP, node%leaves, Uind)
                endif
                if(associated(node%branches)) then
                   ! TODO: consider implementing a recursive method for that: direct call on all children
@@ -1649,6 +1649,78 @@ contains
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_part_11
+
+      !> Batched direct sum over a node's leaves (particle indices), masked/branchless so it vectorizes.
+      !! Kernel math mirrors ui_part_nograd_11; the per-leaf gather uses the leaves() index array.
+      subroutine ui_leaves_nograd(CP, leaves, Uind)
+         real(ReKi), dimension(3), intent(in   ) :: CP
+         integer, dimension(:),    intent(in   ) :: leaves
+         real(ReKi), dimension(3), intent(inout) :: Uind
+         integer    :: i, ip, nL
+         real(ReKi) :: dx, dy, dz, r2, r2s, rn, r3, msk, sp, Cx, Cy, Cz, rc2, rc3, tt
+         real(ReKi) :: ux, uy, uz
+         real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM
+         nL = size(leaves)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         select case (Part%RegFunction)
+         case (idRegNone) ! No mollification
+            !$OMP SIMD reduction(+:ux,uy,uz) private(ip,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
+            do i=1,nL
+               ip=leaves(i)
+               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+               r2  = dx*dx + dy*dy + dz*dz
+               msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+               r2s = max(r2, MINNORM2)
+               rn  = sqrt(r2s); r3 = r2s*rn
+               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
+               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
+               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               sp = msk*fourpi_inv/r3
+               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+            end do
+         case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, keep the r>2rc branch that skips the exp
+            do i=1,nL
+               ip=leaves(i)
+               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+               r2  = dx*dx + dy*dy + dz*dz
+               if (r2 < MINNORM2) cycle           ! on singularity
+               rn  = sqrt(r2); r3 = r2*rn
+               rc3 = Part%RegParam(ip)*Part%RegParam(ip)*Part%RegParam(ip)
+               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
+               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
+               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
+                  sp = fourpi_inv/r3
+               else
+                  sp = (1.0_ReKi-exp(-r3/rc3))*fourpi_inv/r3
+               end if
+               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+            end do
+         case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+            !$OMP SIMD reduction(+:ux,uy,uz) private(ip,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
+            do i=1,nL
+               ip=leaves(i)
+               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+               r2  = dx*dx + dy*dy + dz*dz
+               msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+               r2s = max(r2, MINNORM2)
+               rn  = sqrt(r2s); r3 = r2s*rn
+               rc2 = (PART_REG_C2*Part%RegParam(ip))**2
+               rc3 = rc2*PART_REG_C2*Part%RegParam(ip)
+               tt  = r2s/rc2
+               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
+               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
+               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
+               sp = msk*sp
+               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+            end do
+         case default
+            print*,'[ERROR] Wrong regularization function for particles',Part%RegFunction
+            STOP
+         end select
+         Uind(1)=Uind(1)+ux; Uind(2)=Uind(2)+uy; Uind(3)=Uind(3)+uz
+      end subroutine ui_leaves_nograd
    end subroutine  ui_tree_part
 
    subroutine ui_tree_segment(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
