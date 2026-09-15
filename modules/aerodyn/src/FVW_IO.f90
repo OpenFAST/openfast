@@ -197,6 +197,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(1))), 'Velocity method (VelocityMethod(1)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(1))))) return
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(2))), 'Velocity method (VelocityMethod(2)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(2))))) return
 
+   ! Necessary condition for multipole convergence: BranchFactor<1 puts targets inside the source radius (series diverges). Default 1.5 adds geometric margin.
+   if (Inp%VelocityMethod(1)==idVelocityTreePart .or. Inp%VelocityMethod(1)==idVelocityTreeSeg) then
+      if (Check( Inp%TreeBranchFactor(1)<1.0_ReKi , 'Tree branch factor (TreeBranchFactor) must be >=1.')) return
+   endif
+
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
    if (Inp%CircSolvMethod == idCircPolarData) then
       if (Check( Inp%nNWPanels<1 , 'Number of near wake panels (`nNWPanels`) must be >=1 when using circulation solving with polar data (`CircSolvMethod=1`)')) return
