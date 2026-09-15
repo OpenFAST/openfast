@@ -1289,6 +1289,11 @@ contains
       ! Adjust indices and interpolant
       if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
          ! Point is within grid
+      else if (IT_LO == 0 .and. T_GRID >= -GridTol) then
+	      ! Within tolerance of the first time step
+	      IT_LO = 1
+	      IT_HI = 1
+         DT = -1.0_ReKi
       else if (IT_LO == G3D%NSteps) then
          if (G3D%Periodic) then
             ! Time wraps back to beginning
