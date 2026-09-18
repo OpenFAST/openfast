@@ -1,0 +1,34 @@
+
+name: 'Fortran Source Style'
+
+#-------------------------------------------------------------------------------
+# Notes
+# - OpenFAST requires 3 space indentation in Fortran source; tab characters are
+#   not allowed.  This workflow enforces that rule on all git-tracked *.f90 and
+#   *.F90 files.
+# - Registry-generated *_Types.f90 files are excluded by the check script.
+#-------------------------------------------------------------------------------
+
+on:
+  push:
+    paths:
+      - '**.f90'
+      - '**.F90'
+      - '.github/workflows/check-tabs.yml'
+      - '.github/scripts/check_tabs.sh'
+
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+
+jobs:
+  check-tabs:
+    name: Check for tab characters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Check Fortran source for tab characters
+        run: .github/scripts/check_tabs.sh
