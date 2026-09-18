@@ -453,6 +453,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, ErrStat, ErrMsg )
    p%FWShedVorticity      = InputFileData%FWShedVorticity
    p%DiffusionMethod      = InputFileData%DiffusionMethod
    p%RegFunction          = InputFileData%RegFunction
+   p%RegFunctionPart      = InputFileData%RegFunctionPart
    p%RegDeterMethod       = InputFileData%RegDeterMethod
    p%WakeRegMethod        = InputFileData%WakeRegMethod
    p%WakeRegParam         = InputFileData%WakeRegParam
@@ -1567,6 +1568,9 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
    character(*), parameter :: RoutineName = 'WriteVTKOutputs'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   logical        :: bAnyGridOutput
+   type(T_Tree)   :: Tree
+   type(T_Panl)   :: Panl
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (OLAF_PROFILING) call tic('WriteVTKOutputs')
@@ -1609,18 +1613,32 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
       ! TODO ANDY: replace with direct call to inflow wind at Grid points
       CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
+      ! Check ahead of time whether any grid needs output now, to avoid rebuilding the wake tree if not necessary
+      bAnyGridOutput = force
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
          bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
-         if (force .or. (bWithinTime .and. bTimeToOutput) )  then
-            ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
-            call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            m%GridOutputs(iGrid)%tLastOutput = t
-            call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
-            m%VTKstep=VTKstep ! We save the step at which writing occurred
-         endif
+         if (bWithinTime .and. bTimeToOutput) bAnyGridOutput = .true.
       enddo
+      if (bAnyGridOutput) then
+         ! Build the wake segments/tree once and reuse it for all grids below
+         call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, Panl, ErrStat2, ErrMsg2, allocPart=.false.)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         do iGrid=1,p%nGridOut
+            bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
+            bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
+            if (force .or. (bWithinTime .and. bTimeToOutput) )  then
+               ! Compute induced velocity on grid, reusing the wake tree built once
+               call InducedVelocitiesAll_OnGrid_Calc(m%GridOutputs(iGrid), p, m%Sgmt, m%Part, Tree, Panl, ErrStat2, ErrMsg2);
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               m%GridOutputs(iGrid)%tLastOutput = t
+               call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
+               m%VTKstep=VTKstep ! We save the step at which writing occurred
+            endif
+         enddo
+         call InducedVelocitiesAll_End(p, Tree, m%Part, Panl, ErrStat2, ErrMsg2, deallocPart=.false.)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
    endif
    if (OLAF_PROFILING) call toc()
 end subroutine WriteVTKOutputs
