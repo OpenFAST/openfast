@@ -1124,28 +1124,29 @@ end subroutine FVW_InitRegularization
 
 
 
-!> Compute induced velocities from all vortex elements onto nPoints
-!! In : x, x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
+!> Compute induced velocities from all vortex elements onto nPoints,
+!! reusing a wake Tree/Panl built once by InducedVelocitiesAll_Init
+!! for all grids at a given output step.
+!! In : Tree, Panl (already built from current wake state)
 !! Out: Vind
-subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
+subroutine InducedVelocitiesAll_OnGrid_Calc(g, p, Sgmt, Part, Tree, Panl, ErrStat, ErrMsg)
    type(GridOutType),               intent(inout) :: g       !< Grid on whcih to compute the velocity
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Segments, already built by InducedVelocitiesAll_Init
+   type(T_Part),                    intent(in   ) :: Part    !< Particle storage, already built by InducedVelocitiesAll_Init
+   type(T_Tree),                    intent(inout) :: Tree    !< Wake tree, already built by InducedVelocitiesAll_Init
+   type(T_Panl),                    intent(in   ) :: Panl    !< Panel storage, already set by InducedVelocitiesAll_Init
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: nCPs, iHeadP
    integer(IntKi) :: i,j,k
    real(ReKi) :: xP,yP,zP
-   ! TODO new options
-   type(T_Tree)   :: Tree
-   type(T_Panl)   :: Panl
    real(ReKi), dimension(:,:), allocatable :: CPs  ! TODO get rid of me with dedicated functions
    real(ReKi), dimension(:,:), allocatable :: Uind ! TODO get rid of me with dedicated functions
    ErrStat= ErrID_None
    ErrMsg =''
-   if (OLAF_PROFILING) call tic('InducedVelocitiesAll_OnGrid')
+   if (OLAF_PROFILING) call tic('InducedVelocitiesAll_OnGrid_Calc')
 
    ! --- Packing control points
    nCPs = g%nx * g%ny * g%nz
@@ -1168,11 +1169,8 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    iHeadP=1
    call FlattenValues(g%uGrid, Uind, iHeadP); ! NOTE: Uind contains uGrid now (Uwnd)
 
-   ! --- Compute induced velocity
-   ! Convert Panels to segments, segments to particles, particles to tree
-   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, Panl, ErrStat, ErrMsg, allocPart=.false.)
-   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, m%Part, Tree, Panl, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_End(p, Tree, m%Part, Panl, ErrStat, ErrMsg, deallocPart=.false.)
+   ! --- Compute induced velocity using the wake Sgmt/Part/Tree/Panl built once
+   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, Panl, ErrStat, ErrMsg)
 
    ! --- Unpacking induced velocity points
    iHeadP=1
@@ -1183,7 +1181,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
 
    if (OLAF_PROFILING) call toc()
 
-end subroutine InducedVelocitiesAll_OnGrid
+end subroutine InducedVelocitiesAll_OnGrid_Calc
 
 !> Wrapper to setup part from set of segments
 subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, allocPart)
