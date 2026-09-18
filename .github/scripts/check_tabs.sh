@@ -10,14 +10,21 @@
 # files are excluded, since they are produced by the OpenFAST Registry rather
 # than edited by hand.
 #
-# Exits 0 when clean, 1 when any tab character is found.
+# Exit status:
+#    0  no tab characters found
+#    1  one or more tab characters found
+#    2  the check could not run (not a git checkout, or a file failed to scan)
 #
 set -uo pipefail
 
 TAB=$(printf '\t')
 MARK='--->'
 
-cd "$(git rev-parse --show-toplevel)" || exit 1
+repo_root=$(git rev-parse --show-toplevel) || {
+   echo "ERROR: not inside a git checkout; cannot determine repository root."
+   exit 2
+}
+cd "$repo_root" || exit 2
 
 echo "OpenFAST Fortran source style check"
 echo "==================================="
@@ -30,14 +37,23 @@ mapfile -t FILES < <(git ls-files -- '*.f90' '*.F90' | grep -v '_Types\.f90$' | 
 
 if [ "${#FILES[@]}" -eq 0 ]; then
    echo "ERROR: no Fortran source files found -- is this a git checkout?"
-   exit 1
+   exit 2
 fi
 
 n_bad_files=0
 n_bad_lines=0
 
 for file in "${FILES[@]}"; do
-   matches=$(grep -n -- "$TAB" "$file") || continue
+   # grep exits 0 on a match, 1 on no match, and >1 on an actual error.
+   # Only "no match" may be skipped; a scan failure must not look like a pass.
+   matches=$(grep -n -- "$TAB" "$file")
+   status=$?
+   if [ "$status" -eq 1 ]; then
+      continue
+   elif [ "$status" -ne 0 ]; then
+      echo "ERROR: failed to scan ${file} (grep exit ${status})."
+      exit 2
+   fi
 
    n_bad_files=$((n_bad_files + 1))
    echo "$file"
