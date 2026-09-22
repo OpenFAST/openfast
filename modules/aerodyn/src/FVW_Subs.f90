@@ -980,6 +980,7 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
             SegConnct(1:2, iMirror) =  SegConnct(1:2, i) + nSegP ! Increased point indices
             SegConnct(3:4, iMirror) =  SegConnct(3:4, i) ! Span and age is copied
             SegGamma(iMirror)       = -SegGamma(i)       ! Vorticity needs mirroring
+            SegEpsilon(iMirror)     =  SegEpsilon(i)     ! Regularization (core size) is copied
          enddo
          do i=1,nSegP
             iMirror = i + nSegP
