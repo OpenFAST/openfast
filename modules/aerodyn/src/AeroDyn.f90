@@ -6564,6 +6564,9 @@ contains
       PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH
       PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV
       PerturbFF%PropagationDir = BaseFF%PropagationDir
+      PerturbFF%RotToWind = BaseFF%RotToWind
+      PerturbFF%RotFromWind = BaseFF%RotFromWind
+      PerturbFF%RotateWindBox = BaseFF%RotateWindBox
       select case (Var%DL%Num)
       case (AD_u_HWindSpeed) 
          PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH + Var%Perturb*PerturbSign
@@ -6571,6 +6574,15 @@ contains
          PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV + Var%Perturb*PerturbSign
       case (AD_u_PropagationDir) 
          PerturbFF%PropagationDir = BaseFF%PropagationDir + Var%Perturb*PerturbSign
+         PerturbFF%RotToWind(1,:) = [ &
+            cos(-PerturbFF%VFlowAngle)*cos(-PerturbFF%PropagationDir), &
+            cos(-PerturbFF%VFlowAngle)*sin(-PerturbFF%PropagationDir), -sin(-PerturbFF%VFlowAngle)]
+         PerturbFF%RotToWind(2,:) = [-sin(-PerturbFF%PropagationDir), cos(-PerturbFF%PropagationDir), 0.0_ReKi]
+         PerturbFF%RotToWind(3,:) = [ &
+            sin(-PerturbFF%VFlowAngle)*cos(-PerturbFF%PropagationDir), &
+            sin(-PerturbFF%VFlowAngle)*sin(-PerturbFF%PropagationDir), cos(-PerturbFF%VFlowAngle)]
+         PerturbFF%RotFromWind = transpose(PerturbFF%RotToWind)
+         PerturbFF%RotateWindBox = .true.
       end select
    end subroutine
    
