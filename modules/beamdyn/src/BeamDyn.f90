@@ -6339,7 +6339,7 @@ end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, IsLin)
 
    type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -6360,16 +6360,22 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the inputs (u) [intent in to avoid deallocation]
-   
+   LOGICAL, OPTIONAL,                    INTENT(IN   )           :: IsLin      !< True when called from the glue linearization path (Jacobians are written to the .lin file); absent/false on solver calls
+
    character(*), parameter       :: RoutineName = 'BD_JacobianPInput'
    integer(intKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   REAL(R8Ki)                    :: RotateStates(3,3)
    logical                       :: NeedWriteOutput
+   logical                       :: DoRotFrame
    INTEGER(IntKi)                :: i, j, col
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! The rotating-frame transform applies only to linearization output; solver Jacobians must stay
+   ! consistent with the frozen-frame state equations the integrator actually uses.
+   DoRotFrame = .false.
+   if (present(IsLin)) DoRotFrame = IsLin .and. p%RotStates
 
    ! Get OP values here
    call BD_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6456,6 +6462,11 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
          end do
       end do
+
+      ! Re-express state rows in the rotating frame so the exported VF_RotFrame metadata is consistent
+      if (DoRotFrame) then
+         call BD_JacRotFrame(u, x, OtherState, m%Jac%Nx, .true., .false., .false., dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+      end if
    end if
 
    !----------------------------------------------------------------------------
@@ -6481,7 +6492,7 @@ END SUBROUTINE BD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, IsLin)
 
    TYPE(ModVarsType),                    INTENT(IN   )      :: Vars               !< Module variables
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6502,17 +6513,22 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x)
+   LOGICAL, OPTIONAL,                    INTENT(IN   )      :: IsLin              !< True when called from the glue linearization path (Jacobians are written to the .lin file); absent/false on solver calls
 
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_JacobianPContState'
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
-   REAL(R8Ki)                    :: RotateStates(3,3)
-   REAL(R8Ki)                    :: RotateStatesTranspose(3,3)
    INTEGER(IntKi)                :: i, j, col
    logical                       :: NeedWriteOutput
+   logical                       :: DoRotFrame
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   ! The rotating-frame transform applies only to linearization output; solver Jacobians must stay
+   ! consistent with the frozen-frame state equations the integrator actually uses.
+   DoRotFrame = .false.
+   if (present(IsLin)) DoRotFrame = IsLin .and. p%RotStates
 
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6562,6 +6578,11 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
+
+      ! Re-express state columns in the rotating frame so the exported VF_RotFrame metadata is consistent
+      if (DoRotFrame) then
+         call BD_JacRotFrame(u, x, OtherState, m%Jac%Nx, .false., .true., .false., dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+      end if
    end if
 
    !----------------------------------------------------------------------------
@@ -6599,6 +6620,12 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
          end do
       end do
+
+      ! Re-express state rows and columns in the rotating frame (with the -wt transport term) so the
+      ! exported VF_RotFrame metadata is consistent
+      if (DoRotFrame) then
+         call BD_JacRotFrame(u, x, OtherState, m%Jac%Nx, .true., .true., .true., dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+      end if
    end if
 
    !----------------------------------------------------------------------------
@@ -6619,6 +6646,129 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE BD_JacobianPContState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Re-express state-space Jacobian blocks in the true rotating frame when RotStates=T, making the exported VF_RotFrame
+!! metadata consistent for MBC3-style postprocessing. BD's continuous states are linearized about a frozen, root-aligned
+!! inertial snapshot; the rotating-frame Jacobians are
+!!    A_r = S A S^-1 + blkdiag(-wt),   B_r = S B,   C_r = C S^-1,
+!! with S = [[I,0],[-wt,I]] acting on each paired (displacement, velocity) state triplet and wt = SkewSymMat(omega_local),
+!! omega_local = root angular velocity in the frozen BD reference basis. At omega = 0 the transform is the identity, so
+!! standstill results are unchanged.
+subroutine BD_JacRotFrame(u, x, OtherState, Nx, DoRows, DoCols, DoTransport, M, ErrStat, ErrMsg)
+   type(BD_InputType),           intent(in   ) :: u           !< Inputs at operating point (root motion, global frame)
+   type(BD_ContinuousStateType), intent(in   ) :: x           !< Continuous states at operating point
+   type(BD_OtherStateType),      intent(in   ) :: OtherState  !< Other states (frozen reference frame GlbRot)
+   integer(IntKi),               intent(in   ) :: Nx          !< Number of BD state DOFs on the transformed axis
+   logical,                      intent(in   ) :: DoRows      !< Apply S on state rows (dXdx, dXdu)
+   logical,                      intent(in   ) :: DoCols      !< Apply S^-1 on state columns (dXdx, dYdx)
+   logical,                      intent(in   ) :: DoTransport !< Add blkdiag(-wt); dXdx only (also gates once-per-snapshot warnings)
+   real(R8Ki),                   intent(inout) :: M(:,:)      !< Jacobian block to transform in place
+   integer(IntKi),               intent(  out) :: ErrStat
+   character(*),                 intent(  out) :: ErrMsg
+
+   character(*), parameter :: RoutineName = 'BD_JacRotFrame'
+   real(R8Ki)     :: omega_g(3), omega_l(3), wt(3,3), R(3,3), RootDev
+   integer(IntKi) :: k, id, iv, Nq
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! The pairing below silently corrupts the Jacobian if BD's state ordering ever changes:
+   ! it requires the first Nx/2 DOFs to be q triplets and the second Nx/2 their dqdt triplets.
+   Nq = Nx / 2
+   if (mod(Nx, 2) /= 0 .or. mod(Nq, 3) /= 0) then
+      call SetErrStat(ErrID_Fatal, 'BD state vector no longer splits into paired (q, dqdt) triplet halves; '// &
+                      'the RotStates rotating-frame transform must be updated for the new state layout.', &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Root angular velocity, global frame -> BD local (frozen) frame. GlbRot transfers local->global;
+   ! right-multiplication rotates a vector global->local (same idiom as gravity in BD_StaticElementMatrix).
+   omega_g = u%RootMotion%RotationVel(:,1)
+   omega_l = matmul(omega_g, OtherState%GlbRot)
+
+   ! Standstill: every operation below is an exact identity, independent of frame alignment, so
+   ! return the Jacobian unchanged before enforcing the re-anchoring invariant. Do not return
+   ! silently if the root is accelerating through zero speed — the omitted omega-dot transport
+   ! term is nonzero there and the exported Jacobian is missing it.
+   if (all(abs(omega_l) < 1.0e-12_R8Ki)) then
+      if (DoTransport .and. norm2(u%RootMotion%RotationAcc(:,1)) > 1.0e-4_R8Ki) then
+         call SetErrStat(ErrID_Warn, 'Nonzero root angular acceleration at a zero-speed linearization '// &
+                         'point; the rotating-frame state transform omits the omega-dot transport term '// &
+                         'and the Jacobian is returned unchanged.', ErrStat, ErrMsg, RoutineName)
+      end if
+      return
+   end if
+
+   ! States are linearized about a root-aligned snapshot, so the root orientation must coincide
+   ! with the frozen reference frame; otherwise S below is built in the wrong basis. The reference
+   ! is re-anchored to the root at the end of each BD_UpdateStates, so at a linearization snapshot
+   ! the deviation is solver-convergence noise (the transform's basis error is O(deviation) and the
+   ! states remain anchored to GlbRot, which is the basis omega is mapped into) — warn if it is
+   ! measurable, and fail only on gross misalignment, which indicates the states are not root-aligned
+   ! at all (e.g. a caller outside the linearization snapshot path).
+   R = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
+   R(1,1) = R(1,1) - 1.0_R8Ki
+   R(2,2) = R(2,2) - 1.0_R8Ki
+   R(3,3) = R(3,3) - 1.0_R8Ki
+   RootDev = maxval(abs(R))
+   if (RootDev > 1.0e-3_R8Ki) then
+      call SetErrStat(ErrID_Fatal, 'Root orientation deviates from the frozen BD reference frame by '// &
+                      trim(Num2LStr(RootDev))//' (> 1e-3) at the linearization point (state re-anchoring '// &
+                      'invariant violated); cannot form rotating-frame Jacobians.', ErrStat, ErrMsg, RoutineName)
+      return
+   else if (RootDev > 1.0e-6_R8Ki .and. DoTransport) then
+      ! warn once per linearization snapshot (the dXdx call), not on every transformed block
+      call SetErrStat(ErrID_Warn, 'Root orientation deviates from the frozen BD reference frame by '// &
+                      trim(Num2LStr(RootDev))//' at the linearization point; rotating-frame transform '// &
+                      'basis error is of the same order.', ErrStat, ErrMsg, RoutineName)
+   end if
+
+   wt = SkewSymMat(omega_l)
+
+   if (DoTransport) then
+      ! The transform assumes a steady operating point: it has no omega-dot transport term.
+      if (norm2(u%RootMotion%RotationAcc(:,1)) > 1.0e-4_R8Ki) then
+         call SetErrStat(ErrID_Warn, 'Nonzero root angular acceleration at the linearization point; the '// &
+                         'rotating-frame state transform omits the omega-dot transport term.', &
+                         ErrStat, ErrMsg, RoutineName)
+      end if
+      ! The rotational-triplet transform is first-order in the WM rotation parameters.
+      if (maxval(abs(x%q(4:6,:))) > 0.2_R8Ki) then
+         call SetErrStat(ErrID_Warn, 'Large elastic rotation state (|WM parameter| > 0.2) at the '// &
+                         'linearization point; the rotating-frame transform of rotation states is '// &
+                         'first-order and its accuracy is unverified at large rotation.', &
+                         ErrStat, ErrMsg, RoutineName)
+      end if
+   end if
+
+   ! Column op (A S^-1): col_d += col_v * wt for each (disp, vel) pair
+   if (DoCols) then
+      do k = 1, Nq, 3
+         id = k          ! disp triplet start (column)
+         iv = Nq + k     ! paired vel triplet start (column)
+         M(:, id:id+2) = M(:, id:id+2) + matmul(M(:, iv:iv+2), wt)
+      end do
+   end if
+
+   ! Row op (S A): row_v -= wt * row_d
+   if (DoRows) then
+      do k = 1, Nq, 3
+         id = k
+         iv = Nq + k
+         M(iv:iv+2, :) = M(iv:iv+2, :) - matmul(wt, M(id:id+2, :))
+      end do
+   end if
+
+   ! Transport term: every state triplet's own diagonal block gets -wt
+   if (DoTransport) then
+      do k = 1, Nx, 3
+         M(k:k+2, k:k+2) = M(k:k+2, k:k+2) - wt
+      end do
+   end if
+
+end subroutine BD_JacRotFrame
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
