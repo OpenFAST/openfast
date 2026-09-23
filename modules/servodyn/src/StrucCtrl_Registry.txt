@@ -138,7 +138,7 @@ typedef	^		MiscVarType  ReKi			a_G		{:}{:}	-	-	"Gravitational acceleration vecto
 typedef	^		MiscVarType  ReKi			rdisp_P	{:}{:}	-	-	"Translational displacement vector, local coordinates for point"	m
 typedef	^		MiscVarType  ReKi			rdot_P	{:}{:}	-	-	"Translational velocity     vector, local coordinates for point"	m/s
 typedef	^		MiscVarType  ReKi			rddot_P	{:}{:}	-	-	"Translational acceleration vector, local coordinates for point"	m/s^2
-typedef	^		MiscVarType  ReKi			omega_P	{:}{:}	-	-	"Rotational		velocity		 vector, local coordinates for point"	rad/s
+typedef	^		MiscVarType  ReKi			omega_P	{:}{:}	-	-	"Rotational    velocity     vector, local coordinates for point"	rad/s
 typedef	^		MiscVarType  ReKi			alpha_P	{:}{:}	-	-	"Rotational    aceeleration vector, local coordinates for point"	rad/s^2
 typedef	^		MiscVarType  ReKi			F_P		{:}{:}	-	-	"StC force  vector, local coordinates for point"	N
 typedef	^		MiscVarType  ReKi			M_P		{:}{:}	-	-	"StC moment vector, local coordinates for point"	N-m
