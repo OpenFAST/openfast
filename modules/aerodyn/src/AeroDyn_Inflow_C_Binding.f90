@@ -2335,6 +2335,7 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%TranslationVel( 1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Velocity(1:3,j)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%RotationVel(    1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Velocity(4:6,j)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%TranslationAcc( 1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Accln(1:3,j)
+         BldStrMotionMesh(iWT)%BldMesh(iBlade)%RotationAcc(    1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Accln(4:6,j)
          call OrientRemap(BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j))
          if (TransposeDCM) then
             BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j) = transpose(BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j))
