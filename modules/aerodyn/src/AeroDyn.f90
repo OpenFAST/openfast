@@ -6119,8 +6119,9 @@ SUBROUTINE TwrInflArray( p, u, RotInflow, m, Positions, Inflow, ErrStat, ErrMsg 
    ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
+   ! FirstWarn_TowerStrike is firstprivate so each thread starts from the .false. set above (avoids reading uninitialized memory); ErrStat2/ErrMsg2 are private to avoid a data race
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,FirstWarn_TowerStrike,DisturbInflow,v) schedule(runtime)
+   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,DisturbInflow,v,ErrStat2,ErrMsg2) firstprivate(FirstWarn_TowerStrike) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          
@@ -7737,6 +7738,9 @@ contains
       PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH
       PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV
       PerturbFF%PropagationDir = BaseFF%PropagationDir
+      PerturbFF%RotToWind = BaseFF%RotToWind
+      PerturbFF%RotFromWind = BaseFF%RotFromWind
+      PerturbFF%RotateWindBox = BaseFF%RotateWindBox
       select case (Var%DL%Num)
       case (AD_u_HWindSpeed) 
          PerturbFF%Uniform%VelH = BaseFF%Uniform%VelH + Var%Perturb*PerturbSign
@@ -7744,6 +7748,15 @@ contains
          PerturbFF%Uniform%ShrV = BaseFF%Uniform%ShrV + Var%Perturb*PerturbSign
       case (AD_u_PropagationDir) 
          PerturbFF%PropagationDir = BaseFF%PropagationDir + Var%Perturb*PerturbSign
+         PerturbFF%RotToWind(1,:) = [ &
+            cos(-PerturbFF%VFlowAngle)*cos(-PerturbFF%PropagationDir), &
+            cos(-PerturbFF%VFlowAngle)*sin(-PerturbFF%PropagationDir), -sin(-PerturbFF%VFlowAngle)]
+         PerturbFF%RotToWind(2,:) = [-sin(-PerturbFF%PropagationDir), cos(-PerturbFF%PropagationDir), 0.0_ReKi]
+         PerturbFF%RotToWind(3,:) = [ &
+            sin(-PerturbFF%VFlowAngle)*cos(-PerturbFF%PropagationDir), &
+            sin(-PerturbFF%VFlowAngle)*sin(-PerturbFF%PropagationDir), cos(-PerturbFF%VFlowAngle)]
+         PerturbFF%RotFromWind = transpose(PerturbFF%RotToWind)
+         PerturbFF%RotateWindBox = .true.
       end select
    end subroutine
    

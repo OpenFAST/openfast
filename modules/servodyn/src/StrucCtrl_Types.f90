@@ -176,7 +176,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rdisp_P      !< Translational displacement vector, local coordinates for point [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rdot_P      !< Translational velocity     vector, local coordinates for point [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rddot_P      !< Translational acceleration vector, local coordinates for point [m/s^2]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: omega_P      !< Rotational		velocity		 vector, local coordinates for point [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: omega_P      !< Rotational    velocity     vector, local coordinates for point [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_P      !< Rotational    aceeleration vector, local coordinates for point [rad/s^2]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_P      !< StC force  vector, local coordinates for point [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M_P      !< StC moment vector, local coordinates for point [N-m]
