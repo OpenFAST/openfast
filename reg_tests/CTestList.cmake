@@ -465,6 +465,7 @@ ad_regression("ad_B1n2_OLAF"                "aerodyn;OLAF")
 ad_regression("ad_Sphere_OLAF"              "aerodyn;OLAF")
 py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 py_ad_regression("py_ad_B1n2_OLAF"                   "aerodyn;OLAF;python")
+py_ad_regression("py_ad_MHK_RM1_Fixed"               "aerodyn;bem;python;mhk")
 
 # UnsteadyAero
 ua_regression("ua_redfreq"                  "unsteadyaero")
