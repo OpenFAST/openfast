@@ -1954,7 +1954,7 @@ CONTAINS
                      ! process linear damping coefficient
                      CALL SplitByBars(tempString3, N, tempStrings)
                      if (N==1) then                                                                                 ! if only one entry, use it for all directions
-                        READ(tempString4, *) m%ExtLdList(l)%Blin(1)
+                        READ(tempString3, *) m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(3) = m%ExtLdList(l)%Blin(1)
                      else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                               ! two directions provided, this is for rods
