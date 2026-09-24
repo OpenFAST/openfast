@@ -1612,7 +1612,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
          bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
-         bDoGrid(iGrid) = force .or. (bWithinTime .and. bTimeToOutput)
+         bDoGrid(iGrid) = bWithinTime .and. bTimeToOutput
       enddo
       if (any(bDoGrid)) then
          ! Build the wake segments/tree once and reuse it for all grids below
