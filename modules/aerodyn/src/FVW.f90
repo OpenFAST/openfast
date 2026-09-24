@@ -14,7 +14,7 @@ module FVW
    use FVW_IO
    use FVW_Wings
    use FVW_BiotSavart
-   use FVW_VortexTools, only: tic, toc
+   use FVW_VortexTools, only: tic, toc, T_Tree
    use FVW_Tests
    use AirFoilInfo
 
