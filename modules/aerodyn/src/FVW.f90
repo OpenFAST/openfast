@@ -14,7 +14,7 @@ module FVW
    use FVW_IO
    use FVW_Wings
    use FVW_BiotSavart
-   use FVW_VortexTools, only: tic, toc
+   use FVW_VortexTools, only: tic, toc, T_Tree
    use FVW_Tests
    use AirFoilInfo
 
@@ -29,9 +29,6 @@ module FVW
 
    public   :: FVW_CalcOutput
    public   :: FVW_UpdateStates
-
-   ! parameter for deciding if enough time has elapsed (Wake calculation, and vtk output)
-   real(DbKi), parameter      :: OneMinusEpsilon = 1 - 10000*EPSILON(1.0_DbKi)
 
 contains
 
@@ -603,7 +600,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       bReevaluation=.True.
    endif
    ! Compute Induced wake effects only if time since last compute is > DTfvw
-   if ( (( t - m%OldWakeTime ) >= p%DTfvw*OneMinusEpsilon) )  then
+   if ( (( t - m%OldWakeTime ) >= p%DTfvw - 0.25_DbKi*p%DTaero) )  then
       m%OldWakeTime = t
       m%ComputeWakeInduced = .TRUE.    ! It's time to update the induced velocities from wake
    else
@@ -1570,6 +1567,9 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
    character(*), parameter :: RoutineName = 'WriteVTKOutputs'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   logical, allocatable :: bDoGrid(:) ! Flag per output grid: .true. if it needs to be written now
+   type(T_Tree)   :: Tree
+   type(T_Panl)   :: Panl
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (OLAF_PROFILING) call tic('WriteVTKOutputs')
@@ -1584,7 +1584,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       do iW=1,p%nWings
          m%W(iW)%Vtot_CP = m%W(iW)%Vind_CP + m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
       enddo
-      if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
+      if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk - 0.25_DbKi*p%DTaero ))  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
@@ -1612,18 +1612,31 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
       ! TODO ANDY: replace with direct call to inflow wind at Grid points
       CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
+      ! Compute once which grids are due for output now
+      allocate(bDoGrid(p%nGridOut))
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
-         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon
-         if (force .or. (bWithinTime .and. bTimeToOutput) )  then
-            ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
-            call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            m%GridOutputs(iGrid)%tLastOutput = t
-            call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
-            m%VTKstep=VTKstep ! We save the step at which writing occurred
-         endif
+         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
+         bDoGrid(iGrid) = force .or. (bWithinTime .and. bTimeToOutput)
       enddo
+      if (any(bDoGrid)) then
+         ! Build the wake segments/tree once and reuse it for all grids below
+         call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, Panl, ErrStat2, ErrMsg2, allocPart=.false.)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         do iGrid=1,p%nGridOut
+            if (bDoGrid(iGrid)) then
+               ! Compute induced velocity on grid, reusing the wake tree built once
+               call InducedVelocitiesAll_OnGrid_Calc(m%GridOutputs(iGrid), p, m%Sgmt, m%Part, Tree, Panl, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               m%GridOutputs(iGrid)%tLastOutput = t
+               call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
+               m%VTKstep=VTKstep ! We save the step at which writing occurred
+            endif
+         enddo
+         call InducedVelocitiesAll_End(p, Tree, m%Part, Panl, ErrStat2, ErrMsg2, deallocPart=.false.)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
+      deallocate(bDoGrid)
    endif
    if (OLAF_PROFILING) call toc()
 end subroutine WriteVTKOutputs

@@ -184,6 +184,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
+   if (len_trim(Inp%SrcPnlFile)>0 .and. PathIsRelative(Inp%SrcPnlFile)) Inp%SrcPnlFile = TRIM(PriPath)//TRIM(Inp%SrcPnlFile)
 
    if (Check(.not.(ANY(idCircVALID ==Inp%CircSolvMethod)), 'Circulation method (CircSolvMethod) not implemented: '//trim(Num2LStr(Inp%CircSolvMethod)))) return
    if (Check(.not.(ANY(idIntMethodVALID==Inp%IntMethod    )) , 'Time integration method (IntMethod) not yet implemented. Use Euler 1st order method for now.')) return

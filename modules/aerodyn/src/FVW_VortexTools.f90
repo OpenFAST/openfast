@@ -63,6 +63,7 @@ module FVW_VortexTools
       real(ReKi)                         :: radius !< Typical dimension of a cell (max of x,y,z extent)
       real(ReKi),dimension(3)            :: center !< Used to store first the geometric center, then the vorticity center
       real(ReKi),dimension(3,10)         :: Moments
+      real(ReKi)                         :: maxRegParam = 0.0_ReKi !< Max reg. param (eps) over all particles in this node
       integer,dimension(:),pointer       :: iPart=>null()  !< indexes of particles stored in this node
       integer,dimension(:),pointer       :: leaves=>null()  ! NOTE: leaves are introduced to save memory
       type(T_Node),dimension(:), pointer :: branches =>null()
@@ -71,11 +72,10 @@ module FVW_VortexTools
 
    !> The type tree contains some basic data, a chained-list of nodes, and a pointer to the Particle data that were used
    type T_Tree
-      type(T_VPart)  :: Part            !< Storage for all particles
-      type(T_VSgmt)   :: Seg             !< Storage for all segments
+      type(T_VPart) :: Part            !< Storage for all particles
+      type(T_VSgmt) :: Seg             !< Storage for all segments
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
-      real(ReKi)    :: DistanceDirect
       type(T_Node)  :: Root            !< Contains the chained-list of nodes
    end type T_Tree
 
@@ -587,6 +587,7 @@ contains
          node%radius=0
          node%center(1:3)=Part%P(1:3,1)
          node%Moments=0.0_ReKi
+         node%maxRegParam = Part%RegParam(1)
          nullify(node%iPart)
          nullify(node%branches)
          allocate(node%leaves(1:1))
@@ -625,7 +626,6 @@ contains
       endif
       Tree%iStep  = iStep
       Tree%bGrown = .true.
-      Tree%DistanceDirect = 2*sum(PartRegParam)/size(PartRegParam) ! 2*mean(eps), below that distance eps has a strong effect
    end subroutine grow_tree_part
 
    !> Recursive function to grow/setup a tree. 
@@ -675,6 +675,7 @@ contains
       GeomC = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value 
       VortC = 0.0_ReKi
       wTot = 0.0_ReKi
+      node%maxRegParam = 0.0_ReKi
       ! --- Barycenter of vorticity of the node 
       do i = 1,node%nPart
          PartPos   = Part%P(:,node%iPart(i))
@@ -682,6 +683,7 @@ contains
          wLoc      = (PartAlpha(1)**2 + PartAlpha(2)**2 + PartAlpha(3)**2)**0.5_ReKi ! Vorticity norm
          VortC     = VortC + wLoc*PartPos                                   ! Sum coordinates weighted by vorticity
          wTot      = wTot + wLoc                                                     ! Total vorticity
+         node%maxRegParam = max(node%maxRegParam, Part%RegParam(node%iPart(i))) ! Regularization floor uses max eps in this cell
       end do
       ! There is no vorticity, we make it a empty node and we exit 
       if(EqualRealNos(abs(wTot),0.0_ReKi)) then
@@ -925,6 +927,7 @@ contains
          node%radius=0
          node%center(1:3)=0.5_ReKi*(Seg%SP(1:3,1)+Seg%SP(1:3,2))
          node%Moments=0.0_ReKi
+         node%maxRegParam = Seg%RegParam(1)
          nullify(node%iPart)
          nullify(node%branches)
          allocate(node%leaves(1:1))
@@ -973,7 +976,6 @@ contains
       endif
       Tree_Seg%iStep  = iStep
       Tree_Seg%bGrown = .true.
-      Tree_Seg%DistanceDirect = 2*sum(SegRegParam)/size(SegRegParam) ! 2*mean(eps), below that distance eps has a strong effect ! TODO REMOVE
    end subroutine grow_tree_segment
 
    !> Recursive function to grow/setup a tree.
@@ -1024,6 +1026,7 @@ contains
       GeomC = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value
       VortC = 0.0_ReKi
       wTot = 0.0_ReKi
+      node%maxRegParam = 0.0_ReKi
       ! --- Barycenter of vorticity of the node
       do i = 1,node%nPart
          P1 = Seg%SP(1:3,Seg%SConnct(1,node%iPart(i)))
@@ -1031,6 +1034,7 @@ contains
          SegCenter = 0.5_ReKi*(P1+P2)
          VortC = VortC + abs(Seg%SGamma(node%iPart(i)))*SegCenter  ! Sum coordinates weighted by vorticity
          wTot   = wTot + abs(Seg%SGamma(node%iPart(i)))            ! Total vorticity
+         node%maxRegParam = max(node%maxRegParam, Seg%RegParam(node%iPart(i))) ! Regularization floor uses max eps in this cell
       end do
       ! There is no vorticity, we make it a empty node and we exit
       if(EqualRealNos(abs(wTot),0.0_ReKi)) then
@@ -1501,7 +1505,7 @@ contains
                enddo
             endif
          else
-            distDirect = max(BranchFactor*node%radius, DistanceDirect) ! Under this distance-> Direct eval., Above it -> quadrupole calculation
+            distDirect = max(BranchFactor*node%radius + 2.0_ReKi*node%maxRegParam, DistanceDirect) ! Direct eval. below this distance; floor = branch radius + 2*max(eps) in cell
             DeltaP  = - node%center + CP(1:3)                          ! Vector between the control point and the center of the branch
             r       = sqrt( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2)
             ! Test if the control point is too close from the branch node so that a direct evaluation is needed 
@@ -1704,7 +1708,7 @@ contains
                enddo
             endif
          else
-            distDirect = max(BranchFactor*node%radius, DistanceDirect) ! Under this distance-> Direct eval., Above it -> quadrupole calculation
+            distDirect = max(BranchFactor*node%radius + 2.0_ReKi*node%maxRegParam, DistanceDirect) ! Direct eval. below this distance; floor = branch radius + 2*max(eps) in cell
             DeltaP  = - node%center + CP(1:3)                          ! Vector between the control point and the center of the branch
             r       = sqrt( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2)
             ! Test if the control point is too close from the branch node so that a direct evaluation is needed
