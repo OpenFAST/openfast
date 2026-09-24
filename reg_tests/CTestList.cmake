@@ -583,6 +583,9 @@ md_regression("md_syrope"                                     "moordyn")
 #  OpenFAST IO Library regression tests
 py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")
 
+add_test(openfast_driver_stderr "${Python_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/lib/test_openfastDrivers.py" -v)
+set_tests_properties(openfast_driver_stderr PROPERTIES TIMEOUT 120 LABELS "python;driver")
+
 # AeroDisk regression tests
 adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")
 

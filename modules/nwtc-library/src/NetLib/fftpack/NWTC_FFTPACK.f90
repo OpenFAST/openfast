@@ -7,6 +7,7 @@
    !                  Also updated to check that transform has been initialized for the
    !                    correct type (to avoid having wSave too small)
    ! ADP: 07/28/2014: Added in the complex FFT routines from fftpack v. 4.1
+   ! ADP: 08/15/2026: upgraded from fftpack v4.1 to v5.1 and added interfaces for 2D fft
 !=======================================================================
 MODULE NWTC_FFTPACK
 !-----------------------------------------------------------------------
@@ -674,6 +675,38 @@ CONTAINS
 
    END SUBROUTINE ExitSINT
   !------------------------------------------------------------------------
+   SUBROUTINE CheckFFTPACKRealKind( ErrStat )
+
+        ! This subroutine verifies that fftpack5.1.f was compiled with a default REAL
+        ! kind of SiKi.  FFTPACK 5.1 declares its arrays as bare REAL/COMPLEX, but this
+        ! wrapper hands it explicitly kinded REAL(SiKi)/COMPLEX(SiKi) buffers and passes
+        ! their element counts as LENSAV/LENWRK.  If the build promotes the default REAL
+        ! to 8 bytes in fftpack5.1.f (DOUBLE_PRECISION does this by default, via
+        ! -fdefault-real-8 for GNU or -real-size 64 for Intel), FFTPACK writes twice as
+        ! many bytes as those buffers hold and silently corrupts the heap and stack.
+        ! See the FFTPACK_SOURCES block in modules/nwtc-library/CMakeLists.txt.
+
+      IMPLICIT                         NONE
+
+      INTEGER, INTENT(OUT),OPTIONAL :: ErrStat        ! returns non-zero if an error occurred
+
+      INTEGER, EXTERNAL             :: FFTPACK_REALKIND  ! from src/NetLib/fftpack/fftpack_kind.f
+
+
+      IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+      IF ( FFTPACK_REALKIND() /= SiKi ) THEN
+         CALL ProgAbort ( 'FFTPACK 5.1 was compiled with a default REAL kind of '// &
+                          TRIM(Num2LStr(FFTPACK_REALKIND()))//', but NWTC_FFTPACK requires '// &
+                          TRIM(Num2LStr(SiKi))//'.  The build must suppress default-real promotion '// &
+                          'for fftpack5.1.f and fftpack_kind.f.', PRESENT(ErrStat) )
+         IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
+      ENDIF
+
+
+   END SUBROUTINE CheckFFTPACKRealKind
+  !------------------------------------------------------------------------
+
    SUBROUTINE InitCOST( NumSteps, FFT_Data, NormalizeIn, ErrStat )
 
         ! This subroutine initializes the cosine transform working space
@@ -693,6 +726,14 @@ CONTAINS
 
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
 
         ! Number of timesteps in the time series returned from the cosine transform
         ! N should be odd:
@@ -763,6 +804,14 @@ CONTAINS
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
 
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
+
         ! Number of timesteps in the time series returned from the backward FFT
         ! N should be even:
 
@@ -831,6 +880,14 @@ CONTAINS
 
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
 
         ! Number of timesteps in the time series returned from the backward FFT
         ! N should be even:
@@ -901,6 +958,14 @@ CONTAINS
 
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
 
         ! Number of timesteps in the time series returned from the sine transform
         ! N should be odd:
@@ -993,6 +1058,14 @@ CONTAINS
 
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
 
       FFT_Data%L = L
       FFT_Data%M = M
@@ -1154,6 +1227,14 @@ CONTAINS
 
 
       IF ( PRESENT(ErrStat) ) ErrStat = ErrID_None
+
+        ! Verify FFTPACK's default REAL kind matches this wrapper's (SiKi)
+
+      CALL CheckFFTPACKRealKind( ErrStat )
+      IF ( PRESENT(ErrStat) ) THEN
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ENDIF
+
 
       FFT_Data%L = L
       FFT_Data%M = M

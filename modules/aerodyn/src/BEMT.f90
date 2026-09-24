@@ -518,6 +518,9 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    call allocAry( y%F, p%numBladeNodes, p%numBlades, 'y%F', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%k, p%numBladeNodes, p%numBlades, 'y%k', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%k_p, p%numBladeNodes, p%numBlades, 'y%k_p', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cx_qs , p%numBladeNodes, p%numBlades, 'y%Cx_qs',  errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cy_qs , p%numBladeNodes, p%numBlades, 'y%Cy_qs',  errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%phi_qs, p%numBladeNodes, p%numBlades, 'y%phi_qs', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%AOA, p%numBladeNodes, p%numBlades, 'y%AOA', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cx, p%numBladeNodes, p%numBlades, 'y%Cx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cy, p%numBladeNodes, p%numBlades, 'y%Cy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1123,7 +1126,7 @@ subroutine GetRTip( u, p, RTip )
 
 end subroutine GetRTip
 !..................................................................................................................................
-subroutine calculate_Inductions_from_BEMT(p,phi,u,OtherState,AFInfo,axInduction,tanInduction, ErrStat,ErrMsg, k_out, kp_out, F_out)
+subroutine calculate_Inductions_from_BEMT(p,phi,u,OtherState,AFInfo,axInduction,tanInduction, ErrStat,ErrMsg, k_out, kp_out, F_out, Cx_out, Cy_out)
 
    type(BEMT_ParameterType),        intent(in   ) :: p                  !< Parameters
    real(ReKi),                      intent(in   ) :: phi(:,:)           !< phi
@@ -1137,6 +1140,8 @@ subroutine calculate_Inductions_from_BEMT(p,phi,u,OtherState,AFInfo,axInduction,
    real(ReKi), optional,            intent(inout) :: k_out(:,:)         !< 
    real(ReKi), optional,            intent(inout) :: kp_out(:,:)        !< 
    real(ReKi), optional,            intent(inout) :: F_out(:,:)         !< hub/tip loss factor
+   real(ReKi), optional,            intent(inout) :: Cx_out(:,:)        !< From BEM Polar: Cx (normal for plane, along xl)
+   real(ReKi), optional,            intent(inout) :: Cy_out(:,:)        !< From BEM Polar: Cy (tangential to plane, along -yl)
 
    integer(IntKi)                                 :: i                  !< blade node counter
    integer(IntKi)                                 :: j                  !< blade counter
@@ -1146,7 +1151,7 @@ subroutine calculate_Inductions_from_BEMT(p,phi,u,OtherState,AFInfo,axInduction,
    integer(IntKi)                                 :: errStat2           !< Error status of the operation
    character(ErrMsgLen)                           :: errMsg2            !< Error message if ErrStat /= ErrID_None
    character(*), parameter                        :: RoutineName = 'calculate_Inductions_from_BEMT'
-   real(ReKi)                                     :: kp, k, F           !< Optional variables returned by BEM
+   real(ReKi)                                     :: kp, k, F, Cx, Cy   !< Optional variables returned by BEM
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1159,10 +1164,12 @@ subroutine calculate_Inductions_from_BEMT(p,phi,u,OtherState,AFInfo,axInduction,
       
             ! Need to get the induction factors for these conditions without skewed wake correction and without UA
             ! COMPUTE: axInduction, tanInduction  
-            fzero = BEMTU_InductionWithResidual(p, u, i, j, phi(i,j), AFInfo(p%AFIndx(i,j)), IsValidSolution, ErrStat2, ErrMsg2, a=axInduction(i,j), ap=tanInduction(i,j), kp_out=kp, k_out=k, F_out=F)
+            fzero = BEMTU_InductionWithResidual(p, u, i, j, phi(i,j), AFInfo(p%AFIndx(i,j)), IsValidSolution, ErrStat2, ErrMsg2, a=axInduction(i,j), ap=tanInduction(i,j), kp_out=kp, k_out=k, F_out=F, Cx_out=Cx, Cy_out=Cy)
             if (present(kp_out)) kp_out(i,j) = kp
             if (present(k_out))  k_out(i,j)  = k
             if (present(F_out))  F_out(i,j)  = F
+            if (present(Cx_out)) Cx_out(i,j) =  Cx ! For BEM Polar, Cx = "cn" = Cxl (normal to plane, not chord)
+            if (present(Cy_out)) Cy_out(i,j) = -Cy ! For BEM Polar, Cy = "ct" =-Cyl
          
                if (ErrStat2 /= ErrID_None) then
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
@@ -1321,7 +1328,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    ! NOTE that we don't use the DBEMT inputs when calling its CalcOutput routine, so we'll skip calculating them here
    !............................................
    call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg,&
-         y%axInduction_qs, y%tanInduction_qs, y%k, y%k_p, y%F)
+         y%axInduction_qs, y%tanInduction_qs, y%k, y%k_p, y%F, y%Cx_qs, y%Cy_qs)
+   y%phi_qs = y%phi ! Stored here because SetInputs_for_UA_AllNodes erased it.
    
    !............................................
    ! update phi if necessary (consistent with inductions) and calculate inputs to UA (EVEN if UA isn't used, because we use the inputs later):
@@ -1456,7 +1464,7 @@ end subroutine BEMT_InitStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing inductions outputs, used in both loose and tight coupling.
 subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, ApplyCorrections, phi, u, p, x, xd, z, OtherState, AFInfo, axInduction, tanInduction, chi, m, errStat, errMsg, &
-      axInduction_qs_out, tanInduction_qs_out, k_out, kp_out, F_out)
+      axInduction_qs_out, tanInduction_qs_out, k_out, kp_out, F_out, Cx_out, Cy_out)
 !..................................................................................................................................
 
    REAL(DbKi),                     intent(in   )  :: t           ! current simulation time
@@ -1482,6 +1490,8 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
    REAL(ReKi), optional,           intent(  out)  :: k_out(:,:) ! NOTE: if provided, kp_out and F_out should be provided
    REAL(ReKi), optional,           intent(  out)  :: kp_out(:,:)
    REAL(ReKi), optional,           intent(  out)  :: F_out(:,:)
+   REAL(ReKi), optional,           intent(  out)  :: Cx_out(:,:)
+   REAL(ReKi), optional,           intent(  out)  :: Cy_out(:,:)
 
 
       ! Local variables:
@@ -1532,7 +1542,7 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
          !............................................
          ! NOTE: we assume that all optional arguments (k/kp/F) are provided or none at all.
          if (present(k_out)) then
-            call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2, k_out, kp_out, F_out)
+            call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2, k_out, kp_out, F_out, Cx_out, Cy_out)
          else
             call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2)
          endif

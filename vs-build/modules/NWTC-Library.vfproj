@@ -123,6 +123,32 @@
 				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\fdump.f"/>
 				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack5.1.f">
 					<FileConfiguration Name="Double_Debug|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Double_Release|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Double_OpenMP_Release|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Matlab_Release|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Matlab_Debug|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Release|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="Debug|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+					<FileConfiguration Name="OpenMP_Release|x64">
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+					</FileConfiguration>
+				</File>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack_kind.f">
+					<FileConfiguration Name="Double_Debug|x64">
 						<Tool Name="VFFortranCompilerTool" RealKIND="realKIND4"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Double_Release|x64">
@@ -218,6 +244,8 @@
 			<Filter Name="ranlux">
 				<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
 			</Filter>
+			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp_Types.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\KdTree.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
@@ -257,8 +285,6 @@
 			</File>
 			<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/>
-			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp.f90"/>
-			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp_Types.f90"/>
 		</Filter>
 	</Files>
 	<Globals/>
