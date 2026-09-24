@@ -504,16 +504,11 @@ subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
-   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
+   if (p%WrVTK==2 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
+      ! Only write final VTK outputs if WrVTK is set to 2
       call WrScr('OLAF: writing final VTK outputs')
       t=-1.0_ReKi
-      if (p%WrVTK==1) then
-         if (m%VTKstep<m%iStep+1) then
-            call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
-         endif
-      elseif (p%WrVTK==2) then
-         call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
-      endif
+      call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
       m%VTKstep = FINAL_STEP ! We make sure we don't write again
    endif
 end subroutine FVW_FinalWrite
