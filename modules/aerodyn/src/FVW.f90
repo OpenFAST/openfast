@@ -504,11 +504,18 @@ subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
-   if (p%WrVTK==2 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
-      ! Only write final VTK outputs if WrVTK is set to 2
-      call WrScr('OLAF: writing final VTK outputs')
-      t=-1.0_ReKi
-      call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
+   ! NOTE: the driver's main loop calls CalcOutput one step behind UpdateStates, so the very last
+   !       simulated state is never seen by CalcOutput. Force it here if it wasn't written yet.
+   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
+      t = real(m%iStep+1, DbKi) * p%DTaero
+      if (p%WrVTK==2) then
+         ! WrVTK=2 guarantees a wake output at the end of the simulation, regardless of VTK_fps
+         call WrScr('OLAF: writing final VTK outputs')
+         call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
+      elseif (m%VTKstep<m%iStep+1 .and. (t - m%VTKlastTime) >= p%DTvtk - 0.25_DbKi*p%DTaero) then
+         ! WrVTK=1: only write the final step if it wasn't caught yet and it lines up with VTK_fps
+         call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
+      endif
       m%VTKstep = FINAL_STEP ! We make sure we don't write again
    endif
 end subroutine FVW_FinalWrite
