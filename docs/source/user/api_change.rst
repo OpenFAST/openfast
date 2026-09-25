@@ -36,6 +36,7 @@ AeroDyn                                       \*                            ====
 AeroDyn                                       \*       NumGSMembers         0   NumGSMembers - Number of general support members (-)
 AeroDyn                                       \*                            GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
 AeroDyn                                       \*                            (-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
+OLAF                                          26       RegFunctionPart            2  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 1} [only if VelocityMethod=2,3] (switch)
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
 OpenFAST v4.2.x to OpenFAST  v5.0.0
