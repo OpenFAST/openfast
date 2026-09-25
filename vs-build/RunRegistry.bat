@@ -248,6 +248,7 @@ GOTO checkError
 :WAMIT
 :WAMIT2
 :Morison
+:NonlinearFK
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" %ALL_FAST_Includes% -O "%Output_Loc%"

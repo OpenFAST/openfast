@@ -504,7 +504,8 @@ You can include water velocity due to a current model by setting
 not include current. **CurrMod** = 2 requires that the *UserCurrent()*
 subroutine of the *Current.f90* source file be implemented by the user,
 and will require recompiling either the standalone SeaState program or
-OpenFAST. Current induces steady hydrodynamic loads through the viscous-drag
+OpenFAST. **CurrMod** = 3 reads an ASCII current profile file specified by
+**CurrFile**. Current induces steady hydrodynamic loads through the viscous-drag
 terms (both distributed and lumped) of strip-theory members in HydroDyn. Current is
 not used in the potential-flow solution or when **WaveMod** = 6.
 
@@ -555,6 +556,13 @@ positive valued. :math:`U_{0_{NS}}` is the current velocity at SWL, correspondin
 The depth-independent current velocity everywhere equals **CurrDIV**.
 This current has a heading direction **CurrDIDir**, following the same
 convention as **WaveDir**.
+
+For **CurrMod** = 3, SeaState reads an ASCII file with three columns:
+depth in meters negative downward from SWL, x-velocity in m/s, and
+y-velocity in m/s. Depth values less than or equal to zero must be strictly
+decreasing. SeaState linearly interpolates the x- and y-velocity components
+separately by depth, and uses the nearest endpoint value when the query
+depth lies outside the range covered by the table.
 
 MacCamy-Fuchs diffraction model
 -------------------------------

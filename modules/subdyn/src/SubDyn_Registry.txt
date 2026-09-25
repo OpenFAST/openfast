@@ -127,6 +127,9 @@ typedef  ^  SD_InitType   IntKi              GuyanDampSize  - - -     "Size of G
 typedef  ^  SD_InitType   ReKi               GuyanDampMat  {:}{:} - - "Guyan Damping Matrix, see also CBB" 
 typedef  ^  SD_InitType   INTEGER            Members {:}{:} - -       "Member joints connection          " 
 typedef  ^  SD_InitType   ReKi               MemberSpin {:} - -       "Member spin angle about its axis - for rectangular members " rad
+typedef  ^  SD_InitType   ReKi               MemberDivSize {:} - -    "Optional maximum element length for each member" m
+typedef  ^  SD_InitType   IntKi              MemberNDiv {:} - -       "Resolved number of finite elements per member" -
+typedef  ^  SD_InitType   IntKi              MemberElemStart {:} - -  "First element index for each member in p%Elems" -
 typedef  ^  SD_InitType   CHARACTER(ChanLen) SSOutList {:} - -        "List of Output Channels           " 
 typedef  ^  SD_InitType   LOGICAL            OutCOSM - - -            "Output Cos-matrices Flag          " 
 typedef  ^  SD_InitType   LOGICAL            TabDelim - - -           "Generate a tab-delimited output file in OutJckF-Flag                       " 
@@ -152,7 +155,7 @@ typedef  ^  SD_InitType   ReKi               PropsS     {:}{:} - -    "Property 
 typedef  ^  SD_InitType   R8Ki               K {:}{:} - -             "System stiffness matrix                " 
 typedef  ^  SD_InitType   R8Ki               M {:}{:} - -             "System mass matrix                     " 
 typedef  ^  SD_InitType   ReKi               ElemProps {:}{:} - -     "Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )" 
-typedef  ^  SD_InitType   INTEGER            MemberNodes {:}{:} - -   "Member number and list of nodes making up a member (>2 if subdivided)" 
+typedef  ^  SD_InitType   INTEGER            MemberNodes {:}{:} - -   "Member number and endpoint node IDs (interior member nodes reconstructed from connectivity)" 
 typedef  ^  SD_InitType   INTEGER            NodesConnN {:}{:} - -    "Nodes that connect to a common node   " 
 typedef  ^  SD_InitType   INTEGER            NodesConnE {:}{:} - -    "Elements that connect to a common node" 
 typedef  ^  SD_InitType   LOGICAL            SSSum - - -              "SubDyn Summary File Flag              " 

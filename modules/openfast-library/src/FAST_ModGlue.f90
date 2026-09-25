@@ -42,6 +42,14 @@ public :: ModGlue_Init, &
 
 logical :: CalcSteadyDebug = .false.
 
+! Numeric format for linearization (.lin) file output. Fixed at full double
+! precision independent of the deck's tabular OutFmt: the .lin matrices feed
+! eigenanalysis, and Jacobians of coupled-section blades span ~15 orders of
+! magnitude, so truncated writes (e.g. the ES10.3E2 default) corrupt their
+! eigenvalues.
+character(*), parameter :: LinFmt = 'ES24.15E3'
+integer(IntKi), parameter :: LinFmtWidth = 24
+
 contains
 
 subroutine ModGlue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
@@ -1399,7 +1407,7 @@ subroutine ModGlue_CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, 
 
    write (Un, '(A)') 'Simulation information:'
 
-   fmt = '(3x,A,1x,'//trim(p_FAST%OutFmt_t)//',1x,A)'
+   fmt = '(3x,A,1x,'//LinFmt//',1x,A)'
    Desc = 'Simulation time:'; write (Un, fmt) Desc, t_global, 's'
    Desc = 'Rotor Speed:    '; write (Un, fmt) Desc, y_FAST%Lin%RotSpeed, 'rad/s'
    Desc = 'Azimuth:        '; write (Un, fmt) Desc, y_FAST%Lin%Azimuth, 'rad'
@@ -1472,15 +1480,15 @@ subroutine ModGlue_CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, 
    ! If Jacobian matrix output is requested
    if (FullOutputLoc) then
       write (Un, '(/,A,/)') 'Jacobian matrices:'
-      if (allocated(Lin%dUdu)) call WrPartialMatrix(Lin%dUdu, Un, p_FAST%OutFmt, 'dUdu', UseRow=uUse, UseCol=uUse)
-      if (allocated(Lin%dUdy)) call WrPartialMatrix(Lin%dUdy, Un, p_FAST%OutFmt, 'dUdy', UseRow=uUse, UseCol=yUse)
-      if (allocated(Lin%dXdy)) call WrPartialMatrix(Lin%dXdy, Un, p_FAST%OutFmt, 'dXdy', UseRow=xUse, UseCol=yUse)
-      if (allocated(Lin%J)) call WrPartialMatrix(Lin%J, Un, p_FAST%OutFmt, 'J')
+      if (allocated(Lin%dUdu)) call WrPartialMatrix(Lin%dUdu, Un, LinFmt, 'dUdu', UseRow=uUse, UseCol=uUse)
+      if (allocated(Lin%dUdy)) call WrPartialMatrix(Lin%dUdy, Un, LinFmt, 'dUdy', UseRow=uUse, UseCol=yUse)
+      if (allocated(Lin%dXdy)) call WrPartialMatrix(Lin%dXdy, Un, LinFmt, 'dXdy', UseRow=xUse, UseCol=yUse)
+      if (allocated(Lin%J)) call WrPartialMatrix(Lin%J, Un, LinFmt, 'J')
       if (present(ModSuffix)) then
-         if (allocated(Lin%dXdx)) call WrPartialMatrix(Lin%dXdx, Un, p_FAST%OutFmt, 'dXdx', UseRow=xUse, UseCol=xUse)
-         if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, p_FAST%OutFmt, 'dXdu', UseRow=xUse, UseCol=uUse)
-         if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, p_FAST%OutFmt, 'dYdx', UseRow=yUse, UseCol=xUse)
-         if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, p_FAST%OutFmt, 'dYdu', UseRow=yUse, UseCol=uUse)
+         if (allocated(Lin%dXdx)) call WrPartialMatrix(Lin%dXdx, Un, LinFmt, 'dXdx', UseRow=xUse, UseCol=xUse)
+         if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, LinFmt, 'dXdu', UseRow=xUse, UseCol=uUse)
+         if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, LinFmt, 'dYdx', UseRow=yUse, UseCol=xUse)
+         if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, LinFmt, 'dYdu', UseRow=yUse, UseCol=uUse)
       end if
    end if
 
@@ -1494,10 +1502,10 @@ subroutine ModGlue_CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, 
 
    ! Write the linearized state matrices
    write (Un, '(/,A,/)') 'Linearized state matrices:'
-   if (allocated(Lin%dXdx)) call WrPartialMatrix(Lin%dXdx, Un, p_FAST%OutFmt, 'A', UseRow=xUse, UseCol=xUse)
-   if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, p_FAST%OutFmt, 'B', UseRow=xUse, UseCol=uUse)
-   if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, p_FAST%OutFmt, 'C', UseRow=yUse, UseCol=xUse)
-   if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, p_FAST%OutFmt, 'D', UseRow=yUse, UseCol=uUse)
+   if (allocated(Lin%dXdx)) call WrPartialMatrix(Lin%dXdx, Un, LinFmt, 'A', UseRow=xUse, UseCol=xUse)
+   if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, LinFmt, 'B', UseRow=xUse, UseCol=uUse)
+   if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, LinFmt, 'C', UseRow=yUse, UseCol=xUse)
+   if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, LinFmt, 'D', UseRow=yUse, UseCol=uUse)
 
    ! Close file
    close (Un)
@@ -1553,11 +1561,11 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    end if
 
    ! tab stop after operating point
-   TS = 14 + 3*p_FAST%FmtWidth + 7
+   TS = 14 + 3*LinFmtWidth + 7
 
    ! Construct write formats
-   Fmt = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',T'//trim(Num2LStr(TS))//',L8,8x,I8,9x,A)'
-   FmtRot = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',2(", ",'//trim(p_FAST%OutFmt)//'),T'//trim(Num2LStr(TS))//',L8,8x,I8,9x,A)'
+   Fmt = '(3x,I8,3x,'//LinFmt//',T'//trim(Num2LStr(TS))//',L8,8x,I8,9x,A)'
+   FmtRot = '(3x,I8,3x,'//LinFmt//',2(", ",'//LinFmt//'),T'//trim(Num2LStr(TS))//',L8,8x,I8,9x,A)'
    FmtStr = '(3x,A10,1x,A,T'//trim(Num2LStr(TS))//',A15,1x,A16,1x,A)'
 
    ! Write header

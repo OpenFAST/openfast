@@ -78,11 +78,19 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
    ! Determine if acceleration should be calculated and returned
    OutputAccel = allocated(AccelUVW)
-   ! Cubic velocity interpolation also requires a valid acceleration field, since its
-   ! formula uses the derivative data even when acceleration output is not requested.
+   ! Cubic velocity interpolation also requires a valid acceleration field,
+   ! since its formula uses the derivative data even when acceleration output is not requested.
    if ((OutputAccel .or. FF%VelInterpCubic) .and. .not. FF%AccFieldValid) then
-      call SetErrStat(ErrID_Fatal, "Accel output requested, but accel field is not valid", &
-                      ErrStat, ErrMsg, RoutineName)
+      if (OutputAccel .and. FF%VelInterpCubic) then
+         call SetErrStat(ErrID_Fatal, "Acceleration output and cubic velocity interpolation both require a valid acceleration field, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      else if (OutputAccel) then
+         call SetErrStat(ErrID_Fatal, "Acceleration output requested, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      else  ! FF%VelInterpCubic
+         call SetErrStat(ErrID_Fatal, "Cubic velocity interpolation requires a valid acceleration field, but the acceleration field is not valid", &
+                         ErrStat, ErrMsg, RoutineName)
+      end if
       return
    end if
 
@@ -781,7 +789,7 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
    if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
-   ! Extract interpolation cells from grids based on poisiont
+   ! Extract interpolation cells from grids based on position
    !----------------------------------------------------------------------------
 
    ! If position is inside grid
@@ -1270,7 +1278,7 @@ contains
          ! so take modulus again to ensure that T_GRID is less than NSteps
          T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
       end if
-      
+
       ! Calculate bounding grid indices
       IT_LO = floor(T_GRID, IntKi) + 1
       IT_HI = IT_LO + 1
@@ -1281,6 +1289,11 @@ contains
       ! Adjust indices and interpolant
       if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
          ! Point is within grid
+      else if (IT_LO == 0 .and. T_GRID >= -GridTol) then
+         ! Within tolerance of the first time step
+         IT_LO = 1
+         IT_HI = 1
+         DT = -1.0_ReKi
       else if (IT_LO == G3D%NSteps) then
          if (G3D%Periodic) then
             ! Time wraps back to beginning
@@ -1298,7 +1311,7 @@ contains
          ! Time exceeds array bounds
          call SetErrStat(ErrID_Fatal, ' Error: GF wind array was exhausted at '// &
                          TRIM(Num2LStr(TIME))//' seconds (trying to access data at '// &
-                         TRIM(Num2LStr(TimeShifted))//' seconds). IT_Lo='//TRIM(Num2LStr(IT_Lo))// &
+                         TRIM(Num2LStr(TimeShifted))//' seconds). IT_LO='//TRIM(Num2LStr(IT_Lo))// &
                          ', IT_HI='//TRIM(Num2LStr(IT_Hi)), &
                          ErrStat, ErrMsg, RoutineName)
       end if

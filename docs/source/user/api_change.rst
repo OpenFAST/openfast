@@ -9,6 +9,36 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v5.0.x to OpenFAST  v5.1.0
+-----------------------------------
+
+Under-relaxation is introduced for the tight-coupling iterative solver to improve numerical stability, requiring two new inputs in the main OpenFAST input file.
+
+The generalized support-structure (GS) influence model was added to AeroDyn. This introduces three new switches (``GSPotent``, ``GSShadow``, ``GSAero``) after ``TwrAero`` in the AeroDyn primary input file, and two new sections (``General support structure joints`` and ``General support structure members``) after the ``Tower Influence and Aerodynamics`` section. The two new sections are required even when the GS model is disabled (set ``NumGSJoints`` and ``NumGSMembers`` to 0, keeping the table header lines).
+
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+Added in OpenFAST `5.1.0`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+OpenFAST                                      14       AutoRelax            default  AutoRelax   - Adaptive under-relaxation for the tight-coupling iterative solver (flag) [default=true]
+OpenFAST                                      15       RelaxFactor          default  RelaxFactor - Constant or initial (if AutoRelax) under-relaxation factor for the tight-coupling iterative solver (-) [>0 and <=1; default=0.7 if AutoRelax=false; default=0.3 if AutoRelax=true]
+HydroDyn                                      28       FKMod                      0  FKMod       - Nonlinear Froude-Krylov and hydrostatic load model {0: none, 1: nonlinear F-K and hydrostatics} (switch) [1 to NBody if NBodyMod>1; only used when PotMod=1; must provide GeoFile if FKMod=1]
+HydroDyn                                      29       GeoFile              "unused" GeoFile     - Full name(s) of geometry file (ASCII STL format) for nonlinear Froude-Krylov and hydrostatic load integration [1 to NBody; only used when PotMod=1 and when the corresponding FKMod=1]
+AeroDyn                                       10       GSPotent                   0  GSPotent    - Type generalized support (GS) structure influence on wind based on potential flow around the GS members (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+AeroDyn                                       11       GSShadow                   0  GSShadow    - Calculate GS influence on wind based on downstream shadow (switch) {0=none, 1=Powles model, 2=Eames model}
+AeroDyn                                       12       GSAero                 False  GSAero      - Calculate GS aerodynamic loads? (flag)
+AeroDyn                                       \*                            ======  General support structure joints  =========================================================== [new section, added after the "Tower Influence and Aerodynamics" section]
+AeroDyn                                       \*       NumGSJoints          0   NumGSJoints  - Number of general support joints (-)
+AeroDyn                                       \*                            GSJointID      GSJointxi      GSJointyi      GSJointzi
+AeroDyn                                       \*                            (-)            (m)            (m)            (m)
+AeroDyn                                       \*                            ======  General support structure members  ========================================================== [new section, added after the joints section]
+AeroDyn                                       \*       NumGSMembers         0   NumGSMembers - Number of general support members (-)
+AeroDyn                                       \*                            GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
+AeroDyn                                       \*                            (-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
+OLAF                                          26       RegFunctionPart            2  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 1} [only if VelocityMethod=2,3] (switch)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+
 OpenFAST v4.2.x to OpenFAST  v5.0.0
 -----------------------------------
 

@@ -86,7 +86,6 @@ subroutine InitSettingsFlags( ProgInfo, CLSettings, CLFlags )
    CLFlags%DTDefault           =  .FALSE.        ! specified 'DEFAULT' for resolution in time
    CLFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
    CLFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
-   CLFlags%SlDNonLinearForcePortionOnly =  .FALSE. ! Report only non-linear portion of forces
 
 end subroutine InitSettingsFlags
 
@@ -278,10 +277,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ! If no delimeters were given, than this option is simply a flag
       IF ( Delim1 == 0_IntKi ) THEN
             ! check to see if the filename is the name of the SlD input file
-         IF   ( ThisArgUC(1:9) == "NONLINEAR"   )   THEN
-            CLFlags%SlDNonLinearForcePortionOnly = .TRUE.
-            RETURN
-         ELSEIF   ( ThisArgUC(1:3) == "SLD" )   THEN
+         IF   ( ThisArgUC(1:3) == "SLD" )   THEN
             sldFlagSet              = .TRUE.             ! More logic in the routine that calls this one to set things.
             RETURN
          ELSEIF   ( ThisArgUC(1:2) == "VV"  )   THEN
@@ -544,11 +540,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       ! Stiffness matrix
    CALL ReadVar( UnIn, FileName,DvrFlags%StiffMatOut,'StiffMatOut',' Output stiffness matrices at start and end',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   if (Failed()) return
-
-      ! Non-linear reaction portion only
-   CALL ReadVar( UnIn, FileName,DvrFlags%SlDNonLinearForcePortionOnly,'SlDNonLinearForcePortionOnly',' Only report the non-linear portion of the reaction force.',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    if (Failed()) return
 

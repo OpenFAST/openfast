@@ -241,9 +241,10 @@ CONTAINS
    
 
    ! read in stiffness/damping coefficient or load nonlinear data file if applicable
-   SUBROUTINE getCoefficientOrCurve(inputString, LineProp_c, LineProp_npoints, LineProp_Xs, LineProp_Ys, ErrStat3, ErrMsg3)
+   SUBROUTINE getCoefficientOrCurve(inputString, LineProp_c, LineProp_npoints, LineProp_Xs, LineProp_Ys, &
+                                    ErrStat3, ErrMsg3, PriPath)
    
-      CHARACTER(40),    INTENT(IN   )  :: inputString
+      CHARACTER(*),     INTENT(IN   )  :: inputString
       REAL(DbKi),       INTENT(INOUT)  :: LineProp_c
       INTEGER(IntKi),   INTENT(  OUT)  :: LineProp_nPoints
       REAL(DbKi),       INTENT(  OUT)  :: LineProp_Xs (MD_MaxNCoef)  ! MD_MaxNCoef set in registry
@@ -251,6 +252,7 @@ CONTAINS
       
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: PriPath ! Path to the primary MoorDyn input file
 
       INTEGER(IntKi)                   :: I
       INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
@@ -259,6 +261,7 @@ CONTAINS
       INTEGER(IntKi)                   :: ErrStat4
       CHARACTER(120)                   :: ErrMsg4         
       CHARACTER(120)                   :: Line2   
+      CHARACTER(1024)                  :: FileName
       
            
       if (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) then ! "eE" are exluded as they're used for scientific notation!
@@ -273,9 +276,14 @@ CONTAINS
          LineProp_c = 0.0
          
          ! load lookup table data from file
+         IF ( PRESENT(PriPath) .AND. PathIsRelative( inputString ) ) THEN
+            FileName = TRIM(PriPath)//TRIM(inputString)
+         ELSE
+            FileName = TRIM(inputString)
+         END IF
         
          CALL GetNewUnit( UnCoef )
-         CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
+         CALL OpenFInpFile( UnCoef, TRIM(FileName), ErrStat4, ErrMsg4 )   ! add error handling?
          IF (ErrStat4 == ErrID_Fatal) then
             ErrStat3 = ErrStat4
             ErrMsg3 = ErrMsg4
@@ -303,7 +311,7 @@ CONTAINS
          
          if (I < 2) then
             ErrStat3 = ErrID_Fatal
-            ErrMsg3  = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)//" (first 3 lines are headers)."
+            ErrMsg3  = "Less than the minimum of 2 data lines found in file "//TRIM(FileName)//" (first 3 lines are headers)."
             LineProp_npoints = 0
             Close (UnCoef)
             RETURN
@@ -322,7 +330,7 @@ CONTAINS
    
       CHARACTER(*),          INTENT(INOUT)  :: instring
       INTEGER(IntKi),        INTENT(  OUT)  :: n
-      CHARACTER(40),         INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
+      CHARACTER(*),          INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
       
       INTEGER :: pos1, pos2
  

@@ -50,6 +50,12 @@ All solver parameters are set in the main OpenFAST input file
        maximum damping (first-order accurate).  Typical value: **0.9**.
        Reducing ``RhoInf`` below 1 damps high-frequency numerical noise at the
        cost of slightly reduced accuracy.
+   * - ``ConvTol``
+     - real
+     - Convergence tolerance.  The iteration stops when the average
+       `L2`-norm of the Newton update vector falls below this value.
+       Typical value: ``1.0e-4``.  Tighter tolerances increase
+       computational cost but may be needed for stiff problems.
    * - ``MaxConvIter``
      - integer
      - Maximum number of Newton convergence iterations per time step before the
@@ -57,12 +63,25 @@ All solver parameters are set in the main OpenFAST input file
        With ``ModCoupling=2`` or ``1``, a fatal error is issued on failure;
        with ``ModCoupling=3`` the Jacobian is rebuilt first and the step is
        retried before a warning is emitted.
-   * - ``ConvTol``
+   * - ``AutoRelax``
+     - bool
+     - Adaptive under-relaxation for the tight-coupling iterative solver.
+       If set to ``true``, OpenFAST will only use the user provided
+       ``RelaxFactor`` in the first iteration of each predictor or corrector
+       step. In subsequent iterations, OpenFAST will increase the relaxation
+       factor from the previous iteration by a factor of 1.2 if converging
+       (residual decreasing) or halve the relaxation factor if diverging
+       (residual increasing). The relaxation factor is bounded between a
+       minimum of 0.01 and a maximum of 0.8. If set to ``false``, OpenFAST
+       will use a constant relaxation factor given by ``RelaxFactor``.
+       Default is true.
+   * - ``RelaxFactor``
      - real
-     - Convergence tolerance.  The iteration stops when the average
-       `L2`-norm of the Newton update vector falls below this value.
-       Typical value: ``1.0e-4``.  Tighter tolerances increase
-       computational cost but may be needed for stiff problems.
+     - Constant (if ``AutoRelax`` is ``False``) or initial (if ``AutoRelax``
+       is ``True``) under-relaxation factor for the tight-coupling iterative
+       solver. Must be a positive number less than or equal to **1.0**. If
+       ``AutoRelax`` is ``False``, default value is **0.7**. If ``AutoRelax``
+       is ``True``, default value is **0.3**.
    * - ``DT_UJac``
      - real
      - Time interval (seconds) between Jacobian rebuilds when

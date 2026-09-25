@@ -2338,18 +2338,20 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       enddo
    endif
 
-   IF ( InputFileData%StC_SA_MODE /= SA_CMODE_GH_vel    .and. &
-        InputFileData%StC_SA_MODE /= SA_CMODE_GH_invVel .and. &
-        InputFileData%StC_SA_MODE /= SA_CMODE_GH_disp   .and. &
-        InputFileData%StC_SA_MODE /= SA_CMODE_Ph_FF     .and. &
-        InputFileData%StC_SA_MODE /= SA_CMODE_Ph_DF     ) then
-      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be '                          //&
-                   trim(Num2LStr(SA_CMODE_GH_vel))   //' (velocity-based ground hook control), '               //&
-                   trim(Num2LStr(SA_CMODE_GH_invVel))//' (inverse velocity-based ground hook control), '       //&
-                   trim(Num2LStr(SA_CMODE_GH_disp))  //' (displacement-based ground hook control), '           //&
-                   trim(Num2LStr(SA_CMODE_Ph_FF))    //' (phase difference algorithm with friction force), or '//&
-                   trim(Num2LStr(SA_CMODE_Ph_DF))    //' (phase difference algorithm with damping force).',      &
-           ErrStat, ErrMsg, RoutineName )
+   IF ( InputFileData%StC_CMODE == CMODE_Semi ) THEN
+      IF ( InputFileData%StC_SA_MODE /= SA_CMODE_GH_vel    .and. &
+           InputFileData%StC_SA_MODE /= SA_CMODE_GH_invVel .and. &
+           InputFileData%StC_SA_MODE /= SA_CMODE_GH_disp   .and. &
+           InputFileData%StC_SA_MODE /= SA_CMODE_Ph_FF     .and. &
+           InputFileData%StC_SA_MODE /= SA_CMODE_Ph_DF     ) then
+         CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (StC_SA_MODE) must be '                          //&
+                      trim(Num2LStr(SA_CMODE_GH_vel))   //' (velocity-based ground hook control), '               //&
+                      trim(Num2LStr(SA_CMODE_GH_invVel))//' (inverse velocity-based ground hook control), '       //&
+                      trim(Num2LStr(SA_CMODE_GH_disp))  //' (displacement-based ground hook control), '           //&
+                      trim(Num2LStr(SA_CMODE_Ph_FF))    //' (phase difference algorithm with friction force), or '//&
+                      trim(Num2LStr(SA_CMODE_Ph_DF))    //' (phase difference algorithm with damping force).',      &
+              ErrStat, ErrMsg, RoutineName )
+      END IF
    END IF
 
       ! Prescribed forces

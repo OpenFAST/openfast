@@ -32,6 +32,7 @@
 MODULE WAMIT2_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE SeaSt_WaveField_Types
+USE NonlinearFK_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxWAMIT2Outputs                 = 6      !  [-]
@@ -72,6 +73,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT2_ParameterType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FKMod      !< Body nonlinear Froude-Krylov and hydrostatic model (switch) [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveExctn2Grid      !< Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component) [(N)]
     TYPE(GridInterp_ParameterType)  :: Exctn2GridParams      !< Parameters of WaveExctn2Grid [-]
     LOGICAL , DIMENSION(1:6)  :: MnDriftDims = .false.      !< Flags for which dimensions to calculate in MnDrift   calculations [-]
@@ -385,6 +387,18 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    ErrMsg  = ''
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
+   if (allocated(SrcParamData%FKMod)) then
+      LB(1:1) = lbound(SrcParamData%FKMod)
+      UB(1:1) = ubound(SrcParamData%FKMod)
+      if (.not. allocated(DstParamData%FKMod)) then
+         allocate(DstParamData%FKMod(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FKMod.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FKMod = SrcParamData%FKMod
+   end if
    if (allocated(SrcParamData%WaveExctn2Grid)) then
       LB(1:5) = lbound(SrcParamData%WaveExctn2Grid)
       UB(1:5) = ubound(SrcParamData%WaveExctn2Grid)
@@ -421,6 +435,9 @@ subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%FKMod)) then
+      deallocate(ParamData%FKMod)
+   end if
    if (allocated(ParamData%WaveExctn2Grid)) then
       deallocate(ParamData%WaveExctn2Grid)
    end if
@@ -435,6 +452,7 @@ subroutine WAMIT2_PackParam(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%NBody)
    call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%FKMod)
    call RegPackAlloc(RF, InData%WaveExctn2Grid)
    call GridInterp_PackParam(RF, InData%Exctn2GridParams) 
    call RegPack(RF, InData%MnDriftDims)
@@ -460,6 +478,7 @@ subroutine WAMIT2_UnPackParam(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FKMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveExctn2Grid); if (RegCheckErr(RF, RoutineName)) return
    call GridInterp_UnpackParam(RF, OutData%Exctn2GridParams) ! Exctn2GridParams 
    call RegUnpack(RF, OutData%MnDriftDims); if (RegCheckErr(RF, RoutineName)) return

@@ -122,13 +122,16 @@ CONTAINS
       CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
       CHARACTER(40)                :: WaterKinValue        ! Temporarily stores the optional WaterKin setting for MD, which is typically a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
-      CHARACTER(40)                :: TempString1          !
-      CHARACTER(40)                :: TempString2          !
-      CHARACTER(40)                :: TempString3          !
-      CHARACTER(40)                :: TempString4          !
-      CHARACTER(40)                :: TempString5          !
-      CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
+      CHARACTER(1024)              :: TempString1          !
+      CHARACTER(1024)              :: TempString2          !
+      CHARACTER(1024)              :: TempString3          !
+      CHARACTER(1024)              :: TempString4          !
+      CHARACTER(1024)              :: TempString5          !
+      CHARACTER(1024)              :: TempString6          !
+      CHARACTER(1024)              :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
 !      CHARACTER(1024)              :: FileName             !
+      LOGICAL                      :: hasSyrope = .FALSE.  ! flag for if a line type has a Syrope model specified
+      LOGICAL                      :: hasSyropeICs = .FALSE. ! flag for whether any line type uses Syrope model
 
 
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
@@ -154,6 +157,16 @@ CONTAINS
       INTEGER                       :: Nx
       INTEGER                       :: QuoteCh                                     ! Character position.
       CHARACTER(*), PARAMETER       :: RoutineName = 'MD_Init'
+
+      ! for Syrope working curves
+      CHARACTER(1024)              :: owcPath              !
+      CHARACTER(1024)              :: wcFormula            !
+      REAL(DbKi)                   :: wcK1                 !
+      REAL(DbKi)                   :: wcK2                 !
+
+      ! for Syrope line initial conditions
+      REAL(DbKi)                   :: Tmax0
+      REAL(DbKi)                   :: Tmean0
 
       
       ! Initialize Err stat
@@ -369,6 +382,21 @@ CONTAINS
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nLines = p%nLines + 1
+                  Line = NextLine(i)
+               END DO
+            
+            else if ((INDEX(Line, "SYROPE IC") > 0) ) then ! if Syrope Line initial conditions
+
+               IF (wordy > 1) print *, "   Reading Syrope line initial conditions: ";
+               
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! find how many elements of this type there are
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nSyropeLineICs = p%nSyropeLineICs + 1
                   Line = NextLine(i)
                END DO
 
@@ -708,25 +736,80 @@ CONTAINS
                    
                    ! process stiffness coefficients
                    CALL SplitByBars(tempString1, N, tempStrings)
-                   if (N > 3) then
-                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
-                      CALL CleanUp()
-                      RETURN
-                   else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
-                      m%LineTypeList(l)%ElasticMod = 3
+
+                   ! check if the first entry follows the pattern "SYROPE:<filepath>" for a Syrope model
+                   ! if so, enable the Syrope model for this line type
+                   tempString5 = adjustl(tempStrings(1))
+                   ! check length of tempString5 to out-of-bounds error
+                   hasSyrope = (len(tempString5) > 7) .and. (tempString5(1:7) == 'SYROPE:')
+
+                   if (hasSyrope) then
+                      if (N /= 3) then
+                         CALL SetErrStat( ErrID_Fatal, 'A line type EA entry for a SYROPE model must have exactly 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
+                         CALL CleanUp()
+                         RETURN
+                      end if
+
+                      m%LineTypeList(l)%ElasticMod = 4
                       read(tempStrings(2), *) m%LineTypeList(l)%alphaMBL
                       read(tempStrings(3), *) m%LineTypeList(l)%vbeta
-                   else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
-                      m%LineTypeList(l)%ElasticMod = 2
-                      read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
-                   else
-                     m%LineTypeList(l)%ElasticMod = 1                ! normal case
-                   end if
-                   ! get the regular/static coefficient or relation in all cases (can be from a lookup table)
-                   CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%EA,     &
+
+                      tempString6 = adjustl(tempString5(8:)) ! get the filepath of the SYROPE curves
+                      IF ( PathIsRelative( tempString6 ) ) THEN
+                         tempString6 = TRIM(p%PriPath)//TRIM(tempString6)
+                      END IF
+                      
+                      CALL MD_ReadSyropeWorkingCurves(tempString6, owcPath, wcFormula, wcK1, wcK2, ErrStat2, ErrMsg2)
+                      IF (ErrStat2 >= AbortErrLev) THEN
+                         ErrMsg2 = 'Failed to read SYROPE working curves for line type '//trim(Num2LStr(l))//'.'//NewLine//TRIM(ErrMsg2)
+                      END IF
+                      CALL CheckError( ErrStat2, ErrMsg2 )
+                      IF (ErrStat >= AbortErrLev) RETURN
+                      ErrStat2 = ErrID_None
+                      ErrMsg2 = ''
+
+                      if (wordy > 0) print *, "  Read Syrope working curve for Line type ", trim(Num2LStr(l))
+
+                      if (trim(wcFormula) == 'LINEAR') then
+                          m%LineTypeList(l)%syropeWCForm = 1
+                      else if (trim(wcFormula) == 'QUADRATIC') then
+                          m%LineTypeList(l)%syropeWCForm = 2
+                      else if (trim(wcFormula) == 'EXP') then
+                          m%LineTypeList(l)%syropeWCForm = 3
+                      end if
+                      m%LineTypeList(l)%syropeWCK1 = wcK1
+                      m%LineTypeList(l)%syropeWCK2 = wcK2
+
+                      ! get the original working curve from the loopup table owcPath
+                      CALL getCoefficientOrCurve(owcPath, m%LineTypeList(l)%EA,  &
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
-                                                           m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2)
+                                                           m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
+                      
+                      hasSyrope = .false. ! reset hasSyrope flag for later use when processing
+
+                   else ! process other visco-elastic or normal cases
+
+                     if (N > 3) then
+                        CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
+                        m%LineTypeList(l)%ElasticMod = 3
+                        read(tempStrings(2), *) m%LineTypeList(l)%alphaMBL
+                        read(tempStrings(3), *) m%LineTypeList(l)%vbeta
+                     else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
+                        m%LineTypeList(l)%ElasticMod = 2
+                        read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
+                     else
+                        m%LineTypeList(l)%ElasticMod = 1                ! normal case
+                     end if
+                     ! get the regular/static coefficient or relation in all cases (can be from a lookup table)
+                     CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%EA,     &
+                                                            m%LineTypeList(l)%nEApoints, &
+                                                            m%LineTypeList(l)%stiffXs,   &
+                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
+                   end if
 
                    
                    ! process damping coefficients 
@@ -747,13 +830,13 @@ CONTAINS
                    CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
                                                            m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
-                                                           m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2)
+                                                           m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2, p%PriPath)
                                                            
                    ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
-                                                           m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2)
+                                                           m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2, p%PriPath)
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
@@ -1702,6 +1785,70 @@ CONTAINS
                   IF (wordy > 0) print *, "Set up Line", l, "of type",  m%LineList(l)%PropsIdNum
 
                END DO   ! l = 1,p%nLines
+            
+            !-------------------------------------------------------------------------------------------
+            else if ((INDEX(Line, "SYROPE IC") > 0) ) then ! if Syrope initial conditions header
+               hasSyropeICs = .false.
+               do l = 1, p%nLineTypes
+                  if (m%LineTypeList(l)%ElasticMod == 4) then
+                     hasSyropeICs = .true.
+                     exit
+                  end if
+               end do
+
+               if (.not. hasSyropeICs) then
+                  CALL SetErrStat( ErrID_Warn, 'No line type with Syrope model is defined, but SYROPE IC section is present.' , ErrStat, ErrMsg, RoutineName )
+               end if
+
+               if (wordy > 0) print *, "   Reading Syrope line initial inputs"
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               DO l = 1, p%nSyropeLineICs
+
+                  !read into a line
+                  Line = NextLine(i)
+
+                  ! count commas to determine how many line IDs specified for this IC
+                  N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= N+2 ) THEN 
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be '//trim(Num2LStr(N+2))//' columns (<lineIDs>, Tmax, Tmean).', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! parse out entries: SyropeLineID  Tmax Tmean
+                  ErrStat2 = 0
+                  READ(Line,*,IOSTAT=ErrStat2) TempIDnums(1:N), Tmax0, Tmean0
+                  IF (ErrStat2 /= 0) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  DO il = 1, N
+                     if (TempIDnums(il) >= 1 .and. TempIDnums(il) <= p%nLines) then      ! ensure line ID is in range
+                        if (m%LineTypeList(m%LineList(TempIDnums(il))%PropsIdNum)%ElasticMod == 4) then ! ensure line type is Syrope
+                           DO j = 1, m%LineList(TempIDnums(il))%N
+                              m%LineList(TempIDnums(il))%Tmax(j) = Tmax0
+                              m%LineList(TempIDnums(il))%Tmean(j) = Tmean0
+                           END DO
+                        else
+                           CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' does not use a Syrope line type.', ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           return
+                        end if
+                     else
+                        CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//'. Line number '//TRIM(Int2LStr(TempIDnums(il)))//' out of bounds.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        return
+                     endif 
+                  END DO
+               END DO
 
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "EXTERNAL LOADS") > 0) then ! if external load header
@@ -2682,8 +2829,8 @@ CONTAINS
 !            print *, m%LineList(l)%r(:,I)
          END DO
                
-         ! if using viscoelastic model, initialize the internal states
-         if (m%LineList(l)%ElasticMod == 2) then
+         ! if using viscoelastic model or Syrope model, initialize the internal states
+         if (m%LineList(l)%ElasticMod == 2 .or. m%LineList(l)%ElasticMod == 4) then
             do I = 1,N
                x%states(m%LineStateIs1(l) + 6*N-6 + I-1) = m%LineList(l)%dl_1(I)   ! should be zero
             end do
@@ -4924,5 +5071,180 @@ SUBROUTINE MD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    IF ( PRESENT(dZdz) ) THEN
    END IF
 END SUBROUTINE MD_JacobianPConstrState
+
+SUBROUTINE MD_ReadSyropeWorkingCurves(inputString, owcPath, wcFormula, k1, k2, ErrStat3, ErrMsg3)
+
+   CHARACTER(*),      INTENT(IN)  :: inputString
+   CHARACTER(*),      INTENT(OUT) :: owcPath
+   CHARACTER(*),      INTENT(OUT) :: wcFormula
+   REAL(DbKi),        INTENT(OUT) :: k1
+   REAL(DbKi),        INTENT(OUT) :: k2
+
+   INTEGER(IntKi),    INTENT(OUT) :: ErrStat3
+   CHARACTER(*),      INTENT(OUT) :: ErrMsg3
+
+   ! local variables
+   TYPE(FileInfoType)             :: FileInfo
+   CHARACTER(1024)                :: NextLine
+   CHARACTER(64)                  :: OptString
+   CHARACTER(256)                 :: OptValue
+   CHARACTER(256)                 :: Words(2)
+   LOGICAL                        :: FoundOWC
+   LOGICAL                        :: FoundWCFormula
+   LOGICAL                        :: FoundK1
+   LOGICAL                        :: FoundK2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_ReadSyropeWorkingCurves'
+
+   INTEGER(IntKi)                 :: i, ios
+   INTEGER(IntKi)                 :: ErrStat4
+   CHARACTER(1024)                :: ErrMsg4
+
+   ! initialize outputs
+   owcPath   = ''
+   wcFormula = ''
+   k1        = 0.0_DbKi
+   k2        = 0.0_DbKi
+   ErrStat3  = ErrID_None
+   ErrMsg3   = ''
+   FoundOWC = .false.
+   FoundWCFormula = .false.
+   FoundK1 = .false.
+   FoundK2 = .false.
+
+   ! read file
+   
+   CALL ProcessComFile(inputString, FileInfo, ErrStat4, ErrMsg4)
+   IF (ErrStat4 /= ErrID_None) THEN
+      CALL SetErrStat(ErrID_Fatal, &
+         'Error processing Syrope working curve file ' // TRIM(inputString) // ': ' // TRIM(ErrMsg4), &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+   END IF
+
+   CALL WrScr('  Loading SYROPE working curves from ' // TRIM(inputString))
+
+   ! parse lines
+   DO i = 1, FileInfo%NumLines
+
+      NextLine = TRIM(FileInfo%Lines(i))
+      IF (LEN_TRIM(NextLine) == 0) CYCLE
+
+      OptValue = ''
+      OptString = ''
+      Words = ''
+      CALL GetWords(NextLine, Words, 2)
+      IF (LEN_TRIM(Words(1)) == 0 .OR. LEN_TRIM(Words(2)) == 0) THEN
+         CALL SetErrStat(ErrID_Fatal, &
+            'Failed to read options in Syrope working curve file ' // TRIM(inputString) // &
+            '. Expected lines in the form "<value> <keyword>". Line was: ' // TRIM(NextLine), &
+            ErrStat3, ErrMsg3, RoutineName)
+         RETURN
+      END IF
+      OptValue = TRIM(Words(1))
+      OptString = TRIM(Words(2))
+
+      CALL Conv2UC(OptString)
+
+      IF (OptString == 'OWC') THEN
+         owcPath = TRIM(OptValue)
+         FoundOWC = .true.
+      ELSE IF (OptString == 'WCTYPE') THEN
+         wcFormula = TRIM(OptValue)
+         FoundWCFormula = .true.
+      ELSE IF (OptString == 'K1') THEN
+         READ(OptValue, *, IOSTAT=ios) k1
+         IF (ios /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal, &
+               'Invalid K1 value in Syrope working curve file ' // TRIM(inputString) // '.', &
+               ErrStat3, ErrMsg3, RoutineName)
+            RETURN
+         END IF
+         FoundK1 = .true.
+      ELSE IF (OptString == 'K2') THEN
+         READ(OptValue, *, IOSTAT=ios) k2
+         IF (ios /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal, &
+               'Invalid K2 value in Syrope working curve file ' // TRIM(inputString) // '.', &
+               ErrStat3, ErrMsg3, RoutineName)
+            RETURN
+         END IF
+         FoundK2 = .true.
+      ELSE
+         CALL SetErrStat(ErrID_Warn, &
+            'Unknown keyword "' // TRIM(OptString) // '" in Syrope working curve file ' // TRIM(inputString) // '.', &
+            ErrStat3, ErrMsg3, RoutineName)
+      END IF
+
+   END DO
+
+   ! required checks
+   IF (.NOT. FoundOWC) THEN
+      CALL SetErrStat(ErrID_Fatal, &
+         'OWC option not found in Syrope working curve file ' // TRIM(inputString) // '.', &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+   END IF
+
+   IF (.NOT. FoundWCFormula) THEN
+      CALL SetErrStat(ErrID_Fatal, &
+         'WCTYPE option not found in Syrope working curve file ' // TRIM(inputString) // '.', &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+   END IF
+
+   IF (.NOT. FoundK1) THEN
+      CALL SetErrStat(ErrID_Fatal, &
+         'K1 option not found in Syrope working curve file ' // TRIM(inputString) // '.', &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+   END IF
+
+   IF (.NOT. FoundK2) THEN
+      CALL SetErrStat(ErrID_Fatal, &
+         'K2 option not found in Syrope working curve file ' // TRIM(inputString) // '.', &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+   END IF
+
+   ! validate formula
+   CALL Conv2UC(wcFormula)
+
+   IF (wcFormula == 'LINEAR') THEN
+
+      IF (k1 < 0.0_DbKi) THEN
+         CALL SetErrStat(ErrID_Fatal, &
+            'LINEAR working curve requires k1 >= 0.', &
+            ErrStat3, ErrMsg3, RoutineName)
+         RETURN
+      END IF
+
+   ELSE IF (wcFormula == 'QUADRATIC') THEN
+
+      IF (k1 < 0.0_DbKi .OR. k1 >= 1.0_DbKi .OR. k2 <= 0.0_DbKi .OR. k2 > 1.0_DbKi) THEN
+         CALL SetErrStat(ErrID_Fatal, &
+            'QUADRATIC working curve requires 0 <= k1 < 1 and 0 < k2 <= 1.', &
+            ErrStat3, ErrMsg3, RoutineName)
+         RETURN
+      END IF
+
+   ELSE IF (wcFormula == 'EXP') THEN
+
+      IF (k1 < 0.0_DbKi .OR. k1 >= 1.0_DbKi .OR. k2 <= 0.0_DbKi) THEN
+         CALL SetErrStat(ErrID_Fatal, &
+            'EXP working curve requires 0 <= k1 < 1 and k2 > 0.', &
+            ErrStat3, ErrMsg3, RoutineName)
+         RETURN
+      END IF
+
+   ELSE
+
+      CALL SetErrStat(ErrID_Fatal, &
+         'Invalid WCTYPE value "' // TRIM(wcFormula) // '" in Syrope working curve file ' // TRIM(inputString) // '.', &
+         ErrStat3, ErrMsg3, RoutineName)
+      RETURN
+
+   END IF
+
+END SUBROUTINE MD_ReadSyropeWorkingCurves
 
 END MODULE MoorDyn

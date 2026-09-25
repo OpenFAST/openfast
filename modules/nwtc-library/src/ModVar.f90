@@ -787,14 +787,21 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
+subroutine MV_AddDelta(VarAry, DeltaAry, DataAry, RelaxIn)
    type(ModVarType), intent(in)  :: VarAry(:)      ! Array of variables
    real(R8Ki), intent(in)        :: DeltaAry(:)    ! Array of delta values
    real(R8Ki), intent(inout)     :: DataAry(:)     ! Array to be modified
+   real(R8Ki), intent(in),optional :: RelaxIn
    integer(IntKi)                :: i, j, k
-   real(R8Ki)                    :: quat_base(3), quat_delta(3), rvec(3), dcm(3, 3)
+   real(R8Ki)                    :: quat_base(3), quat_delta(3), rvec(3), dcm(3, 3), Relax
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
+
+   if (present(RelaxIn)) then
+      Relax = RelaxIn
+   else
+      Relax = 1.0_R8Ki
+   endif
 
    ! Loop through variables
    do i = 1, size(VarAry)
@@ -812,7 +819,7 @@ subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
                quat_base = DataAry(k:k + 2)
 
                ! Get rotation vector delta
-               rvec = DeltaAry(k:k + 2)
+               rvec = Relax*DeltaAry(k:k + 2)
 
                if (UseSmallRotAngles) then
                   call SmllRotTrans('linearization perturbation', rvec(1), rvec(2), rvec(3), dcm, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -829,7 +836,7 @@ subroutine MV_AddDelta(VarAry, DeltaAry, DataAry)
             end do
 
          case default
-            DataAry(iLoc(1):iLoc(2)) = DataAry(iLoc(1):iLoc(2)) + DeltaAry(iLoc(1):iLoc(2))
+            DataAry(iLoc(1):iLoc(2)) = DataAry(iLoc(1):iLoc(2)) + Relax*DeltaAry(iLoc(1):iLoc(2))
          end select
       end associate
    end do

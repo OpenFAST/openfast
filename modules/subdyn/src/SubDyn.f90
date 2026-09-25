@@ -26,7 +26,7 @@ Module SubDyn
    USE NWTC_Library
    USE SubDyn_Types
    USE SubDyn_Output
-   USE SubDyn_Tests
+   USE SubDyn_Tests, only: SD_Tests
    USE SD_FEM
    USE FEM, only: FINDLOCI
 
@@ -229,10 +229,10 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL DispNVD( SD_ProgDesc )
    InitOut%Ver = SD_ProgDesc
 
-   ! --- Test TODO remove me in the future
-   if (DEV_VERSION) then
-     CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
-   endif
+    ! --- Development tests
+    if (DEV_VERSION) then
+       CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
+    endif
 
    ! transfer glue-code information to data structure for SubDyn initialization:
    Init%g           = InitInput%g
@@ -1057,13 +1057,14 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
    CHARACTER(*),            INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
 ! local variable for input and output
 CHARACTER(1024)              :: PriPath          ! The path to the primary input file
-CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold value of read line
+CHARACTER(1024)              :: Line, Dummy_Str, MemberLine  ! String to temporarially hold value of read line
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo
 LOGICAL                      :: LegacyFormat
 LOGICAL                      :: bNumeric, bInteger, bCableHasPretension
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
+INTEGER(IntKi)               :: nMemberCols
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
@@ -1072,6 +1073,8 @@ REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
 INTEGER(IntKi)               :: Dummy_Int
+INTEGER(IntKi)               :: MemberNodeMax, MemberDivCount
+REAL(ReKi)                   :: MemberLen
 REAL(R8Ki)                   :: tmpMat(3,3)
 INTEGER(IntKi), ALLOCATABLE  :: TPIdxInput(:)
 INTEGER(IntKi), ALLOCATABLE  :: tmpIntAry(:)
@@ -1376,18 +1379,30 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,E
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Members,    p%NMembers, MembersCol, 'Members',    ErrStat2, ErrMsg2)
 CALL AllocAry(Init%MemberSpin, p%NMembers,             'MemberSpin', ErrStat2, ErrMsg2)
+CALL AllocAry(Init%MemberDivSize, p%NMembers,          'MemberDivSize', ErrStat2, ErrMsg2)
+CALL AllocAry(Init%MemberNDiv,    p%NMembers,          'MemberNDiv', ErrStat2, ErrMsg2)
 Init%Members(:,:)  = 0.0_IntKi
 Init%MemberSpin(:) = 0.0_ReKi
+Init%MemberDivSize(:) = 0.0_ReKi
+Init%MemberNDiv(:)    = 0_IntKi
 
 if (p%NMembers == 0) then
    CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
    return
 endif
 
-CALL AllocAry(StrArray, MembersCol, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return
+CALL AllocAry(StrArray, MembersCol+1, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return
 DO J = 1, p%NMembers
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading SubDyn members table'; if (Failed()) return
-   CALL ReadCAryFromStr ( Line, StrArray, MembersCol, 'Members', 'SubDyn members table should have 7 entries on each line', ErrStat2, ErrMsg2 ); if (Failed()) return
+   MemberLine = Line
+   I = index(MemberLine, '!')
+   if (I > 0) MemberLine = MemberLine(:I-1)
+   K = index(MemberLine, '#')
+   if (K > 0) MemberLine = MemberLine(:K-1)
+   StrArray(:) = ''
+   CALL ReadCAryFromStr ( MemberLine, StrArray, MembersCol+1, 'Members', 'SubDyn members table should have 7 required entries and one optional MDivSize entry', ErrStat2, ErrMsg2 )
+   nMemberCols = count(len_trim(StrArray) > 0)
+   IF (Check( (nMemberCols /= MembersCol) .and. (nMemberCols /= MembersCol+1), 'SubDyn members table should have 7 entries, or 8 entries when optional MDivSize is provided. Problematic line: "'//trim(Line)//'"')) return
    ! Extract fields from first line
    DO I = 1, MembersCol - 1
       bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
@@ -1409,9 +1424,22 @@ DO J = 1, p%NMembers
       end if
       Init%MemberSpin(J) = Init%MemberSpin(J) * D2R
       Init%Members(J,I) = -1
+      Init%MemberNDiv(J) = Init%NDiv
+      if (nMemberCols == MembersCol+1) then
+         bNumeric = is_numeric( StrArray(MembersCol+1), Init%MemberDivSize(J) )
+         if (.not.bNumeric) then
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Optional MDivSize entry for a beam member must be a positive numeric value. Problematic line: "'//trim(Line)//'"')
+            return
+         end if
+         if (Init%MemberDivSize(J) <= 0.0_ReKi) then
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Optional MDivSize entry for a beam member must be greater than zero. Problematic line: "'//trim(Line)//'"')
+            return
+         end if
+      end if
    else if ( Init%Members(J,6)==idMemberCable .or. Init%Members(J,6)==idMemberRigid ) then
       Init%MemberSpin(J) = 0
       Init%Members(J,I) = -1
+      Init%MemberNDiv(J) = 1
    else
       Init%MemberSpin(J) = 0
       bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
@@ -1419,6 +1447,7 @@ DO J = 1, p%NMembers
          CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found for COSMID for a spring member. Problematic line: "'//trim(Line)//'"')
          return
       end if
+      Init%MemberNDiv(J) = 1
    end if
 ENDDO
 
@@ -1668,8 +1697,8 @@ IF ( p%NMOutputs > 0 ) THEN
       READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
       IF (ErrStat2 == 0) THEN
          READ(Line,*,IOSTAT=ErrStat2) p%MOutLst(I)%MemberID, p%MOutLst(I)%NOutCnt
-         IF ( ErrStat2 /= 0 .OR. p%MOutLst(I)%NOutCnt < 1 .OR. p%MOutLst(I)%NOutCnt > 9 .OR. p%MOutLst(I)%NOutCnt > Init%Ndiv+1) THEN
-            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": NOutCnt must be >= 1 and <= minimim(Ndiv+1,9)')
+         IF ( ErrStat2 /= 0 .OR. p%MOutLst(I)%NOutCnt < 1 .OR. p%MOutLst(I)%NOutCnt > 9 ) THEN
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": NOutCnt must be >= 1 and <= 9')
             RETURN
          END IF
          CALL AllocAry( p%MOutLst(I)%NodeCnt, p%MOutLst(I)%NOutCnt, 'NodeCnt', ErrStat2, ErrMsg2); if(Failed()) return
@@ -1681,12 +1710,22 @@ IF ( p%NMOutputs > 0 ) THEN
          flg = 0
          DO J = 1, p%NMembers
             IF(p%MOutLst(I)%MemberID .EQ. Init%Members(j, 1)) THEN
+               MemberDivCount = Init%MemberNDiv(J)
+               if (Init%MemberDivSize(J) > 0.0_ReKi .and. (Init%Members(J,iMType)==idMemberBeamCirc .or. Init%Members(J,iMType)==idMemberBeamRect .or. Init%Members(J,iMType)==idMemberBeamArb)) then
+                  MemberLen = MemberLength(p%MOutLst(I)%MemberID,Init,ErrStat2,ErrMsg2)
+                  if (Failed()) return
+                  MemberDivCount = max(1_IntKi, int(ceiling(MemberLen/Init%MemberDivSize(J)), IntKi))
+               endif
+               MemberNodeMax = MemberDivCount + 1
                flg = flg + 1 ! flg could be greater than 1, when there are more than 9 internal nodes of a member.
+               IF( p%MOutLst(I)%NOutCnt > min(MemberNodeMax, 9_IntKi) ) THEN
+                  CALL Fatal(' NOutCnt should be less than or equal to min(number of nodes on the requested member, 9). ')
+                  RETURN
+               ENDIF
                IF( (p%MOutLst(I)%NOutCnt < 10) .and. ((p%MOutLst(I)%NOutCnt > 0)) ) THEN
                   DO K = 1,p%MOutLst(I)%NOutCnt
-                     ! node number should be less than NDiv + 1
-                     IF( (p%MOutLst(I)%NodeCnt(k) > (Init%NDiv+1)) .or. (p%MOutLst(I)%NodeCnt(k) < 1) ) THEN
-                        CALL Fatal(' NodeCnt should be less than NDIV+1 and greater than 0. ')
+                     IF( (p%MOutLst(I)%NodeCnt(k) > MemberNodeMax) .or. (p%MOutLst(I)%NodeCnt(k) < 1) ) THEN
+                        CALL Fatal(' NodeCnt should be less than or equal to the number of nodes on the requested member and greater than 0. ')
                         RETURN
                      ENDIF
                   ENDDO
@@ -4282,6 +4321,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
+   INTEGER(IntKi)         :: iElemStart
    INTEGER                :: iDirCos
    REAL(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
@@ -4297,6 +4337,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
    real(FEKi) :: Ke(12,12), Me(12, 12), FCe(12), FGe(12) ! element stiffness and mass matrices gravity force vector
    real(ReKi), dimension(:,:), allocatable :: DummyArray !
+   integer(IntKi), allocatable :: MemberNodeIDs(:)
    ! Variables for Eigenvalue analysis
    real(R8Ki), dimension(:,:), allocatable :: AA, BB, CC, DD ! Linearization matrices
    character(len=*),parameter :: ReFmt='ES15.6E2'
@@ -4508,9 +4549,16 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
 
    WRITE(UnSum, '()')
    WRITE(UnSum, '(A,I6)')  '#Number of members',p%NMembers
-   WRITE(UnSum, '(A,I6)')  '#Number of nodes per member:', Init%Ndiv+1
+   WRITE(UnSum, '(A,I6)')  '#Maximum number of nodes per member:', maxval(Init%MemberNDiv)+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  '#Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
+      iElemStart = Init%MemberElemStart(i)
+      call AllocAry(MemberNodeIDs, Init%MemberNDiv(i)+1_IntKi, 'MemberNodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+      MemberNodeIDs(1) = p%Elems(iElemStart, 2)
+      do j=2, Init%MemberNDiv(i)+1_IntKi
+         MemberNodeIDs(j) = p%Elems(iElemStart + j - 2_IntKi, 3)
+      end do
+
       !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
       propIDs=Init%Members(i,iMProp:iMProp+1)
@@ -4525,45 +4573,47 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass = BeamMassC(Init%PropSetsBC(iProp(1),4),Init%PropSetsBC(iProp(1),5),Init%PropSetsBC(iProp(1),6),   &
                              Init%PropSetsBC(iProp(2),4),Init%PropSetsBC(iProp(2),5),Init%PropSetsBC(iProp(2),6), mLength, method=-1)
 
-           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+              WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%MemberNDiv(i) + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(MemberNodeIDs(j), j = 1, Init%MemberNDiv(i)+1)
         else if (mType==idMemberBeamRect) then
            iProp(1) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(2))
            mMass = BeamMassR(Init%PropSetsBR(iProp(1),4),Init%PropSetsBR(iProp(1),5),Init%PropSetsBR(iProp(1),6),Init%PropSetsBR(iProp(1),7),   &
                              Init%PropSetsBR(iProp(2),4),Init%PropSetsBR(iProp(2),5),Init%PropSetsBR(iProp(2),6),Init%PropSetsBR(iProp(2),7), mLength, method=-1)
 
-           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+              WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%MemberNDiv(i) + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(MemberNodeIDs(j), j = 1, Init%MemberNDiv(i)+1)
         else if (mType==idMemberCable) then
            iProp(1) = FINDLOCI(Init%PropSetsC(:,1), propIDs(1))
            mMass= Init%PropSetsC(iProp(1),3) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Cable'
+                 mMass,mLength,' ',(MemberNodeIDs(j), j = 1, 2), ' # Cable'
         else if (mType==idMemberRigid) then
            iProp(1) = FINDLOCI(Init%PropSetsR(:,1), propIDs(1))
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+                 mMass,mLength,' ',(MemberNodeIDs(j), j = 1, 2), ' # Rigid link'
         else if (mType==idMemberSpring) then
            iProp(1) = FINDLOCI(Init%PropSetsS(:,1), propIDs(1))
            mMass= 0.0 ! Spring element has no mass
            mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Spring element'
+                 mMass,mLength,' ',(MemberNodeIDs(j), j = 1, 2), ' # Spring element'
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
            mMass = Init%PropSetsX(iProp(1),4) * Init%PropSetsX(iProp(1),5) * mLength ! Simplified calculation because arbitrary beams only support uniform section properties
-           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
-                 mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+              WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%MemberNDiv(i) + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass, mLength,' ',(MemberNodeIDs(j), j = 1, Init%MemberNDiv(i)+1)
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
-      ELSE
+      ELSE 
+          if (allocated(MemberNodeIDs)) deallocate(MemberNodeIDs)
           RETURN
       ENDIF
-   ENDDO
+      if (allocated(MemberNodeIDs)) deallocate(MemberNodeIDs)
+   ENDDO   
    !-------------------------------------------------------------------------------------------------------------
    ! write Cosine matrix for all members to a txt file
    !-------------------------------------------------------------------------------------------------------------

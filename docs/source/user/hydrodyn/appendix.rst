@@ -24,7 +24,7 @@ structure::
               0.0125   RdtnDT         - Time step for wave radiation kernel calculations (sec) [only used when PotMod=1 and ExctnMod>0 or RdtnMod>0; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]
                    1   NBody          - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
                    1   NBodyMod       - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-        "marin_semi"   PotFile        - Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]
+        "marin_semi"   PotFile        - Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 if FKMod=0 and .3sc if FKMod=1) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]
                    1   WAMITULEN      - Characteristic body length scale used to redimensionalize WAMIT output (meters) [1 to NBody if NBodyMod>1] [only used when PotMod=1]
                    0   PtfmRefxt      - The xt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]
                    0   PtfmRefyt      - The yt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]
@@ -33,6 +33,9 @@ structure::
                13917   PtfmVol0       - Displaced volume of water when the body is in its undisplaced position (m^3) [1 to NBody] [only used when PotMod=1; USE THE SAME VALUE COMPUTED BY WAMIT AS OUTPUT IN THE .OUT FILE!]
                    0   PtfmCOBxt      - The xt offset of the center of buoyancy (COB) from (0,0) (meters) [1 to NBody] [only used when PotMod=1]
                    0   PtfmCOByt      - The yt offset of the center of buoyancy (COB) from (0,0) (meters) [1 to NBody] [only used when PotMod=1]
+                   0   NAddDOF        - Number of additional generalized DOF of each WAMIT body (-) [1 to NBody] [>=0; =0 if NBody>1; only used when PotMod=1]
+                   0   FKMod          - Nonlinear Froude-Krylov and hydrostatic load model {0: none, 1: nonlinear F-K and hydrostatics} (switch) [1 to NBody if NBodyMod>1; only used when PotMod=1; must provide GeoFile if FKMod=1]
+            "unused"   GeoFile        - Full name(s) of geometry file (ASCII STL format) for nonlinear Froude-Krylov and hydrostatic load integration (quoted string) [1 to NBody; only used when PotMod=1 and when the corresponding FKMod=1]
       ---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6, or PotMod=0 or 2]
                    0   MnDrift        - Mean-drift 2nd-order forces computed                                       {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. If NBody>1, MnDrift  /=8]
                    0   NewmanApp      - Mean- and slow-drift 2nd-order forces computed with Newman's approximation {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. If NBody>1, NewmanApp/=8. Used only when WaveDirMod=0]
@@ -64,8 +67,9 @@ structure::
                    0             0             0             0             0             0
                    0             0             0             0             0             0
       ---------------------- STRIP THEORY OPTIONS --------------------------------------
-                   0   WaveDisp       - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position) } (switch) [If PtfmYMod=1, need WaveDisp=1]
-                   0   AMMod          - Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]
+                   0   WaveDisp       - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position} (switch)
+                   0   AMMod          - Method of computing distributed added-mass force. {0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
+                   0   HstMod         - Method of computing hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
       ---------------------- AXIAL COEFFICIENTS --------------------------------------
                    2   NAxCoef        - Number of axial coefficients (-)
       AxCoefID  AxCd     AxCa     AxCp    AxFDMod   AxVnCOff  AxFDLoFSc
@@ -212,10 +216,10 @@ structure::
         22         40         41           4            4           1            0         1.0000        3         1      TRUE           ! Cross Brace 3
       ---------------------- FILLED MEMBERS ------------------------------------------
                    2   NFillGroups     - Number of filled member groups (-) [If FillDens = DEFAULT, then FillDens = WtrDens; FillFSLoc is related to MSL2SWL]
-      FillNumM FillMList FillFSLoc     FillDens
-      (-)      (-)       (m)           (kg/m^3)
-       3   2   3   4    -6.17           1025
-       3   5   6   7   -14.89           1025
+      FillNumM  FillMList  FillFSLoc     FillDens
+      (-)          (-)        (m)        (kg/m^3)
+       3        2   3   4    -6.17         1025
+       3        5   6   7   -14.89         1025
       ---------------------- MARINE GROWTH -------------------------------------------
                    0   NMGDepths      - Number of marine-growth depths specified (-)
       MGDpth     MGThck       MGDens
@@ -264,6 +268,7 @@ structure::
            0.0125        TimeInterval      - Time step for the simulation (sec)
       ---------------------- PRP INPUTS (Platform Reference Point) ------------------
                 0   PRPInputsMod      - Model for the PRP (platform reference point) inputs {0: all inputs are zero for every timestep, 1: steady-state inputs, 2: read inputs from a file (InputsFile)} (switch)
+                0   NAddDOF           - Number of additional generalized DOF of the WAMIT body (-)
                 0   PtfmRefzt         - Vertical distance from the ground level to the platform reference point (m)
       "not_used"    PRPInputsFile     - Filename for the PRP HydroDyn input InputsMod = 2 (quoted string)
       ---------------------- PRP STEADY STATE INPUTS  -------------------------------
@@ -303,6 +308,7 @@ JαAxi, JαAyi, JαAzi                                              (m/s\ :sup:`
 JαDynP                                                           (Pa)                                                                                                       Total (first- plus second-order) fluid particle dynamic pressure at Jα
 **Total and Additional Loads**                                                                                                                                              
 BαAddFxi, BαAddFyi, BαAddFzi, BαAddMxi, BαAddMyi, BαAddMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Loads due to additional preload, stiffness, and damping at Bα
+BαADOFβAdd                                                       (-)                                                                                                        Loads due to additional preload, stiffness, and damping at Bα in additional generalized DOF β
 HydroFxi, HydroFyi, HydroFzi, HydroMxi, HydroMyi, HydroMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Total integrated hydrodynamic loads from both potential flow and strip theory at (0,0,0)
 **Loads from Potential-Flow Solution**                                                                                                                                      
 BαWvsFxi, BαWvsFyi, BαWvsFzi, BαWvsMxi, BαWvsMyi, BαWvsMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Total (first- plus second-order) wave-excitation loads from diffraction at Bα
@@ -310,6 +316,10 @@ BαWvsF1xi, BαWvsF1yi, BαWvsF1zi, BαWvsM1xi, BαWvsM1yi, BαWvsM1zi (N), (N),
 BαWvsF2xi, BαWvsF2yi, BαWvsF2zi, BαWvsM2xi, BαWvsM2yi, BαWvsM2zi (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Second-order wave-excitation loads from diffraction at Bα
 BαHdSFxi, BαHdSFyi, BαHdSFzi, BαHdSMxi, BαHdSMyi, BαHdSMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Hydrostatic loads at Bα
 BαRdtFxi, BαRdtFyi, BαRdtFzi, BαRdtMxi, BαRdtMyi, BαRdtMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Wave-radiation loads at Bα
+BαNFKFxi, BαNFKFyi, BαNFKFzi, BαNFKMxi, BαNFKMyi, BαNFKMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Mesh-based nonlinear Froude-Krylov and hydrostatic loads at Bα
+BαADOFβWvs                                                       (-)                                                                                                        Wave-excitation load at Bα in additional generalized DOF β (first-order only)
+BαADOFβHds                                                       (-)                                                                                                        Hydrostatic load at Bα in additional generalized DOF β
+BαADOFβRdt                                                       (-)                                                                                                        Wave-radiation load at Bα in additional generalized DOF β
 **Structural Motions**                                                                                                                                                      
 PRPSurge, PRPSway, PRPHeave, PRPRoll, PRPPitch, PRPYaw           (m), (m), (m), (rad), (rad), (rad)                                                                         Displacements and rotations at platform reference point (PRP)
 PRPTVxi, PRPTVyi, PRPTVzi, PRPRVxi, PRPRVyi, PRPRVzi             (m/s), (m/s), (m/s), (rad/s), (rad/s), (rad/s)                                                             Translational and rotational velocities of the PRP
@@ -317,6 +327,7 @@ PRPTAxi, PRPTAyi, PRPTAzi, PRPRAxi, PRPRAyi, PRPRAzi             (m/s\ :sup:`2`)
 BαSurge, BαSway, BαHeave, BαRoll, BαPitch BαYaw                  (m), (m), (m), (rad), (rad), (rad)                                                                         Displacements and rotations at Bα
 BαTVxi, BαTVyi, BαTVzi, BαRVxi, BαRVyi, BαRVzi                   (m/s), (m/s), (m/s), (rad/s), (rad/s), (rad/s)                                                             Translational and rotational velocities at Bα
 BαTAxi, BαTAyi, BαTAzi, BαRAxi, BαRAyi, BαRAzi                   (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`), (rad/s\ :sup:`2`), (rad/s\ :sup:`2`), (rad/s\ :sup:`2`) Translational and rotational accelerations at Bα
+BαADOFβD, BαADOFβV, BαADOFβA                                     (-), (-/s), (-/s\ :sup:`2`)                                                                                Displacement, velocity, and acceleration of Bα additional generalized DOF β
 MαNβSTVxi, MαNβSTVyi, MαNβSTVzi                                  (m/s), (m/s), (m/s)                                                                                        Structural translational velocities at MαNβ
 MαNβSTAxi, MαNβSTAyi, MαNβSTAzi                                  (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`)                                                          Structural translational accelerations at MαNβ
 JαSTVxi, JαSTVyi, JαSTVzi                                        (m/s), (m/s), (m/s)                                                                                        Structural translational velocities at Jα

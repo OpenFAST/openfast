@@ -342,6 +342,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['RhoInf']  = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['ConvTol']  = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['MaxConvIter']  = int(f.readline().split()[0])
+        self.fst_vt['Fst']['AutoRelax'] = bool_read(f.readline().split()[0])
+        self.fst_vt['Fst']['RelaxFactor'] = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['DT_UJac']  = float_read(f.readline().split()[0])
         self.fst_vt['Fst']['UJacSclFact']  = float_read(f.readline().split()[0])
 
@@ -1068,6 +1070,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrPotent']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrShadow']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrAero']       = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSPotent']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSShadow']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSAero']        = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CavitCheck']    = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['NacelleDrag']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CompAA']        = bool_read(f.readline().split()[0])
@@ -1198,6 +1203,50 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn']['TwrCb'][i]   = data[4]
             self.fst_vt['AeroDyn']['TwrCp'][i]   = data[5]
             self.fst_vt['AeroDyn']['TwrCa'][i]   = data[6]
+
+        # Generalized support structure joints
+        f.readline()
+        self.fst_vt['AeroDyn']['NumGSJoints']    = int(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        self.fst_vt['AeroDyn']['GSJointID'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointXi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointYi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointZi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        for i in range(self.fst_vt['AeroDyn']['NumGSJoints']):
+            data = [float(val) for val in f.readline().split()]
+            self.fst_vt['AeroDyn']['GSJointID'][i] = int(data[0])
+            self.fst_vt['AeroDyn']['GSJointXi'][i] = data[1]
+            self.fst_vt['AeroDyn']['GSJointYi'][i] = data[2]
+            self.fst_vt['AeroDyn']['GSJointZi'][i] = data[3]
+
+        # Generalized support structure members
+        f.readline()
+        self.fst_vt['AeroDyn']['NumGSMembers']   = int(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        self.fst_vt['AeroDyn']['GSMemberID']  = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMJointID1'] = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMJointID2'] = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDia1']     = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDia2']     = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMCd1']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMCd2']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMTI1']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMTI2']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDiv']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        for i in range(self.fst_vt['AeroDyn']['NumGSMembers']):
+            data = [float(val) for val in f.readline().split()]
+            self.fst_vt['AeroDyn']['GSMemberID'][i]  = int(data[0])
+            self.fst_vt['AeroDyn']['GSMJointID1'][i] = int(data[1])
+            self.fst_vt['AeroDyn']['GSMJointID2'][i] = int(data[2])
+            self.fst_vt['AeroDyn']['GSMDia1'][i]     = data[3]
+            self.fst_vt['AeroDyn']['GSMDia2'][i]     = data[4]
+            self.fst_vt['AeroDyn']['GSMCd1'][i]      = data[5]
+            self.fst_vt['AeroDyn']['GSMCd2'][i]      = data[6]
+            self.fst_vt['AeroDyn']['GSMTI1'][i]      = data[7]
+            self.fst_vt['AeroDyn']['GSMTI2'][i]      = data[8]
+            self.fst_vt['AeroDyn']['GSMDiv'][i]      = data[9]
 
         # Outputs
         f.readline()
@@ -1933,10 +1982,14 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['NBodyMod']      = int_read(f.readline().split()[0])
         
         # Get multiple potential files
-        pot_strings = read_array(f,self.fst_vt['HydroDyn']['NBody'],str) #re.split(',| ',f.readline().strip())
-        pot_strings = [os.path.normpath(os.path.join(os.path.split(hd_file)[0],ps)) for ps in pot_strings]  # make relative to hd_file
-        self.fst_vt['HydroDyn']['PotFile']       = pot_strings
-        self.fst_vt['HydroDyn']['WAMITULEN']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
+        if self.fst_vt['HydroDyn']['NBodyMod'] == 1:
+            self.fst_vt['HydroDyn']['PotFile']   = [os.path.normpath(os.path.join(os.path.split(hd_file)[0],quoted_read(f.readline().split()[0])))]
+            self.fst_vt['HydroDyn']['WAMITULEN'] = [float_read(f.readline().split()[0])]
+        else:
+            pot_strings = read_array(f,self.fst_vt['HydroDyn']['NBody'],str) #re.split(',| ',f.readline().strip())
+            pot_strings = [os.path.normpath(os.path.join(os.path.split(hd_file)[0],ps)) for ps in pot_strings]  # make relative to hd_file
+            self.fst_vt['HydroDyn']['PotFile']   = pot_strings
+            self.fst_vt['HydroDyn']['WAMITULEN'] = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmRefxt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmRefyt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmRefzt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
@@ -1945,6 +1998,13 @@ class InputReader_OpenFAST(object):
         self.fst_vt['HydroDyn']['PtfmCOBxt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['PtfmCOByt']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=float)
         self.fst_vt['HydroDyn']['NAddDOF']       = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=int)
+        if self.fst_vt['HydroDyn']['NBodyMod'] == 1:
+            self.fst_vt['HydroDyn']['FKMod']     = int_read(f.readline().split()[0])
+        else:
+            self.fst_vt['HydroDyn']['FKMod']     = read_array(f,self.fst_vt['HydroDyn']['NBody'], array_type=int)
+        geo_strings = read_array(f,self.fst_vt['HydroDyn']['NBody'],str) #re.split(',| ',f.readline().strip())
+        geo_strings = [os.path.normpath(os.path.join(os.path.split(hd_file)[0],gs)) for gs in geo_strings]  # make relative to hd_file
+        self.fst_vt['HydroDyn']['GeoFile']       = geo_strings
 
         # 2ND-ORDER FLOATING PLATFORM FORCES
         f.readline()
@@ -2497,6 +2557,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SeaState']['CurrNSDir']     = float_read(f.readline().split()[0])
         self.fst_vt['SeaState']['CurrDIV']       = float_read(f.readline().split()[0])
         self.fst_vt['SeaState']['CurrDIDir']     = float_read(f.readline().split()[0])
+        self.fst_vt['SeaState']['CurrFile']      = quoted_read(f.readline().split()[0])
 
         # MacCamy-Fuchs Diffraction Model
         f.readline()

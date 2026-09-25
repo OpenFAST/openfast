@@ -42,6 +42,22 @@ model, these buoyancy values must be added to any strip-theory member
 buoyancy reported in the subsequent sections to obtain the total 
 buoyancy of the platform.
 
+For bodies without mesh-based nonlinear Froude-Krylov and
+hydrostatic loads (**FKMod** = 0), the reported displaced volume,
+center of buoyancy, and buoyancy forces and moments are simply
+based on user inputs, i.e., **PtfmVol0**, **PtfmCOBxt**, and
+**PtfmCOByt**.
+
+For bodies modeled with mesh-based nonlinear Froude-Krylov and
+hydrostatic load calculation (**FKMod** = 1), the summary file
+will report the number of unique mesh vertices identified, the
+number of mesh triangular faces, and the total volume (not the
+displaced volume) enclosed by the body mesh. The summary file
+will also report the total buoyancy forces and moments (about
+the global earth-fixed axes and origin) on the undisplaced body
+computed by numerically integrating the hydrostatic pressure on
+the calm-water wetted surface.
+
 Strip-Theory Volume Calculations
 --------------------------------
 This section contains a summary of the combined total volume, 

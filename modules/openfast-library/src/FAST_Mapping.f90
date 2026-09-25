@@ -706,6 +706,14 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          Active=NotCompAeroMaps)
       if (Failed()) return
 
+      associate (AD_p_Rotor => Turbine%AD%p%Rotors(DstMod%Ins))
+         call MapMotionMesh(Turbine, Mappings, &
+                            SrcMod=SrcMod, SrcDL=DatLoc(ED_y_PlatformPtMesh), &            ! ED%y%PlatformPtMesh
+                            DstMod=DstMod, DstDL=DatLoc(AD_u_GSMotion), &                  ! AD%u%rotors(DstMod%Ins)%GSMotion
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                            Active=(AD_p_Rotor%hasGSMod.and.(Turbine%p_FAST%CompSub/=Module_SD).and.NotCompAeroMaps))
+         if (Failed()) return
+      end associate
    
    case (Module_SED)
 
@@ -781,6 +789,15 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       call MapCustom(Mappings, Custom_SrvD_to_AD, SrcMod, DstMod)
 
+   case (Module_SD)
+      associate (AD_p_Rotor => Turbine%AD%p%Rotors(DstMod%Ins))
+         call MapMotionMesh(Turbine, Mappings, &
+                            SrcMod=SrcMod, SrcDL=DatLoc(SD_y_Y3Mesh), &    ! SD%y(SrcMod%Ins)%Y3Mesh
+                            DstMod=DstMod, DstDL=DatLoc(AD_u_GSMotion), &  ! AD%u%rotors(DstMod%Ins)%GSMotion
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                            Active=(AD_p_Rotor%hasGSMod))
+         if (Failed()) return
+      end associate
    end select
 
 contains
@@ -1011,6 +1028,18 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=CompAeroAD .and. NotCompAeroMaps)
       if (Failed()) return
+
+      ! Generalized support structure
+      associate (AD_p_Rotor => Turbine%AD%p%Rotors(SrcMod%Ins))
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                            SrcDL=DatLoc(AD_y_GSLoad), &                  ! AD%y%rotors(SrcMod%Ins)%GSLoad
+                            SrcDispDL=DatLoc(AD_u_GSMotion),&             ! AD%u%rotors(SrcMod%Ins)%GSMotion
+                            DstDL=DatLoc(ED_u_PlatformPtMesh), &          ! ED%u%PlatformPtMesh
+                            DstDispDL=DatLoc(ED_y_PlatformPtMesh),&       ! ED%y%PlatformPtMesh
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                            Active=((AD_p_Rotor%GSAero/=GSAero_none).and.(Turbine%p_FAST%CompSub/=Module_SD).and.NotCompAeroMaps))
+         if (Failed()) return
+      end associate
 
    case (Module_ADsk)
 
@@ -1954,6 +1983,18 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    ErrMsg = ''
 
    select case (SrcMod%ID)
+
+   case (Module_AD)
+      associate (AD_p_Rotor => Turbine%AD%p%Rotors(SrcMod%Ins))
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                            SrcDL=DatLoc(AD_y_GSLoad), &                  ! AD%y%rotors(SrcMod%Ins)%GSLoad
+                            SrcDispDL=DatLoc(AD_u_GSMotion),&             ! AD%u%rotors(SrcMod%Ins)%GSMotion
+                            DstDL=DatLoc(SD_u_LMesh), &                   ! SD%u(DstMod%Ins)%LMesh
+                            DstDispDL=DatLoc(SD_y_y3Mesh),&               ! SD%y(DstMod%Ins)%y3Mesh
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                            Active=AD_p_Rotor%GSAero/=GSAero_none)
+         if (Failed()) return
+      end associate
 
    case (Module_ED)
 

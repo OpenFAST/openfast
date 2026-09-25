@@ -15,6 +15,7 @@
 include   Registry_NWTC_Library.txt
 usefrom   SeaSt_WaveField.txt
 usefrom   GridInterp.txt
+usefrom   NonlinearFK.txt
 
 param       WAMIT2/WAMIT2     unused            INTEGER              MaxWAMIT2Outputs  -        6       -        ""    -
 
@@ -27,7 +28,6 @@ typedef     ^                 ^                 ReKi                 PtfmRefxt  
 typedef     ^                 ^                 ReKi                 PtfmRefyt         {:}      -        -        "The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
 typedef     ^                 ^                 ReKi                 PtfmRefzt         {:}      -        -        "The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
 typedef     ^                 ^                 R8Ki                 PtfmRefztRot      {:}      -        -        "The rotation about zt of the body reference frame(s) from xt/yt" radians
-
 typedef     ^                 ^                 ReKi                 WAMITULEN         -        -        -        "WAMIT unit length scale"    -
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 
@@ -59,6 +59,7 @@ typedef     ^                 ^            GridInterp_MiscVarType    WaveField_m
 #
 typedef     ^                 ParameterType     INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef     ^                 ^                 INTEGER              NBodyMod          -        -        -        "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef     ^                 ^                 INTEGER              FKMod            {:}       -        -        "Body nonlinear Froude-Krylov and hydrostatic model (switch)" -
 
 #The 2nd order force time series grid
 typedef     ^                 ^                 SiKi             WaveExctn2Grid {:}{:}{:}{:}{:} -        -        "Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component)"    (N)
