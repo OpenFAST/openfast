@@ -60,6 +60,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterConstant, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunctionPart    ,'RegFunctionPart'   ,'',idRegExp        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegAge        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
@@ -191,6 +192,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idDiffusionVALID==Inp%DiffusionMethod)) , 'Diffusion method (DiffusionMethod) not implemented: '//trim(Num2LStr(Inp%DiffusionMethod)))) return
    if (Check(.not.(ANY(idRegDeterVALID ==Inp%RegDeterMethod))  , 'Regularization determination method (RegDeterMethod) not yet implemented: '//trim(Num2LStr(Inp%RegDeterMethod)))) return
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented: '//trim(Num2LStr(Inp%RegFunction)))) return
+   if (Check(.not.(ANY(idRegPartVALID  ==Inp%RegFunctionPart)), 'Particle regularization function (RegFunctionPart) not implemented: '//trim(Num2LStr(Inp%RegFunctionPart)))) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented: '//trim(Num2LStr(Inp%WakeRegMethod)))) return
    if (Check(.not.(ANY(idShearVALID    ==Inp%ShearModel   )), 'Shear model (ShearModel) not valid: '//trim(Num2LStr(Inp%ShearModel)))) return
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(1))), 'Velocity method (VelocityMethod(1)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(1))))) return

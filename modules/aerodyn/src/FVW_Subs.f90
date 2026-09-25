@@ -843,7 +843,7 @@ subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
       call AllocAry( m%Part%Alpha , 3, nPart, 'PartAlpha'  , ErrStat2, ErrMsg2 ); if(Failed())return; m%Part%Alpha  = -999999_ReKi;
       call AllocAry( m%Part%RegParam,  nPart, 'PartEpsilon', ErrStat2, ErrMsg2 ); if(Failed())return; m%Part%RegParam= -999999_ReKi;
       m%Part%nAct        = -1  ! Active particles
-      m%Part%RegFunction = p%RegFunction
+      m%Part%RegFunction = p%RegFunctionPart
    endif
 
    ! TODO Figure out Uind, CPs needed for grid
@@ -1185,11 +1185,11 @@ subroutine InducedVelocitiesAll_OnGrid_Calc(g, p, Sgmt, Part, Tree, Panl, ErrSta
 end subroutine InducedVelocitiesAll_OnGrid_Calc
 
 !> Wrapper to setup part from set of segments
-subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, allocPart)
+subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunctionPart, Part, allocPart)
    type(T_Sgmt),                    intent(in   ) :: Sgmt  !< Segments
    integer(IntKi),                  intent(in   ) :: nSeg  !< Number of segments to use (might not use all of them)
    integer(IntKi),                  intent(in   ) :: PartPerSegment !< Number of particles per segment
-   integer(IntKi),                  intent(in   ) :: RegFunction    !< Regularization function
+   integer(IntKi),                  intent(in   ) :: RegFunctionPart !< Particle regularization function (None, Exp, Compact)
    type(T_Part),                    intent(inout) :: Part  !< Particles
    logical,                         intent(in   ) :: allocPart !< allocate particles
    integer(IntKi) :: iHeadP
@@ -1220,9 +1220,7 @@ subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, all
    Part%nAct = nPart ! TODO add iHeadPart  if particles already present
 
    call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
-   if (RegFunction/=idRegNone) then
-      Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
-   endif
+   Part%RegFunction = RegFunctionPart ! TODO Epsilon equivalence between segment and particle cores may still need tuning in SegmentsToPart
    if (DEV_VERSION) then
       call find_nan_2D(Part%P(:,1:nPart)    , 'SegmentsToPartWrap Part%P')
       call find_nan_2D(Part%Alpha(:,1:nPart), 'SegmentsToPartWrap Part%Alpha')
@@ -1265,10 +1263,10 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree, Panl, ErrStat, E
    select case (p%VelocityMethod(iVel))
    case (idVelocityPart)
       ! --- Convert segments to particles
-      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part, allocPart=allocPart)
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunctionPart, Part, allocPart=allocPart)
    case (idVelocityTreePart)
       ! --- Convert segments to particles
-      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part, allocPart=allocPart)
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunctionPart, Part, allocPart=allocPart)
       ! --- Grow particle tree
       call grow_tree_part(Tree, Part%nAct, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
    case (idVelocityTreeSeg)
@@ -1566,7 +1564,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
 
       case (idVelocityPart)
-         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunctionPart, m%Part, allocPart=.false.)
          call ui_part_nograd(nCPs, CPs, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, Uind)
          !deallocate(Part%P, Part%Alpha, Part%RegParam)
 
@@ -1576,7 +1574,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          call cut_tree(Tree)
 
       case (idVelocityTreePart)
-         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunctionPart, m%Part, allocPart=.false.)
          call grow_tree_part(Tree, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, 0)
          call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
          !deallocate(Part%P, Part%Alpha, Part%RegParam)

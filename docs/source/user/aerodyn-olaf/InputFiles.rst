@@ -178,12 +178,28 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 
 **RegFunction** [switch] specifies the regularization function used to remove
-the singularity of the vortex elements, as specified in
+the singularity of the vortex elements/segments, as specified in
 :numref:`sec:vortconv`. There are five options: 1) no correction *[0]*,
 2) the Rankine method *[1]*, 3) the Lamb-Oseen method *[2]*, 4) the Vatistas
 method *[3]*, and 5) the denominator offset method *[4]*. 
 The functions are given in :numref:`sec:RegularizationFunction`. 
 The default option is *[3]*.
+
+**RegFunctionPart** [switch] specifies the regularization function used for the
+vortex particles, which are used when a particle-based velocity method is
+selected (*VelocityMethod* = *[2,3]*). There are three options: 1) no
+correction *[0]*, 2) the exponential method *[1]*, and 3) the compact-support
+method *[2]*. The functions are given in
+:numref:`sec:RegularizationFunctionPart`. 
+The compact-support option *[2]* has a finite support radius beyond which the
+kernel reverts to the exact singular kernel; with the tree-accelerated particle
+method (*VelocityMethod* = *[2]*) this allows more particle interactions to be
+handled by the far-field multipole approximation, so it can be significantly
+faster than the exponential option depending on the case (wake size, particle
+count, and regularization parameter).
+The compact-support kernel is also purely polynomial and avoids evaluating a
+transcendental (exponential) function, which can further reduce cost.
+The default option is *[1]*.
 
 **WakeRegMethod** [switch] specifies the method of determining viscous core
 radius (i.e., the regularization parameter). There are three options: 1)

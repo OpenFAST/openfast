@@ -1517,6 +1517,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['OLAF']['DiffusionMethod'] = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['RegDeterMethod']  = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['RegFunction']     = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['RegFunctionPart'] = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WakeRegMethod']   = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WakeRegFactor']   = float(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WingRegFactor']   = float(f.readline().split()[0])

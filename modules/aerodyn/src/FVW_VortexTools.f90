@@ -1448,7 +1448,7 @@ contains
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
    subroutine ui_tree_part(Tree, icp_end, CPs, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-      use FVW_BiotSavart, only: ui_part_nograd_11
+      use FVW_BiotSavart, only: ui_part_nograd_11, PartRegFloorFactor
       type(T_Tree), target,          intent(inout) :: Tree            !< 
       integer,                       intent(in   ) :: icp_end         !< Number of CPs to use <size(CPs,2)
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
@@ -1505,7 +1505,7 @@ contains
                enddo
             endif
          else
-            distDirect = max(BranchFactor*node%radius + 2.0_ReKi*node%maxRegParam, DistanceDirect) ! Direct eval. below this distance; floor = branch radius + 2*max(eps) in cell
+            distDirect = max(BranchFactor*node%radius + PartRegFloorFactor(Part%RegFunction)*node%maxRegParam, DistanceDirect) ! Direct eval. below this distance; floor = branch radius + (kernel support factor)*max(eps) in cell
             DeltaP  = - node%center + CP(1:3)                          ! Vector between the control point and the center of the branch
             r       = sqrt( DeltaP(1)**2 + DeltaP(2)**2 + DeltaP(3)**2)
             ! Test if the control point is too close from the branch node so that a direct evaluation is needed 

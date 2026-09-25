@@ -12,6 +12,7 @@ module FVW_BiotSavart
    real(ReKi),parameter :: MIN_EXP_VALUE=-10.0_ReKi
    real(ReKi),parameter :: PART_REG_NRAD =  2.0_ReKi             !< Particle exp mollifier treated as 1 beyond this many core radii (matches 2*rc far-field multipole floor)
    real(ReKi),parameter :: PART_REG_CUT3 =  PART_REG_NRAD**3     !< Corresponding (r/rc)^3 cutoff
+   real(ReKi),parameter :: PART_REG_C2   =  1.6_ReKi             !< Compact-C2 support = PART_REG_C2*RegParam (exp-equivalent core); also the exact multipole floor for that kernel
    real(ReKi),parameter :: MINDENOM=0.0_ReKi
 !    real(ReKi),parameter :: MINDENOM=1e-15_ReKi
    real(ReKi),parameter :: MINNORM=1e-4
@@ -30,6 +31,21 @@ module FVW_BiotSavart
    real(ReKi),parameter    :: fourpi     =  4.00_ReKi * ACOS(-1.0_Reki )
 
 contains
+
+!> Multipole floor factor for the particle kernels: number of core radii beyond which the
+!! regularized kernel equals the singular 1/r^3, so the far-field multipole expansion is valid.
+pure function PartRegFloorFactor(RegFunction) result(f)
+   integer(IntKi), intent(in) :: RegFunction
+   real(ReKi)                 :: f
+   select case (RegFunction)
+   case (idRegNone)    ! Unregularized kernel: no extra core-based floor needed
+      f = 0.0_ReKi
+   case (idRegCompact) ! Truly compact: exactly singular beyond rc = PART_REG_C2*RegParam
+      f = PART_REG_C2
+   case default        ! Exponential: conservative 2*rc floor
+      f = PART_REG_NRAD
+   end select
+end function PartRegFloorFactor
 
 
 !> Induced velocity from one segment at one control points
@@ -376,7 +392,8 @@ subroutine ui_part_nograd_11(DeltaP, Alpha, RegFunction, RegParam, Ui)
    real(ReKi),dimension(3) :: C          !< Cross product of Alpha and r
    real(ReKi)              :: E          !< Exponential poart for the mollifider
    real(ReKi)              :: r3_inv     !< 
-   real(ReKi)              :: r2, r3, rc3!< |r|^2, |r|^3, RegParam^3 (reused to avoid recomputing ** intrinsics)
+   real(ReKi)              :: r2, r3, rc3!< |r|^2, |r|^3, core^3 (reused to avoid recomputing ** intrinsics)
+   real(ReKi)              :: rc2, t     !< compact-C2 core^2 and (r/rc)^2
    real(ReKi)              :: rDeltaP    !< norm , distance between point and particle
    real(ReKi)              :: ScalarPart !< the part containing the inverse of the distance, but not 4pi, Mollifier
    r2      = DeltaP(1)**2+ DeltaP(2)**2+ DeltaP(3)**2
@@ -402,10 +419,16 @@ subroutine ui_part_nograd_11(DeltaP, Alpha, RegFunction, RegParam, Ui)
             E          = exp(-r3/rc3)
             ScalarPart = (1._ReKi-E)*r3_inv*fourpi_inv
          endif
-      case (idRegCompact) ! Compact support
-         rc3        = RegParam*RegParam*RegParam
-         r3_inv     = 1._ReKi/sqrt(rc3*rc3+r3*r3)
-         ScalarPart = r3_inv*fourpi_inv
+      case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+         rc2 = (PART_REG_C2*RegParam)**2
+         if (r2 >= rc2) then ! outside core: kernel is exactly the singular 1/r^3
+            r3_inv     = 1._ReKi/r3
+            ScalarPart = r3_inv*fourpi_inv
+         else                ! inside core: C2 polynomial mollifier
+            t          = r2/rc2
+            rc3        = rc2*PART_REG_C2*RegParam
+            ScalarPart = (35._ReKi + t*(-42._ReKi + 15._ReKi*t))*fourpi_inv/(8._ReKi*rc3)
+         endif
       case default 
          print*,'[ERROR] Wrong regularization function for particles',RegFunction
          STOP

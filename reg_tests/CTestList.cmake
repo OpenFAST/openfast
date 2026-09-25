@@ -460,6 +460,7 @@ ad_regression("ad_5MW_GSPotent"             "aerodyn;bem;GS")
 ad_regression("ad_AWT_GSShadow"             "aerodyn;bem;GS")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_OLAF_RegFunctionPart2" "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
