@@ -201,7 +201,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       INTEGER,    ALLOCATABLE                :: SortWvDirInd(:)                      ! The array of indices such that WAMITWvDir(SortWvDirInd(:)) is sorted from lowest to highest agnle     (-)
       INTEGER                                :: Sttus                                ! Status returned by an attempted allocation or READ.
       INTEGER                                :: UnW1                                 ! I/O unit number for the WAMIT output file with the .1   extension; this file contains the linear, nondimensionalized, frequency-dependent solution to the radiation   problem.
-      INTEGER                                :: UnW3                                 ! I/O unit number for the WAMIT output file with the .3   extension; this file contains the linear, nondimensionalized, frequency-dependent solution to the diffraction problem.
+      INTEGER                                :: UnW3                                 ! I/O unit number for the WAMIT output file with the .3/.3sc extension; this file contains the linear, nondimensionalized, frequency-dependent solution to the diffraction problem.
       INTEGER                                :: UnWh                                 ! I/O unit number for the WAMIT output file with the .hst extension; this file contains the linear, nondimensionalized hydrostatic restoring matrix.
 
       LOGICAL                                :: FirstFreq                            ! When .TRUE., indicates we're still looping through the first frequency component.
@@ -229,13 +229,14 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(SiKi)                             :: tmpDir2
       REAL(SiKi)                             :: AvgInpWvDirSpcg                      ! Average spacing of input wave directions used to check for potential gaps (deg)
       LOGICAL                                :: dirInRange
-      REAL(SiKi),              PARAMETER     :: WvDirTol = 0.001                     ! Tolerance for wave heading in degrees             
+      REAL(SiKi),              PARAMETER     :: WvDirTol = 0.001                     ! Tolerance for wave heading in degrees
          ! Error handling
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
       COMPLEX(SiKi)                          :: Ctmp1, Ctmp2, Ctmp4, Ctmp5           ! Temporary COMPLEX transformation terms
       character(*), parameter                :: RoutineName = 'WAMIT_Init'
 
+      character(4)                           :: dot3ext
 
          ! Initialize data
          
@@ -262,7 +263,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       p%NBodyMod     = InitInp%NBodyMod
       p%NBody        = InitInp%NBody            ! In the context of this WAMIT object NBody is 1 if NBodyMod > 1 [there are NBody different WAMIT objects in this case]
       p%WaveField   => InitInp%WaveField
-      p%PtfmYMod     = InitInp%PtfmYMod 
+      p%PtfmYMod     = InitInp%PtfmYMod
       
       ! Set up wave excitation grid - Can no longer use the WaveField parameters due to different headings
       ! Copy WaveField grid parameters
@@ -299,6 +300,19 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       end do
       p%HasAddDOF = ( p%NDOF > 6*p%NBody )
       
+      call AllocAry( p%FKMod , p%NBody, 'p%FKMod' , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      p%FKMod = InitInp%FKMod
+      if (all(p%FKMod==FKMod_full)) then
+         dot3ext = '.3sc'
+      else if (all(p%FKMod==FKMod_none)) then
+         dot3ext = '.3'
+      else
+         ErrStat = ErrID_Fatal
+         ErrMsg = RoutineName//": When simulating multiple potential-flow bodies with NBodyMod=1, all bodies must have the same FKMod. "
+         call cleanup()
+         return
+      end if
+
          ! Allocate misc var and parameter vectors/matrices
       call AllocAry( p%F_HS_Moment_Offset,  6, p%NBody, 'p%F_HS_Moment_Offset', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       call AllocAry( m%F_HS              ,  p%NDOF, 'm%F_HS'              , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -316,13 +330,17 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          call AllocAry( y%FAddDOF,       p%NDOF-6*p%NBody, 'y%FAddDOF'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
-      do iBody = 1, p%NBody     
-         p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
-         p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
-         p%F_HS_Moment_Offset(3,iBody) =  p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
-         p%F_HS_Moment_Offset(4,iBody) =  p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
-         p%F_HS_Moment_Offset(5,iBody) = -p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
-         p%F_HS_Moment_Offset(6,iBody) = 0.0_ReKi
+      do iBody = 1, p%NBody
+         if (p%FKMod(iBody)==FKMod_full) then
+            p%F_HS_Moment_Offset(:,iBody) = 0.0_ReKi
+         else
+            p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
+            p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
+            p%F_HS_Moment_Offset(3,iBody) =  p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+            p%F_HS_Moment_Offset(4,iBody) =  p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
+            p%F_HS_Moment_Offset(5,iBody) = -p%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
+            p%F_HS_Moment_Offset(6,iBody) = 0.0_ReKi
+         end if
       end do 
          
          ! Tell our nice users what is about to happen that may take a while:
@@ -398,52 +416,54 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
 
 
          ! Linear restoring from the hydrostatics problem:
-
-      CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN  ! Open file.
       p%HdroSttc (:,:) = 0.0 ! Initialize to zero
 
+      if (p%FKMod(1)==FKMod_none) then ! Currently requires all coupled bodies to have the same FKMod
 
-      DO    ! Loop through all rows in the file
+         CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN  ! Open file.
 
-         READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
+         DO    ! Loop through all rows in the file
 
-         IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
+            READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
 
-         ! In case NBodyMod = 1, we now have WAMIT matrices which are potentially larger than 6x6, so we need to determine how the SttcDim multiplier matrix (a 6x6)
-         !   should be applied to the larger WAMIT matrix.  
+            IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
 
-            IF ( I > p%NDOF .or. J > p%NDOF ) THEN
-               CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
-               CALL Cleanup()
-               RETURN
+            ! In case NBodyMod = 1, we now have WAMIT matrices which are potentially larger than 6x6, so we need to determine how the SttcDim multiplier matrix (a 6x6)
+            !   should be applied to the larger WAMIT matrix.
+
+               IF ( I > p%NDOF .or. J > p%NDOF ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.hst'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL Cleanup()
+                  RETURN
+               END IF
+
+               IF ( p%HasAddDOF ) THEN
+
+                  p%HdroSttc (I,J) = TmpData1*SttcDimAdd      ! Redimensionalize the data and place it at the appropriate location within the array
+
+               ELSE
+
+                  iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+                  jSub = mod(J-1,6)+1
+
+                  p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
+
+               END IF
+
+            ELSE                                           ! We must have reached the end of the file, so stop reading in data
+
+               EXIT
+
             END IF
-            
-            IF ( p%HasAddDOF ) THEN
 
-               p%HdroSttc (I,J) = TmpData1*SttcDimAdd      ! Redimensionalize the data and place it at the appropriate location within the array
+         END DO ! End loop through all rows in the file
 
-            ELSE
+         CLOSE ( UnWh ) ! Close file.
 
-               iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
-               jSub = mod(J-1,6)+1
+            ! need to transform p%HdroSttc when PtfmRefztRot is nonzero per plan
+         call TransformWAMITMatrices( p, InitInp%PtfmRefztRot, p%HdroSttc )
 
-               p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
-
-            END IF
-
-         ELSE                                           ! We must have reached the end of the file, so stop reading in data
-
-            EXIT
-
-         END IF
-
-      END DO ! End loop through all rows in the file
-
-      CLOSE ( UnWh ) ! Close file.
-
-         ! need to transform p%HdroSttc when PtfmRefztRot is nonzero per plan
-      call TransformWAMITMatrices( p, InitInp%PtfmRefztRot, p%HdroSttc )
-
+      end if
 
 
          ! Linear, frequency-dependent hydrodynamic added mass and damping from the
@@ -691,7 +711,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          !   excitation force per unit wave amplitude vector from the diffraction
          !   problem:
 
-      CALL OpenFInpFile ( UnW3, TRIM(InitInp%WAMITFile)//'.3', ErrStat2, ErrMsg2   )  ! Open file.
+      CALL OpenFInpFile ( UnW3, TRIM(InitInp%WAMITFile)//trim(dot3ext), ErrStat2, ErrMsg2   )  ! Open file.
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
          IF ( ErrStat >= AbortErrLev )  THEN
             CALL Cleanup()
@@ -807,8 +827,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   K = K + 1
                END DO
 
-               IF ( TmpPer /= WAMITPer(K) )  THEN  ! Abort if the .3 and .1 files do not contain the same frequency components (not counting zero and infinity)
-                  ErrMsg2  = ' Other than zero and infinite frequencies, "'   //TRIM(InitInp%WAMITFile)//'.3",' // &
+               IF ( ABS(TmpPer - WAMITPer(K))>1.0e-4_ReKi*WAMITPer(K) )  THEN  ! Abort if the .3 and .1 files do not contain the same frequency components (not counting zero and infinity); allow for some difference due to formatting
+                  ErrMsg2  = ' Other than zero and infinite frequencies, "'//TRIM(InitInp%WAMITFile)//trim(dot3ext)//'",' // &
                                ' contains different frequency components than "'//TRIM(InitInp%WAMITFile)//'.1". '// &
                                ' Both WAMIT output files must be generated from the same run.'
                   CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -838,7 +858,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
                   END DO          ! I - All previous directions
                   SortWvDirInd(J) = InsertInd   ! Store the index such that WAMITWvDir(SortWvDirInd(:)) is sorted from lowest to highest direction
                ELSEIF ( TmpDir /= WAMITWvDir(J) )  THEN  ! We must have looped through all directions at least once; so check to make sure all subsequent directions are consistent with the directions from the first frequency component, otherwise Abort
-                  ErrMsg2  = ' Not every frequency component in "'//TRIM(InitInp%WAMITFile)//'.3"'// &
+                  ErrMsg2  = ' Not every frequency component in "'//TRIM(InitInp%WAMITFile)//trim(dot3ext)//'"'// &
                                ' contains the same listing of direction angles.  Check for' // &
                                ' errors in the WAMIT output file.'
                   CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -889,7 +909,7 @@ if (p%ExctnMod == 1 ) then
                   RETURN
                END IF
                IF ( I > p%NDOF ) THEN
-                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//'.3'//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
+                  CALL SetErrStat( ErrID_Fatal, ' WAMIT file "'//TRIM(InitInp%WAMITFile)//trim(dot3ext)//'" contains more modes than expected ('//trim(num2lstr(p%NDOF))//'). ', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
                   RETURN
                END IF
@@ -1052,14 +1072,14 @@ end if
 
                ! First do some check on the input wave heading angles
                IF ( (HdroWvDir(NInpWvDir)-HdroWvDir(1)) > (360.0+WvDirTol) ) THEN
-                  CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(InitInp%WAMITFile)//'.3 should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
+                  CALL SetErrStat( ErrID_Fatal,' The difference between any pair of wave directions in '//TRIM(InitInp%WAMITFile)//trim(dot3ext)//' should be less than or equal to 360 deg.',ErrStat,ErrMsg,RoutineName)
                END IF
                ! The input wave headings should cover a contiguous region of directions. Check for gaps and warn user.
                IF (NInpWvDir>1) THEN
                   AvgInpWvDirSpcg = (HdroWvDir(NInpWvDir)-HdroWvDir(1))/REAL(NInpWvDir-1,SiKi)
                   DO I = 2,NInpWvDir
                      IF ( (HdroWvDir(I)-HdroWvDir(I-1)) > (3.0*AvgInpWvDirSpcg) ) THEN
-                        CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(InitInp%WAMITFile)//'.3 is likely not contiguous with a gap between '//TRIM(Num2LStr(HdroWvDir(I-1)))//' and '//TRIM(Num2LStr(HdroWvDir(I)))//' degs.', &
+                        CALL SetErrStat( ErrID_Warn,'The wave headings in '//TRIM(InitInp%WAMITFile)//trim(dot3ext)//' is likely not contiguous with a gap between '//TRIM(Num2LStr(HdroWvDir(I-1)))//' and '//TRIM(Num2LStr(HdroWvDir(I)))//' degs.', &
                            ErrStat, ErrMsg, RoutineName)
                      END IF
                   END DO
@@ -1078,7 +1098,7 @@ end if
                   ! For robustness, check every single incident wave direction
                   DO I = 0,InitInp%WaveField%NStepWave2
                      IF (.NOT. GetAngleInRange(InitInp%WaveField%WaveDirArr(I),MinAllowedWvDir,MaxAllowedWvDir,unusedReal)) THEN
-                        CALL SetErrStat( ErrID_Fatal,TRIM(InitInp%WAMITFile)//'.3 does not cover the wave heading of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirArr(I)))//' deg (in the global frame).', &
+                        CALL SetErrStat( ErrID_Fatal,TRIM(InitInp%WAMITFile)//trim(dot3ext)//' does not cover the wave heading of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirArr(I)))//' deg (in the global frame).', &
                            ErrStat, ErrMsg, RoutineName)
                         CALL Cleanup()
                         RETURN
@@ -1087,7 +1107,7 @@ end if
                ELSE IF ( InitInp%PtfmYMod == 1 ) THEN
                   IF ( (.not. EqualRealNos( HdroWvDir(1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( HdroWvDir(NInpWvDir),REAL(180,SiKi))) )  THEN
                      ErrMsg2  = 'With PtfmYMod=1, we need the lowest and highest wave headings to be exactly -180 deg and 180 deg, respectively, in "' &
-                                    //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
+                                    //TRIM(InitInp%WAMITFile)//trim(dot3ext)//'" (inclusive).'
                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
                      RETURN

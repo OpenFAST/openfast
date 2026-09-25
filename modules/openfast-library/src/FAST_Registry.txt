@@ -129,6 +129,8 @@ typedef	^	FAST_ParameterType	IntKi	ModCoupling	-	-	-	"Module coupling type {1=lo
 typedef	^	FAST_ParameterType	DbKi	RhoInf	-	-	-	"Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]"	-
 typedef	^	FAST_ParameterType	DbKi	ConvTol	-	-	-	"Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)"	-
 typedef	^	FAST_ParameterType	IntKi	MaxConvIter	-	-	-	"Maximum number of convergence iterations for tight coupling generalized alpha integrator (-)"	-
+typedef ^	FAST_ParameterType	logical	AutoRelax	-	.true.	-	"Adaptive under-relaxation (flag)"	-
+typedef	^	FAST_ParameterType	DbKi	RelaxFactor	-	0.7_DbKi	-	"Constant or initial under-relaxation factor for the tight-coupling iterative solver (-) [>0 and <=1]"	-
 # Data for Jacobians:
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-

@@ -96,6 +96,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    INTEGER(IntKi)  :: syropeWCForm = 0_IntKi      !< Syrope working curve formula (1 = LINEAR, 2 = QUADRATIC, 3 = EXP) [-]
+    REAL(DbKi)  :: syropeWCK1 = 0.0_R8Ki      !< Coefficient for the Syrope working curve formula [-]
+    REAL(DbKi)  :: syropeWCK2 = 0.0_R8Ki      !< Coefficient for the Syrope working curve formula [-]
   END TYPE MD_LineProp
 ! =======================
 ! =========  MD_RodProp  =======
@@ -279,6 +282,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to MD_MaxNCoef) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffZs = 0.0_R8Ki      !< z array for stress-strain original working curve (Syrope model only) [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffxs_ = 0.0_R8Ki      !< auxiliary x array for Syrope working curve [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffys_ = 0.0_R8Ki      !< auxiliary y array for Syrope working curve [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: stiffzs_ = 0.0_R8Ki      !< auxiliary z array for Syrope working curve [-]
     INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to MD_MaxNCoef) [-]
     REAL(DbKi) , DIMENSION(1:MD_MaxNCoef)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
@@ -304,6 +311,11 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: T      !< segment tension vectors [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Td      !< segment internal damping force vectors [[N]]
+    INTEGER(IntKi)  :: syropeWCForm = 0_IntKi      !< Syrope working curve formula (1 = LINEAR, 2 = QUADRATIC, 3 = EXP) [-]
+    REAL(DbKi)  :: syropeWCK1 = 0.0_R8Ki      !< Coefficient for the Syrope working curve formula [-]
+    REAL(DbKi)  :: syropeWCK2 = 0.0_R8Ki      !< Coefficient for the Syrope working curve formula [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Tmax      !< segment preceding highest mean tensions [[N]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Tmean      !< segment mean tensions [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: W      !< weight/buoyancy vectors [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Dp      !< node drag (transverse) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Dq      !< node drag (axial) [[N]]
@@ -404,6 +416,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nBodies = 0      !< number of Body objects []
     INTEGER(IntKi)  :: nRods = 0      !< number of Rod objects []
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
+    INTEGER(IntKi)  :: nSyropeLineICs = 0      !< number of Syrope Line initial conditions []
     INTEGER(IntKi)  :: nExtLds = 0      !< number of external loads or damping []
     INTEGER(IntKi)  :: nCtrlChans = 0      !< number of distinct control channels specified for use as inputs []
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
@@ -798,6 +811,9 @@ subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, 
    DstLinePropData%nEIpoints = SrcLinePropData%nEIpoints
    DstLinePropData%bstiffXs = SrcLinePropData%bstiffXs
    DstLinePropData%bstiffYs = SrcLinePropData%bstiffYs
+   DstLinePropData%syropeWCForm = SrcLinePropData%syropeWCForm
+   DstLinePropData%syropeWCK1 = SrcLinePropData%syropeWCK1
+   DstLinePropData%syropeWCK2 = SrcLinePropData%syropeWCK2
 end subroutine
 
 subroutine MD_DestroyLineProp(LinePropData, ErrStat, ErrMsg)
@@ -842,6 +858,9 @@ subroutine MD_PackLineProp(RF, Indata)
    call RegPack(RF, InData%nEIpoints)
    call RegPack(RF, InData%bstiffXs)
    call RegPack(RF, InData%bstiffYs)
+   call RegPack(RF, InData%syropeWCForm)
+   call RegPack(RF, InData%syropeWCK1)
+   call RegPack(RF, InData%syropeWCK2)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -878,6 +897,9 @@ subroutine MD_UnPackLineProp(RF, OutData)
    call RegUnpack(RF, OutData%nEIpoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%bstiffXs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%bstiffYs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCForm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCK1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCK2); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyRodProp(SrcRodPropData, DstRodPropData, CtrlCode, ErrStat, ErrMsg)
@@ -1792,6 +1814,10 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%nEApoints = SrcLineData%nEApoints
    DstLineData%stiffXs = SrcLineData%stiffXs
    DstLineData%stiffYs = SrcLineData%stiffYs
+   DstLineData%stiffZs = SrcLineData%stiffZs
+   DstLineData%stiffxs_ = SrcLineData%stiffxs_
+   DstLineData%stiffys_ = SrcLineData%stiffys_
+   DstLineData%stiffzs_ = SrcLineData%stiffzs_
    DstLineData%nBApoints = SrcLineData%nBApoints
    DstLineData%dampXs = SrcLineData%dampXs
    DstLineData%dampYs = SrcLineData%dampYs
@@ -2014,6 +2040,33 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Td = SrcLineData%Td
+   end if
+   DstLineData%syropeWCForm = SrcLineData%syropeWCForm
+   DstLineData%syropeWCK1 = SrcLineData%syropeWCK1
+   DstLineData%syropeWCK2 = SrcLineData%syropeWCK2
+   if (allocated(SrcLineData%Tmax)) then
+      LB(1:1) = lbound(SrcLineData%Tmax)
+      UB(1:1) = ubound(SrcLineData%Tmax)
+      if (.not. allocated(DstLineData%Tmax)) then
+         allocate(DstLineData%Tmax(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Tmax.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Tmax = SrcLineData%Tmax
+   end if
+   if (allocated(SrcLineData%Tmean)) then
+      LB(1:1) = lbound(SrcLineData%Tmean)
+      UB(1:1) = ubound(SrcLineData%Tmean)
+      if (.not. allocated(DstLineData%Tmean)) then
+         allocate(DstLineData%Tmean(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Tmean.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Tmean = SrcLineData%Tmean
    end if
    if (allocated(SrcLineData%W)) then
       LB(1:2) = lbound(SrcLineData%W)
@@ -2277,6 +2330,12 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    if (allocated(LineData%Td)) then
       deallocate(LineData%Td)
    end if
+   if (allocated(LineData%Tmax)) then
+      deallocate(LineData%Tmax)
+   end if
+   if (allocated(LineData%Tmean)) then
+      deallocate(LineData%Tmean)
+   end if
    if (allocated(LineData%W)) then
       deallocate(LineData%W)
    end if
@@ -2362,6 +2421,10 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%nEApoints)
    call RegPack(RF, InData%stiffXs)
    call RegPack(RF, InData%stiffYs)
+   call RegPack(RF, InData%stiffZs)
+   call RegPack(RF, InData%stiffxs_)
+   call RegPack(RF, InData%stiffys_)
+   call RegPack(RF, InData%stiffzs_)
    call RegPack(RF, InData%nBApoints)
    call RegPack(RF, InData%dampXs)
    call RegPack(RF, InData%dampYs)
@@ -2387,6 +2450,11 @@ subroutine MD_PackLine(RF, Indata)
    call RegPackAlloc(RF, InData%PDyn)
    call RegPackAlloc(RF, InData%T)
    call RegPackAlloc(RF, InData%Td)
+   call RegPack(RF, InData%syropeWCForm)
+   call RegPack(RF, InData%syropeWCK1)
+   call RegPack(RF, InData%syropeWCK2)
+   call RegPackAlloc(RF, InData%Tmax)
+   call RegPackAlloc(RF, InData%Tmean)
    call RegPackAlloc(RF, InData%W)
    call RegPackAlloc(RF, InData%Dp)
    call RegPackAlloc(RF, InData%Dq)
@@ -2451,6 +2519,10 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%nEApoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stiffXs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stiffYs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stiffZs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stiffxs_); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stiffys_); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stiffzs_); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nBApoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dampXs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dampYs); if (RegCheckErr(RF, RoutineName)) return
@@ -2476,6 +2548,11 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PDyn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Td); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCForm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCK1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%syropeWCK2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Tmean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%W); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Dp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Dq); if (RegCheckErr(RF, RoutineName)) return
@@ -3022,6 +3099,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nBodies = SrcParamData%nBodies
    DstParamData%nRods = SrcParamData%nRods
    DstParamData%nLines = SrcParamData%nLines
+   DstParamData%nSyropeLineICs = SrcParamData%nSyropeLineICs
    DstParamData%nExtLds = SrcParamData%nExtLds
    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
    DstParamData%nFails = SrcParamData%nFails
@@ -3419,6 +3497,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%nBodies)
    call RegPack(RF, InData%nRods)
    call RegPack(RF, InData%nLines)
+   call RegPack(RF, InData%nSyropeLineICs)
    call RegPack(RF, InData%nExtLds)
    call RegPack(RF, InData%nCtrlChans)
    call RegPack(RF, InData%nFails)
@@ -3528,6 +3607,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nBodies); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nRods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nLines); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nSyropeLineICs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nExtLds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCtrlChans); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFails); if (RegCheckErr(RF, RoutineName)) return

@@ -277,11 +277,21 @@ formulation: 1) Euler-Bernoulli; 3) Timoshenko. Tapered formulations (2
 and 4) have yet to be implemented and will be available in a future
 release.
 
-**NDiv** specifies the number of elements per member. Analysis nodes
-are located at the ends of elements and the number of analysis nodes per
-member equals **NDiv** + 1. **NDiv** is applied uniformly to all
-members regardless of the member’s length, hence it could result in
-small elements in some members and long elements in other members.
+**NDiv** specifies the default number of elements per member. Analysis
+nodes are located at the ends of elements and the default number of
+analysis nodes per member equals **NDiv** + 1. By default, **NDiv** is
+applied uniformly to all beam members.
+
+An optional per-member input **MDivSize** can be provided in the
+MEMBERS table (as an extra last column) for beam members. When
+**MDivSize** is provided for a beam member, it overrides **NDiv** for
+that member and the number of elements is computed as
+:math:`\lceil L/\mathrm{MDivSize} \rceil`, where :math:`L` is the
+member length. Members without **MDivSize** continue to use **NDiv**.
+For cable, rigid-link, and spring members, **MDivSize** is ignored.
+
+This mixed approach allows users to keep legacy **NDiv** behavior while
+selectively controlling maximum element length on individual members.
 Increasing the number of elements per member may increase accuracy, with
 the trade-off of increased memory usage and computation time. We
 recommend using **NDiv** > 1 when modeling tapered members.
@@ -527,6 +537,22 @@ An example of member table is given below
     (-)         (-)         (-)          (-)           (-)        (-)      (deg/-)
      10         101         102           2             2          1c         0
      11         102         103           2             2          1c         0
+
+  The MEMBERS table also supports an optional final column
+  **MDivSize** for beam members. This provides per-member maximum element
+  length (in meters). Example:
+
+  .. code::
+
+    2   NMembers    - Number of frame members
+    MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2   MType   MSpin/COSMID   MDivSize
+      (-)         (-)         (-)          (-)           (-)        (-)      (deg/-)         (m)
+    10         101         102           2             2          1c         0
+    11         102         103           2             2          1c         0           1.5
+
+  In this example, member 10 uses the global **NDiv**, while member 11
+  uses **MDivSize** and is discretized with
+  :math:`\lceil L_{11}/1.5\rceil` elements.
 
 
 
@@ -780,9 +806,11 @@ ID specified in the MEMBERS table, and **NOutCnt** specifies how many
 nodes along the member will generate output. **NodeCnt** specifies
 those node numbers (a separate entry on the same line for each node) for
 output as an integer index from the start-joint (node 1) to the
-end-joint (node **NDiv** + 1) of the member. The outputs specified in
-the SDOutList section determines which quantities are actually output at
-these locations.
+end-joint (node count on that member). The maximum node index is
+therefore member-specific and depends on whether that member uses
+global **NDiv** or optional **MDivSize** in the MEMBERS table. The
+outputs specified in the SDOutList section determines which quantities
+are actually output at these locations.
 
 Output Channels- SDOutList Section
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

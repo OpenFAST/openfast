@@ -377,6 +377,10 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call ParseVar( FileInfo_In, CurLine, 'CurrDIDir', InputFileData%Current%CurrDIDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
+      ! CurrFile - User-defined current profile file.
+   call ParseVar( FileInfo_In, CurLine, 'CurrFile', InputFileData%Current%CurrFile, ErrStat2, ErrMsg2, UnEc, IsPath=.true. )
+      if (Failed())  return;
+
    !-------------------------------------------------------------------------------------------------
    ! Data section for the MacCamy-Fuchs diffraction model
    !-------------------------------------------------------------------------------------------------
@@ -935,8 +939,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       InputFileData%Current%CurrMod = 0
    end if
 
-   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) )  then
-      call SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
+   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) .AND. ( InputFileData%Current%CurrMod /= 3 ) )  then
+      call SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 
@@ -1015,6 +1019,18 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          return
       end if
 
+   else if ( InputFileData%Current%CurrMod == 3 ) then
+
+      if ( LEN_TRIM( InputFileData%Current%CurrFile ) == 0 ) then
+         call SetErrStat( ErrID_Fatal,'CurrFile must not be an empty string when CurrMod is 3.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+
+      if ( PathIsRelative( InputFileData%Current%CurrFile ) ) then
+         call GetPath( TRIM(InitInp%InputFile), TmpPath )
+         InputFileData%Current%CurrFile = TRIM(TmpPath)//TRIM(InputFileData%Current%CurrFile)
+      end if
+
    else ! No current or user-defined current
 
       InputFileData%Current%CurrSSV0  = 0.0
@@ -1024,6 +1040,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       InputFileData%Current%CurrNSDir = 0.0
       InputFileData%Current%CurrDIV   = 0.0
       InputFileData%Current%CurrDIDir = 0.0
+      InputFileData%Current%CurrFile  = ''
 
    end if
 

@@ -686,6 +686,24 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       call CheckNodes(iWT);     if (Failed())  return
    enddo
 
+   ! Tower influence/drag and the generalized support structure (GS) are not wired up through the
+   ! C-binding interface: no tower/GS motion inputs are received and no tower/GS loads are returned
+   ! (only blade mesh motions and loads are transferred). Error out if any of these are enabled.
+   ! These flags/switches are set once in the shared AeroDyn input file (not rotor-specific), so
+   ! checking the first rotor is sufficient. Internally they are all integer switches where 0 means
+   ! "none"/disabled (TwrAero and GSAero are logical flags in the input file that map to 0 when False).
+   if ( ADI%p%AD%rotors(1)%TwrPotent /= 0 .or. ADI%p%AD%rotors(1)%TwrShadow /= 0 .or. &
+        ADI%p%AD%rotors(1)%TwrAero   /= 0 .or. ADI%p%AD%rotors(1)%GSPotent  /= 0 .or. &
+        ADI%p%AD%rotors(1)%GSShadow  /= 0 .or. ADI%p%AD%rotors(1)%GSAero    /= 0 ) then
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = "Tower influence (TwrPotent, TwrShadow, TwrAero) and generalized support structure "// &
+                   "(GSPotent, GSShadow, GSAero) options are not supported through the AeroDyn C-binding "// &
+                   "interface; the tower and GS motions and loads are not transferred through the interface. "// &
+                   "Set TwrPotent, TwrShadow, GSPotent, and GSShadow to 0, and TwrAero and GSAero to False, "// &
+                   "in the AeroDyn input file."
+      if (Failed()) return
+   endif
+
 
    !-------------------------------------------------------------
    ! Set the interface  meshes for motion inputs and loads output

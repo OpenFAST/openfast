@@ -74,6 +74,8 @@ typedef ^ ^                     R8Ki            ConvTol                 -  -  - 
 typedef ^ ^                     IntKi           ModCoupling             -  -  -     "Module coupling method {1=loose; 2=tight with fixed Jacobian updates (DT_UJac); 3=tight with automatic Jacobian updates}" -
 typedef ^ ^                     IntKi           NumCrctn                -  -  -     "" -
 typedef ^ ^                     IntKi           MaxConvIter             -  -  -     "" -
+typedef ^ ^                     logical         AutoRelax               -  .true.    -     "Adaptive under-relaxation (flag)" -
+typedef ^ ^                     R8Ki            RelaxFactor             -  0.7_R8Ki  -     "Constant or initial under-relaxation factor for the tight-coupling iterative solver" -
 typedef ^ ^                     IntKi           NIter_UJac              -  -  -     "Number of solution iterations between updating the Jacobian" -
 typedef ^ ^                     IntKi           NStep_UJac              -  -  -     "Number of global time steps between updating the Jacobian" -
 typedef ^ ^                     R8Ki            Scale_UJac              -  -  -     "Jacobian load scaling factor" -

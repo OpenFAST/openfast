@@ -54,7 +54,7 @@ structure::
                    0   CrestXi        - X-position of the crest (m) [unused when ConstWaveMod=0]
                    0   CrestYi        - Y-position of the crest (m) [unused when ConstWaveMod=0]
       ---------------------- CURRENT ------------------------------------------------- [unused with WaveMod=6]
-                   0   CurrMod        - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent} (switch)
+                   0   CurrMod        - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent, 3: user-defined from ASCII profile file} (switch)
                    0   CurrSSV0       - Sub-surface current velocity at still water level  (m/s) [used only when CurrMod=1]
            "DEFAULT"   CurrSSDir      - Sub-surface current heading direction (degrees) or DEFAULT (string) [used only when CurrMod=1]
                   20   CurrNSRef      - Near-surface current reference depth            (meters) [used only when CurrMod=1]
@@ -62,6 +62,7 @@ structure::
                    0   CurrNSDir      - Near-surface current heading direction         (degrees) [used only when CurrMod=1]
                    0   CurrDIV        - Depth-independent current velocity                 (m/s) [used only when CurrMod=1]
                    0   CurrDIDir      - Depth-independent current heading direction    (degrees) [used only when CurrMod=1]
+            "unused"   CurrFile       - User-defined current profile file (ASCII depth below SWL (<=0), x-velocity, y-velocity table) [used only when CurrMod=3]
       ---------------------- MacCamy-Fuchs diffraction model -------------------------
                    0   MCFD           - MacCamy-Fuchs member radius (ignored if radius <= 0) [must be 0 when WaveMod 0 or 6] 
       ---------------------- OUTPUT --------------------------------------------------

@@ -90,9 +90,9 @@ CONTAINS
       ! copy over elasticity data
       Line%ElasticMod = LineProp%ElasticMod
 
-      if (Line%ElasticMod > 3) then
+      if (Line%ElasticMod > 4) then
          ErrStat = ErrID_Fatal
-         ErrMsg = "Line ElasticMod > 3. This is not possible."
+         ErrMsg = "Line ElasticMod > 4. This is not possible."
          RETURN
       endif
       
@@ -101,6 +101,20 @@ CONTAINS
          Line%stiffXs(I) = LineProp%stiffXs(I)
          Line%stiffYs(I) = LineProp%stiffYs(I)  ! note: this does not convert to E (not EA) like done in C version
       END DO
+
+      ! find static strain of the slow spring on the original working curve if Syrope model is used
+      if (Line%ElasticMod == 4) then
+         DO I = 1,Line%nEApoints
+            Line%stiffZs(I) = Line%stiffXs(I) - 1.0 / Line%vbeta * log(1.0 + Line%vbeta / Line%alphaMBL * Line%stiffYs(I))
+         END DO
+      end if
+
+      ! set working curve formula
+      if (Line%ElasticMod == 4) then
+         Line%syropeWCForm = LineProp%syropeWCForm
+         line%syropeWCK1 = LineProp%syropeWCK1
+         line%syropeWCK2 = LineProp%syropeWCK2
+      endif
       
       Line%nBApoints = LineProp%nBApoints
       DO I = 1,Line%nBApoints
@@ -250,6 +264,18 @@ CONTAINS
          RETURN
       END IF
 
+      ! allocate Syrope state variables if Syrope model is being used
+      if (Line%ElasticMod == 4) then
+         ALLOCATE ( Line%Tmax(N), Line%Tmean(N), STAT = ErrStat )
+         IF ( ErrStat /= ErrID_None ) THEN
+            ErrMsg  = ' Error allocating Syrope arrays, Tmax and Tmean.'
+            !CALL CleanUp()
+            RETURN
+         END IF
+         Line%Tmax = 0.0_DbKi
+         Line%Tmean = 0.0_DbKi
+      end if
+
       ! allocate node force vectors
       ALLOCATE ( Line%W(3, 0:N), Line%Dp(3, 0:N), Line%Dq(3, 0:N), &
          Line%Ap(3, 0:N), Line%Aq(3, 0:N), Line%B(3, 0:N), Line%Bs(3, 0:N), &
@@ -309,7 +335,6 @@ CONTAINS
       REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
       INTEGER(IntKi)                         :: N
-
 
       N = Line%N ! for convenience
 
@@ -421,16 +446,42 @@ CONTAINS
 
       ENDIF
 
-      ! If using the viscoelastic model, initalize the deltaL_1 to the delta L of the segment. 
+      ! If using the viscoelastic model (not Syrope), initalize the deltaL_1 to the delta L of the segment. 
       ! This is required here to initalize the state as non-zero, which avoids an initial 
       ! transient where the segment goes from unstretched to stretched in one time step.
-      IF (Line%ElasticMod > 1) THEN
+      IF (Line%ElasticMod > 1 .and. Line%ElasticMod < 4) THEN
          DO I = 1, N
             ! calculate current (Stretched) segment lengths and unit tangent vectors (qs) for each segment (this is used for bending calculations)
             CALL UnitVector(Line%r(:,I-1), Line%r(:,I), Line%qs(:,I), Line%lstr(I))
             Line%dl_1(I) = Line%lstr(I) - Line%l(I) ! delta l of the segment
          END DO
       ENDIF
+
+      ! If using Syrope model, initialize dl_1 to the static stretch based on the working curve and mean tension
+      IF (Line%ElasticMod == 4) THEN
+         DO I = 1, N
+            CALL UnitVector(Line%r(:,I-1), Line%r(:,I), Line%qs(:,I), Line%lstr(I))
+            CALL SetupWorkingCurve(Line, Line%Tmax(I), ErrStat2, ErrMsg2)
+            IF (ErrStat2 /= ErrID_None) THEN
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, '')
+               RETURN
+            END IF
+            CALL calculate1DinterpolationXY( Line%stiffys_(1:Line%nEApoints), &
+                                             Line%stiffzs_(1:Line%nEApoints), &
+                                             Line%Tmean(I), &
+                                             Line%dl_1(I), ErrStat2, ErrMsg2 )
+            Line%dl_1(I) = Line%dl_1(I) * Line%l(I)
+            IF (ErrStat2 /= ErrID_None) THEN
+               CALL SetErrStat(ErrStat2, &
+                  'The Syrope slow spring strain is not a single-valued function of mean tension for Line '// &
+                  trim(Num2LStr(Line%IdNum))//', segment '//trim(Num2LStr(I))//'. '// &
+                  'The static stiffness on the working curve should be smaller than the dynamic stiffness. '// &
+                  trim(ErrMsg2), &
+                  ErrStat, ErrMsg, '')
+               RETURN
+            END IF
+         END DO
+      END IF
 
       ! initialize phi to unique values on the range 0-2pi if VIV model is active
       IF (Line%Cl > 0) THEN
@@ -1181,6 +1232,8 @@ CONTAINS
       CHARACTER(ErrMsgLen)             :: ErrMsg2   
       CHARACTER(120)                   :: RoutineName = 'Line_GetStateDeriv'   
 
+      Real(DbKi)                       :: dl_s           ! static stretch (both slow and fast components)
+
       ErrStat = ErrID_None
       ErrMsg  = ""
 
@@ -1384,7 +1437,7 @@ CONTAINS
             MagTd = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)
          
          ! viscoelastic model from https://asmedigitalcollection.asme.org/OMAE/proceedings/IOWTC2023/87578/V001T01A029/1195018 
-         else if (Line%ElasticMod > 1) then
+         else if (Line%ElasticMod > 1 .and. Line%ElasticMod < 4) then
 
             if (Line%ElasticMod == 3) then
                if (Line%dl_1(I) > 0.0) then
@@ -1438,6 +1491,101 @@ CONTAINS
             ! update state derivative for static stiffness stretch (last N entries in the line state vector if no VIV model, otherwise N entries past the 6*N-6 entries in this vector)
             Xd( 6*N-6 + I) = ld_1
          
+         else if (Line%ElasticMod == 4) then
+
+            if (Line%dl_1(I) < 0.0) then
+               CALL SetErrStat(ErrID_Fatal,"Syrope model: Slow spring stretch cannot be less than zero",ErrStat,ErrMsg,RoutineName)
+               return
+            end if
+
+            IF (Line%alphaMBL <= 0 .OR. Line%vbeta <= 0 .OR. Line%l(I) <= 0 .OR. Line%dl_1(I) <= 0) THEN
+               CALL SetErrStat(ErrID_Warn,"Syrope model: Assumptions violated",ErrStat,ErrMsg,RoutineName)
+               if (wordy > 2) then
+                  print *, "Line%alphaMBL", Line%alphaMBL
+                  print *, "Line%vbeta", Line%vbeta
+                  print *, "Line%l(I)", Line%l(I)
+                  print *, "Line%dl_1(I)", Line%dl_1(I)
+               endif
+            ENDIF
+            
+            dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
+
+            if (EqualRealNos(Line%Tmax(I), Line%Tmean(I))) then
+               ! on the original working curve
+               CALL calculate1DinterpolationXY( Line%stiffZs(1:Line%nEApoints), &
+                                                Line%stiffYs(1:Line%nEApoints), &
+                                                Line%dl_1(I) / Line%l(I), &
+                                                Line%Tmean(I), ErrStat2, ErrMsg2 )
+               IF (ErrStat2 /= ErrID_None) THEN
+                  CALL SetErrStat(ErrStat2, &
+                     'The Syrope mean tension is not a single-valued function of slow spring strain for Line '// &
+                     trim(Num2LStr(Line%IdNum))//', segment '//trim(Num2LStr(I))//'. '// &
+                     'The static stiffness on the original working curve is smaller than the dynamic stiffness. '// &
+                     trim(ErrMsg2), &
+                     ErrStat, ErrMsg, '')
+                  RETURN
+               END IF
+
+               if (dl >= 0.0) then
+                  MagT = Line%Tmean(I)
+               else
+                  MagT = 0.0_DbKi ! cable can't "push"
+               endif
+
+               CALL calculate1DinterpolationXY( Line%stiffYs(1:Line%nEApoints), &
+                                                Line%stiffXs(1:Line%nEApoints), &
+                                                Line%Tmean(I), &
+                                                dl_s, ErrStat2, ErrMsg2 )
+               IF (ErrStat2 /= ErrID_None) THEN
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, '')
+                  RETURN
+               END IF
+            else
+               ! on the active working curve
+               CALL calculate1DinterpolationXY( Line%stiffzs_(1:Line%nEApoints), &
+                                                Line%stiffys_(1:Line%nEApoints), &
+                                                Line%dl_1(I) / Line%l(I), &
+                                                Line%Tmean(I), ErrStat2, ErrMsg2 )
+               IF (ErrStat2 /= ErrID_None) THEN
+                  CALL SetErrStat(ErrStat2, &
+                     'The Syrope slow spring strain is not a single-valued function of mean tension for Line '// &
+                     trim(Num2LStr(Line%IdNum))//', segment '//trim(Num2LStr(I))//'. '// &
+                     'The static stiffness on the working curve is smaller than the dynamic stiffness. '// &
+                     trim(ErrMsg2), &
+                     ErrStat, ErrMsg, '')
+                  RETURN
+               END IF
+
+               if (dl >= 0.0) then
+                  MagT = Line%Tmean(I)
+               else
+                  MagT = 0.0_DbKi ! cable can't "push"
+               endif
+
+               CALL calculate1DinterpolationXY( Line%stiffys_(1:Line%nEApoints), &
+                                                Line%stiffxs_(1:Line%nEApoints), &
+                                                Line%Tmean(I), &
+                                                dl_s, ErrStat2, ErrMsg2 )
+               IF (ErrStat2 /= ErrID_None) THEN
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, '')
+                  RETURN
+               END IF
+            endif
+
+            ld_1 = ((dl - dl_s * Line%l(I)) * (Line%alphaMBL + Line%vbeta * Line%Tmean(I)) + Line%BA_D * Line%lstrd(I)) / (Line%BA_D + Line%BA)
+            MagTd = Line%BA * ld_1 / Line%l(I)
+            Xd( 6*N-6 + I) = ld_1
+
+            ! update Tmax and working curve if Tmean > Tmax
+            if (Line%Tmean(I) > Line%Tmax(I)) then
+               Line%Tmax(I) = Line%Tmean(I)
+               CALL SetupWorkingCurve(Line, Line%Tmax(I), ErrStat2, ErrMsg2)
+               IF (ErrStat2 /= ErrID_None) THEN
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, '')
+                  RETURN
+               END IF
+            end if
+
          end if
 
          
@@ -1778,7 +1926,7 @@ CONTAINS
       !    DO I = N-4, N 
       !       print*, "I =", I, "rdd_old =", Line%rdd_old(:,I)
       !    enddo
-	   ! endif
+      ! endif
 
       ! check for NaNs
       DO J = 1, 6*(N-1)
@@ -2071,6 +2219,97 @@ CONTAINS
       enddo
    end subroutine VisLinesMesh_Update
 
+   SUBROUTINE SetupWorkingCurve(Line, Tmax, ErrStat, ErrMsg)
+
+      TYPE(MD_Line),   INTENT(INOUT) :: Line
+      REAL(DbKi),      INTENT(IN   ) :: Tmax      ! Maximum tension used to build the working curve
+      INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+      CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+      CHARACTER(*), PARAMETER        :: RoutineName = 'SetupWorkingCurve'
+
+      INTEGER(IntKi)                  :: I
+      INTEGER(IntKi)                  :: ErrStat2
+      CHARACTER(ErrMsgLen)            :: ErrMsg2
+      REAL(DbKi)                      :: eps_max, eps_min  ! maximum and minimum strains for the working curve
+      REAL(DbKi)                      :: xi                ! normalized strain on the working curve
+      REAL(DbKi)                      :: denom
+      REAL(DbKi)                      :: log_arg
+      REAL(DbKi)                      :: exp_denom
+
+      ErrStat  = ErrID_None
+      ErrMsg   = ''
+      ErrStat2 = ErrID_None
+      ErrMsg2  = ''
+
+      ! input validation
+      IF (Tmax < Line%StiffYs(1) .OR. Tmax > Line%StiffYs(Line%nEApoints)) THEN
+         CALL SetErrStat(ErrID_Fatal, "Tmax is outside the working curve range.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+      ! eps_max is computed from Tmax and the original working curve
+      CALL calculate1DinterpolationXY( Line%StiffYs(1:Line%nEApoints), &
+                                       Line%StiffXs(1:Line%nEApoints), &
+                                       Tmax, eps_max, ErrStat2, ErrMsg2 )
+      IF (ErrStat2 /= ErrID_None) THEN
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+      ! eps_min is the strain at zero tension
+      eps_min = Line%StiffXs(1) + Line%syropeWCK1 * (eps_max - Line%StiffXs(1))
+
+      ! for linear working curve formula, if Line%syropeWCK1 > 1, treat it as slope/stiffness of the working curve
+      ! in general, this value is much larger than 1
+      IF (Line%syropeWCForm == 1 .AND. Line%syropeWCK1 >= 1.0_DbKi) THEN
+         eps_min = eps_max - Tmax / Line%syropeWCK1
+      END IF
+
+      ! make sure eps_min is less than eps_max and larger than zero
+      IF (eps_min < 0.0_DbKi .OR. eps_min >= eps_max) THEN
+         CALL SetErrStat(ErrID_Fatal, "Invalid working curve parameters: the zero tension strain on the working curve is out of range.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+      denom = eps_max - eps_min
+      IF (ABS(denom) <= TINY(1.0_DbKi)) THEN
+         CALL SetErrStat(ErrID_Fatal, &
+            "Vertical Syrope working curve detected.", &
+            ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+      DO I = 1, Line%nEApoints
+         Line%Stiffxs_(I) = eps_min + denom * REAL(I - 1, DbKi) / REAL(Line%nEApoints - 1, DbKi)
+         xi = (Line%Stiffxs_(I) - eps_min) / denom   ! normalized strain
+
+         IF (Line%syropeWCForm == 1) THEN            ! linear working curve
+            Line%Stiffys_(I) = Tmax * xi
+
+         ELSE IF (Line%syropeWCForm == 2) THEN       ! quadratic working curve
+            Line%Stiffys_(I) = Tmax * xi * (Line%syropeWCK2 * xi + (1.0_DbKi - Line%syropeWCK2))
+
+         ELSE IF (Line%syropeWCForm == 3) THEN       ! exponential working curve
+            exp_denom = 1.0_DbKi - EXP(Line%syropeWCK2)
+            Line%Stiffys_(I) = Tmax * (1.0_DbKi - EXP(Line%syropeWCK2 * xi)) / exp_denom
+
+         ELSE
+            CALL SetErrStat(ErrID_Fatal, "Invalid working curve formula specified.", ErrStat, ErrMsg, RoutineName)
+            RETURN
+         END IF
+
+         log_arg = 1.0_DbKi + (Line%vbeta / Line%alphaMBL) * Line%Stiffys_(I)
+         IF (log_arg <= 0.0_DbKi) THEN
+            CALL SetErrStat(ErrID_Fatal, &
+               "Non-positive argument in log() when setting working curve in Syrope model.", &
+               ErrStat, ErrMsg, RoutineName)
+            RETURN
+         END IF
+
+         Line%Stiffzs_(I) = Line%Stiffxs_(I) - (1.0_DbKi / Line%vbeta) * LOG(log_arg)
+      END DO
+
+   END SUBROUTINE SetupWorkingCurve
 
 
 END MODULE MoorDyn_Line

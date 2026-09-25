@@ -369,13 +369,23 @@ file. In this case, HydroDyn will use the provided WAMIT output as is.
 
 The **PotFile** input should contain the path and root name (without
 extensions) for the WAMIT output files enclosed in quotation marks. These
-files consist of the *.1*, *.3*, *.hst*, and second-order files. The 
-*.hst* file contains the hydrostatic restoring (stiffness) matrix. 
-The *.1* file contains the frequency-dependent hydrodynamic added-mass 
-and damping matrix from the wave radiation problem. The *.3* 
-file contains the frequency- and direction-dependent first-order
-wave-excitation vector from the linear wave diffraction
-problem. These are written by the WAMIT program and should not include 
+files consist of the *.1*, *.3* (if **FKMod** = 0), *.3sc* (if **FKMod** = 1),
+*.hst* (if **FKMod** = 0), and second-order files (if **FKMod** = 0).
+See nonlinear Froude-Krylov and hydrostatic load model below for the
+**FKMod** input. The *.hst* file contains the hydrostatic restoring 
+(stiffness) matrix. The *.1* file contains the frequency-dependent
+hydrodynamic added-mass and damping matrix from the wave radiation problem.
+The *.3* file contains the frequency- and direction-dependent total first-order
+wave-excitation vector from the linear wave diffraction problem. When mesh-based
+nonlinear Froude-Krylov and hydrostatic load calculation is enabled with
+**FKMod** = 1, the *.3sc* file is required in lieu of the *.3* file.
+The *.3sc* file only contains the scattering part of the linear wave excitation
+to avoid double-counting the Froude-Krylov component. Furthermore, HydroDyn
+will ignore any *.hst* file provided for bodies with **FKMod** = 1, since the
+hydrostatic load will be directly computed from pressure integration on the
+instantaneous wetted surface. In this case, the *.hst* file can be omitted.
+
+These files are written by the WAMIT program and should not include
 any file headers. When the linear state-space model is used in place of
 frequency-to-time domain transformation for wave excitation or in place 
 of convolution for radiation, the *.ssexctn* file for wave excitation 
@@ -418,7 +428,10 @@ its undisplaced position (in m\ :sup:`3`). This value should be set equal
 to the value computed by WAMIT as output in the WAMIT ``.out`` file. 
 **PtfmCOBxt** and **PtfmCOByt** are the *X* and *Y* offsets (in m) of the 
 center of buoyancy of each body from the origin/PRP, NOT from 
-**PtfmRefxt** and **PtfmRefyt**.
+**PtfmRefxt** and **PtfmRefyt**. **PtfmVol0**, **PtfmCOBxt**, and **PtfmCOByt**
+are all ignored for bodies modeled with mesh-based nonlinear Froude-Krylov and
+hydrostatic load model (**FKMod** = 1). A placeholder value, e.g., 0, should
+still be entered for these bodies.
 
 *Experimental feature*
 
@@ -441,9 +454,9 @@ to constraints with coupling to ExtPtfm, the only module that can make use of th
 additional modes so far and input file limitations. Generalized modes have not 
 been implemented for 2nd-order loads; therefore, the 2nd-order WAMIT-style input 
 files, if included, should always contain **6NBody** modes irrespective of 
-**NAddDOF**. Finally, when **NAddDOF > 0**, **WAMITULEN** must be 1.
+**NAddDOF**. Finally, when **NAddDOF** > 0, **WAMITULEN** must be 1.
 
-In addition to being limited to one potential-flow body, **NAddDOF > 0** is only 
+In addition to being limited to one potential-flow body, **NAddDOF** > 0 is only
 supported when **ExctnMod** = 0 or 1 and **RdtnMod** = 0 or 1. State-space 
 wave-excitation and wave-radiation models are not supported. **NAddDOF** is not 
 used when **PotMod** = 0 or 2.
@@ -455,6 +468,113 @@ floating structures only with 6DOF rigid-body motions and a user-defined number
 of additional elastic modes. The number of modes in HydroDyn and ExtPtfm must match. 
 More specifically, the number of modes active in ExtPtfm must be equal to 
 **6+NAddDOF** with the first 6 modes also being rigid-body modes.
+
+HydroDyn can also compute the nonlinear Froude-Krylov wave excitation and
+hydrostatic loads using direct pressure integration on the instantaneous
+wetted surface. This can be enabled by setting **FKMod** = 1. Setting
+**FKMod** = 0 instructs HydroDyn to compute the standard linear and
+second-order (if enabled) wave excitation via frequency-to-time-domain
+transformation and use the linear hydrostatic stiffness matrix for
+computing hydrostatic loads. **FKMod** = 1 requires **PotMod** = 1 and
+**ExctnMod** = 0 or 1. State-space wave excitation with **ExctnMod** = 2 is
+incompatible with nonlinear Froude-Krylov and hydrostatic loads. Setting
+**ExctnMod** = 0 with **FKMod** = 1 effectively removes the scattering
+part of the wave excitation, leaving only the nonlinear Froude-Krylov
+wave excitation. Setting **ExctnMod** = 1 allows linear scattering wave
+excitation to be included along side the nonlinear Froude-Krylov
+contribution. Currently, **FKMod** = 1 is also incompatible with additional
+generalized degrees of freedom and requires **NAddDOF** = 0.
+
+With **FKMod** = 1, HydroDyn requires the *.3sc* file instead of the
+*.3* file. The former contains only the scattering part of the linear
+potential-flow wave excitation. HydroDyn will also ignore the *.hst* file
+and the **PtfmVol0**, **PtfmCOBxt**, and **PtfmCOByt** inputs because the
+hydrostatic loads will be directly computed from pressure integration.
+To avoid double-counting higher-order effects, HydroDyn does not compute any
+second-order potential-flow wave excitation for bodies with **FKMod** = 1.
+The corresponding second-order WAMIT files will be ignored and can be omitted
+by the user.
+
+Because the **NBodyMod** = 1 option (hydrodynamically coupled potential-flow
+bodies) requires a single set of **PotFile** for all bodies, we require all
+bodies to have the same **FKMod** setting. Therefore, only one input entry
+for **FKMod** is required when **NBodyMod** = 1. Alternatively with decoupled
+potential-flow bodies (**NBodyMod** = 2 or 3), we require **NBody** input
+entries for **FKMod** with one entry for each body. In this case, it is also
+possible to selectively enable nonlinear Froude-Krylov and hydrostatic load
+calculation for some bodies and not for others.
+
+HydroDyn requires the complete geometry both above and below water of each
+potential-flow body with **FKMod** = 1. Currently, this can only be provided
+through ASCII STL files. The **GeoFile** input expects a list of **NBody**
+quoted strings containing the paths and file names of the STL files including
+file name extension. If **FKMod** = 0 for all or some of the bodies, a
+placeholder entry, such as *"unused"*, should be included, so the total
+number of quoted strings are always **NBody**.
+
+The STL file for each body must describe a closed surface without gap with
+the normal vector of each face pointing outward away from the body. These
+requirements apply both above and below the waterline. In other words, 
+the STL file must include a "deck" above the waterline that closes the volume.
+HydroDyn will check the validity of the mesh by computing the total volume. If an
+invalid mesh or flipped normal is detected (leading to inconsistent or
+negative volume), HydroDyn will error out. In this case, the user should double
+check the mesh normal direction and ensure the surface is closed without gaps.
+The origin (0,0,0) of the STL file is mapped to the body's reference point
+defined by (**PtfmRefxt**, **PtfmRefyt**, **PtfmRefzt**). For example, if an
+STL file has its lowest point at *z* = -10 m, and the body's **PtfmRefzt** is
+set to -5 m, the actual draft of the undisplaced body will be -15 m. HydroDyn
+will also yaw the entire mesh about the STL file origin according to
+**PtfmRefztRot** at initialization.
+
+As with any numerical method, the mesh must be fine enough and of good quality
+to obtain accurate results. HydroDyn uses a four-point quadrature for pressure
+integration on each triangular face with face clipping at the instantaneous
+waterline for improved convergence on coarse mesh. Therefore, aggressive mesh
+refinement near the waterline is usually unnecessary. Because most floating
+bodies are small compared to the incident wavelengths, the mesh resolution is
+usually dictated by what is necessary to adequately describe the shape of the
+body using flat triangular faces. Of course, if a very large body is modeled or
+if short waves are critical to the dynamics of the system, the mesh resolution
+should be set accordingly.
+
+The nonlinear Froude-Krylov and hydrostatic load calculation is also affected
+by wave stretching. If **WaveStMod** = 0 (no wave stretching) in the SeaState
+input file, HydroDyn will always integrate the pressure on the part of the
+structure below the still water level. If **WaveStMod** > 0, HydroDyn will
+integrate the pressure on the part of the structure below the instantaneous
+incident wave free surface. The hydrodynamic pressure of the incident wave is
+computed according to the wave stretching model selected, and the hydrostatic
+pressure above the still water level is negative. See **Note** below. The
+instantaneous displaced position of the body is always used to obtain the 
+correct hydrostatic restoring force and moment. Note that when **FKMod** = 1,
+the **ExctnDisp** and **ExctnCutOff** settings only affect the scattering
+part of the wave excitation based on the *.3sc* file. Similarly, **PtfmYMod**,
+**PtfmRefY**, and **PtfmYCutOff** will only affect the scattering part of the
+wave excitation and the wave radiation load calculation, with the Froude-Krylov
+wave excitation and hydrostatic load calculation superseded by the body-exact
+pressure integration. These inputs can still be set freely by the user as
+appropriate.
+
+**Note:** While OpenFAST allows the user to select any of the available
+**WaveStMod** options with the nonlinear Froude-Krylov and hydrostatic load
+calculation, Wheeler stretching with **WaveStMod** = 3 is preferred because
+the resulting total pressure field (hydrodynamic + hydrostatic) satisfies
+the free-surface boundary condition requiring zero gauge pressure at the
+free surface. Vertical wave stretching with **WaveStMod** = 1 might also be
+acceptable, but it does not yield exactly zero total pressure at the free
+surface if below the still water level. Extrapolation stretching with
+**WaveStMod** = 2 should be avoided.
+
+With **FKMod** = 1, users can obtain the combined nonlinear Froude-Krylov and
+hydrostatic load from pressure integration from the following output channels:
+**B1NFKFxi**, **B1NFKFyi**, **B1NFKFzi**, **B1NFKMxi**, **B1NFKMyi**,
+**B1NFKMzi**, ..., **B9NFKMzi**. As with other similar output channels, only
+the loads on the first 9 potential-flow bodies can be output. The output
+forces and moments are resolved in the earth-fixed axis directions, and the
+moments are about the instantaneous body position. For performance reasons,
+HydroDyn does not compute, save, and output separate nonlinear Froude-Krylov
+wave excitation and hydrostatic loads.
 
 .. _hd-2nd_order_floating_platform_forces_input:
 

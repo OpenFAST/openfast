@@ -1,0 +1,49 @@
+###################################################################################################################################
+# Registry for NonlinearFK in the FAST Modularization Framework
+# This Registry file is used to create MODULE NonlinearFK which contains all of the user-defined types needed in NonlinearFK.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>         <ModuleName/ModName>          <TypeName>          <FieldType>         <FieldName>         <Dims>    <IO>      <DNAME>   <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include   Registry_NWTC_Library.txt
+usefrom   SeaSt_WaveField.txt
+usefrom   GridInterp.txt
+
+param     NonlinearFK/NonlinearFK                  -                          IntKi                 FKMod_none                   -              0        -         "No mesh-based Froude-Krylov or hydrostatic load calculation" -
+param     NonlinearFK/NonlinearFK                  -                          IntKi                 FKMod_full                   -              1        -         "Full mesh-based Froude-Krylov and hydrostatic load calculation" -
+
+typedef   NonlinearFK/NonlinearFK                  Triangle3D                 ReKi                  v                           {3}{3}          -        -         "The three vertices of a triangle" m
+typedef   NonlinearFK/NonlinearFK                  Triangle3D                 ReKi                  n                           {3}             -        -         "Unit normal vector" -
+typedef   NonlinearFK/NonlinearFK                  Triangle3D                 ReKi                  nds                         {3}             -        -         "Normal directional area" -
+typedef   NonlinearFK/NonlinearFK                  STLGeomType                IntKi                 n_tris                       -              -        -         "Number of triangles in the STL file" -
+typedef   NonlinearFK/NonlinearFK                  STLGeomType                Triangle3D            tris                        {:}             -        -         "All triangles in the STL file" -
+typedef   NonlinearFK/NonlinearFK                  BodyType                   ReKi                  PtfmRefPt                   {3}             -        -         "Reference point/local origin of undisplaced body" m
+typedef   NonlinearFK/NonlinearFK                  BodyType                   ReKi                  volume                       -              -        -         "Volume of the body" -
+typedef   NonlinearFK/NonlinearFK                  BodyType                   IntKi                 n_nodes                      -              -        -         "Number of unique nodes of the body" -
+typedef   NonlinearFK/NonlinearFK                  BodyType                   IntKi                 n_tris                       -              -        -         "Number of triangles of the body" -
+typedef   NonlinearFK/NonlinearFK                  BodyType                   ReKi                  nodes                       {:}{:}          -        -         "Node coordinates" -
+typedef   NonlinearFK/NonlinearFK                  BodyType                   IntKi                 tris                        {:}{:}          -        -         "Triangle vertex list" -
+typedef   NonlinearFK/NonlinearFK                  InitInputType              IntKi                 nBody                        -              -        -         "Number of potential-flow bodies" -
+typedef   NonlinearFK/NonlinearFK                  InitInputType              IntKi                 FKMod                       {:}             -        -         "Switch for nonlinear Froude-Krylov models" -
+typedef   NonlinearFK/NonlinearFK                  InitInputType              character(1024)       GeoFile                     {:}             -        -         "Geometry file paths" -
+typedef   NonlinearFK/NonlinearFK                  InitInputType              SeaSt_WaveFieldType  *WaveField                    -              -        -         "Pointer to SeaState wavefield type" -
+typedef   NonlinearFK/NonlinearFK                  InitInputType              ReKi                  PtfmRefxt                   {:}             -        -         "The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1]"  (m)
+typedef   NonlinearFK/NonlinearFK                  InitInputType              ReKi                  PtfmRefyt                   {:}             -        -         "The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1]"  (m)
+typedef   NonlinearFK/NonlinearFK                  InitInputType              ReKi                  PtfmRefzt                   {:}             -        -         "The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1]"  (m)
+typedef   NonlinearFK/NonlinearFK                  InitInputType              ReKi                  PtfmRefztRot                {:}             -        -         "The rotation about zt of the body reference frame(s) from xt/yt" radians
+typedef   NonlinearFK/NonlinearFK                  InitOutputType             ReKi                  buoyancy                    {:}{:}           -        -         "Buoyancy force and moment on undisplaced bodies" N.Nm
+typedef   NonlinearFK/NonlinearFK                  ParameterType              IntKi                 nBody                        -              -        -         "Number of potential-flow bodies" -
+typedef   NonlinearFK/NonlinearFK                  ParameterType              BodyType              Bodies                      {:}             -        -         "Body geometries" -
+typedef   NonlinearFK/NonlinearFK                  ParameterType              IntKi                 FKMod                       {:}             -        -         "Switch for nonlinear Froude-Krylov models" -
+typedef   NonlinearFK/NonlinearFK                  ParameterType              SeaSt_WaveFieldType  *WaveField                    -              -        -         "Pointer to SeaState wavefield type" -
+typedef   NonlinearFK/NonlinearFK                  BodyMiscType               ReKi                  Nodes                       {:}{:}          -        -         "Instantaneous position of all body nodes (relative to SWL)" m
+typedef   NonlinearFK/NonlinearFK                  BodyMiscType               ReKi                  WaveElev                    {:}             -        -         "Wave elevation at each body node" m
+typedef   NonlinearFK/NonlinearFK                  MiscVarType                BodyMiscType          Bodies                      {:}             -        -         "Misc var information for the bodies" -
+typedef   NonlinearFK/NonlinearFK                  MiscVarType              GridInterp_MiscVarType  WaveField_m                  -              -        -         "Misc var information from the Grid Interpolation module"   -

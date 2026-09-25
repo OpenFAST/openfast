@@ -66,6 +66,198 @@ SUBROUTINE UserCurrent ( zi, EffWtrDpth, DirRoot, CurrVxi, CurrVyi )
       RETURN
       
 END SUBROUTINE UserCurrent
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read and validate user-defined current profile data from an ASCII file.
+SUBROUTINE ReadUsrCurrentProfile( CurrFile, CurrentData, ErrStat, ErrMsg )
+
+      IMPLICIT NONE
+
+      CHARACTER(*),                  INTENT(IN   ) :: CurrFile
+      TYPE(Current_InitInputType),   INTENT(INOUT) :: CurrentData
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      INTEGER(IntKi)                               :: UnIn
+      INTEGER(IntKi)                               :: IOS
+      INTEGER(IntKi)                               :: NRows
+      INTEGER(IntKi)                               :: RowIdx
+      INTEGER(IntKi)                               :: LineNum
+      CHARACTER(1024)                              :: Line
+      CHARACTER(1024)                              :: CleanLine
+      REAL(SiKi)                                   :: TmpRow(3)
+      REAL(SiKi)                                   :: Depth
+      REAL(SiKi)                                   :: PrevDepth
+      LOGICAL                                      :: DataStarted
+      INTEGER(IntKi)                               :: ErrStat2
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2
+      CHARACTER(*), PARAMETER                      :: RoutineName = 'ReadUsrCurrentProfile'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      if (allocated(CurrentData%UsrCurrProfileDepth)) deallocate(CurrentData%UsrCurrProfileDepth)
+      if (allocated(CurrentData%UsrCurrProfileVxi  )) deallocate(CurrentData%UsrCurrProfileVxi)
+      if (allocated(CurrentData%UsrCurrProfileVyi  )) deallocate(CurrentData%UsrCurrProfileVyi)
+
+      call GetNewUnit( UnIn )
+      call OpenFInpFile( UnIn, TRIM(CurrFile), ErrStat2, ErrMsg2 ); if (Failed()) return
+
+      NRows = 0
+      LineNum = 0
+      DataStarted = .false.
+      do
+         read( UnIn, '(A)', IOSTAT=IOS ) Line
+         LineNum = LineNum + 1
+         if ( IOS < 0 ) exit
+         if ( IOS /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error reading current profile file '//TRIM(CurrFile)//' at line '//TRIM(Num2LStr(LineNum))//'.', ErrStat, ErrMsg, RoutineName )
+            call CleanUp()
+            return
+         end if
+
+         CleanLine = ADJUSTL( Line )
+         ErrStat2 = ErrID_None
+         ErrMsg2  = ''
+         call ReadAry( CleanLine, TmpRow, 3, 'CurrentProfileLine', 'depth, x-velocity, y-velocity', ErrStat2, ErrMsg2 )
+         if ( ErrStat2 >= AbortErrLev .or. LEN_TRIM(ErrMsg2) > 0 ) then
+            if ( .not. DataStarted ) cycle
+            call SetErrStat( ErrID_Fatal, 'Invalid current profile data at line '//TRIM(Num2LStr(LineNum))//' in file '//TRIM(CurrFile)//'. '//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+            call CleanUp()
+            return
+         end if
+
+         DataStarted = .true.
+         NRows = NRows + 1
+      end do
+
+      if ( NRows <= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Current profile file '//TRIM(CurrFile)//' contains no data rows.', ErrStat, ErrMsg, RoutineName )
+         call CleanUp()
+         return
+      end if
+
+      rewind( UnIn, IOSTAT=IOS )
+      if ( IOS /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Error rewinding current profile file '//TRIM(CurrFile)//'.', ErrStat, ErrMsg, RoutineName )
+         call CleanUp()
+         return
+      end if
+
+      call AllocAry( CurrentData%UsrCurrProfileDepth, NRows, 'UsrCurrProfileDepth', ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( CurrentData%UsrCurrProfileVxi, NRows, 'UsrCurrProfileVxi', ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry( CurrentData%UsrCurrProfileVyi, NRows, 'UsrCurrProfileVyi', ErrStat2, ErrMsg2 ); if (Failed()) return
+
+      RowIdx = 0
+      LineNum = 0
+      DataStarted = .false.
+      PrevDepth = HUGE(PrevDepth)
+      do
+         read( UnIn, '(A)', IOSTAT=IOS ) Line
+         LineNum = LineNum + 1
+         if ( IOS < 0 ) exit
+         if ( IOS /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error reading current profile file '//TRIM(CurrFile)//' at line '//TRIM(Num2LStr(LineNum))//'.', ErrStat, ErrMsg, RoutineName )
+            call CleanUp()
+            return
+         end if
+
+         CleanLine = ADJUSTL( Line )
+         ErrStat2 = ErrID_None
+         ErrMsg2  = ''
+         call ReadAry( CleanLine, TmpRow, 3, 'CurrentProfileLine', 'depth, x-velocity, y-velocity', ErrStat2, ErrMsg2 )
+         if ( ErrStat2 >= AbortErrLev .or. LEN_TRIM(ErrMsg2) > 0 ) then
+            if ( .not. DataStarted ) cycle
+            call SetErrStat( ErrID_Fatal, 'Invalid current profile data at line '//TRIM(Num2LStr(LineNum))//' in file '//TRIM(CurrFile)//'. '//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+            call CleanUp()
+            return
+         end if
+
+         DataStarted = .true.
+         RowIdx = RowIdx + 1
+         Depth = TmpRow(1)
+
+         if ( Depth > 0.0_SiKi ) then
+            call SetErrStat( ErrID_Fatal, 'Current profile depth must be non-positive at line '//TRIM(Num2LStr(LineNum))//' in file '//TRIM(CurrFile)//'.', ErrStat, ErrMsg, RoutineName )
+            call CleanUp()
+            return
+         end if
+
+         if ( RowIdx > 1 ) then
+            if ( Depth >= PrevDepth ) then
+               call SetErrStat( ErrID_Fatal, 'Current profile depths must be strictly decreasing at line '//TRIM(Num2LStr(LineNum))//' in file '//TRIM(CurrFile)//'.', ErrStat, ErrMsg, RoutineName )
+               call CleanUp()
+               return
+            end if
+         end if
+
+         CurrentData%UsrCurrProfileDepth(RowIdx) = Depth
+         CurrentData%UsrCurrProfileVxi(RowIdx)   = TmpRow(2)
+         CurrentData%UsrCurrProfileVyi(RowIdx)   = TmpRow(3)
+         PrevDepth = Depth
+      end do
+
+      close( UnIn )
+
+contains
+
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function
+
+   subroutine CleanUp
+      close( UnIn )
+      if (allocated(CurrentData%UsrCurrProfileDepth)) deallocate(CurrentData%UsrCurrProfileDepth)
+      if (allocated(CurrentData%UsrCurrProfileVxi  )) deallocate(CurrentData%UsrCurrProfileVxi)
+      if (allocated(CurrentData%UsrCurrProfileVyi  )) deallocate(CurrentData%UsrCurrProfileVyi)
+   end subroutine CleanUp
+
+END SUBROUTINE ReadUsrCurrentProfile
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Interpolate the user-defined current profile at a given depth.
+SUBROUTINE CurrentProfileAtDepth( QueryDepth, UsrCurrProfileDepth, UsrCurrProfileVxi, UsrCurrProfileVyi, CurrVxi, CurrVyi )
+
+      IMPLICIT NONE
+
+      REAL(SiKi), INTENT(IN)                   :: QueryDepth
+      REAL(SiKi), INTENT(IN), DIMENSION(:)     :: UsrCurrProfileDepth
+      REAL(SiKi), INTENT(IN), DIMENSION(:)     :: UsrCurrProfileVxi
+      REAL(SiKi), INTENT(IN), DIMENSION(:)     :: UsrCurrProfileVyi
+      REAL(SiKi), INTENT(OUT)                  :: CurrVxi
+      REAL(SiKi), INTENT(OUT)                  :: CurrVyi
+
+      INTEGER(IntKi)                           :: I
+      INTEGER(IntKi)                           :: NProfileRows
+      REAL(SiKi)                               :: Frac
+
+      NProfileRows = SIZE( UsrCurrProfileDepth )
+
+      if ( QueryDepth >= UsrCurrProfileDepth(1) ) then
+         CurrVxi = UsrCurrProfileVxi(1)
+         CurrVyi = UsrCurrProfileVyi(1)
+         return
+      end if
+
+      if ( QueryDepth <= UsrCurrProfileDepth(NProfileRows) ) then
+         CurrVxi = UsrCurrProfileVxi(NProfileRows)
+         CurrVyi = UsrCurrProfileVyi(NProfileRows)
+         return
+      end if
+
+      do I = 1, NProfileRows - 1
+         if ( QueryDepth >= UsrCurrProfileDepth(I+1) ) then
+            Frac = ( QueryDepth - UsrCurrProfileDepth(I) ) / ( UsrCurrProfileDepth(I+1) - UsrCurrProfileDepth(I) )
+            CurrVxi = UsrCurrProfileVxi(I) + Frac * ( UsrCurrProfileVxi(I+1) - UsrCurrProfileVxi(I) )
+            CurrVyi = UsrCurrProfileVyi(I) + Frac * ( UsrCurrProfileVyi(I+1) - UsrCurrProfileVyi(I) )
+            return
+         end if
+      end do
+
+END SUBROUTINE CurrentProfileAtDepth
       
       
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -140,6 +332,12 @@ SUBROUTINE Calc_Current( InitInp, z, h , DirRoot, CurrVxi, CurrVyi )
 
             CALL UserCurrent ( z, h, DirRoot, CurrVxi, CurrVyi )
 
+
+         CASE ( 3 )              ! User-defined current profile from ASCII file.
+
+            CALL CurrentProfileAtDepth( z, InitInp%UsrCurrProfileDepth, InitInp%UsrCurrProfileVxi, InitInp%UsrCurrProfileVyi, &
+                                        CurrVxi, CurrVyi )
+
          ENDSELECT
 
       END IF
@@ -156,7 +354,7 @@ END SUBROUTINE Calc_Current
 SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(Current_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(Current_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine
    TYPE(Current_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -182,8 +380,12 @@ SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
          
    ErrStat = ErrID_None         
    ErrMsg  = ""               
-  
-   
+
+   IF ( InitInp%CurrMod == 3 ) THEN
+      CALL ReadUsrCurrentProfile( TRIM(InitInp%CurrFile), InitInp, ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
       ! IF there are Morison elements, then compute the current components at each morison node elevation
       
    IF ( InitInp%NGridPts > 0 ) THEN    

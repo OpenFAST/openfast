@@ -43,6 +43,10 @@ IMPLICIT NONE
     REAL(SiKi)  :: CurrNSDir = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: CurrDIV = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: CurrDIDir = 0.0_R4Ki      !<  [-]
+    CHARACTER(1024)  :: CurrFile      !<  [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: UsrCurrProfileDepth      !<  [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: UsrCurrProfileVxi      !<  [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: UsrCurrProfileVyi      !<  [-]
     INTEGER(IntKi)  :: CurrMod = 0_IntKi      !<  [-]
     REAL(SiKi)  :: EffWtrDpth = 0.0_R4Ki      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !<  [-]
@@ -82,6 +86,43 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%CurrNSDir = SrcInitInputData%CurrNSDir
    DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
    DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
+   DstInitInputData%CurrFile = SrcInitInputData%CurrFile
+   if (allocated(SrcInitInputData%UsrCurrProfileDepth)) then
+      LB(1:1) = lbound(SrcInitInputData%UsrCurrProfileDepth)
+      UB(1:1) = ubound(SrcInitInputData%UsrCurrProfileDepth)
+      if (.not. allocated(DstInitInputData%UsrCurrProfileDepth)) then
+         allocate(DstInitInputData%UsrCurrProfileDepth(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UsrCurrProfileDepth.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%UsrCurrProfileDepth = SrcInitInputData%UsrCurrProfileDepth
+   end if
+   if (allocated(SrcInitInputData%UsrCurrProfileVxi)) then
+      LB(1:1) = lbound(SrcInitInputData%UsrCurrProfileVxi)
+      UB(1:1) = ubound(SrcInitInputData%UsrCurrProfileVxi)
+      if (.not. allocated(DstInitInputData%UsrCurrProfileVxi)) then
+         allocate(DstInitInputData%UsrCurrProfileVxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UsrCurrProfileVxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%UsrCurrProfileVxi = SrcInitInputData%UsrCurrProfileVxi
+   end if
+   if (allocated(SrcInitInputData%UsrCurrProfileVyi)) then
+      LB(1:1) = lbound(SrcInitInputData%UsrCurrProfileVyi)
+      UB(1:1) = ubound(SrcInitInputData%UsrCurrProfileVyi)
+      if (.not. allocated(DstInitInputData%UsrCurrProfileVyi)) then
+         allocate(DstInitInputData%UsrCurrProfileVyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UsrCurrProfileVyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%UsrCurrProfileVyi = SrcInitInputData%UsrCurrProfileVyi
+   end if
    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
    DstInitInputData%EffWtrDpth = SrcInitInputData%EffWtrDpth
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
@@ -107,6 +148,15 @@ subroutine Current_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Current_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(InitInputData%UsrCurrProfileDepth)) then
+      deallocate(InitInputData%UsrCurrProfileDepth)
+   end if
+   if (allocated(InitInputData%UsrCurrProfileVxi)) then
+      deallocate(InitInputData%UsrCurrProfileVxi)
+   end if
+   if (allocated(InitInputData%UsrCurrProfileVyi)) then
+      deallocate(InitInputData%UsrCurrProfileVyi)
+   end if
    if (allocated(InitInputData%WaveKinGridzi)) then
       deallocate(InitInputData%WaveKinGridzi)
    end if
@@ -125,6 +175,10 @@ subroutine Current_PackInitInput(RF, Indata)
    call RegPack(RF, InData%CurrNSDir)
    call RegPack(RF, InData%CurrDIV)
    call RegPack(RF, InData%CurrDIDir)
+   call RegPack(RF, InData%CurrFile)
+   call RegPackAlloc(RF, InData%UsrCurrProfileDepth)
+   call RegPackAlloc(RF, InData%UsrCurrProfileVxi)
+   call RegPackAlloc(RF, InData%UsrCurrProfileVyi)
    call RegPack(RF, InData%CurrMod)
    call RegPack(RF, InData%EffWtrDpth)
    call RegPackAlloc(RF, InData%WaveKinGridzi)
@@ -149,6 +203,10 @@ subroutine Current_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%CurrNSDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CurrDIV); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CurrDIDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CurrFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%UsrCurrProfileDepth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%UsrCurrProfileVxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%UsrCurrProfileVyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CurrMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EffWtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveKinGridzi); if (RegCheckErr(RF, RoutineName)) return

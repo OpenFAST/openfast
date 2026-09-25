@@ -7,6 +7,9 @@ False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
           1   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
+          0   GSPotent           - Type generalized support (GS) structure influence on wind based on potential flow around the GS members (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+          0   GSShadow           - Calculate GS influence on wind based on downstream shadow (switch) {0=none, 1=Powles model, 2=Eames model}
+False         GSAero             - Calculate GS aerodynamic loads? (flag)
 False         CavitCheck         - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
 False         NacelleDrag        - Include Nacelle Drag effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
@@ -94,6 +97,14 @@ TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp
 4.0000000E+01  5.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
 6.0000000E+01  4.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
 8.0000000E+01  4.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+======  General support structure joints  ===========================================================
+0                     NumGSJoints
+GSJointID      GSJointxi      GSJointyi      GSJointzi
+(-)            (m)            (m)            (m)
+======  General support structure members  ==========================================================
+0                     NumGSMembers
+GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
+(-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
 ======  Outputs  ====================================================================================
 True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"? (flag)
           4   NBlOuts             - Number of blade node outputs [0 - 9] (-)

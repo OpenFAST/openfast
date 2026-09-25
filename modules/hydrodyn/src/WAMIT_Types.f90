@@ -34,6 +34,7 @@ MODULE WAMIT_Types
 USE Conv_Radiation_Types
 USE SS_Radiation_Types
 USE SS_Excitation_Types
+USE NonlinearFK_Types
 USE NWTC_Library
 IMPLICIT NONE
 ! =========  WAMIT_InitInputType  =======
@@ -51,6 +52,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOBxt      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmCOByt      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NAddDOF      !< Number of additional generalized degrees of freedom [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FKMod      !< Body nonlinear Froude-Krylov and hydrostatic model (switch) [-]
     INTEGER(IntKi)  :: RdtnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
@@ -139,6 +141,7 @@ IMPLICIT NONE
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
     TYPE(GridInterp_ParameterType)  :: ExctnGridParams      !< Parameters of WaveExctnGrid [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FKMod      !< Body nonlinear Froude-Krylov and hydrostatic model (switch) [-]
   END TYPE WAMIT_ParameterType
 ! =======================
 ! =========  WAMIT_InputType  =======
@@ -282,6 +285,18 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       end if
       DstInitInputData%NAddDOF = SrcInitInputData%NAddDOF
    end if
+   if (allocated(SrcInitInputData%FKMod)) then
+      LB(1:1) = lbound(SrcInitInputData%FKMod)
+      UB(1:1) = ubound(SrcInitInputData%FKMod)
+      if (.not. allocated(DstInitInputData%FKMod)) then
+         allocate(DstInitInputData%FKMod(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%FKMod.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%FKMod = SrcInitInputData%FKMod
+   end if
    DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
@@ -331,6 +346,9 @@ subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%NAddDOF)) then
       deallocate(InitInputData%NAddDOF)
    end if
+   if (allocated(InitInputData%FKMod)) then
+      deallocate(InitInputData%FKMod)
+   end if
    call Conv_Rdtn_DestroyInitInput(InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitInputData%WaveField)
@@ -355,6 +373,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%PtfmCOBxt)
    call RegPackAlloc(RF, InData%PtfmCOByt)
    call RegPackAlloc(RF, InData%NAddDOF)
+   call RegPackAlloc(RF, InData%FKMod)
    call RegPack(RF, InData%RdtnMod)
    call RegPack(RF, InData%ExctnMod)
    call RegPack(RF, InData%ExctnDisp)
@@ -399,6 +418,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PtfmCOBxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PtfmCOByt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NAddDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FKMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnDisp); if (RegCheckErr(RF, RoutineName)) return
@@ -996,6 +1016,18 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    call GridInterp_CopyParam(SrcParamData%ExctnGridParams, DstParamData%ExctnGridParams, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcParamData%FKMod)) then
+      LB(1:1) = lbound(SrcParamData%FKMod)
+      UB(1:1) = ubound(SrcParamData%FKMod)
+      if (.not. allocated(DstParamData%FKMod)) then
+         allocate(DstParamData%FKMod(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FKMod.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FKMod = SrcParamData%FKMod
+   end if
 end subroutine
 
 subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1037,6 +1069,9 @@ subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
    nullify(ParamData%WaveField)
    call GridInterp_DestroyParam(ParamData%ExctnGridParams, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(ParamData%FKMod)) then
+      deallocate(ParamData%FKMod)
+   end if
 end subroutine
 
 subroutine WAMIT_PackParam(RF, Indata)
@@ -1075,6 +1110,7 @@ subroutine WAMIT_PackParam(RF, Indata)
    end if
    call RegPack(RF, InData%PtfmYMod)
    call GridInterp_PackParam(RF, InData%ExctnGridParams) 
+   call RegPackAlloc(RF, InData%FKMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1129,6 +1165,7 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    end if
    call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
    call GridInterp_UnpackParam(RF, OutData%ExctnGridParams) ! ExctnGridParams 
+   call RegUnpackAlloc(RF, OutData%FKMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

@@ -898,10 +898,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          return
       end if
 
-      ! Initialization input   
+      ! Initialization input
       Init%InData_SlD%InputFile = p_FAST%SoilFile
       Init%InData_SlD%RootName = p_FAST%OutFileRoot
-      Init%InData_SlD%SlDNonLinearForcePortionOnly = .true. ! SoilDyn will only return the Non-Linear portion of the reaction force
       Init%InData_SlD%WtrDpth = p_FAST%WtrDpth
 
       ! Initialize SoilDyn
@@ -913,13 +912,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       ! Pass nonlinear flag to SubDyn: true only when REDWIN DLL is active (CalcOption=3)
-      Init%InData_SD%SlDNonLinear = SlD%p%UseREDWINinterface ! REDWIN DLL returning nonlinear soil reaction forces      
+      Init%InData_SD%SlDNonLinear = SlD%p%UseREDWINinterface ! REDWIN DLL returning nonlinear soil reaction forces
 
       ! Add module to list of modules, return on error
       CALL MV_AddModule(m_Glue%ModData, Module_SlD, 'SlD', 1, dt_module, p_FAST%DT, &
                         Init%OutData_SlD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-      
+
    end select
 
    !----------------------------------------------------------------------------
@@ -2005,6 +2004,10 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       CALL SetErrStat( ErrID_Fatal, 'MaxIter must be at least 1.', ErrStat, ErrMsg, RoutineName )
    END IF
 
+   IF ( (p%RelaxFactor <= 0.0_DbKi) .or. (p%RelaxFactor > 1.0_DbKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'RelaxFactor must be positive and less than or equal to 1.', ErrStat, ErrMsg, RoutineName )
+   END IF
+
       ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings
    CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2873,7 +2876,20 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
    CALL ReadVar( UnIn, InputFile, p%MaxConvIter, "MaxConvIter", "Maximum number of convergence iterations "//&
                      "for tight coupling generalized alpha integrator (-)", ErrStat2, ErrMsg2, UnEc)
    if (Failed()) return
-      
+
+      ! AutoRelax - Adaptive under-relaxation (flag)
+   CALL ReadVarWDefault( UnIn, InputFile, p%AutoRelax, "AutoRelax", "Adaptive under-relaxation (flag)", .true., ErrStat2, ErrMsg2, UnEc)
+   if (Failed()) return
+
+      ! RelaxFactor - Constant or initial under-relaxation factor for the iterative solver (-) [>0 and <=1]
+   if (p%AutoRelax) then
+      CALL ReadVarWDefault( UnIn, InputFile, p%RelaxFactor, "RelaxFactor", "Constant or initial under-relaxation factor for the iterative solver (-) [>0 and <=1]", 0.3_R8Ki, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
+   else
+      CALL ReadVarWDefault( UnIn, InputFile, p%RelaxFactor, "RelaxFactor", "Constant or initial under-relaxation factor for the iterative solver (-) [>0 and <=1]", 0.7_R8Ki, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
+   endif
+
       ! DT_UJac - Time between calls to get Jacobians (s)
    CALL ReadVar( UnIn, InputFile, p%DT_UJac, "DT_UJac", "Time between calls to get Jacobians (s)", ErrStat2, ErrMsg2, UnEc)
    if (Failed()) return
@@ -5990,6 +6006,33 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, SD
                end do
             end if
          end do
+
+         ! General support structure (GS): a single shared structure across all rotors, so
+         ! write at most one copy (no rotor suffix) to avoid duplicates in multirotor cases.
+         ! Prefer the rotor with a committed GSLoad (GSAero on => drag vectors), else fall
+         ! back to a committed GSMotion (influence-only, points).
+         j = 0
+         do iRot = 1, p_FAST%NRotors
+            if (AD%y%rotors(iRot)%GSLoad%Committed) then
+               j = iRot
+               exit
+            end if
+         end do
+         if (j>0) then
+            call MeshWrVTK(p_FAST%TurbinePos, AD%y%rotors(j)%GSLoad, &
+                           trim(p_FAST%VTK_OutFileRoot)//'.AD_GS', &
+                           y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, &
+                           AD%Input(INPUT_CURR)%rotors(j)%GSMotion )
+         else
+            do iRot = 1, p_FAST%NRotors
+               if (AD%Input(INPUT_CURR)%rotors(iRot)%GSMotion%Committed) then
+                  call MeshWrVTK(p_FAST%TurbinePos, AD%Input(INPUT_CURR)%rotors(iRot)%GSMotion, &
+                                 trim(p_FAST%VTK_OutFileRoot)//'.AD_GS', &
+                                 y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+                  exit
+               end if
+            end do
+         end if
       end if
 
       ! FVW submodule of AD15

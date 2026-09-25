@@ -29,7 +29,7 @@ MODULE AWAE_Timings
 
    integer(IntKi), parameter, public :: AWAE_MaxTimingEntries = 32
 
-   ! Typically we dissalow the `save` attribute for module variables, but we make an exception here since
+   ! Typically we disallow the `save` attribute for module variables, but we make an exception here since
    ! these variables are used to store timing data that is collected across multiple subroutine calls, but
    ! only outside of OMP loops.  If we were to allow OMP loops to call these subroutines, then we would
    ! need to use threadprivate variables instead of save variables.

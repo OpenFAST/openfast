@@ -22,6 +22,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SS_Excitation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Excitation_Types.f90)
   generate_f90_types(src/WAMIT.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT_Types.f90)
   generate_f90_types(src/WAMIT2.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT2_Types.f90)
+  generate_f90_types(src/NonlinearFK.txt ${CMAKE_CURRENT_LIST_DIR}/src/NonlinearFK_Types.f90)
 endif()
 
 add_library(hydrodynlib STATIC
@@ -44,6 +45,8 @@ add_library(hydrodynlib STATIC
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
   src/YawOffset.f90
+  src/NonlinearFK.f90
+  src/NonlinearFK_Types.f90
 )
 target_link_libraries(hydrodynlib seastlib nwtclibs)
 

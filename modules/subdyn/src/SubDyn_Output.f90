@@ -103,10 +103,11 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       CALL AllocAry(pLst%Fg,     12, pLst%NoutCnt, 2, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(pLst%extrap,     pLst%NoutCnt   , 'MOutLst(I)%extrap' , ErrStat2, ErrMsg2); if(Failed()) return
 
-      ! NOTE: len(MemberNodes) >2 if nDiv>1
       iMember = FINDLOCI(Init%Members(:,1), pLst%MemberID) ! Reindexing from MemberID to 1:nMembers
-      nNodesPerMember = count(Init%MemberNodes(iMember,:)>0_IntKi)
-      pLst%NodeIDs(1:pLst%NoutCnt)=Init%MemberNodes(iMember, pLst%NodeCnt)  ! We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+      nNodesPerMember = Init%MemberNDiv(iMember) + 1_IntKi
+      do J=1,pLst%NoutCnt
+         pLst%NodeIDs(J) = MemberNodeID(iMember, pLst%NodeCnt(J))  ! Store actual node IDs corresponding to requested ordinals
+      enddo
       pLst%ElmIDs=0  !Initialize to 0
       pLst%ElmNds=0  !Initialize to 0
       pLst%extrap=.false.
@@ -126,10 +127,10 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
          ENDDO  ! iiElem, nElemPerNode
          if ( (K2==2_IntKi).or.(nNodesPerMember==2_IntKi) ) cycle ! No need to proceed further if we have an interior node or only one element
          ! Save neighboring element info for force extrapolation to an end node if more than 1 element per member
-         if (iNode == Init%MemberNodes(iMember,1)) then                ! First node of the member
-            iNode = Init%MemberNodes(iMember,2)                        ! Index of the second node
-         else if (iNode == Init%MemberNodes(iMember,nNodesPerMember)) then ! Last node of the member
-            iNode = Init%MemberNodes(iMember,nNodesPerMember-1_IntKi)      ! Index of the second to last node
+         if (iNode == MemberNodeID(iMember,1_IntKi)) then                    ! First node of the member
+            iNode = MemberNodeID(iMember,2_IntKi)                            ! Index of the second node
+         else if (iNode == MemberNodeID(iMember,nNodesPerMember)) then       ! Last node of the member
+            iNode = MemberNodeID(iMember,nNodesPerMember-1_IntKi)            ! Index of the second to last node
          end if
          do iiElem = 1, 2 ! Should have exactly two elements connecting to an interior node
             iElem = Init%NodesConnE(iNode, iiElem+1) ! iiElem-th element Number; no need to call ThisElementIsAlongMember since interior node but kept for safety for now
@@ -156,9 +157,9 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
          CALL AllocAry(pLst%Fg,     12, 2, 2, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
          CALL AllocAry(pLst%extrap,     2   , 'MOutLst(I)%extrap' , ErrStat2, ErrMsg2); if(Failed()) return
          pLst%MemberID = Init%Members(iMember,1)
-         nNodesPerMember = count(Init%MemberNodes(iMember,:)>0_IntKi)
-         pLst%NodeIDs(1) = Init%MemberNodes(iMember,1)             ! First node of the member
-         pLst%NodeIDs(2) = Init%MemberNodes(iMember,nNodesPerMember) ! Last node of the member
+         nNodesPerMember = Init%MemberNDiv(iMember) + 1_IntKi
+         pLst%NodeIDs(1) = MemberNodeID(iMember,1_IntKi)              ! First node of the member
+         pLst%NodeIDs(2) = MemberNodeID(iMember,nNodesPerMember)      ! Last node of the member
          pLst%ElmIDs=0  !Initialize to 0
          pLst%ElmNds=0  !Initialize to 0
          pLst%extrap=.false.
@@ -175,10 +176,10 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
             ENDDO  ! iiElem, nElemPerNode
             if ( nNodesPerMember==2_IntKi ) cycle ! No need to proceed further if we only have one element
             ! Save neighboring element info for force extrapolation to an end node if more than 1 element per member
-            if (iNode == Init%MemberNodes(iMember,1)) then                ! First node of the member
-               iNode = Init%MemberNodes(iMember,2)                        ! Index of the second node
-            else if (iNode == Init%MemberNodes(iMember,nNodesPerMember)) then ! Last node of the member
-               iNode = Init%MemberNodes(iMember,nNodesPerMember-1_IntKi)      ! Index of the second to last node
+            if (iNode == MemberNodeID(iMember,1_IntKi)) then               ! First node of the member
+               iNode = MemberNodeID(iMember,2_IntKi)                       ! Index of the second node
+            else if (iNode == MemberNodeID(iMember,nNodesPerMember)) then  ! Last node of the member
+               iNode = MemberNodeID(iMember,nNodesPerMember-1_IntKi)       ! Index of the second to last node
             end if
             do iiElem = 1,2 ! Should have exactly two elements connecting to an interior node
                iElem = Init%NodesConnE(iNode, iiElem+1) ! iiElem-th element Number; no need to call ThisElementIsAlongMember since interior node but kept for safety for now
@@ -236,21 +237,40 @@ CONTAINS
       integer(IntKi), intent(in) :: iElem   !< Element index
       integer(IntKi), intent(in) :: iNode   !< Node index
       integer(IntKi), intent(in) :: iMember !< Member index
-      integer(IntKi), dimension(2) :: ElemNodes  ! Node IDs for element under consideration (may not be consecutive numbers)
-      integer(IntKi)               :: iOtherNode ! Other node than iNode for element iElem
+      integer(IntKi), dimension(2) :: ElemNodes    ! Node IDs for element under consideration (may not be consecutive numbers)
+      integer(IntKi)               :: iElemStart   ! First element index for member iMember
+      integer(IntKi)               :: iElemEnd     ! Last element index for member iMember
       ElemNodes = p%Elems(iElem,2:3) ! 1st and 2nd node of the element
-      ! Check that the other node belongs to the member
-      IF      (ElemNodes(1) == iNode) then
-         iOtherNode=ElemNodes(2)
-      else if (ElemNodes(2) == iNode) then
-         iOtherNode=ElemNodes(1)
-      else
+      if (ElemNodes(1) /= iNode .and. ElemNodes(2) /= iNode) then
          ThisElementIsAlongMember=.false. ! Not along member since nodes don't match
          return
-      endif
-      ! Being along the member means the second node of the element is in the node list of the member
-      ThisElementIsAlongMember= ANY(Init%MemberNodes(iMember,:) == iOtherNode)
+      end if
+
+      iElemStart = MemberElemStart(iMember)
+      iElemEnd   = iElemStart + Init%MemberNDiv(iMember) - 1_IntKi
+      ThisElementIsAlongMember = (iElem >= iElemStart) .and. (iElem <= iElemEnd)
    END FUNCTION
+
+   INTEGER(IntKi) FUNCTION MemberElemStart(iMember)
+      integer(IntKi), intent(in) :: iMember
+      MemberElemStart = Init%MemberElemStart(iMember)
+   END FUNCTION MemberElemStart
+
+   INTEGER(IntKi) FUNCTION MemberNodeID(iMember, iOrdinal)
+      integer(IntKi), intent(in) :: iMember
+      integer(IntKi), intent(in) :: iOrdinal
+      integer(IntKi)             :: iElemStart
+
+      MemberNodeID = 0_IntKi
+      if (iOrdinal < 1_IntKi .or. iOrdinal > Init%MemberNDiv(iMember)+1_IntKi) return
+
+      iElemStart = MemberElemStart(iMember)
+      if (iOrdinal == 1_IntKi) then
+         MemberNodeID = p%Elems(iElemStart, 2)
+      else
+         MemberNodeID = p%Elems(iElemStart + iOrdinal - 2_IntKi, 3)
+      end if
+   END FUNCTION MemberNodeID
 
    !> Set different "data" for a given output node, and possibly store more than one "data" per node:
    !! The "data" is:

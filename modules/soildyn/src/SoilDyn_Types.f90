@@ -90,7 +90,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of the input file [-]
     LOGICAL  :: Linearize = .false.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth to mudline (global coordinates) ['(m)']
-    LOGICAL  :: SlDNonLinearForcePortionOnly = .false.      !< Only the non-linear portion of the reaction forces is returned [-]
   END TYPE SlD_InitInputType
 ! =======================
 ! =========  SlD_InitOutputType  =======
@@ -140,7 +139,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDepth = 0.0_ReKi      !< Water depth to mudline (global coordinates) ['(m)']
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stiffness      !< Stiffness matrix ['(N/m,]
     LOGICAL  :: DLL_OnlyStiff = .false.      !< Use only the stiffness matrix in calculating the restoring forces [-]
-    LOGICAL  :: SlDNonLinearForcePortionOnly = .false.      !< Only the non-linear portion of the reaction forces is returned [-]
   END TYPE SlD_ParameterType
 ! =======================
 ! =========  SlD_InputType  =======
@@ -529,7 +527,6 @@ subroutine SlD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%SlDNonLinearForcePortionOnly = SrcInitInputData%SlDNonLinearForcePortionOnly
 end subroutine
 
 subroutine SlD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -550,7 +547,6 @@ subroutine SlD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%Linearize)
    call RegPack(RF, InData%WtrDpth)
-   call RegPack(RF, InData%SlDNonLinearForcePortionOnly)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -563,7 +559,6 @@ subroutine SlD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SlDNonLinearForcePortionOnly); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SlD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -939,7 +934,6 @@ subroutine SlD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Stiffness = SrcParamData%Stiffness
    end if
    DstParamData%DLL_OnlyStiff = SrcParamData%DLL_OnlyStiff
-   DstParamData%SlDNonLinearForcePortionOnly = SrcParamData%SlDNonLinearForcePortionOnly
 end subroutine
 
 subroutine SlD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1000,7 +994,6 @@ subroutine SlD_PackParam(RF, Indata)
    call RegPack(RF, InData%WtrDepth)
    call RegPackAlloc(RF, InData%Stiffness)
    call RegPack(RF, InData%DLL_OnlyStiff)
-   call RegPack(RF, InData%SlDNonLinearForcePortionOnly)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1041,7 +1034,6 @@ subroutine SlD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%WtrDepth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Stiffness); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DLL_OnlyStiff); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SlDNonLinearForcePortionOnly); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SlD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

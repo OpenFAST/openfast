@@ -208,6 +208,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    CALL AllocAry( InputFileData%PtfmCOBxt    , InputFileData%NBody,     'PtfmCOBxt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%PtfmCOByt    , InputFileData%NBody,     'PtfmCOByt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
    CALL AllocAry( InputFileData%NAddDOF      , InputFileData%NBody,     'NAddDOF'      , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%FKMod        , InputFileData%NBody,     'FKMod'        , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%GeoFile      , InputFileData%NBody,     'GeoFile'      , ErrStat2, ErrMsg2);   if (Failed())  return;
 
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
    call ParseAry( FileInfo_In, CurLine, 'PotFile', InputFileData%PotFile, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
@@ -247,6 +249,17 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       if (Failed())  return;
    
    call ParseAry( FileInfo_In, CurLine, 'NAddDOF', InputFileData%NAddDOF, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
+      ! FKMod - Mesh-based nonlinear Froude-Krylov and hydrostatic model (switch)
+   call ParseAry( FileInfo_In, CurLine, 'FKMod', InputFileData%FKMod(1:InputFileData%nWAMITObj), InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+   if (InputFileData%NBodyMod==1) then
+      InputFileData%FKMod(2:InputFileData%NBody) = InputFileData%FKMod(1)
+   end if
+
+      ! GeoFile - Root name of Potential flow body geometry file
+   call ParseAry( FileInfo_In, CurLine, 'GeoFile', InputFileData%GeoFile, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    !-------------------------------------------------------------------------------------------------
@@ -1445,7 +1458,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    IF ( InputFileData%PotMod > 0 ) THEN
       do i = 1,InputFileData%nWAMITObj
-          IF ( LEN_TRIM( InputFileData%PotFile(i) ) == 0 ) THEN
+         IF ( LEN_TRIM( InputFileData%PotFile(i) ) == 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'PotFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
@@ -1545,12 +1558,39 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       RETURN
    END IF
    IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%ExctnMod == 2 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave exctiation model (ExctnMod=2). Need ExctnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+      CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave excitation model (ExctnMod=2). Need ExctnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
    IF ( InputFileData%PotMod == 1 .and. InputFileData%hasAddDOF .and. InputFileData%Wamit%RdtnMod == 2 ) THEN
       CALL SetErrStat( ErrID_Fatal,'Nonzero NAddDOF currently cannot be used with state-space wave radiation model (RdtnMod=2). Need RdtnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
       RETURN
+   END IF
+
+   IF ( InputFileData%PotMod == 1 ) THEN
+      do i = 1,InputFileData%NBody
+         IF ( InputFileData%FKMod(i) /= FKMod_none .and. InputFileData%FKMod(i) /= FKMod_full )THEN
+            CALL SetErrStat( ErrID_Fatal,'FKMod must be '//trim(num2lstr(FKMod_none))//' or '//trim(num2lstr(FKMod_full))//' for all WAMIT bodies.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%FKMod(i) == FKMod_full .and. InputFileData%Wamit%ExctnMod == 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FKMod = '//trim(num2lstr(FKMod_full))//' is incompatible with state-space wave excitation model (ExctnMod=2). Need ExctnMod = 0 or 1.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%FKMod(i) == FKMod_full .and. InputFileData%hasAddDOF ) THEN
+            CALL SetErrStat( ErrID_Fatal,'FKMod = '//trim(num2lstr(FKMod_full))//' is incompatible with NAddDOF>0.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
+      do i = 1,InputFileData%NBody
+          IF ( InputFileData%FKMod(i)==FKMod_full .and. LEN_TRIM( InputFileData%GeoFile(i) ) == 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'GeoFile must not be an empty string unless FKMod = '//trim(num2lstr(FKMod_none))//'.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( PathIsRelative( InputFileData%GeoFile(i) ) ) THEN
+            CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+            InputFileData%GeoFile(i)            = TRIM(TmpPath)//TRIM(InputFileData%GeoFile(i))
+         END IF
+      end do
    END IF
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations

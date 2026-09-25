@@ -482,8 +482,10 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    LOGICAL                       :: CreateNewProp
    INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberSpring, nMemberBeamCirc, nMemberBeamRect, nMemberBeamArb !< Number of members per type
    INTEGER(IntKi)                :: eType !< Element Type
+   INTEGER(IntKi)                :: memberDiv, maxMemberDiv, iJoint1, iJoint2
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
+   REAL(ReKi)                    :: memberLength
    ErrStat = ErrID_None
    ErrMsg  = ""
    
@@ -494,6 +496,28 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.'); return
    ENDIF
    
+   ! --- Resolve the number of finite elements per member before sizing arrays
+   do I = 1, size(Init%Members,1)
+      eType = Init%Members(I, iMType)
+      if (eType==idMemberBeamCirc .or. eType==idMemberBeamRect .or. eType==idMemberBeamArb) then
+         Init%MemberNDiv(I) = max(1_IntKi, Init%MemberNDiv(I))
+         if (Init%MemberDivSize(I) > 0.0_ReKi) then
+            iJoint1 = FINDLOCI(Init%Joints(:,1), Init%Members(I,2))
+            iJoint2 = FINDLOCI(Init%Joints(:,1), Init%Members(I,3))
+            if (iJoint1 <= 0 .or. iJoint2 <= 0) then
+               CALL Fatal(' Failed to find one or both joints for member at position '//trim(num2lstr(I))//' in member list while resolving MDivSize.')
+               return
+            endif
+            memberLength = sqrt( (Init%Joints(iJoint2,2)-Init%Joints(iJoint1,2))**2 + &
+                                 (Init%Joints(iJoint2,3)-Init%Joints(iJoint1,3))**2 + &
+                                 (Init%Joints(iJoint2,4)-Init%Joints(iJoint1,4))**2 )
+            Init%MemberNDiv(I) = max(1_IntKi, int(ceiling(memberLength/Init%MemberDivSize(I)), IntKi))
+         endif
+      else
+         Init%MemberNDiv(I) = 1_IntKi
+      endif
+   enddo
+
    ! --- Total number of element   
    nMemberBeamCirc = count(Init%Members(:,iMType) == idMemberBeamCirc)
    nMemberBeamRect = count(Init%Members(:,iMType) == idMemberBeamRect)
@@ -501,21 +525,31 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    nMemberRigid    = count(Init%Members(:,iMType) == idMemberRigid)
    nMemberBeamArb  = count(Init%Members(:,iMType) == idMemberBeamArb)
    nMemberSpring   = count(Init%Members(:,iMType) == idMemberSpring)
-   Init%NElem = (nMemberBeamCirc + nMemberBeamRect + nMemberBeamArb)*Init%NDiv + nMemberCable + nMemberRigid + nMemberSpring ! NOTE: only Beams are divided
+   Init%NElem = sum(Init%MemberNDiv)
+   CALL AllocAry(Init%MemberElemStart, p%NMembers, 'MemberElemStart', ErrStat2, ErrMsg2); if(Failed()) return
+   if (p%NMembers > 0) then
+      Init%MemberElemStart(1) = 1_IntKi
+      do I = 2, p%NMembers
+         Init%MemberElemStart(I) = Init%MemberElemStart(I-1) + Init%MemberNDiv(I-1)
+      enddo
+   end if
    IF ( (nMemberBeamCirc+nMemberBeamRect+nMemberRigid+nMemberCable+nMemberBeamArb+nMemberSpring) /= size(Init%Members,1)) then
       CALL Fatal(' Member list contains an element which is not a beam, a cable, a rigid link or a spring'); return
    ENDIF
 
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeamCirc+nMemberBeamRect+nMemberBeamArb)
+   p%nNodes = Init%NJoints + sum(max(Init%MemberNDiv - 1_IntKi, 0_IntKi), mask = Init%Members(:,iMType) == idMemberBeamCirc .or. &
+                                                                                 Init%Members(:,iMType) == idMemberBeamRect .or. &
+                                                                                 Init%Members(:,iMType) == idMemberBeamArb)
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
       CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ))); return
    ENDIF
    
-   ! TODO replace this with an integer list!
-   CALL AllocAry(Init%MemberNodes,p%NMembers,Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
+   ! Store only member endpoints here; interior member nodes are reconstructed from p%Elems and MemberNDiv when needed.
+   maxMemberDiv = maxval(Init%MemberNDiv)
+   CALL AllocAry(Init%MemberNodes,p%NMembers,2,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
    ! NOTE: need NNode and NElem 
@@ -563,16 +597,16 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        endif ! is beam
     enddo
 
-    Init%MemberNodes = 0
+   Init%MemberNodes = 0
     ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
-    if (Init%NDiv==1) then
+    if (maxMemberDiv==1) then
        ! NDiv = 1
-       Init%MemberNodes(1:p%NMembers, 1:2) = p%Elems(1:Init%NElem, 2:3) 
+      Init%MemberNodes(1:p%NMembers, 1:2) = p%Elems(1:Init%NElem, 2:3) 
        Init%NPropBC = Init%NPropSetsBC
        Init%NPropBR = Init%NPropSetsBR
        Init%NPropX  = Init%NPropSetsX
 
-    else if (Init%NDiv > 1) then
+    else if (maxMemberDiv > 1) then
 
        ! Discretize structure according to NDiv 
        ! - Elems is fully reinitialized, connectivity needs to be done again using SetNewElem
@@ -612,6 +646,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           eType = TempMembers(I, iMType  )
           iDirCos = TempMembers(I,  iMDirCosID)
           spin  = TempMemSpin(I)
+          memberDiv = Init%MemberNDiv(I)
           
           if (eType==idMemberRigid .OR. eType==idMemberCable .OR. eType==idMemberSpring) then
              ! --- Cables, rigid links and springs are not subdivided and have same prop at nodes
@@ -623,9 +658,17 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              cycle
           endif
 
+          if (memberDiv == 1) then
+             Init%MemberNodes(I, 1) = Node1
+             Init%MemberNodes(I, 2) = Node2
+             kelem = kelem + 1
+             CALL SetNewElem(kelem, Node1, Node2, eType, Prop1, Prop2, p, iDirCos, spin)
+             cycle
+          endif
+
           ! --- Subdivision of beams
-          Init%MemberNodes(I,           1) = Node1
-          Init%MemberNodes(I, Init%NDiv+1) = Node2
+          Init%MemberNodes(I, 1) = Node1
+          Init%MemberNodes(I, 2) = Node2
 
           x1 = Init%Nodes(Node1, 2)
           y1 = Init%Nodes(Node1, 3)
@@ -635,9 +678,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           y2 = Init%Nodes(Node2, 3)
           z2 = Init%Nodes(Node2, 4)
           
-          dx = ( x2 - x1 )/Init%NDiv
-          dy = ( y2 - y1 )/Init%NDiv
-          dz = ( z2 - z1 )/Init%NDiv
+          dx = ( x2 - x1 )/memberDiv
+          dy = ( y2 - y1 )/memberDiv
+          dz = ( z2 - z1 )/memberDiv
 
           if (eType == idMemberBeamCirc) then
 
@@ -647,8 +690,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
             d2 = TempPropsBC(Prop2, 5)
             t2 = TempPropsBC(Prop2, 6)
             
-            dd = ( d2 - d1 )/Init%NDiv
-            dt = ( t2 - t1 )/Init%NDiv
+            dd = ( d2 - d1 )/memberDiv
+            dt = ( t2 - t1 )/memberDiv
 
              ! If both dd and dt are 0, no interpolation is needed, and we can use the same property set for new nodes/elements. otherwise we'll have to create new properties for each new node
            
@@ -664,9 +707,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
             Sb2 = TempPropsBR(Prop2, 6)
             t2  = TempPropsBR(Prop2, 7)
 
-            dSa = ( Sa2 - Sa1 )/Init%NDiv
-            dSb = ( Sb2 - Sb1 )/Init%NDiv
-            dt  = (  t2 - t1  )/Init%NDiv
+            dSa = ( Sa2 - Sa1 )/memberDiv
+            dSb = ( Sb2 - Sb1 )/memberDiv
+            dt  = (  t2 - t1  )/memberDiv
 
              ! If dSa, dSb, and dt are all 0, no interpolation is needed, and we can use the same property set for new nodes/elements. otherwise we'll have to create new properties for each new node
 
@@ -681,7 +724,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
 
           ! node connect to Node1
           knode = knode + 1
-          Init%MemberNodes(I, 2) = knode
           CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init); if (ErrStat>ErrID_None) return;
           IF ( CreateNewProp ) THEN
                IF ( eType == idMemberBeamCirc ) THEN
@@ -704,9 +746,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           CALL SetNewElem(kelem, Node1, knode, eType, Prop1, nprop, p, iDirCos, spin); if (ErrStat>ErrID_None) return;
           
           ! interior nodes
-          DO J = 2, (Init%NDiv-1)
+          DO J = 2, (memberDiv-1)
              knode = knode + 1
-             Init%MemberNodes(I, J+1) = knode
              CALL SetNewNode(knode, x1 + J*dx, y1 + J*dy, z1 + J*dz, Init) ! Set Init%Nodes(knode,:)
              IF ( CreateNewProp ) THEN
                   IF ( eType == idMemberBeamCirc ) THEN
@@ -746,16 +787,16 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           call Fatal('Implementation error. Number of elements wrongly estimated.');return
        endif
 
-    ENDIF ! if NDiv is greater than 1
+   ENDIF ! if at least one member has more than one element
 
     ! set the props in Init
     CALL AllocAry(Init%PropsBC, Init%NPropBC, PropSetsBCCol, 'Init%PropsBC', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsBR, Init%NPropBR, PropSetsBRCol, 'Init%PropsBR', ErrStat2, ErrMsg2); if(Failed()) return
 
-    if (Init%NDiv==1) then
+    if (maxMemberDiv==1) then
        Init%PropsBC(1:Init%NPropBC, 1:PropSetsBCCol) = Init%PropSetsBC(1:Init%NPropBC, 1:PropSetsBCCol)
        Init%PropsBR(1:Init%NPropBR, 1:PropSetsBRCol) = Init%PropSetsBR(1:Init%NPropBR, 1:PropSetsBRCol)
-    else if (Init%NDiv>1) then
+    else if (maxMemberDiv>1) then
        Init%PropsBC(1:Init%NPropBC, 1:PropSetsBCCol) = TempPropsBC(1:Init%NPropBC, 1:PropSetsBCCol)
        Init%PropsBR(1:Init%NPropBR, 1:PropSetsBRCol) = TempPropsBR(1:Init%NPropBR, 1:PropSetsBRCol)
     endif

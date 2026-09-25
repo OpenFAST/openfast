@@ -64,6 +64,12 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    ! Convergence tolerance
    p%ConvTol = p_FAST%ConvTol
 
+   ! Adaptive under-relaxation
+   p%AutoRelax = p_FAST%AutoRelax
+
+   ! Under-relaxation factor
+   p%RelaxFactor = p_FAST%RelaxFactor
+
    ! Solver time step
    p%h = p_FAST%DT
 
@@ -1209,7 +1215,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    logical, parameter         :: IsSolve = .true.
    integer(IntKi)             :: ConvIter, CorrIter, TotalIter
    integer(IntKi)             :: NumUJac, NumCorrections
-   real(R8Ki)                 :: ConvError
+   real(R8Ki)                 :: ConvError, ConvErrorLast
    real(DbKi)                 :: t_global_next     ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j, k
@@ -1217,6 +1223,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    integer(IntKi)             :: ConvUJac          ! Jacobian updated for convergence
    integer(IntKi)             :: MaxConvUJac       ! Max times Jacobian can be updated for convergence
    real(R8Ki)                 :: RotDiff(3, 3)
+   real(R8Ki)                 :: RelaxFactor
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1398,6 +1405,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
       !-------------------------------------------------------------------------
 
       ! Loop through convergence iterations
+      RelaxFactor = p%RelaxFactor
       do ConvIter = 0, p%MaxConvIter
 
          ! Increment total number of convergence iterations in step
@@ -1546,7 +1554,19 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
 
          ! If at least one convergence iteration has been done and
          ! the RHS norm is less than convergence tolerance, exit loop
-         if ((ConvIter > 0) .and. (ConvError < p%ConvTol)) exit
+         if (ConvIter == 0) then
+            ConvErrorLast = ConvError
+         else
+            if (ConvError < p%ConvTol) exit
+            if (p%AutoRelax) then
+               if (ConvError<ConvErrorLast) then
+                  RelaxFactor = min(1.2_R8Ki*RelaxFactor,0.80_R8Ki)
+               else ! Residual is stagnant or diverging
+                  RelaxFactor = max(0.5_R8Ki*RelaxFactor,0.01_R8Ki)
+               endif
+            endif
+            ConvErrorLast = ConvError
+         endif
 
          ! Remove load condition conditioning on input changes
          if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)*p%Scale_UJac
@@ -1562,7 +1582,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          !----------------------------------------------------------------------
 
          ! Add change in inputs
-         if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
+         if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u, RelaxIn=RelaxFactor)
 
          !----------------------------------------------------------------------
          ! TC and Option 1: Transfer updated states and inputs to modules
@@ -1639,6 +1659,7 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i
+   real(R8Ki)                             :: RelaxFactor, ConvErrorLast
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1705,7 +1726,7 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
    !----------------------------------------------------------------------------
    ! Convergence Iterations
    !----------------------------------------------------------------------------
-
+   RelaxFactor = p%RelaxFactor
    ! Loop through convergence iterations
    do ConvIter = 0, p%MaxConvIter
 
@@ -1823,6 +1844,19 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
          exit
       end if
 
+      if (ConvIter == 0) then
+         ConvErrorLast = ConvError
+      else
+         if (p%AutoRelax) then
+            if (ConvError<ConvErrorLast) then
+               RelaxFactor = min(1.2_R8Ki*RelaxFactor,0.80_R8Ki)
+            else ! Residual is stagnant or diverging
+               RelaxFactor = max(0.5_R8Ki*RelaxFactor,0.01_R8Ki)
+            endif
+         endif
+         ConvErrorLast = ConvError
+      endif
+
       ! Remove load condition conditioning on input changes
       if (p%iUL(1) > 0) m%IO_X(p%iUL(1):p%iUL(2), 1) = m%IO_X(p%iUL(1):p%iUL(2), 1)*p%Scale_UJac
 
@@ -1831,7 +1865,7 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
       !-------------------------------------------------------------------------
 
       ! Add change in inputs
-      call MV_AddDelta(m%Mod%Vars%u, m%IO_X(:, 1), m%Mod%Lin%u)
+      call MV_AddDelta(m%Mod%Vars%u, m%IO_X(:, 1), m%Mod%Lin%u, RelaxIn=RelaxFactor)
 
       ! Transfer updated TC and Option 1 inputs to modules
       do i = 1, size(m%Mod%ModData)

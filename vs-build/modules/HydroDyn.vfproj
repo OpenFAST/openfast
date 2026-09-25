@@ -148,6 +148,26 @@
 					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
 				</FileConfiguration>
 			</File>
+			<File RelativePath="..\..\modules\hydrodyn\src\NonlinearFK.txt">
+				<FileConfiguration Name="Double_Debug|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Double_Release|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Double_OpenMP_Release|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="OpenMP_Release|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat NonlinearFK" Description="Running Registry for NonlinearFK" Outputs="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
+				</FileConfiguration>
+			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.txt">
 				<FileConfiguration Name="Double_Debug|x64">
 					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
@@ -239,6 +259,8 @@
 			<File RelativePath="..\..\modules\hydrodyn\src\Morison.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\Morison_Output.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\NonlinearFK.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\NonlinearFK_Types.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>

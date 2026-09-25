@@ -145,6 +145,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: RhoInf = 0.0_R8Ki      !< Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0] [-]
     REAL(DbKi)  :: ConvTol = 0.0_R8Ki      !< Convergence iteration error tolerance for tight coupling generalized alpha integrator (-) [-]
     INTEGER(IntKi)  :: MaxConvIter = 0_IntKi      !< Maximum number of convergence iterations for tight coupling generalized alpha integrator (-) [-]
+    LOGICAL  :: AutoRelax = .true.      !< Adaptive under-relaxation (flag) [-]
+    REAL(DbKi)  :: RelaxFactor = 0.7_DbKi      !< Constant or initial under-relaxation factor for the tight-coupling iterative solver (-) [>0 and <=1] [-]
     REAL(DbKi)  :: DT_Ujac = 0.0_R8Ki      !< Time between when we need to re-calculate these Jacobians [s]
     REAL(ReKi)  :: UJacSclFact = 0.0_ReKi      !< Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1 = 0_IntKi      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
@@ -1162,6 +1164,8 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%RhoInf = SrcParamData%RhoInf
    DstParamData%ConvTol = SrcParamData%ConvTol
    DstParamData%MaxConvIter = SrcParamData%MaxConvIter
+   DstParamData%AutoRelax = SrcParamData%AutoRelax
+   DstParamData%RelaxFactor = SrcParamData%RelaxFactor
    DstParamData%DT_Ujac = SrcParamData%DT_Ujac
    DstParamData%UJacSclFact = SrcParamData%UJacSclFact
    DstParamData%SizeJac_Opt1 = SrcParamData%SizeJac_Opt1
@@ -1391,6 +1395,8 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%RhoInf)
    call RegPack(RF, InData%ConvTol)
    call RegPack(RF, InData%MaxConvIter)
+   call RegPack(RF, InData%AutoRelax)
+   call RegPack(RF, InData%RelaxFactor)
    call RegPack(RF, InData%DT_Ujac)
    call RegPack(RF, InData%UJacSclFact)
    call RegPack(RF, InData%SizeJac_Opt1)
@@ -1513,6 +1519,8 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxConvIter); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AutoRelax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RelaxFactor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT_Ujac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UJacSclFact); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SizeJac_Opt1); if (RegCheckErr(RF, RoutineName)) return

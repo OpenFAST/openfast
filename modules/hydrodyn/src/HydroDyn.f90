@@ -34,6 +34,7 @@ MODULE HydroDyn
    USE HydroDyn_Input
    USE HydroDyn_Output
    USE YawOffset
+   USE NonlinearFK
 
 #ifdef USE_FIT
    USE FIT_MODULES
@@ -187,6 +188,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       InputFileData%Morison%WaveField => InitInp%WaveField
       InputFileData%WAMIT%WaveField   => InitInp%WaveField
       InputFileData%WAMIT2%WaveField  => InitInp%WaveField
+      InputFileData%NonlinearFK%WaveField => InitInp%WaveField
 
       InputFileData%Morison%PtfmYMod  = InputFileData%PtfmYMod
       InputFileData%WAMIT%PtfmYMod    = InputFileData%PtfmYMod
@@ -306,6 +308,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                call AllocAry( InputFileData%WAMIT%PtfmCOBxt   , InputFileData%NBody, "PtfmCOBxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                call AllocAry( InputFileData%WAMIT%PtfmCOByt   , InputFileData%NBody, "PtfmCOByt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                call AllocAry( InputFileData%WAMIT%NAddDOF     , InputFileData%NBody, "NAddDOF"     , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL AllocAry( InputFileData%WAMIT%FKMod       , InputFileData%NBody, 'FKMod'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                allocate( p%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( x%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( xd%WAMIT(        1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT.', ErrStat, ErrMsg, RoutineName )
@@ -323,6 +326,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                InputFileData%WAMIT%PtfmCOBxt      = InputFileData%PtfmCOBxt   
                InputFileData%WAMIT%PtfmCOByt      = InputFileData%PtfmCOByt   
                InputFileData%WAMIT%NAddDOF        = InputFileData%NAddDOF
+               InputFileData%WAMIT%FKMod          = InputFileData%FKMod
             else
                InputFileData%WAMIT%NBody    = 1    ! Each WAMIT object will only contain one of the NBody WAMIT bodies
 
@@ -335,6 +339,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                call AllocAry( InputFileData%WAMIT%PtfmCOBxt   , 1, "PtfmCOBxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                call AllocAry( InputFileData%WAMIT%PtfmCOByt   , 1, "PtfmCOByt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                call AllocAry( InputFileData%WAMIT%NAddDOF     , 1, "NAddDOF"     , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL AllocAry( InputFileData%WAMIT%FKMod       , 1, 'FKMod'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                allocate( p%WAMIT(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( x%WAMIT(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( xd%WAMIT(        InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT.', ErrStat, ErrMsg, RoutineName )
@@ -351,7 +356,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                InputFileData%WAMIT%PtfmCOBxt   (1)  = InputFileData%PtfmCOBxt   (1)
                InputFileData%WAMIT%PtfmCOByt   (1)  = InputFileData%PtfmCOByt   (1)
                InputFileData%WAMIT%NAddDOF     (1)  = InputFileData%NAddDOF     (1)
-  
+               InputFileData%WAMIT%FKMod       (1)  = InputFileData%FKMod       (1)
             end if
             
             if ( ErrStat >= AbortErrLev ) then
@@ -383,6 +388,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                 InputFileData%WAMIT%PtfmCOBxt   (1)  = InputFileData%PtfmCOBxt   (i)
                 InputFileData%WAMIT%PtfmCOByt   (1)  = InputFileData%PtfmCOByt   (i)
                 InputFileData%WAMIT%NAddDOF     (1)  = InputFileData%NAddDOF     (i)
+                InputFileData%WAMIT%FKMod       (1)  = InputFileData%FKMod       (i)
  
                 CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(i), p%WAMIT(i), x%WAMIT(i), xd%WAMIT(i), z%WAMIT, OtherState%WAMIT(i), &
                                         y%WAMIT(i), m%WAMIT(i), Interval, ErrStat2, ErrMsg2 )
@@ -415,24 +421,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             call AllocAry( m%F_PtfmAdd, p%NDOF, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             call AllocAry( m%F_Waves  , p%NDOF, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
-               ! Generate Summary file information for WAMIT module
-                   ! Compute the load contribution from hydrostatics:
-            IF ( InputFileData%UnSum > 0 ) THEN
-                do iBody = 1, InputFileData%NBody
-                    WRITE( InputFileData%UnSum, '(A18,I5)')          'WAMIT Model - Body',iBody
-                    WRITE( InputFileData%UnSum, '(A18)')             '------------------'
-                    WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', InputFileData%PtfmVol0(iBody)
-                    WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', InputFileData%PtfmCOBxt(iBody)
-                    WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', InputFileData%PtfmCOByt(iBody)
-                    WRITE( InputFileData%UnSum,  '(/)' ) 
-                    WRITE( InputFileData%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
-                    WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
-                    WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
-                    WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody),p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOByt(iBody), -p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
-                end do
-            END IF
-
-
                !-----------------------------------------
                ! Initialize the WAMIT2 Calculations
                !-----------------------------------------
@@ -490,15 +478,21 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                    return
                 end if
 
-               CALL WAMIT2_Init(InputFileData%WAMIT2, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL CleanUp()
-                  RETURN
-               END IF
+               if (InputFileData%FKMod(1)==FKMod_none) then
+                  ! Note that for NBodyMod=1, all bodies must have the same FKMod; checked in WAMIT_Init
+                  CALL WAMIT2_Init(InputFileData%WAMIT2, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+               end if
 
                      ! For NBodyMod > 1 and NBody > 1, set the body info and init the WAMIT2 body
                do i = 2, p%nWAMITObj
+
+                   if (InputFileData%FKMod(i)==FKMod_full) cycle  ! Don't use second-order potential-flow if nonlinear FK
+
                    InputFileData%WAMIT2%WAMITFile        = InputFileData%PotFile     (i)
                    InputFileData%WAMIT2%WAMITULEN        = InputFileData%WAMITULEN   (i)
                    InputFileData%WAMIT2%PtfmRefxt   (1)  = InputFileData%PtfmRefxt   (i)
@@ -525,6 +519,62 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%WAMIT2%DiffQTFF    = .FALSE.
                p%WAMIT2%SumQTFF     = .FALSE.
             ENDIF
+
+            ! Nonlinear FK bodies
+            call AllocAry( InputFileData%NonlinearFK%FKMod       , InputFileData%nBody, 'FKMod'       , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( InputFileData%NonlinearFK%GeoFile     , InputFileData%nBody, 'GeoFile'     , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( InputFileData%NonlinearFK%PtfmRefxt   , InputFileData%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( InputFileData%NonlinearFK%PtfmRefyt   , InputFileData%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( InputFileData%NonlinearFK%PtfmRefzt   , InputFileData%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call AllocAry( InputFileData%NonlinearFK%PtfmRefztRot, InputFileData%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            InputFileData%NonlinearFK%nBody = InputFileData%nBody
+            InputFileData%NonlinearFK%FKMod = InputFileData%FKMod
+            do i = 1, p%nBody
+               InputFileData%NonlinearFK%GeoFile(i) = InputFileData%GeoFile(i)
+            end do
+            InputFileData%NonlinearFK%PtfmRefxt = InputFileData%PtfmRefxt
+            InputFileData%NonlinearFK%PtfmRefyt = InputFileData%PtfmRefyt
+            InputFileData%NonlinearFK%PtfmRefzt = InputFileData%PtfmRefzt
+            InputFileData%NonlinearFK%PtfmRefztRot = InputFileData%PtfmRefztRot
+            CALL NonlinearFK_Init(InputFileData%NonlinearFK, p%NonlinearFK, m%NonlinearFK, InitOut%NonlinearFK, ErrStat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL CleanUp()
+                  RETURN
+               END IF
+
+            ! Generate Summary file information for WAMIT module
+            ! Compute the load contribution from hydrostatics:
+            IF ( InputFileData%UnSum > 0 ) THEN
+                do iBody = 1, InputFileData%NBody
+                    WRITE( InputFileData%UnSum, '(A18,I5)')          'WAMIT Model - Body',iBody
+                    WRITE( InputFileData%UnSum, '(A18)')             '------------------'
+                    select case (InputFileData%FKMod(iBody))
+                    case (FKMod_none)
+                       WRITE( InputFileData%UnSum, '(A64)') 'No mesh-based Froude-Krylov and hydrostatic load calculation. '
+                       WRITE( InputFileData%UnSum,  '(/)' )
+                       WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', InputFileData%PtfmVol0(iBody)
+                       WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', InputFileData%PtfmCOBxt(iBody)
+                       WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', InputFileData%PtfmCOByt(iBody)
+                       WRITE( InputFileData%UnSum,  '(/)' )
+                       WRITE( InputFileData%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
+                       WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
+                       WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
+                       WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody),p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOByt(iBody), -p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+                    case (FKMod_full)
+                       WRITE( InputFileData%UnSum, '(A64)') 'Mesh-based Froude-Krylov and hydrostatic load calculation.    '
+                       WRITE( InputFileData%UnSum,  '(/)' )
+                       WRITE( InputFileData%UnSum, '(A42,2X,I15)')    'Number of unique mesh vertices         :', p%NonlinearFK%Bodies(iBody)%n_nodes
+                       WRITE( InputFileData%UnSum, '(A42,2X,I15)')    'Number of mesh triangular faces        :', p%NonlinearFK%Bodies(iBody)%n_tris
+                       WRITE( InputFileData%UnSum, '(A42,2X,ES15.6)') 'Total volume of closed body (m^3)      :', p%NonlinearFK%Bodies(iBody)%volume
+                       WRITE( InputFileData%UnSum,  '(/)' )
+                       WRITE( InputFileData%UnSum, '(A81)' ) 'Buoyancy loads computed from mesh, summed about ( 0.0, 0.0, 0.0 )'
+                       WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
+                       WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
+                       WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',InitOut%NonlinearFK%Buoyancy(:,iBody)
+                    end select
+                end do
+            END IF
 
 #ifdef USE_FIT 
          ELSE IF ( InputFileData%PotMod == 2  ) THEN  ! FIT 
@@ -1407,7 +1457,7 @@ END SUBROUTINE HydroDyn_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, calcMorisonHstLds )   
+SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, calcMorisonHstLds, calcNonlinearFKLds )
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(HydroDyn_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
@@ -1422,6 +1472,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !! Error message if ErrStat /= ErrID_None
       LOGICAL, OPTIONAL,                  INTENT(IN   )  :: calcMorisonHstLds  !< Flag to calculate the Morison hydrostatic loads (default: .true.)
+      LOGICAL, OPTIONAL,                  INTENT(IN   )  :: calcNonlinearFKLds !< Flag to calculate mesh-based nonlinear FK and hydrostatic loads (default: .true.)
                                                                                !! Used to speed up Jacobian calculations when perturbing velocity/acceleration inputs
 
       INTEGER                                            :: I, J        ! Generic counters
@@ -1442,10 +1493,14 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       REAL(ReKi)                           :: PtfmRefY
       REAL(R8Ki)                           :: PRPRotation(3)
 
+      REAL(ReKi)                           :: NLFKForce(3,p%NBody)
+      REAL(ReKi)                           :: NLFKMoment(3,p%NBody)
+
       CHARACTER(*),    PARAMETER           :: RoutineName = 'HydroDyn_CalcOutput'
       REAL(ReKi),      PARAMETER           :: LrgAngle = 0.261799387799149            ! Threshold for platform roll and pitch rotation (15 deg). This is consistent with the ElastoDyn check.
       LOGICAL,         SAVE                :: FrstWarn_LrgY = .TRUE.
       logical                              :: calcMorisonHstLdsLocal
+      logical                              :: calcNonlinearFKLdsLocal
 
       ! Initialize ErrStat
       ErrStat = ErrID_None         
@@ -1456,7 +1511,11 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       else
          calcMorisonHstLdsLocal = .true.
       end if
-       
+      if (present(calcNonlinearFKLds)) then
+         calcNonlinearFKLdsLocal = calcNonlinearFKLds
+      else
+         calcNonlinearFKLdsLocal = .true.
+      end if
       
       ! Write the Hydrodyn-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
       ! and the current time has advanced since the last stored time step. Note that this must be done before filling y%WriteOutput
@@ -1711,34 +1770,49 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          if (p%WAMIT2used) then
 
             if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-               call WAMIT2_CalcOutput( Time, PtfmRefY, p%WaveField, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
-               if (Failed()) return
-               do iBody=1,p%NBody
-                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)
-               end do
-
-               ! Add F_Waves2 to m%F_Waves
-               do iBody=1,p%NBody
-                  indxStart = p%BDOFStrt(iBody)
-                  indxEnd   = indxStart+5
-                  m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(1)%F_Waves2(6*(iBody-1)+1:6*(iBody-1)+6)
-               end do
-            else
-               do iBody=1,p%NBody
-
-                  call WAMIT2_CalcOutput( Time, PtfmRefY, p%WaveField, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+               if (p%NonlinearFK%FKMod(1)==FKMod_none) then
+                  call WAMIT2_CalcOutput( Time, PtfmRefY, p%WaveField, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
                   if (Failed()) return
-                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)
+                  do iBody=1,p%NBody
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)
+                  end do
 
                   ! Add F_Waves2 to m%F_Waves
-                  indxStart = p%BDOFStrt(iBody)
-                  indxEnd   = indxStart+5
-                  m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(iBody)%F_Waves2
+                  do iBody=1,p%NBody
+                     indxStart = p%BDOFStrt(iBody)
+                     indxEnd   = indxStart+5
+                     m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(1)%F_Waves2(6*(iBody-1)+1:6*(iBody-1)+6)
+                  end do
+               end if
+            else
+               do iBody=1,p%NBody
+                  if (p%NonlinearFK%FKMod(iBody)==FKMod_none) then
+                     call WAMIT2_CalcOutput( Time, PtfmRefY, p%WaveField, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+                     if (Failed()) return
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)
+
+                     ! Add F_Waves2 to m%F_Waves
+                     indxStart = p%BDOFStrt(iBody)
+                     indxEnd   = indxStart+5
+                     m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(iBody)%F_Waves2
+                  end if
                end do
             end if
          end if         !  p%WAMIT2used
+
+         ! Mesh-based nonlinear Froude-Krylov and hydrostatic load integration for potential-flow bodies
+         NLFKForce  = 0.0_ReKi ! Redundant initialization; can delete later
+         NLFKMoment = 0.0_ReKi
+         if (calcNonlinearFKLdsLocal) then
+            call NonlinearFK_CalcOutput( Time, u%WamitMesh, p%NonlinearFK, m%NonlinearFK, NLFKForce, NLFKMoment, ErrStat2, ErrMsg2 )
+            if (Failed()) return
+            do iBody=1,p%NBody
+               y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + NLFKForce(:,iBody)
+               y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + NLFKMoment(:,iBody)
+            end do
+         end if
 
 #ifdef USE_FIT          
       ELSE IF ( p%PotMod ==2 ) THEN !FIT
@@ -1773,7 +1847,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       if (Failed()) return
 
          ! Map calculated results into the first p%NumOuts values of the y%WriteOutput Array
-      CALL HDOut_MapOutputs( p, y, m%WAMIT, m%WAMIT2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, PtfmRefY, q, qdot, qdotdot, ErrStat2, ErrMsg2 )
+      CALL HDOut_MapOutputs( p, y, m%WAMIT, m%WAMIT2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, PtfmRefY, q, qdot, qdotdot, NLFKForce, NLFKMoment, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
          ! Aggregate the sub-module outputs 
@@ -1987,6 +2061,7 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    INTEGER(IntKi)                :: startingI, startingJ, bOffset, offsetI
    integer(IntKi)                :: iVarWaveElev0, iVarHWindSpeed, iVarPLexp, iVarPropagationDir
    logical                       :: calcMorisonHstLds
+   logical                       :: calcNonlinearFKLds
    
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2029,12 +2104,23 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! If variable is extended input, skip
          if (MV_HasFlagsAll(Vars%u(i), VF_ExtLin)) cycle
 
-         ! Calculate Morison hydrostatic loads when perturbing displacement/orientation inputs
+         ! Calculate Morison hydrostatic loads and nonlinear FK and hydrostatic loads when perturbing displacement/orientation inputs
          select case (Vars%u(i)%Field)
          case (FieldTransDisp, FieldOrientation)
-            calcMorisonHstLds = .true.
+            select case (Vars%u(i)%DL%Num)
+            case (HydroDyn_u_Morison_Mesh)
+               calcMorisonHstLds  = .true.
+               calcNonlinearFKLds = .false.
+            case (HydroDyn_u_WAMITMesh)
+               calcMorisonHstLds  = .false.
+               calcNonlinearFKLds = .true.
+            case default ! PRPMesh
+               calcMorisonHstLds  = .true.
+               calcNonlinearFKLds = .true.
+            end select
          case default
-            calcMorisonHstLds = .false.
+            calcMorisonHstLds  = .false.
+            calcNonlinearFKLds = .false.
          end select
 
          ! Loop through number of linearization perturbations in variable
@@ -2043,13 +2129,13 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
             call HydroDyn_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
-            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, calcMorisonHstLds); if (Failed()) return
+            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, calcMorisonHstLds, calcNonlinearFKLds); if (Failed()) return
             call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
             call HydroDyn_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
-            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, calcMorisonHstLds); if (Failed()) return
+            call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, calcMorisonHstLds, calcNonlinearFKLds); if (Failed()) return
             call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index

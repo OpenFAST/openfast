@@ -70,7 +70,6 @@ typedef  ^  InitInputType       CHARACTER(1024)      InputFile      - - -       
 typedef  ^  ^                   CHARACTER(1024)      RootName       - - -       "Root name of the input file" -
 typedef  ^  ^                   LOGICAL              Linearize      - F -       "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^  ^                   ReKi                 WtrDpth        - - -       "Water depth to mudline (global coordinates)" '(m)'
-typedef  ^  ^                   logical              SlDNonLinearForcePortionOnly - F - "Only the non-linear portion of the reaction forces is returned" -
 
 # Define outputs from the initialization routine here:
 typedef  ^  InitOutputType      ModVarsType           Vars             - - -    "Module Variables"
@@ -111,7 +110,6 @@ typedef  ^  ^                   IntKi             NumPoints            - - -    
 typedef  ^  ^                   ReKi              WtrDepth             - - -    "Water depth to mudline (global coordinates)" '(m)'
 typedef  ^  ^                   R8Ki              Stiffness          ::: - -    "Stiffness matrix" '(N/m, N-m/rad)'
 typedef  ^  ^                   logical           DLL_OnlyStiff        - - -    "Use only the stiffness matrix in calculating the restoring forces" -
-typedef  ^  ^                   logical           SlDNonLinearForcePortionOnly - F - "Only the non-linear portion of the reaction forces is returned" -
 
 # Inputs ....................................................................................................................
 typedef ^   InputType           MeshType          SoilMesh             - - -    "Mesh of soil contact points" -

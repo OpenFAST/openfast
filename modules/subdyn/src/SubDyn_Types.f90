@@ -168,6 +168,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GuyanDampMat      !< Guyan Damping Matrix, see also CBB [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Members      !< Member joints connection           [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MemberSpin      !< Member spin angle about its axis - for rectangular members  [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MemberDivSize      !< Optional maximum element length for each member [m]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: MemberNDiv      !< Resolved number of finite elements per member [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: MemberElemStart      !< First element index for each member in p%Elems [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels            [-]
     LOGICAL  :: OutCOSM = .false.      !< Output Cos-matrices Flag           [-]
     LOGICAL  :: TabDelim = .false.      !< Generate a tab-delimited output file in OutJckF-Flag                        [-]
@@ -193,7 +196,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix                 [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix                      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: MemberNodes      !< Member number and list of nodes making up a member (>2 if subdivided) [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: MemberNodes      !< Member number and endpoint node IDs (interior member nodes reconstructed from connectivity) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnN      !< Nodes that connect to a common node    [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnE      !< Elements that connect to a common node [-]
     LOGICAL  :: SSSum = .false.      !< SubDyn Summary File Flag               [-]
@@ -1369,6 +1372,42 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%MemberSpin = SrcInitTypeData%MemberSpin
    end if
+   if (allocated(SrcInitTypeData%MemberDivSize)) then
+      LB(1:1) = lbound(SrcInitTypeData%MemberDivSize)
+      UB(1:1) = ubound(SrcInitTypeData%MemberDivSize)
+      if (.not. allocated(DstInitTypeData%MemberDivSize)) then
+         allocate(DstInitTypeData%MemberDivSize(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%MemberDivSize.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%MemberDivSize = SrcInitTypeData%MemberDivSize
+   end if
+   if (allocated(SrcInitTypeData%MemberNDiv)) then
+      LB(1:1) = lbound(SrcInitTypeData%MemberNDiv)
+      UB(1:1) = ubound(SrcInitTypeData%MemberNDiv)
+      if (.not. allocated(DstInitTypeData%MemberNDiv)) then
+         allocate(DstInitTypeData%MemberNDiv(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%MemberNDiv.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%MemberNDiv = SrcInitTypeData%MemberNDiv
+   end if
+   if (allocated(SrcInitTypeData%MemberElemStart)) then
+      LB(1:1) = lbound(SrcInitTypeData%MemberElemStart)
+      UB(1:1) = ubound(SrcInitTypeData%MemberElemStart)
+      if (.not. allocated(DstInitTypeData%MemberElemStart)) then
+         allocate(DstInitTypeData%MemberElemStart(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%MemberElemStart.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%MemberElemStart = SrcInitTypeData%MemberElemStart
+   end if
    if (allocated(SrcInitTypeData%SSOutList)) then
       LB(1:1) = lbound(SrcInitTypeData%SSOutList)
       UB(1:1) = ubound(SrcInitTypeData%SSOutList)
@@ -1659,6 +1698,15 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%MemberSpin)) then
       deallocate(InitTypeData%MemberSpin)
    end if
+   if (allocated(InitTypeData%MemberDivSize)) then
+      deallocate(InitTypeData%MemberDivSize)
+   end if
+   if (allocated(InitTypeData%MemberNDiv)) then
+      deallocate(InitTypeData%MemberNDiv)
+   end if
+   if (allocated(InitTypeData%MemberElemStart)) then
+      deallocate(InitTypeData%MemberElemStart)
+   end if
    if (allocated(InitTypeData%SSOutList)) then
       deallocate(InitTypeData%SSOutList)
    end if
@@ -1758,6 +1806,9 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%GuyanDampMat)
    call RegPackAlloc(RF, InData%Members)
    call RegPackAlloc(RF, InData%MemberSpin)
+   call RegPackAlloc(RF, InData%MemberDivSize)
+   call RegPackAlloc(RF, InData%MemberNDiv)
+   call RegPackAlloc(RF, InData%MemberElemStart)
    call RegPackAlloc(RF, InData%SSOutList)
    call RegPack(RF, InData%OutCOSM)
    call RegPack(RF, InData%TabDelim)
@@ -1834,6 +1885,9 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%GuyanDampMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Members); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MemberSpin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MemberDivSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MemberNDiv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MemberElemStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SSOutList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutCOSM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
