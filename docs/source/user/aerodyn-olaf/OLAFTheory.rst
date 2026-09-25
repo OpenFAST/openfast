@@ -570,6 +570,7 @@ Here, the singularity is removed by introducing an additive factor in the
 denominator of Eq. :eq:`eq:BiotSavartSegment`, proportional to the filament
 length :math:`r_0`. In this case, :math:`F_\nu=1`. This method is found in the
 work of van Garrel (:cite:`olaf-Garrel03_1`).
+
 .. _sec:RegularizationFunctionPart:
 
 Particle regularization functions
@@ -672,6 +673,7 @@ reasonable compromise across three possible equivalence criteria:
 Because the kernel is exactly equal to the singular kernel beyond :math:`r_c'`,
 the tree-accelerated particle method can apply an exact far-field cutoff at
 that radius.
+
 .. _sec:corerad:
 
 Time Evolution of the Regularization Parameter–Core Spreading Method
