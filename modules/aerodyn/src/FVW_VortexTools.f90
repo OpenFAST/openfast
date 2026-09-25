@@ -1705,9 +1705,10 @@ contains
                msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
                r2s = max(r2, MINNORM2)
                rn  = sqrt(r2s); r3 = r2s*rn
-               rc2 = (PART_REG_C2*Part%RegParam(ip))**2
-               rc3 = rc2*PART_REG_C2*Part%RegParam(ip)
-               tt  = r2s/rc2
+               ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam(ip)==0
+               rc2 = max((PART_REG_C2*Part%RegParam(ip))**2, MINNORM2)
+               rc3 = rc2*max(PART_REG_C2*Part%RegParam(ip), MINNORM)
+               tt  = min(r2s/rc2, 1.0_ReKi)
                Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
                Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
                Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
@@ -1768,6 +1769,8 @@ contains
          integer :: iPart
          if (node%nPart<=0) then
             ! We skip the dead leaf
+         ! Invariant: a childless node here never carries valid moments, because segment-tree growth has no leaf-termination block (unlike ui_tree_part_11).
+         ! If leaf termination is ever added to grow_tree_segment_*, this must switch to the MAC-on-every-node structure of ui_tree_part_11, else far control points silently get zero velocity.
          elseif (.not.associated(node%branches)) then
             ! Loop on leaves
             if(associated(node%leaves)) then

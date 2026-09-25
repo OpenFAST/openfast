@@ -19,7 +19,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
    character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line
-   integer(IntKi)       :: UnIn, i
+   integer(IntKi)       :: UnIn, i, iVel
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -199,9 +199,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(2))), 'Velocity method (VelocityMethod(2)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(2))))) return
 
    ! Necessary condition for multipole convergence: BranchFactor<1 puts targets inside the source radius (series diverges). Default 1.5 adds geometric margin.
-   if (Inp%VelocityMethod(1)==idVelocityTreePart .or. Inp%VelocityMethod(1)==idVelocityTreeSeg) then
-      if (Check( Inp%TreeBranchFactor(1)<1.0_ReKi , 'Tree branch factor (TreeBranchFactor) must be >=1.')) return
-   endif
+   do iVel = 1,2
+      if (Inp%VelocityMethod(iVel)==idVelocityTreePart .or. Inp%VelocityMethod(iVel)==idVelocityTreeSeg) then
+         if (Check( Inp%TreeBranchFactor(iVel)<1.0_ReKi , 'Tree branch factor (TreeBranchFactor('//trim(Num2LStr(iVel))//')) must be >=1.')) return
+      endif
+   enddo
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
    if (Inp%CircSolvMethod == idCircPolarData) then

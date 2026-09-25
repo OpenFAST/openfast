@@ -432,9 +432,10 @@ subroutine ui_part_nograd(nCPS, CPs, nPart, Part, Alpha, RegFunction, RegParam, 
             msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
             r2s = max(r2, MINNORM2)
             rn  = sqrt(r2s); r3 = r2s*rn
-            rc2 = (PART_REG_C2*RegParam(ip))**2
-            rc3 = rc2*PART_REG_C2*RegParam(ip)
-            tt  = r2s/rc2
+            ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam(ip)==0
+            rc2 = max((PART_REG_C2*RegParam(ip))**2, MINNORM2)
+            rc3 = rc2*max(PART_REG_C2*RegParam(ip), MINNORM)
+            tt  = min(r2s/rc2, 1.0_ReKi)
             Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
             Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
             Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
