@@ -1565,7 +1565,7 @@ contains
             if (r<distDirect) then
                ! We are too close, perform direct evaluation of this node's leaves and recurse into branches
                if(node%iLeafStart>0) then
-                  call ui_leaves_nograd(CP, node%iLeafStart, node%iLeafN, Uind)
+                  call ui_leaves_nograd(CP, Tree%LeafBuf, node%iLeafStart, node%iLeafN, Part%RegFunction, Uind)
                endif
                if(associated(node%branches)) then
                   ! TODO: consider implementing a recursive method for that: direct call on all children
@@ -1697,78 +1697,82 @@ contains
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_part_11
-
-      !> Batched direct sum over a node's leaves, masked/branchless so it vectorizes.
-      !! Kernel math mirrors ui_part_nograd_11; sources read from contiguous Tree%LeafBuf rows -> packed loads (was an indirect leaves(i) stride-3 gather).
-      subroutine ui_leaves_nograd(CP, iStart, nL, Uind)
-         real(ReKi), dimension(3), intent(in   ) :: CP
-         integer,                  intent(in   ) :: iStart !< First LeafBuf row of this node's bucket
-         integer,                  intent(in   ) :: nL     !< Number of leaf particles in this node
-         real(ReKi), dimension(3), intent(inout) :: Uind
-         integer    :: i, iEnd
-         real(ReKi) :: dx, dy, dz, r2, r2s, rn, r3, msk, sp, Cx, Cy, Cz, rc2, rc3, tt
-         real(ReKi) :: ux, uy, uz
-         real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM
-         iEnd = iStart+nL-1
-         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
-         select case (Part%RegFunction)
-         case (idRegNone) ! No mollification
-            !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
-            do i=iStart,iEnd
-               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
-               r2  = dx*dx + dy*dy + dz*dz
-               msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
-               r2s = max(r2, MINNORM2)
-               rn  = sqrt(r2s); r3 = r2s*rn
-               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
-               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
-               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
-               sp = msk*fourpi_inv/r3
-               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
-            end do
-         case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, keep the r>2rc branch that skips the exp
-            do i=iStart,iEnd
-               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
-               r2  = dx*dx + dy*dy + dz*dz
-               if (r2 < MINNORM2) cycle           ! on singularity
-               rn  = sqrt(r2); r3 = r2*rn
-               rc3 = Tree%LeafBuf(i,7)*Tree%LeafBuf(i,7)*Tree%LeafBuf(i,7)
-               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
-               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
-               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
-               if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
-                  sp = fourpi_inv/r3
-               else
-                  sp = (1.0_ReKi-exp(-r3/rc3))*fourpi_inv/r3
-               end if
-               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
-            end do
-         case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
-            !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
-            do i=iStart,iEnd
-               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
-               r2  = dx*dx + dy*dy + dz*dz
-               msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
-               r2s = max(r2, MINNORM2)
-               rn  = sqrt(r2s); r3 = r2s*rn
-               ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam==0
-               rc2 = max((PART_REG_C2*Tree%LeafBuf(i,7))**2, MINNORM2)
-               rc3 = rc2*max(PART_REG_C2*Tree%LeafBuf(i,7), MINNORM)
-               tt  = min(r2s/rc2, 1.0_ReKi)
-               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
-               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
-               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
-               sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
-               sp = msk*sp
-               ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
-            end do
-         case default
-            print*,'[ERROR] Wrong regularization function for particles',Part%RegFunction
-            STOP
-         end select
-         Uind(1)=Uind(1)+ux; Uind(2)=Uind(2)+uy; Uind(3)=Uind(3)+uz
-      end subroutine ui_leaves_nograd
    end subroutine  ui_tree_part
+
+   !> Batched direct sum over a node's leaves, masked/branchless so it vectorizes.
+   !! Module-level with a contiguous LeafBuf dummy so unit stride survives OpenMP outlining of the caller;
+   !! as a contained procedure the host-associated buffer degraded to a gather under -fopenmp.
+   subroutine ui_leaves_nograd(CP, LeafBuf, iStart, nL, RegFunction, Uind)
+      use FVW_BiotSavart, only: idRegNone, idRegExp, idRegCompact, PART_REG_C2, PART_REG_CUT3, MINNORM
+      real(ReKi), dimension(3),   intent(in   ) :: CP
+      real(ReKi), dimension(:,:), contiguous, intent(in   ) :: LeafBuf !< Packed leaf sources, cols [Px Py Pz Ax Ay Az Rc]
+      integer,                    intent(in   ) :: iStart !< First LeafBuf row of this node's bucket
+      integer,                    intent(in   ) :: nL     !< Number of leaf particles in this node
+      integer,                    intent(in   ) :: RegFunction
+      real(ReKi), dimension(3),   intent(inout) :: Uind
+      integer    :: i, iEnd
+      real(ReKi) :: dx, dy, dz, r2, r2s, rn, r3, msk, sp, Cx, Cy, Cz, rc2, rc3, tt
+      real(ReKi) :: ux, uy, uz
+      real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM
+      iEnd = iStart+nL-1
+      ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+      select case (RegFunction)
+      case (idRegNone) ! No mollification
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
+         do i=iStart,iEnd
+            dx=CP(1)-LeafBuf(i,1); dy=CP(2)-LeafBuf(i,2); dz=CP(3)-LeafBuf(i,3)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            Cx = LeafBuf(i,5)*dz - LeafBuf(i,6)*dy
+            Cy = LeafBuf(i,6)*dx - LeafBuf(i,4)*dz
+            Cz = LeafBuf(i,4)*dy - LeafBuf(i,5)*dx
+            sp = msk*fourpi_inv/r3
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+      case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, keep the r>2rc branch that skips the exp
+         do i=iStart,iEnd
+            dx=CP(1)-LeafBuf(i,1); dy=CP(2)-LeafBuf(i,2); dz=CP(3)-LeafBuf(i,3)
+            r2  = dx*dx + dy*dy + dz*dz
+            if (r2 < MINNORM2) cycle           ! on singularity
+            rn  = sqrt(r2); r3 = r2*rn
+            rc3 = LeafBuf(i,7)*LeafBuf(i,7)*LeafBuf(i,7)
+            Cx = LeafBuf(i,5)*dz - LeafBuf(i,6)*dy
+            Cy = LeafBuf(i,6)*dx - LeafBuf(i,4)*dz
+            Cz = LeafBuf(i,4)*dy - LeafBuf(i,5)*dx
+            if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
+               sp = fourpi_inv/r3
+            else
+               sp = (1.0_ReKi-exp(-r3/rc3))*fourpi_inv/r3
+            end if
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+      case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
+         do i=iStart,iEnd
+            dx=CP(1)-LeafBuf(i,1); dy=CP(2)-LeafBuf(i,2); dz=CP(3)-LeafBuf(i,3)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam==0
+            rc2 = max((PART_REG_C2*LeafBuf(i,7))**2, MINNORM2)
+            rc3 = rc2*max(PART_REG_C2*LeafBuf(i,7), MINNORM)
+            tt  = min(r2s/rc2, 1.0_ReKi)
+            Cx = LeafBuf(i,5)*dz - LeafBuf(i,6)*dy
+            Cy = LeafBuf(i,6)*dx - LeafBuf(i,4)*dz
+            Cz = LeafBuf(i,4)*dy - LeafBuf(i,5)*dx
+            sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
+            sp = msk*sp
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+      case default
+         print*,'[ERROR] Wrong regularization function for particles',RegFunction
+         STOP
+      end select
+      Uind(1)=Uind(1)+ux; Uind(2)=Uind(2)+uy; Uind(3)=Uind(3)+uz
+   end subroutine ui_leaves_nograd
 
    subroutine ui_tree_segment(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: ui_seg_11
