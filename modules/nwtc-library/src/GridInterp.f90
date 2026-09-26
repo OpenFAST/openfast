@@ -631,19 +631,24 @@ function GridInterp4DVecR4( data, m )
    type(GridInterp_MiscVarType), intent(in   )  :: m                     !< MiscVars
 
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecR4'
-   integer(IntKi), parameter                    :: vDim = 3
-   integer(IntKi)                               :: i,j,k,l,vi
-   real(SiKi)                                   :: GridInterp4DVecR4(vDim)
+   integer(IntKi)                               :: i,j,k,l
+   real(SiKi)                                   :: weight
+   real(SiKi)                                   :: GridInterp4DVecR4(3)
 
-   ! interpolate
+   ! Interpolate all three vector components together so that the
+   ! interpolation weight and indirect grid indices are reused.
    GridInterp4DVecR4 = 0.0_SiKi
    do l = 1,4
       do k = 1,4
          do j = 1,4
             do i = 1,4
-               do vi = 1,vDim
-                  GridInterp4DVecR4(vi) = GridInterp4DVecR4(vi) + m%N4D(i,j,k,l) * data( m%Indx(i,1), m%Indx(j,2), m%Indx(k,3), m%Indx(l,4), vi )
-               end do
+               weight = m%N4D(i,j,k,l)
+               GridInterp4DVecR4(1) = GridInterp4DVecR4(1) + weight * &
+                  data(m%Indx(i,1),m%Indx(j,2),m%Indx(k,3),m%Indx(l,4),1)
+               GridInterp4DVecR4(2) = GridInterp4DVecR4(2) + weight * &
+                  data(m%Indx(i,1),m%Indx(j,2),m%Indx(k,3),m%Indx(l,4),2)
+               GridInterp4DVecR4(3) = GridInterp4DVecR4(3) + weight * &
+                  data(m%Indx(i,1),m%Indx(j,2),m%Indx(k,3),m%Indx(l,4),3)
             end do
          end do
       end do
