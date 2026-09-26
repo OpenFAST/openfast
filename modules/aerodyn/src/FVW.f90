@@ -504,15 +504,17 @@ subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
+   ! NOTE: the driver's main loop calls CalcOutput one step behind UpdateStates, so the very last
+   !       simulated state is never seen by CalcOutput. Force it here if it wasn't written yet.
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
-      call WrScr('OLAF: writing final VTK outputs')
-      t=-1.0_ReKi
-      if (p%WrVTK==1) then
-         if (m%VTKstep<m%iStep+1) then
-            call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
-         endif
-      elseif (p%WrVTK==2) then
+      t = real(m%iStep+1, DbKi) * p%DTaero
+      if (p%WrVTK==2) then
+         ! WrVTK=2 guarantees a wake output at the end of the simulation, regardless of VTK_fps
+         call WrScr('OLAF: writing final VTK outputs')
          call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
+      elseif (m%VTKstep<m%iStep+1 .and. (t - m%VTKlastTime) >= p%DTvtk - 0.25_DbKi*p%DTaero) then
+         ! WrVTK=1: only write the final step if it wasn't caught yet and it lines up with VTK_fps
+         call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
       endif
       m%VTKstep = FINAL_STEP ! We make sure we don't write again
    endif
@@ -1617,7 +1619,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
          bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
-         bDoGrid(iGrid) = force .or. (bWithinTime .and. bTimeToOutput)
+         bDoGrid(iGrid) = bWithinTime .and. bTimeToOutput
       enddo
       if (any(bDoGrid)) then
          ! Build the wake segments/tree once and reuse it for all grids below
