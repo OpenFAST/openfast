@@ -456,8 +456,11 @@ ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem;mhk")
 ad_regression("ad_MHK_RM1_Floating"         "aerodyn;bem;mhk")
+ad_regression("ad_5MW_GSPotent"             "aerodyn;bem;GS")
+ad_regression("ad_AWT_GSShadow"             "aerodyn;bem;GS")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_OLAF_RegFunctionPart2" "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
@@ -581,6 +584,9 @@ md_regression("md_syrope"                                     "moordyn")
 
 #  OpenFAST IO Library regression tests
 py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")
+
+add_test(openfast_driver_stderr "${Python_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/lib/test_openfastDrivers.py" -v)
+set_tests_properties(openfast_driver_stderr PROPERTIES TIMEOUT 120 LABELS "python;driver")
 
 # AeroDisk regression tests
 adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")

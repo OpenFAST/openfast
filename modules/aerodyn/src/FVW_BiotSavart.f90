@@ -10,6 +10,9 @@ module FVW_BiotSavart
    real(ReKi),parameter :: PRECISION_UI  = epsilon(1.0_ReKi)/100 !< NOTE assuming problem of size 1
    real(ReKi),parameter :: PRECISION_EPS =  epsilon(1.0_ReKi) !< Machine Precision For the given ReKi for problems of scale 1!
    real(ReKi),parameter :: MIN_EXP_VALUE=-10.0_ReKi
+   real(ReKi),parameter :: PART_REG_NRAD =  2.0_ReKi             !< Particle exp mollifier treated as 1 beyond this many core radii (matches 2*rc far-field multipole floor)
+   real(ReKi),parameter :: PART_REG_CUT3 =  PART_REG_NRAD**3     !< Corresponding (r/rc)^3 cutoff
+   real(ReKi),parameter :: PART_REG_C2   =  1.6_ReKi             !< Compact-C2 support = PART_REG_C2*RegParam (exp-equivalent core); also the exact multipole floor for that kernel
    real(ReKi),parameter :: MINDENOM=0.0_ReKi
 !    real(ReKi),parameter :: MINDENOM=1e-15_ReKi
    real(ReKi),parameter :: MINNORM=1e-4
@@ -28,6 +31,21 @@ module FVW_BiotSavart
    real(ReKi),parameter    :: fourpi     =  4.00_ReKi * ACOS(-1.0_Reki )
 
 contains
+
+!> Multipole floor factor for the particle kernels: number of core radii beyond which the
+!! regularized kernel equals the singular 1/r^3, so the far-field multipole expansion is valid.
+pure function PartRegFloorFactor(RegFunction) result(f)
+   integer(IntKi), intent(in) :: RegFunction
+   real(ReKi)                 :: f
+   select case (RegFunction)
+   case (idRegNone)    ! Unregularized kernel: no extra core-based floor needed
+      f = 0.0_ReKi
+   case (idRegCompact) ! Truly compact: exactly singular beyond rc = PART_REG_C2*RegParam
+      f = PART_REG_C2
+   case default        ! Exponential: conservative 2*rc floor
+      f = PART_REG_NRAD
+   end select
+end function PartRegFloorFactor
 
 
 !> Induced velocity from one segment at one control points
@@ -346,22 +364,92 @@ subroutine ui_part_nograd(nCPS, CPs, nPart, Part, Alpha, RegFunction, RegParam, 
    real(ReKi), dimension(:,:),   intent(in)    :: Alpha       !< Particle intensity [m^3/s] (3 x nPart+) omega dV= alpha
    integer(IntKi),               intent(in)    :: RegFunction !< Regularization function 
    real(ReKi), dimension(:),     intent(in)    :: RegParam    !< Regularization parameter (nPart+)
-   real(ReKi), dimension(3) :: UItmp   !< 
-   real(ReKi), dimension(3) :: DP      !< 
-   integer :: icp,ip
-   ! TODO: inlining of regularization
-   !$OMP PARALLEL DEFAULT(SHARED)
-   !$OMP DO PRIVATE(icp,ip, DP, UItmp) schedule(runtime)
-   do icp=1,nCPs ! loop on CPs 
-      do ip=1,nPart ! loop on particles
-         UItmp(1:3) = 0.0_ReKi
-         DP(1:3)    = CPs(1:3,icp)-Part(1:3,ip)
-         call ui_part_nograd_11(DP, Alpha(1:3,ip), RegFunction , RegParam(ip), UItmp)
-         UIout(1:3,icp)=UIout(1:3,icp)+UItmp(1:3)
-      enddo! loop on particles
-   enddo ! loop CPs
-   !$OMP END DO 
-   !$OMP END PARALLEL
+   integer    :: icp, ip
+   real(ReKi) :: CPx, CPy, CPz            !< Control point coordinates (loop-invariant over particles)
+   real(ReKi) :: dx, dy, dz               !< CP - particle
+   real(ReKi) :: r2, r2s, rn, r3          !< |r|^2, guarded |r|^2, |r|, |r|^3
+   real(ReKi) :: msk, sp                  !< singularity mask (0/1) and ScalarPart
+   real(ReKi) :: Cx, Cy, Cz               !< Alpha x r
+   real(ReKi) :: rc2, rc3, tt             !< core^2, core^3, (r/rc)^2
+   real(ReKi) :: ux, uy, uz               !< per-CP accumulator (enables SIMD reduction)
+   real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM   !< r^2 singularity guard: mask+max avoid the sqrt/branch and any 1/0
+   ! Branchless, RegFunction-hoisted inner loops so the particle sum vectorizes (kernel math matches ui_part_nograd_11)
+   select case (RegFunction)
+   case (idRegNone) ! No mollification
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            sp = msk*fourpi_inv/r3
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, so keep the r>2rc branch that skips the exp
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,rn,r3,sp,Cx,Cy,Cz,rc3,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            if (r2 < MINNORM2) cycle           ! on singularity
+            rn  = sqrt(r2); r3 = r2*rn
+            rc3 = RegParam(ip)*RegParam(ip)*RegParam(ip)
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
+               sp = fourpi_inv/r3
+            else
+               sp = (1.0_ReKi-exp(-r3/rc3))*fourpi_inv/r3
+            end if
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam(ip)==0
+            rc2 = max((PART_REG_C2*RegParam(ip))**2, MINNORM2)
+            rc3 = rc2*max(PART_REG_C2*RegParam(ip), MINNORM)
+            tt  = min(r2s/rc2, 1.0_ReKi)
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
+            sp = msk*sp
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case default
+      print*,'[ERROR] Wrong regularization function for particles',RegFunction
+      STOP
+   end select
 end subroutine ui_part_nograd
 
 !> Induced velocity from 1 particle at 1 control point. The velocity gradient is not computed
@@ -374,27 +462,43 @@ subroutine ui_part_nograd_11(DeltaP, Alpha, RegFunction, RegParam, Ui)
    real(ReKi),dimension(3) :: C          !< Cross product of Alpha and r
    real(ReKi)              :: E          !< Exponential poart for the mollifider
    real(ReKi)              :: r3_inv     !< 
+   real(ReKi)              :: r2, r3, rc3!< |r|^2, |r|^3, core^3 (reused to avoid recomputing ** intrinsics)
+   real(ReKi)              :: rc2, t     !< compact-C2 core^2 and (r/rc)^2
    real(ReKi)              :: rDeltaP    !< norm , distance between point and particle
    real(ReKi)              :: ScalarPart !< the part containing the inverse of the distance, but not 4pi, Mollifier
-   rDeltaP=sqrt(DeltaP(1)**2+ DeltaP(2)**2+ DeltaP(3)**2)! norm
+   r2      = DeltaP(1)**2+ DeltaP(2)**2+ DeltaP(3)**2
+   rDeltaP = sqrt(r2)! norm
    if (rDeltaP<MINNORM) then !--- Exactly on the Singularity 
       Ui(1:3)  = 0.0_ReKi
       return
    else !--- Normal Procedure 
+      r3 = r2*rDeltaP ! |r|^3, reused below
       C(1) = Alpha(2) * DeltaP(3) - Alpha(3) * DeltaP(2)
       C(2) = Alpha(3) * DeltaP(1) - Alpha(1) * DeltaP(3)
       C(3) = Alpha(1) * DeltaP(2) - Alpha(2) * DeltaP(1)
       select case (RegFunction) !
       case (idRegNone) ! No mollification
-         r3_inv     = 1._ReKi/(rDeltaP**3)
+         r3_inv     = 1._ReKi/r3
          ScalarPart = r3_inv*fourpi_inv
       case (idRegExp) ! Exponential mollifier
-         r3_inv     = 1._ReKi/(rDeltaP**3)
-         E          = exp(-rDeltaP**3/RegParam**3)
-         ScalarPart = (1._ReKi-E)*r3_inv*fourpi_inv
-      case (idRegCompact) ! Compact support
-         r3_inv     = 1._ReKi/sqrt(RegParam**6+rDeltaP**6)
-         ScalarPart = r3_inv*fourpi_inv
+         rc3        = RegParam*RegParam*RegParam
+         r3_inv     = 1._ReKi/r3
+         if (r3 > PART_REG_CUT3*rc3) then ! r > 2*rc: mollifier -> 1 (skip exp), consistent with far-field multipole floor
+            ScalarPart = r3_inv*fourpi_inv
+         else
+            E          = exp(-r3/rc3)
+            ScalarPart = (1._ReKi-E)*r3_inv*fourpi_inv
+         endif
+      case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+         rc2 = (PART_REG_C2*RegParam)**2
+         if (r2 >= rc2) then ! outside core: kernel is exactly the singular 1/r^3
+            r3_inv     = 1._ReKi/r3
+            ScalarPart = r3_inv*fourpi_inv
+         else                ! inside core: C2 polynomial mollifier
+            t          = r2/rc2
+            rc3        = rc2*PART_REG_C2*RegParam
+            ScalarPart = (35._ReKi + t*(-42._ReKi + 15._ReKi*t))*fourpi_inv/(8._ReKi*rc3)
+         endif
       case default 
          print*,'[ERROR] Wrong regularization function for particles',RegFunction
          STOP
