@@ -364,22 +364,92 @@ subroutine ui_part_nograd(nCPS, CPs, nPart, Part, Alpha, RegFunction, RegParam, 
    real(ReKi), dimension(:,:),   intent(in)    :: Alpha       !< Particle intensity [m^3/s] (3 x nPart+) omega dV= alpha
    integer(IntKi),               intent(in)    :: RegFunction !< Regularization function 
    real(ReKi), dimension(:),     intent(in)    :: RegParam    !< Regularization parameter (nPart+)
-   real(ReKi), dimension(3) :: UItmp   !< 
-   real(ReKi), dimension(3) :: DP      !< 
-   integer :: icp,ip
-   ! TODO: inlining of regularization
-   !$OMP PARALLEL DEFAULT(SHARED)
-   !$OMP DO PRIVATE(icp,ip, DP, UItmp) schedule(runtime)
-   do icp=1,nCPs ! loop on CPs 
-      do ip=1,nPart ! loop on particles
-         UItmp(1:3) = 0.0_ReKi
-         DP(1:3)    = CPs(1:3,icp)-Part(1:3,ip)
-         call ui_part_nograd_11(DP, Alpha(1:3,ip), RegFunction , RegParam(ip), UItmp)
-         UIout(1:3,icp)=UIout(1:3,icp)+UItmp(1:3)
-      enddo! loop on particles
-   enddo ! loop CPs
-   !$OMP END DO 
-   !$OMP END PARALLEL
+   integer    :: icp, ip
+   real(ReKi) :: CPx, CPy, CPz            !< Control point coordinates (loop-invariant over particles)
+   real(ReKi) :: dx, dy, dz               !< CP - particle
+   real(ReKi) :: r2, r2s, rn, r3          !< |r|^2, guarded |r|^2, |r|, |r|^3
+   real(ReKi) :: msk, sp                  !< singularity mask (0/1) and ScalarPart
+   real(ReKi) :: Cx, Cy, Cz               !< Alpha x r
+   real(ReKi) :: rc2, rc3, tt             !< core^2, core^3, (r/rc)^2
+   real(ReKi) :: ux, uy, uz               !< per-CP accumulator (enables SIMD reduction)
+   real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM   !< r^2 singularity guard: mask+max avoid the sqrt/branch and any 1/0
+   ! Branchless, RegFunction-hoisted inner loops so the particle sum vectorizes (kernel math matches ui_part_nograd_11)
+   select case (RegFunction)
+   case (idRegNone) ! No mollification
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            sp = msk*fourpi_inv/r3
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, so keep the r>2rc branch that skips the exp
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,rn,r3,sp,Cx,Cy,Cz,rc3,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            if (r2 < MINNORM2) cycle           ! on singularity
+            rn  = sqrt(r2); r3 = r2*rn
+            rc3 = RegParam(ip)*RegParam(ip)*RegParam(ip)
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
+               sp = fourpi_inv/r3
+            else
+               sp = (1.0_ReKi-exp(-r3/rc3))*fourpi_inv/r3
+            end if
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(icp,ip,CPx,CPy,CPz,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt,ux,uy,uz) schedule(runtime)
+      do icp=1,nCPs
+         CPx=CPs(1,icp); CPy=CPs(2,icp); CPz=CPs(3,icp)
+         ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
+         !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
+         do ip=1,nPart
+            dx=CPx-Part(1,ip); dy=CPy-Part(2,ip); dz=CPz-Part(3,ip)
+            r2  = dx*dx + dy*dy + dz*dz
+            msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
+            r2s = max(r2, MINNORM2)
+            rn  = sqrt(r2s); r3 = r2s*rn
+            ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam(ip)==0
+            rc2 = max((PART_REG_C2*RegParam(ip))**2, MINNORM2)
+            rc3 = rc2*max(PART_REG_C2*RegParam(ip), MINNORM)
+            tt  = min(r2s/rc2, 1.0_ReKi)
+            Cx = Alpha(2,ip)*dz - Alpha(3,ip)*dy
+            Cy = Alpha(3,ip)*dx - Alpha(1,ip)*dz
+            Cz = Alpha(1,ip)*dy - Alpha(2,ip)*dx
+            sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
+            sp = msk*sp
+            ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
+         end do
+         UIout(1,icp)=UIout(1,icp)+ux; UIout(2,icp)=UIout(2,icp)+uy; UIout(3,icp)=UIout(3,icp)+uz
+      end do
+      !$OMP END PARALLEL DO
+   case default
+      print*,'[ERROR] Wrong regularization function for particles',RegFunction
+      STOP
+   end select
 end subroutine ui_part_nograd
 
 !> Induced velocity from 1 particle at 1 control point. The velocity gradient is not computed

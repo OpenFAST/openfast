@@ -260,6 +260,8 @@ The default option is *[2]*.
 **TreeBranchFactor** [-] specifies the dimensionless distance, in branch radius,
 above which a multipole calculation is used instead of a direct evaluation. 
 Only used when *VelocityMethod* = *[2,4]*.
+The value must be :math:`\geq 1`: a factor below 1 places target points inside the
+source radius, where the multipole series diverges.
 Default value: 1.5.
 
 **PartPerSegment** [-] specifies the number of particles that are used when a
