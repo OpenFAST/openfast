@@ -73,6 +73,8 @@ module FVW_VortexTools
       integer,dimension(:),pointer       :: leaves=>null()  ! NOTE: leaves are introduced to save memory
       type(T_Node),dimension(:), pointer :: branches =>null()
       integer                            :: nPart = -1  ! Number of particles in branches and leaves of this node
+      integer                            :: iLeafStart = -1 !< First row of Tree%LeafBuf for this node's leaf bucket (-1 = no leaves)
+      integer                            :: iLeafN     =  0 !< Leaf-particle count in this node (NOT nPart: a split node has leaves+branches)
    end type T_Node
 
    !> The type tree contains some basic data, a chained-list of nodes, and a pointer to the Particle data that were used
@@ -82,6 +84,7 @@ module FVW_VortexTools
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
       type(T_Node)  :: Root            !< Contains the chained-list of nodes
+      real(ReKi), dimension(:,:), allocatable :: LeafBuf !< Leaf sources packed by node bucket, cols [Px Py Pz Ax Ay Az Rc]; column-major => contiguous SIMD loads in leaf P2P (kills the leaves(i) gather)
    end type T_Tree
 
    interface cut_tree
@@ -630,9 +633,52 @@ contains
          call grow_tree_part_parallel(Tree%root, Tree%Part)
 !          call grow_tree_rec(Tree%root, Tree%Part)
       endif
+      ! --- Pack leaf sources contiguously for SIMD leaf P2P (kills the leaves(i) gather in ui_leaves_nograd)
+      if (Part%n>0) call compact_tree_part(Tree)
       Tree%iStep  = iStep
       Tree%bGrown = .true.
    end subroutine grow_tree_part
+
+   !> Copy each node's leaf-particle sources into the contiguous Tree%LeafBuf, recording per-node [iLeafStart,iLeafN].
+   !! Post-build, O(n), once per rebuild. Reorders leaf inputs only (a scratch copy); the shared Part arrays are untouched.
+   subroutine compact_tree_part(Tree)
+      type(T_Tree), intent(inout), target :: Tree
+      type(T_VPart), pointer :: Part
+      integer :: k
+      Part => Tree%Part
+      if (allocated(Tree%LeafBuf)) then
+         if (size(Tree%LeafBuf,1) /= Part%n) deallocate(Tree%LeafBuf)
+      endif
+      if (.not.allocated(Tree%LeafBuf)) allocate(Tree%LeafBuf(Part%n,7))
+      k = 0
+      call compact_node(Tree%Root)
+   contains
+      recursive subroutine compact_node(node)
+         type(T_Node), intent(inout) :: node
+         integer :: i, ip, nL
+         if (node%nPart<=0) return
+         if (associated(node%leaves)) then
+            nL = size(node%leaves)
+            node%iLeafStart = k+1
+            node%iLeafN     = nL
+            do i=1,nL
+               ip = node%leaves(i)
+               Tree%LeafBuf(k+i,1) = Part%P(1,ip);     Tree%LeafBuf(k+i,2) = Part%P(2,ip);     Tree%LeafBuf(k+i,3) = Part%P(3,ip)
+               Tree%LeafBuf(k+i,4) = Part%Alpha(1,ip); Tree%LeafBuf(k+i,5) = Part%Alpha(2,ip); Tree%LeafBuf(k+i,6) = Part%Alpha(3,ip)
+               Tree%LeafBuf(k+i,7) = Part%RegParam(ip)
+            end do
+            k = k + nL
+         else
+            node%iLeafStart = -1
+            node%iLeafN     = 0
+         endif
+         if (associated(node%branches)) then
+            do i=1,size(node%branches)
+               call compact_node(node%branches(i))
+            end do
+         endif
+      end subroutine compact_node
+   end subroutine compact_tree_part
 
    !> Recursive function to grow/setup a tree. 
    !! Note, needed preliminary calc are done by grow_tree before
@@ -1293,6 +1339,8 @@ contains
       logical, optional, intent(in)  :: deallocPart
       logical, optional, intent(in)  :: deallocSgmt
       integer :: i,i1,i2,nBranches,istat
+      ! --- Freeing the packed leaf buffer
+      if (allocated(Tree%LeafBuf)) deallocate(Tree%LeafBuf)
       ! --- Deallocating data we are pointing to, only if user requests it
       if (present(deallocPart)) then
          if (deallocPart) then
@@ -1516,8 +1564,8 @@ contains
             ! Test if the control point is too close so that a direct evaluation is needed 
             if (r<distDirect) then
                ! We are too close, perform direct evaluation of this node's leaves and recurse into branches
-               if(associated(node%leaves)) then
-                  call ui_leaves_nograd(CP, node%leaves, Uind)
+               if(node%iLeafStart>0) then
+                  call ui_leaves_nograd(CP, node%iLeafStart, node%iLeafN, Uind)
                endif
                if(associated(node%branches)) then
                   ! TODO: consider implementing a recursive method for that: direct call on all children
@@ -1650,45 +1698,44 @@ contains
          end if ! had more than 1 particles
       end subroutine ui_tree_part_11
 
-      !> Batched direct sum over a node's leaves (particle indices), masked/branchless so it vectorizes.
-      !! Kernel math mirrors ui_part_nograd_11; the per-leaf gather uses the leaves() index array.
-      subroutine ui_leaves_nograd(CP, leaves, Uind)
+      !> Batched direct sum over a node's leaves, masked/branchless so it vectorizes.
+      !! Kernel math mirrors ui_part_nograd_11; sources read from contiguous Tree%LeafBuf rows -> packed loads (was an indirect leaves(i) stride-3 gather).
+      subroutine ui_leaves_nograd(CP, iStart, nL, Uind)
          real(ReKi), dimension(3), intent(in   ) :: CP
-         integer, dimension(:),    intent(in   ) :: leaves
+         integer,                  intent(in   ) :: iStart !< First LeafBuf row of this node's bucket
+         integer,                  intent(in   ) :: nL     !< Number of leaf particles in this node
          real(ReKi), dimension(3), intent(inout) :: Uind
-         integer    :: i, ip, nL
+         integer    :: i, iEnd
          real(ReKi) :: dx, dy, dz, r2, r2s, rn, r3, msk, sp, Cx, Cy, Cz, rc2, rc3, tt
          real(ReKi) :: ux, uy, uz
          real(ReKi), parameter :: MINNORM2 = MINNORM*MINNORM
-         nL = size(leaves)
+         iEnd = iStart+nL-1
          ux=0.0_ReKi; uy=0.0_ReKi; uz=0.0_ReKi
          select case (Part%RegFunction)
          case (idRegNone) ! No mollification
-            !$OMP SIMD reduction(+:ux,uy,uz) private(ip,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
-            do i=1,nL
-               ip=leaves(i)
-               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+            !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz)
+            do i=iStart,iEnd
+               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
                r2  = dx*dx + dy*dy + dz*dz
                msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
                r2s = max(r2, MINNORM2)
                rn  = sqrt(r2s); r3 = r2s*rn
-               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
-               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
-               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
+               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
+               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
                sp = msk*fourpi_inv/r3
                ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
             end do
          case (idRegExp) ! Exp mollifier: exp() blocks SIMD anyway, keep the r>2rc branch that skips the exp
-            do i=1,nL
-               ip=leaves(i)
-               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+            do i=iStart,iEnd
+               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
                r2  = dx*dx + dy*dy + dz*dz
                if (r2 < MINNORM2) cycle           ! on singularity
                rn  = sqrt(r2); r3 = r2*rn
-               rc3 = Part%RegParam(ip)*Part%RegParam(ip)*Part%RegParam(ip)
-               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
-               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
-               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               rc3 = Tree%LeafBuf(i,7)*Tree%LeafBuf(i,7)*Tree%LeafBuf(i,7)
+               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
+               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
+               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
                if (r3 > PART_REG_CUT3*rc3) then    ! r>2rc: mollifier->1, skip the expensive exp
                   sp = fourpi_inv/r3
                else
@@ -1697,21 +1744,20 @@ contains
                ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
             end do
          case (idRegCompact) ! Truly compact C2 core: exactly singular for r>=rc, rc=PART_REG_C2*RegParam
-            !$OMP SIMD reduction(+:ux,uy,uz) private(ip,dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
-            do i=1,nL
-               ip=leaves(i)
-               dx=CP(1)-Part%P(1,ip); dy=CP(2)-Part%P(2,ip); dz=CP(3)-Part%P(3,ip)
+            !$OMP SIMD reduction(+:ux,uy,uz) private(dx,dy,dz,r2,r2s,rn,r3,msk,sp,Cx,Cy,Cz,rc2,rc3,tt)
+            do i=iStart,iEnd
+               dx=CP(1)-Tree%LeafBuf(i,1); dy=CP(2)-Tree%LeafBuf(i,2); dz=CP(3)-Tree%LeafBuf(i,3)
                r2  = dx*dx + dy*dy + dz*dz
                msk = merge(1.0_ReKi, 0.0_ReKi, r2>=MINNORM2)
                r2s = max(r2, MINNORM2)
                rn  = sqrt(r2s); r3 = r2s*rn
-               ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam(ip)==0
-               rc2 = max((PART_REG_C2*Part%RegParam(ip))**2, MINNORM2)
-               rc3 = rc2*max(PART_REG_C2*Part%RegParam(ip), MINNORM)
+               ! Floor divisors/clamp tt: merge evaluates both arms, so the discarded polynomial arm must not divide by zero when RegParam==0
+               rc2 = max((PART_REG_C2*Tree%LeafBuf(i,7))**2, MINNORM2)
+               rc3 = rc2*max(PART_REG_C2*Tree%LeafBuf(i,7), MINNORM)
                tt  = min(r2s/rc2, 1.0_ReKi)
-               Cx = Part%Alpha(2,ip)*dz - Part%Alpha(3,ip)*dy
-               Cy = Part%Alpha(3,ip)*dx - Part%Alpha(1,ip)*dz
-               Cz = Part%Alpha(1,ip)*dy - Part%Alpha(2,ip)*dx
+               Cx = Tree%LeafBuf(i,5)*dz - Tree%LeafBuf(i,6)*dy
+               Cy = Tree%LeafBuf(i,6)*dx - Tree%LeafBuf(i,4)*dz
+               Cz = Tree%LeafBuf(i,4)*dy - Tree%LeafBuf(i,5)*dx
                sp = merge(fourpi_inv/r3, (35._ReKi + tt*(-42._ReKi + 15._ReKi*tt))*fourpi_inv/(8._ReKi*rc3), r2s >= rc2)
                sp = msk*sp
                ux=ux+Cx*sp; uy=uy+Cy*sp; uz=uz+Cz*sp
