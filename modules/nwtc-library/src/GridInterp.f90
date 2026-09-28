@@ -665,28 +665,31 @@ function GridInterp4DVecR4( data, m )
    type(GridInterp_MiscVarType), intent(in   )  :: m                     !< MiscVars
 
    character(*),   parameter                    :: RoutineName = 'GridInterp4DVecR4'
-   integer(IntKi), parameter                    :: vDim = 3
-   integer(IntKi)                               :: i,j,k,l,vi
-   integer(IntKi)                               :: jj,kk,ll
-   real(SiKi)                                   :: acc(4)
-   real(SiKi)                                   :: GridInterp4DVecR4(vDim)
+   integer(IntKi)                               :: i,j,k,l
+   integer(IntKi)                               :: ii,jj,kk,ll
+   real(SiKi)                                   :: weight
+   real(SiKi)                                   :: GridInterp4DVecR4(3)
 
    ! interpolate
-   do vi = 1,vDim
-      acc = 0.0_SiKi
-      do l = 1,4
-         ll = m%Indx(l,4)
-         do k = 1,4
-            kk = m%Indx(k,3)
-            do j = 1,4
-               jj = m%Indx(j,2)
-               do i = 1,4
-                  acc(i) = acc(i) + m%N4D(i,j,k,l) * data( m%Indx(i,1), jj, kk, ll, vi )
-               end do
+   GridInterp4DVecR4 = 0.0_SiKi
+   do l = 1,4
+      ll = m%Indx(l,4)
+      do k = 1,4
+         kk = m%Indx(k,3)
+         do j = 1,4
+            jj = m%Indx(j,2)
+            do i = 1,4
+               ii = m%Indx(i,1)
+               weight = m%N4D(i,j,k,l)
+               GridInterp4DVecR4(1) = GridInterp4DVecR4(1) + &
+                  weight * data(ii,jj,kk,ll,1)
+               GridInterp4DVecR4(2) = GridInterp4DVecR4(2) + &
+                  weight * data(ii,jj,kk,ll,2)
+               GridInterp4DVecR4(3) = GridInterp4DVecR4(3) + &
+                  weight * data(ii,jj,kk,ll,3)
             end do
          end do
       end do
-      GridInterp4DVecR4(vi) = acc(1) + acc(2) + acc(3) + acc(4)
    end do
 
 end function GridInterp4DVecR4
