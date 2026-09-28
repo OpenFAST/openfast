@@ -2601,8 +2601,9 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
    ! States
    !x1: Downwash memory term 1 (rad)
    !x2: Downwash memory term 2 (rad)
-   !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
+   !x3: lagged attached-flow coefficient: Clp' (lift) for UA_Mod=4; Cnp (normal force) for UA_Mod=5,8,9
    !x4: f'' , Final separation point function
+   !x5: vortex-lift normal force (UA_Mod=5,9)
 
 
    ! Steady states
@@ -2737,8 +2738,9 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    ! States
    !x1: Downwash memory term 1 (rad)
    !x2: Downwash memory term 2 (rad)
-   !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
+   !x3: lagged attached-flow coefficient: Clp' (lift) for UA_Mod=4; Cnp (normal force) for UA_Mod=5,8,9
    !x4: f'' , Final separation point function
+   !x5: vortex-lift normal force (UA_Mod=5,9)
       
       ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )

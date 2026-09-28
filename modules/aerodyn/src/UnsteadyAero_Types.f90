@@ -121,7 +121,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_ElementContinuousStateType  =======
   TYPE, PUBLIC :: UA_ElementContinuousStateType
-    REAL(R8Ki) , DIMENSION(1:7)  :: x = 0.0_R8Ki      !< continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function) [{rad, rad, - -}]
+    REAL(R8Ki) , DIMENSION(1:7)  :: x = 0.0_R8Ki      !< continuous states for UA_Mod=4,5,6,8,9 (x1,x2: downwash memory terms; x3: lagged attached-flow coefficient -- Clp' for UA_Mod=4, Cnp for UA_Mod=5,8,9; x4: f'', final separation point function; x5: vortex-lift normal force, UA_Mod=5,9) [{rad, rad, - -}]
   END TYPE UA_ElementContinuousStateType
 ! =======================
 ! =========  UA_ContinuousStateType  =======
@@ -187,6 +187,10 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: PositivePressure      !< HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative) [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: vortexOn      !< HGMV model: logical flag indicating if the vortex lift term is active [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BelowThreshold      !< HGMV model: logical flag indicating if cn fell below threshold to form another vortex [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tau_v_IAG      !< IAG model: non-dimensional vortex time [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VortexOn_IAG      !< IAG model: logical flag indicating if the vortex lift term is active [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: PositiveStall      !< IAG model: sign of the stall state (x3>=0) latched at vortex initiation [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1_IAG      !< IAG model: angle of attack at the previous step, used for the upstroke test [rad]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeL      !< BV model: logical flag indicating if the lift stall is active [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeD      !< BV model: logical flag indicating if the drag stall is active [-]
   END TYPE UA_OtherStateType
@@ -1621,6 +1625,54 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       end if
       DstOtherStateData%BelowThreshold = SrcOtherStateData%BelowThreshold
    end if
+   if (allocated(SrcOtherStateData%tau_v_IAG)) then
+      LB(1:2) = lbound(SrcOtherStateData%tau_v_IAG)
+      UB(1:2) = ubound(SrcOtherStateData%tau_v_IAG)
+      if (.not. allocated(DstOtherStateData%tau_v_IAG)) then
+         allocate(DstOtherStateData%tau_v_IAG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%tau_v_IAG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%tau_v_IAG = SrcOtherStateData%tau_v_IAG
+   end if
+   if (allocated(SrcOtherStateData%VortexOn_IAG)) then
+      LB(1:2) = lbound(SrcOtherStateData%VortexOn_IAG)
+      UB(1:2) = ubound(SrcOtherStateData%VortexOn_IAG)
+      if (.not. allocated(DstOtherStateData%VortexOn_IAG)) then
+         allocate(DstOtherStateData%VortexOn_IAG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%VortexOn_IAG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%VortexOn_IAG = SrcOtherStateData%VortexOn_IAG
+   end if
+   if (allocated(SrcOtherStateData%PositiveStall)) then
+      LB(1:2) = lbound(SrcOtherStateData%PositiveStall)
+      UB(1:2) = ubound(SrcOtherStateData%PositiveStall)
+      if (.not. allocated(DstOtherStateData%PositiveStall)) then
+         allocate(DstOtherStateData%PositiveStall(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%PositiveStall.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%PositiveStall = SrcOtherStateData%PositiveStall
+   end if
+   if (allocated(SrcOtherStateData%alpha_minus1_IAG)) then
+      LB(1:2) = lbound(SrcOtherStateData%alpha_minus1_IAG)
+      UB(1:2) = ubound(SrcOtherStateData%alpha_minus1_IAG)
+      if (.not. allocated(DstOtherStateData%alpha_minus1_IAG)) then
+         allocate(DstOtherStateData%alpha_minus1_IAG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%alpha_minus1_IAG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%alpha_minus1_IAG = SrcOtherStateData%alpha_minus1_IAG
+   end if
    if (allocated(SrcOtherStateData%activeL)) then
       LB(1:2) = lbound(SrcOtherStateData%activeL)
       UB(1:2) = ubound(SrcOtherStateData%activeL)
@@ -1703,6 +1755,18 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%BelowThreshold)) then
       deallocate(OtherStateData%BelowThreshold)
    end if
+   if (allocated(OtherStateData%tau_v_IAG)) then
+      deallocate(OtherStateData%tau_v_IAG)
+   end if
+   if (allocated(OtherStateData%VortexOn_IAG)) then
+      deallocate(OtherStateData%VortexOn_IAG)
+   end if
+   if (allocated(OtherStateData%PositiveStall)) then
+      deallocate(OtherStateData%PositiveStall)
+   end if
+   if (allocated(OtherStateData%alpha_minus1_IAG)) then
+      deallocate(OtherStateData%alpha_minus1_IAG)
+   end if
    if (allocated(OtherStateData%activeL)) then
       deallocate(OtherStateData%activeL)
    end if
@@ -1739,6 +1803,10 @@ subroutine UA_PackOtherState(RF, Indata)
    call RegPackAlloc(RF, InData%PositivePressure)
    call RegPackAlloc(RF, InData%vortexOn)
    call RegPackAlloc(RF, InData%BelowThreshold)
+   call RegPackAlloc(RF, InData%tau_v_IAG)
+   call RegPackAlloc(RF, InData%VortexOn_IAG)
+   call RegPackAlloc(RF, InData%PositiveStall)
+   call RegPackAlloc(RF, InData%alpha_minus1_IAG)
    call RegPackAlloc(RF, InData%activeL)
    call RegPackAlloc(RF, InData%activeD)
    if (RegCheckErr(RF, RoutineName)) return
@@ -1774,6 +1842,10 @@ subroutine UA_UnPackOtherState(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PositivePressure); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%vortexOn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BelowThreshold); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%tau_v_IAG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VortexOn_IAG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PositiveStall); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%alpha_minus1_IAG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%activeL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%activeD); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
