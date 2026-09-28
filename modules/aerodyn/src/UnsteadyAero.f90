@@ -900,6 +900,15 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       if (p%UAMod == UA_IAG) then
          allocate( OtherState%VortexOn_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%VortexOn_IAG.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%tau_v_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%tau_v_IAG.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%PositiveStall(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%PositiveStall.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%alpha_minus1_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%alpha_minus1_IAG.", ErrStat, ErrMsg, RoutineName)
       end if
 
       if (p%UAMod == UA_HGMV) then
@@ -1049,6 +1058,14 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
 
       if (p%UAMod == UA_IAG) then
          OtherState%VortexOn_IAG = .false.
+         OtherState%tau_v_IAG    = 0.0_ReKi
+         OtherState%PositiveStall = .true.
+            ! Sentinel, NOT 0 and NOT u%alpha: UA_ReInit has no access to the inputs, so there is
+            ! no previous angle yet. The n > 0 guard in UA_UpdateStates skips the dAlpha test on
+            ! the first step and the unconditional write-back there seeds the real value.
+            ! Initializing to 0 instead would make the first dAlpha the full angle of attack
+            ! rather than a rate, which can spuriously trip the upstroke test.
+         OtherState%alpha_minus1_IAG = huge(1.0_ReKi)
       end if
 
    elseif (p%UAMod == UA_BV) then
@@ -2389,8 +2406,13 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    character(*), parameter                      :: RoutineName = 'UA_UpdateStates'
    type(UA_InputType)                           :: u_interp_raw    ! Input at current timestep, t and t+dt
    type(UA_InputType)                           :: u_interp        ! Input at current timestep, t and t+dt
+   type(UA_InputType)                           :: u_vortex        ! Input at t+dt, used only by the UA_IAG vortex block (see note there)
    type(AFI_UA_BL_Type)                         :: BL_p  ! airfoil UA parameters retrieved in Kelvin Chain
    real(R8Ki)                                   :: Tu
+   real(R8Ki)                                   :: x3_IAG                      ! IAG: lagged normal force at t+dt
+   real(ReKi)                                   :: alpha_w, alpha_p, dAlpha    ! IAG: wrapped alpha, previous alpha, and their difference
+   real(ReKi)                                   :: tau_v, tau_v_n1             ! IAG: non-dimensional vortex time at steps n and n-1
+   logical                                      :: PosStall, overCrit, upstroke ! IAG: vortex initiation/termination tests
 
       ! Initialize variables
 
@@ -2521,6 +2543,103 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          end if ! Vortex on/off
          
       end if ! p%UAMod == UA_HGMV
+
+      if (p%UAMod == UA_IAG) then
+
+            ! Vortex initiation/termination and the non-dimensional vortex clock tau_v (Eq. 49).
+            ! This block MUST run after the integration above, because it tests x3 at t+dt.
+            !
+            ! Time level: u_interp above is at t for RK4/AB4/ABM4, but the BDF2 case
+            ! re-extrapolates it to t+dt and does not restore it. Reusing it here would make
+            ! dAlpha -- which is the entire upstroke test -- depend on p%integrationMethod, an
+            ! integrator-dependent change in when the vortex fires. So interpolate a dedicated
+            ! input at an explicit t+dt, consistent with the x3(t+dt) we test against.
+         CALL UA_Input_ExtrapInterp( u, utimes, u_interp_raw, t+p%dt, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         call UA_fixInputs(u_interp_raw, u_vortex, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+            ! BL_p and Tu are not otherwise in scope in this routine (they are locals of
+            ! UA_CalcContStateDeriv), so compute them here as the HGMV block above does.
+         call AFI_ComputeUACoefs( AFInfo, u_vortex%Re, u_vortex%UserProp, BL_p, ErrMsg2, ErrStat2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         Tu = Get_Tu( u_vortex%u, p%c(i,j) )
+
+         x3_IAG = x%element(i,j)%x(3)   ! x3 at t+dt
+
+            ! Wrap alpha before BOTH the |alpha| > pi/2 test and the dAlpha difference: a wrap
+            ! event would otherwise fabricate a ~2*pi dAlpha and invert the upstroke flag.
+         alpha_w = u_vortex%alpha
+         call MPi2Pi(alpha_w)
+         alpha_p = OtherState%alpha_minus1_IAG(i,j)
+         call AddOrSub2Pi(alpha_w, alpha_p)   ! put the previous angle on the same branch
+         dAlpha = alpha_w - alpha_p
+
+            ! Eq. 49 is a recurrence tau_v(n) = F(tau_v(n-1)). Load the previous value once,
+            ! use ONLY that local on every right-hand side, and write back once at the end.
+         tau_v_n1 = OtherState%tau_v_IAG(i,j)
+
+         if (.not. OtherState%VortexOn_IAG(i,j)) then
+
+               ! No vortex running: test for initiation using the instantaneous sign of x3.
+            PosStall = x3_IAG >= 0.0_R8Ki
+               ! CN_CRIT is the static polar extremum (CnMax/CnMin), not the Cn1/Cn2 the
+               ! Beddoes-Leishman models use. Strict inequality: x3 lags the quasi-steady
+               ! normal force, and it is that lag which lets it transiently exceed the static
+               ! peak at all.
+            if (PosStall) then
+               overCrit = x3_IAG > BL_p%CnMax
+            else
+               overCrit = x3_IAG < BL_p%CnMin
+            end if
+            upstroke = IAG_Upstroke( alpha_w, dAlpha, PosStall )
+
+               ! Do not start a vortex while UA is being blended off (mirrors HGMV), and never
+               ! on the first step, when alpha_minus1_IAG is still the huge() sentinel from
+               ! UA_ReInit and dAlpha is therefore meaningless.
+            if (upstroke .and. overCrit .and. EqualRealNos(m%weight(i,j),1.0_ReKi) .and. n > 0) then
+               OtherState%VortexOn_IAG(i,j)  = .true.
+               OtherState%PositiveStall(i,j) = PosStall   ! latch for this vortex's lifetime
+               tau_v_n1                      = 0.0_ReKi   ! restart the convection clock
+            end if
+
+         else
+
+               ! Vortex running: test for termination using the LATCHED sign. Using the
+               ! instantaneous sign here would let CN_CRIT flip from CnMax to CnMin as x3
+               ! crosses zero, inverting overCrit and killing the vortex on the spot.
+            PosStall = OtherState%PositiveStall(i,j)
+            if (PosStall) then
+               overCrit = x3_IAG > BL_p%CnMax
+            else
+               overCrit = x3_IAG < BL_p%CnMin
+            end if
+            upstroke = IAG_Upstroke( alpha_w, dAlpha, PosStall )
+
+               ! tau_v_n1 is the previous step's value; the update happens below. The vortex
+               ! therefore survives the step that carries tau_v past T_VL and terminates on the
+               ! next -- a one-step lag, consistent with HGMV's elapsed-time test above.
+               ! NOTE: tau_v is dimensionless and T_VL is compared to it directly. Do NOT
+               ! multiply T_VL by Tu here; HGMV does, because it stores a wall-clock time.
+            OtherState%VortexOn_IAG(i,j) = upstroke .and. overCrit .and. tau_v_n1 < BL_p%T_VL
+
+         end if
+
+            ! Eq. 49, advancing n-1 -> n. Get_Tu clamps Tu to [0.001,50] s, so 2*Tu is never 0.
+            ! 2*Tu = c/V exactly, so the paper's 0.45*dt*V/c is 0.45*dt/(2*Tu).
+         if (OtherState%VortexOn_IAG(i,j)) then
+            tau_v = tau_v_n1 + 0.45_ReKi * real(p%dt,ReKi) / real(2.0_R8Ki*Tu,ReKi)
+         else
+            tau_v = tau_v_n1 * exp( -real(p%dt,ReKi) / real(2.0_R8Ki*Tu,ReKi) )
+         end if
+
+         OtherState%tau_v_IAG(i,j)        = tau_v
+            ! Unconditional: this also seeds the sentinel on the first step.
+         OtherState%alpha_minus1_IAG(i,j) = alpha_w
+
+      end if ! p%UAMod == UA_IAG
 
    elseif (p%UAMod == UA_BV) then
       ! Integrate discrete states (alpha_dot, alpha_filt_minus1)
@@ -3036,6 +3155,29 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
      
    
 END FUNCTION Get_alphaF
+!---------------------------------------------------------------------------------
+!> IAG model: is the airfoil moving further into stall of the given sign?
+!! Factored out because the caller must evaluate it twice -- once against the instantaneous
+!! sign of x3 when testing for vortex initiation, and once against the sign LATCHED at
+!! initiation when testing for termination. The two cannot be hoisted into a single call:
+!! using the instantaneous sign during a vortex's lifetime would let CN_CRIT flip from CnMax
+!! to CnMin as x3 crosses zero, inverting the test and terminating the vortex immediately.
+!!
+!! Beyond +/-90 deg the airfoil is in reverse flow and the sense of "increasing incidence"
+!! inverts, hence the branch on abs(alpha). alpha is expected to be wrapped to [-pi,pi]
+!! already.
+pure LOGICAL FUNCTION IAG_Upstroke( alpha, dAlpha, PosStall )
+   REAL(ReKi), INTENT(IN   )  :: alpha      !< angle of attack, already wrapped to [-pi,pi]
+   REAL(ReKi), INTENT(IN   )  :: dAlpha     !< change in alpha over the last step
+   LOGICAL,    INTENT(IN   )  :: PosStall   !< .true. for positive stall (Cn >= 0)
+
+   if (abs(alpha) <= PiBy2) then
+      IAG_Upstroke = ( PosStall .eqv. (dAlpha > 0.0_ReKi) )
+   else
+      IAG_Upstroke = ( PosStall .neqv. (dAlpha > 0.0_ReKi) )
+   end if
+
+END FUNCTION IAG_Upstroke
 !---------------------------------------------------------------------------------
 !> Compute angle of attack at 3/4 chord point based on values at Aerodynamic center
 real(ReKi) function Get_Alpha34(v_ac, omega, d_34_to_ac)
