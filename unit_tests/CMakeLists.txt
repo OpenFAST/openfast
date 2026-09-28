@@ -31,6 +31,25 @@ add_executable(aerodyn_utest
 target_link_libraries(aerodyn_utest aerodynlib versioninfolib testdrivelib)
 add_test(NAME aerodyn_utest COMMAND aerodyn_utest)
 
+add_executable(aerodyn_inflow_utest ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/test_interpolated_inflow.F90)
+target_link_libraries(aerodyn_inflow_utest aerodyn_driver_subs testdrivelib)
+set(inflow_test_data_dir "${PROJECT_BINARY_DIR}/reg_tests/modules/aerodyn")
+file(COPY "${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/interpolated_inflow/time"
+     "${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/interpolated_inflow/steady"
+     DESTINATION "${inflow_test_data_dir}")
+foreach(inflow_case time time_inputs steady null)
+  if (inflow_case STREQUAL "steady")
+    set(inflow_fixture "steady")
+  else()
+    set(inflow_fixture "time")
+  endif()
+  add_test(NAME aerodyn_utest_inflow_${inflow_case}
+           COMMAND ${CMAKE_COMMAND} -E env AD_INFLOW_CASE=${inflow_case}
+                   $<TARGET_FILE:aerodyn_inflow_utest>
+                   "${inflow_test_data_dir}/${inflow_fixture}/ad_driver.dvr")
+  set_tests_properties(aerodyn_utest_inflow_${inflow_case} PROPERTIES RUN_SERIAL TRUE)
+endforeach()
+
 # BeamDyn Unit Tests
 add_executable(beamdyn_utest 
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/beamdyn_utest.F90
@@ -95,6 +114,8 @@ add_custom_target(
     inflowwind_utest 
 )
 
+add_dependencies(unit_tests aerodyn_inflow_utest)
+
 if (AMREX_READER AND BUILD_FASTFARM)
   # Need input files
   add_custom_target(copy_amrex_reader_utest_files ALL
@@ -110,4 +131,3 @@ if (AMREX_READER AND BUILD_FASTFARM)
   add_dependencies(amrex_reader_utest copy_amrex_reader_utest_files)     # copy input files needed for this test
   add_dependencies(unit_tests amrex_reader_utest)     # add to the unit_tests target
 endif()
-
