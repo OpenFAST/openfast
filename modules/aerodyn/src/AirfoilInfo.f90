@@ -43,6 +43,23 @@ MODULE AirfoilInfo
 
    integer, parameter                           :: MaxNumAFCoeffs = 7 !cl,cd,cm,cpMin, UA:f_st, FullySeparate, FullyAttached
 
+   !> Sentinel written into UA_BL%CnMax / CnMin when the IAG (UAMod=9) vortex logic must stay
+   !! dormant: non-IAG models, and degenerate (cylinder-like) polars with no stall peak.
+   !!
+   !! DO NOT change this to huge() or a similarly extreme value. Every UA_BL field is blended
+   !! across airfoil tables by the registry-generated AFI_UA_BL_Type_ExtrapInterp routines
+   !! (AirfoilInfo_Types.f90) as  u_out%CnMax = a1*u1%CnMax + a2*u2%CnMax.  With huge() that
+   !! arithmetic misbehaves in three silent ways:
+   !!   - one table degenerate + one normal  -> ~0.5*huge, not a usable CnMax;
+   !!   - extrapolation weights (a1>1, a2<0) -> overflow to +/-Infinity;
+   !!   - the value also overflows the F17.5 summary-table format into '*****'.
+   !! None of these trap, because OpenFAST does not build with -ffpe-trap.
+   !!
+   !! 999 is ~500x any physically meaningful |Cn|, so the  abs(x3) > CN_CRIT  vortex test can
+   !! still never be satisfied, while the value stays finite, interpolates harmlessly and
+   !! prints cleanly.
+   real(ReKi), parameter                        :: IAG_CnCrit_Disabled = 999.0_ReKi
+
 CONTAINS
 
 
@@ -657,6 +674,16 @@ CONTAINS
 
                CALL ParseVarWDefault ( FileInfo, CurLine, 'x_cp_bar', p%Table(iTable)%UA_BL%x_cp_bar, .2_ReKi, ErrStat2, ErrMsg2, UnEc )
                CalcDefaults(iTable)%x_cp_bar = ErrStat2 >= AbortErrLev
+
+                  ! IAG model (UAMod=9) parameters:
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'Ka', p%Table(iTable)%UA_BL%Ka, 0.75_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CalcDefaults(iTable)%Ka = ErrStat2 >= AbortErrLev
+
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'Kv', p%Table(iTable)%UA_BL%Kv, 0.2_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CalcDefaults(iTable)%Kv = ErrStat2 >= AbortErrLev
+
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'dCNdA', p%Table(iTable)%UA_BL%dCNdA, TwoPi, ErrStat2, ErrMsg2, UnEc )
+               CalcDefaults(iTable)%dCNdA = ErrStat2 >= AbortErrLev
                   
                CALL ParseVarWDefault ( FileInfo, CurLine, 'UACutout', p%Table(iTable)%UA_BL%UACutout, 45.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                CalcDefaults(iTable)%UACutout = ErrStat2 >= AbortErrLev
@@ -757,7 +784,12 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          if ( p%Table(iTable)%ConstData ) then
             p%Table(iTable)%InclUAdata = .false.
          else
-            call CalculateUACoeffs(CalcDefaults(iTable), p%Table(iTable), p%ColCl, p%ColCd, p%ColCm, p%ColUAf, InitInp%UAMod)
+            call CalculateUACoeffs(CalcDefaults(iTable), p%Table(iTable), p%ColCl, p%ColCd, p%ColCm, p%ColUAf, InitInp%UAMod, ErrStat2, ErrMsg2)
+               CALL SetErrStat( ErrStat2, trim(ErrMsg2)//' (airfoil table '//trim(num2lstr(iTable))//' of "'//TRIM( InitInp%FileName )//'")', ErrStat, ErrMsg, RoutineName )
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
          end if
 
             ! Let's make sure that the data go from -Pi to Pi and that the values are the same for both
@@ -824,7 +856,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
 
    END SUBROUTINE ReadAFfile
 !----------------------------------------------------------------------------------------------------------------------------------  
-   SUBROUTINE CalculateUACoeffs(CalcDefaults,p,ColCl,ColCd,ColCm,ColUAf,UAMod)
+   SUBROUTINE CalculateUACoeffs(CalcDefaults,p,ColCl,ColCd,ColCm,ColUAf,UAMod,ErrStat,ErrMsg)
       TYPE (AFI_UA_BL_Default_Type),intent(in):: CalcDefaults
       TYPE (AFI_Table_Type),    intent(inout) :: p                             ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
       integer(IntKi),           intent(in   ) :: ColCl                         ! column for cl
@@ -832,6 +864,8 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       integer(IntKi),           intent(in   ) :: ColCm                         ! column for cm
       integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st (based on Cl or cn)
       integer(IntKi),           intent(in   ) :: UAMod                         ! UA model; determines how to compute f_st?
+      integer(IntKi),           intent(  out) :: ErrStat                       ! Error status of the operation
+      character(*),             intent(  out) :: ErrMsg                        ! Error message if ErrStat /= ErrID_None
    
       INTEGER(IntKi)                          :: Row                           ! The row of a table to be parsed in the FileInfo structure.
       INTEGER(IntKi)                          :: col_fs                        ! column for UA cn/cl_fs (fully separated cn or cl)
@@ -872,6 +906,9 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       CHARACTER(ErrMsgLen)                    :: ErrMsg2
       CHARACTER(*), PARAMETER                 :: RoutineName = 'CalculateUACoeffs'
 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
       if ( UAMod == UA_HGMV360 ) then
          LimitAlphaRange = TwoPi ! range we're limiting our equations to (in radians)
       else
@@ -910,6 +947,31 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          if (CalcDefaults%A5             ) p%UA_BL%A5             =  1.00_ReKi
          if (CalcDefaults%x_cp_bar       ) p%UA_BL%x_cp_bar       =  0.20_ReKi
          if (CalcDefaults%filtCutOff     ) p%UA_BL%filtCutOff     =  0.50_ReKi
+         
+         if (UAMod == UA_IAG) then
+            ! IAG model defaults from Bangga, Parkinson & Collier (2023), Table 1.
+            ! NOTE: b1 and T_VL differ from OpenFAST's B-L defaults set above, so they are
+            ! overridden here (only when the user did not supply a value).
+            if (CalcDefaults%Ka          ) p%UA_BL%Ka             =  0.75_ReKi
+            if (CalcDefaults%Kv          ) p%UA_BL%Kv             =  0.20_ReKi
+            if (CalcDefaults%A1          ) p%UA_BL%A1             =  0.30_ReKi
+            if (CalcDefaults%A2          ) p%UA_BL%A2             =  0.70_ReKi
+            if (CalcDefaults%b1          ) p%UA_BL%b1             =  0.70_ReKi  ! IAG value (OpenFAST B-L default is 0.14)
+            if (CalcDefaults%b2          ) p%UA_BL%b2             =  0.53_ReKi
+            if (CalcDefaults%T_p         ) p%UA_BL%T_p            =  1.70_ReKi
+            if (CalcDefaults%T_f0        ) p%UA_BL%T_f0           =  3.00_ReKi
+            if (CalcDefaults%T_V0        ) p%UA_BL%T_V0           =  6.00_ReKi
+            if (CalcDefaults%T_VL        ) p%UA_BL%T_VL           =  6.00_ReKi  ! IAG value (OpenFAST B-L default is 11.0)
+         else
+            p%UA_BL%Ka    = 0.0_ReKi
+            p%UA_BL%Kv    = 0.0_ReKi
+            p%UA_BL%dCNdA = 0.0_ReKi
+         end if
+         
+            ! these are only meaningful for UAMod=UA_IAG; initialize so that the vortex logic
+            ! can never trigger for other models (or for degenerate polars, see below)
+         p%UA_BL%CnMax =  IAG_CnCrit_Disabled
+         p%UA_BL%CnMin = -IAG_CnCrit_Disabled
          
          if (UAMod == UA_HGMV360) then ! set defaults for this model (note: we don't turn off UA)
             if (CalcDefaults%St_sh          ) p%UA_BL%St_sh          =  0.14_ReKi
@@ -955,8 +1017,19 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                end if
                Cn = Calculate_Cn(alpha=p%alpha, cl=p%Coefs(:,ColCl), cd=p%Coefs(:,ColCd), cd0=p%UA_BL%Cd0)
                call ComputeUA360_AttachedFlow(p, ColUAf, Cn, iLower, iUpper)
-               call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
-               call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+               
+               if ( UAMod == UA_IAG ) then
+                  ! Degenerate (cylinder-like) polar: there is no meaningful lift slope or stall
+                  ! peak. Use a nominal slope so the Eq. 42 denominator is not singular, and leave
+                  ! CnMax/CnMin at their +/-huge sentinels so the vortex logic stays dormant.
+                  ! The Kirchhoff consistency check is meaningless on such a polar, so it is skipped.
+                  if (CalcDefaults%dCNdA) p%UA_BL%dCNdA = TwoPi
+                  call ComputeIAG_SeparationFunctions( p, ColUAf, Cn, iLower, iUpper, CheckConsistency=.false., ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               else
+                  call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
+                  call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+               end if
 
             end if
          else
@@ -1085,8 +1158,33 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                call Compute_iLoweriUpper(p, iLower, iUpper) ! calculating iLower and iUpper here (for alpha1 and alpha2)
             else
                call ComputeUA360_AttachedFlow(p, ColUAf, Cn, iLower, iUpper)
-               call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
-               call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+               
+               if ( UAMod == UA_IAG ) then
+                  !------------------------------------------------------------------------
+                  ! IAG model. The separation-function columns are built from IAG's own
+                  ! sinusoidal attached-flow curve dCNdA*sin(alpha-alpha0) (paper Eq. 37),
+                  ! so dCNdA must be resolved FIRST -- including any user override, or the
+                  ! columns and the run-time CN_f (Eq. 44) would use different slopes.
+                  !------------------------------------------------------------------------
+                  if (CalcDefaults%dCNdA) then
+                     call ComputeIAG_dCNdA( p%alpha, cn, p%UA_BL%alpha0, p%UA_BL%C_nalpha, p%UA_BL%dCNdA )
+                  end if
+                  
+                  if (p%UA_BL%dCNdA <= 0.0_ReKi) then
+                     ! A zero or negative slope makes the Eq. 42 denominator degenerate for every
+                     ! row of the table. UA_ValidateAFI issues the user-facing error; fall back to
+                     ! the thin-airfoil value here so the columns below remain well defined.
+                     p%UA_BL%dCNdA = TwoPi
+                  end if
+                  
+                  call ComputeIAG_SeparationFunctions( p, ColUAf, Cn, iLower, iUpper, CheckConsistency=.true., ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     if (ErrStat >= AbortErrLev) return
+                  call ComputeIAG_CnMaxCnMin( p, cn, iLower, iUpper )
+               else
+                  call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
+                  call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
+               end if
             end if
             
 
@@ -1579,6 +1677,302 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       offset = CnOffset * ( tanh(SlopeScale*(p%alpha(Row)+PiBy2)) - tanh(SlopeScale*(p%alpha(Row)-PiBy2)) ) / 2.0_ReKi; !Only apply Cn offset in vicinity of AoA 0 deg
    END FUNCTION ComputeUA360_CnOffset
 !----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeIAG_dCNdA( alpha, cn, alpha0, C_nalpha, dCNdA )
+   ! IAG "linear fit approach" for the static normal-force curve slope.
+   ! Bangga, Parkinson & Collier (2023), Energies 16:3994, section 2.4, p. 11:
+   !  (i)  compute the local gradient of cn(alpha) at every polar point between alpha0 and 7 deg;
+   !  (ii) retain only points whose local gradient lies between 1.8*pi and 2.5*pi;
+   !  (iii) least-squares fit cn = dCNdA*(alpha - alpha0) through the retained points.
+   ! If too few points survive the filter, fall back to the B-L C_nalpha.
+      REAL(ReKi),               intent(in   ) :: alpha(:)                      ! angle of attack table (rad)
+      REAL(ReKi),               intent(in   ) :: cn(:)                         ! static normal force coefficient
+      REAL(ReKi),               intent(in   ) :: alpha0                        ! zero-lift angle of attack (rad)
+      REAL(ReKi),               intent(in   ) :: C_nalpha                      ! fallback slope
+      REAL(ReKi),               intent(  out) :: dCNdA                         ! resulting slope (1/rad)
+
+      REAL(ReKi)                              :: SlopeMin                      ! lower gradient filter: 1.8*pi
+      REAL(ReKi)                              :: SlopeMax                      ! upper gradient filter: 2.5*pi
+      REAL(ReKi)                              :: alphaFitMax                   ! upper edge of the fit window: 7 deg
+
+      REAL(ReKi)                              :: LocalSlope
+      REAL(ReKi)                              :: da, dcn
+      REAL(ReKi)                              :: SumXX, SumXY
+      INTEGER(IntKi)                          :: Row, NumAlf, nKept
+
+      SlopeMin    = 1.8_ReKi * Pi
+      SlopeMax    = 2.5_ReKi * Pi
+      alphaFitMax = 7.0_ReKi * D2R
+
+      NumAlf = size(alpha)
+      SumXX  = 0.0_ReKi
+      SumXY  = 0.0_ReKi
+      nKept  = 0
+
+      do Row = 2, NumAlf-1
+         if (alpha(Row) < alpha0 .or. alpha(Row) > alphaFitMax) cycle
+
+            ! central-difference local gradient
+         da = alpha(Row+1) - alpha(Row-1)
+         if (EqualRealNos(da, 0.0_ReKi)) cycle
+         LocalSlope = ( cn(Row+1) - cn(Row-1) ) / da
+         if (LocalSlope < SlopeMin .or. LocalSlope > SlopeMax) cycle
+
+            ! accumulate the (zero-intercept) least-squares fit about alpha0
+         da    = alpha(Row) - alpha0
+         dcn   = cn(Row)
+         SumXX = SumXX + da*da
+         SumXY = SumXY + da*dcn
+         nKept = nKept + 1
+      end do
+
+      if (nKept >= 2 .and. SumXX > 0.0_ReKi) then
+         dCNdA = SumXY / SumXX
+      else
+         dCNdA = C_nalpha   ! fallback: too few points passed the gradient filter
+      end if
+
+   END SUBROUTINE ComputeIAG_dCNdA
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeIAG_SeparationFunctions( p, ColUAf, cn, iLower, iUpper, CheckConsistency, ErrStat, ErrMsg )
+   ! Build the IAG-specific FullyAttached / f_st / FullySeparate columns.
+   !
+   ! Unlike the HGM/HGMV/HGMV360 path, IAG's attached-flow curve is the sinusoidal
+   ! CN_C = dCNdA*sin(alphaE - alpha0)  (paper Eq. 37), and its separated normal force is the
+   ! squared-Kirchhoff blend  CN_f = dCNdA*((1+sqrt(x4))/2)^2 * sin(alphaE-alpha0) + CN_I (Eq. 44).
+   ! The separation function must therefore be inverted from that same curve (Eq. 42), or f and
+   ! CN_f are inconsistent and the model fails to reduce to the static polar at zero pitch rate.
+   !
+   ! Note the FullySeparate column is NOT used by IAG at run time (CN_f reads only dCNdA, alpha0
+   ! and x4). It is filled anyway so AFI_WrTables writes something meaningful and the array is
+   ! never left uninitialized.
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! airfoil table
+      integer(IntKi),           intent(in   ) :: ColUAf                        ! column for UA f_st
+      REAL(ReKi),               intent(in   ) :: cn(:)                         ! static normal force coefficient
+      INTEGER(IntKi),           intent(in   ) :: iLower                        ! lower index of the fully attached region
+      INTEGER(IntKi),           intent(in   ) :: iUpper                        ! upper index of the fully attached region
+      LOGICAL,                  intent(in   ) :: CheckConsistency              ! verify the Kirchhoff identity (skip for degenerate polars)
+      integer(IntKi),           intent(  out) :: ErrStat                       ! Error status of the operation
+      character(*),             intent(  out) :: ErrMsg                        ! Error message if ErrStat /= ErrID_None
+
+      REAL(ReKi)                              :: cn_fa                         ! IAG fully-attached cn at this alpha
+      REAL(ReKi)                              :: CnRatio
+      REAL(ReKi)                              :: CnFaTol                       ! tolerance for the cn_fa zero crossings
+      REAL(ReKi)                              :: f_st_(p%NumAlf)               ! temporary for the smoothing pass
+      LOGICAL                                 :: RowIsExact(p%NumAlf)          ! .true. where the Kirchhoff identity must hold exactly
+      REAL(ReKi)                              :: cn_check                      ! cn reconstructed from the columns
+      REAL(ReKi)                              :: Residual, MaxResidual
+      REAL(ReKi)                              :: ResidualTol
+      INTEGER(IntKi)                          :: Row, iWorst, nChecked
+      INTEGER(IntKi)                          :: col_fs, col_fa
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      col_fs = ColUAf + 1 ! fully separated
+      col_fa = ColUAf + 2 ! fully attached
+
+      ! cn produced by roughly 0.6 deg of incidence; small enough not to perturb the polar,
+      ! large enough that we never divide by a near-zero cn_fa.
+      CnFaTol = 0.01_ReKi * p%UA_BL%dCNdA
+
+      RowIsExact = .true.
+
+      do Row = 1, p%NumAlf
+         cn_fa = p%UA_BL%dCNdA * sin( p%alpha(Row) - p%UA_BL%alpha0 )   ! Eq. 37 curve
+         p%Coefs(Row,col_fa) = cn_fa
+
+         ! cn_fa -> 0 at alpha0 and again at alpha0 +/- 180 deg. These two cases are NOT the
+         ! same: near alpha0 the flow is attached (cn -> 0 too, so the ratio is finite), but
+         ! near +/-180 deg the section is fully stalled. Do not collapse them.
+         if ( abs(cn_fa) < CnFaTol ) then
+            if ( abs(p%alpha(Row) - p%UA_BL%alpha0) < PiBy2 ) then
+               CnRatio = 1.0_ReKi        ! attached branch: f = 1
+            else
+               CnRatio = 0.0_ReKi        ! reverse-flow branch: clipped to f = 0 below
+            end if
+            RowIsExact(Row) = .false.    ! CnRatio substituted, not computed from the polar
+         else
+            CnRatio = cn(Row) / cn_fa
+         end if
+
+         if ( CnRatio < 0.25_ReKi ) then
+            CnRatio = 0.25_ReKi                                         ! below 1/4 => fully separated
+            RowIsExact(Row) = .false.                                   ! clipped
+         end if
+
+         p%Coefs(Row,ColUAf) = ( 2.0_ReKi * sqrt( CnRatio ) - 1.0_ReKi )**2
+
+         if ( p%Coefs(Row,ColUAf) > 1.0_ReKi ) then
+            p%Coefs(Row,ColUAf) = 1.0_ReKi                              ! f <= 1
+            RowIsExact(Row) = .false.                                   ! clipped
+         end if
+         p%Coefs(Row,ColUAf) = max( 0.0_ReKi, p%Coefs(Row,ColUAf) )     ! f >= 0
+      end do
+
+         ! Where the IAG attached curve matches the polar by construction, set f = 1.
+         ! This is imposed, not derived, so these rows cannot be held to the identity.
+      do Row = iLower, iUpper
+         p%Coefs(Row,ColUAf) = 1.0_ReKi
+         RowIsExact(Row)     = .false.
+      end do
+
+         ! light smoothing, mirroring the conditioning applied on the HGMV360 path.
+         ! Any row the smoother actually moves is likewise no longer exact.
+      f_st_ = p%Coefs(:,ColUAf)
+      do Row = iUpper+1, p%NumAlf-1
+         if (EqualRealNos(f_st_(Row),0.0_ReKi)) f_st_(Row+1) = 0.0_ReKi
+         if ( f_st_(Row+1) > f_st_(Row) )       f_st_(Row)   = 0.5_ReKi * (f_st_(Row+1) + f_st_(Row-1))
+      end do
+      do Row = iLower-1, 2, -1
+         if (EqualRealNos(f_st_(Row),0.0_ReKi)) f_st_(Row-1) = 0.0_ReKi
+         if ( f_st_(Row-1) > f_st_(Row) )       f_st_(Row)   = 0.5_ReKi * (f_st_(Row+1) + f_st_(Row-1))
+      end do
+
+      do Row = 1, p%NumAlf
+         if ( .not. EqualRealNos( f_st_(Row), p%Coefs(Row,ColUAf) ) ) RowIsExact(Row) = .false.
+      end do
+      p%Coefs(:,ColUAf) = f_st_
+
+         ! fully-separated column: invert the linear blend so the static polar is reproduced.
+         ! (Written for output only -- see the routine header.)
+      do Row = 1, p%NumAlf
+         if ( EqualRealNos( p%Coefs(Row,ColUAf), 1.0_ReKi ) ) then
+            p%Coefs(Row,col_fs) = 0.5_ReKi * cn(Row)
+         else
+            p%Coefs(Row,col_fs) = ( cn(Row) - p%Coefs(Row,col_fa) * p%Coefs(Row,ColUAf) ) &
+                                / ( 1.0_ReKi - p%Coefs(Row,ColUAf) )
+         end if
+      end do
+
+      !-------------------------------------------------------------------------------------
+      ! Verify the Kirchhoff identity that Eq. 44 actually evaluates:
+      !
+      !     cn = cn_fa * ( (1 + sqrt(f)) / 2 )**2
+      !
+      ! SCOPE AND LIMITS OF THIS CHECK -- read before relying on it.
+      !
+      ! On any row where f was computed from the polar and NOT clipped, this identity is an
+      ! algebraic tautology, because f is *defined* just above as (2*sqrt(cn/cn_fa) - 1)**2:
+      !
+      !     ((1 + sqrt(f))/2)**2 = ((1 + 2*sqrt(cn/cn_fa) - 1)/2)**2 = cn/cn_fa
+      !
+      ! It therefore holds to round-off for ANY value of cn_fa, including a badly wrong one.
+      ! This check consequently does NOT validate dCNdA or alpha0 -- a 40% error in dCNdA
+      ! passes it cleanly (verified numerically). The implementation plan's claim that it
+      ! "fails immediately if the wrong attached curve is used" is only true for a curve
+      ! substituted *after* f was built, not for one used to build f.
+      !
+      ! What it does still catch, and why it is kept:
+      !   - col_fa and ColUAf getting out of step (wrong column indices, a partial overwrite
+      !     by another routine, or a future edit that rebuilds one column but not the other);
+      !   - f being recomputed or smoothed without the corresponding cn_fa update.
+      ! These are real and plausible regressions, and this is a cheap guard against them.
+      !
+      ! It is NOT a substitute for validating dCNdA/alpha0. That requires comparing the
+      ! reconstructed *dynamic* polar against the static one, which cannot be done here
+      ! because it needs the run-time CN_f path (Task 5).
+      !
+      ! Do NOT check the linear blend f*cn_fa + (1-f)*cn_fs == cn here. That is the
+      ! HGM/HGMV/Oye form; IAG never evaluates it.
+      !-------------------------------------------------------------------------------------
+      if ( CheckConsistency ) then
+         MaxResidual = 0.0_ReKi
+         iWorst      = 0
+         nChecked    = 0
+
+         ! scale the tolerance to the size of the polar so the test means the same thing for
+         ! a lightly loaded section as for a highly loaded one
+         ResidualTol = 1.0e-4_ReKi * max( 1.0_ReKi, maxval(abs(cn)) )
+
+         do Row = 1, p%NumAlf
+            if ( .not. RowIsExact(Row) ) cycle
+
+            nChecked = nChecked + 1
+            cn_check = p%Coefs(Row,col_fa) &
+                     * ( 0.5_ReKi * ( 1.0_ReKi + sqrt( p%Coefs(Row,ColUAf) ) ) )**2
+            Residual = abs( cn_check - cn(Row) )
+
+            if ( Residual > MaxResidual ) then
+               MaxResidual = Residual
+               iWorst      = Row
+            end if
+         end do
+
+         if ( iWorst > 0 .and. MaxResidual > ResidualTol ) then
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'IAG model (UAMod=9): the f_st and FullyAttached columns are mutually '// &
+                      'inconsistent. The Kirchhoff identity cn = cn_fa*((1+sqrt(f))/2)^2 is '// &
+                      'violated by '//trim(num2lstr(MaxResidual))//' (tolerance '// &
+                      trim(num2lstr(ResidualTol))//') at alpha = '// &
+                      trim(num2lstr(p%alpha(iWorst)*R2D))//' deg, where cn = '// &
+                      trim(num2lstr(cn(iWorst)))//', cn_fa = '//trim(num2lstr(p%Coefs(iWorst,col_fa)))// &
+                      ', f_st = '//trim(num2lstr(p%Coefs(iWorst,ColUAf)))// &
+                      '. One of the two columns has been overwritten or rebuilt independently '// &
+                      'of the other; this is an internal error, not a bad airfoil file.'
+         else if ( nChecked == 0 ) then
+            ErrStat = ErrID_Warn
+            ErrMsg  = 'IAG model (UAMod=9): every row of the separation function was clipped or '// &
+                      'imposed, so the f_st/FullyAttached columns could not be cross-checked. '// &
+                      'This often means dCNdA or alpha0 is badly wrong for this airfoil, or the '// &
+                      'attached-flow region (alphaLower..alphaUpper) spans the whole table.'
+         end if
+      end if
+
+   END SUBROUTINE ComputeIAG_SeparationFunctions
+!----------------------------------------------------------------------------------------------------------------------------------  
+   SUBROUTINE ComputeIAG_CnMaxCnMin( p, cn, iLower, iUpper )
+   ! Compute the IAG critical normal-force coefficients CnMax / CnMin: the static stall peaks
+   ! either side of alpha0. These are NOT Cn1/Cn2 (which are cn at f = 0.7).
+   !
+   ! The search window matters. A global maxval over a 360-deg table can return the deep-stall
+   ! secondary peak near +/-45 deg, which on thin sections exceeds the stall peak; CN_CRIT would
+   ! then be unreachable and vortex shedding silently disabled. A window that is too narrow
+   ! (e.g. the +/-20 deg LimitAlphaRange) clips the genuine peak on thick sections and the vortex
+   ! fires far too early. Both failures are silent, so both bounds are checked below.
+      TYPE (AFI_Table_Type),    intent(inout) :: p                             ! airfoil table
+      REAL(ReKi),               intent(in   ) :: cn(:)                         ! static normal force coefficient
+      INTEGER(IntKi),           intent(in   ) :: iLower                        ! lower index of the fully attached region
+      INTEGER(IntKi),           intent(in   ) :: iUpper                        ! upper index of the fully attached region
+
+      REAL(ReKi)                              :: SearchMargin                  ! how far past alphaUpper/alphaLower to look
+      REAL(ReKi)                              :: PeakEdgeTol                   ! how close to the window edge counts as "clipped"
+      REAL(ReKi)                              :: aMaxSearch, aMinSearch
+      INTEGER(IntKi)                          :: iPeak
+
+      PeakEdgeTol = 0.5_ReKi*D2R
+
+      SearchMargin = 20.0_ReKi*D2R
+
+      aMaxSearch = p%UA_BL%alphaUpper + SearchMargin
+      aMinSearch = p%UA_BL%alphaLower - SearchMargin
+
+      p%UA_BL%CnMax = maxval( cn, MASK = p%alpha >= p%UA_BL%alpha0 .and. p%alpha <= aMaxSearch )
+      p%UA_BL%CnMin = minval( cn, MASK = p%alpha <= p%UA_BL%alpha0 .and. p%alpha >= aMinSearch )
+
+         ! Sanity: detect a search window that CLIPPED the stall peak rather than containing it.
+         ! The symptom of clipping is that the extremum lies at the outer edge of the window, so
+         ! that is what we test. Do NOT test CnMax > cn(iUpper): the stall peak legitimately
+         ! coincides with alphaUpper on many airfoils (it is roughly where the attached region is
+         ! defined to end), and that comparison then falls back to Cn1 on perfectly good polars.
+      iPeak = maxloc( cn, DIM=1, MASK = p%alpha >= p%UA_BL%alpha0 .and. p%alpha <= aMaxSearch )
+      if ( iPeak >= 1 ) then
+         if ( p%alpha(iPeak) >= aMaxSearch - PeakEdgeTol ) p%UA_BL%CnMax = p%UA_BL%Cn1  ! peak at window edge => clipped
+      end if
+
+      iPeak = minloc( cn, DIM=1, MASK = p%alpha <= p%UA_BL%alpha0 .and. p%alpha >= aMinSearch )
+      if ( iPeak >= 1 ) then
+         if ( p%alpha(iPeak) <= aMinSearch + PeakEdgeTol ) p%UA_BL%CnMin = p%UA_BL%Cn2  ! peak at window edge => clipped
+      end if
+
+         ! Last resort: if the result is still degenerate, disable the vortex logic entirely
+         ! rather than leaving CnMax near zero, which would chatter the vortex on and off.
+      if ( p%UA_BL%CnMin >= p%UA_BL%CnMax ) then
+         p%UA_BL%CnMax =  IAG_CnCrit_Disabled
+         p%UA_BL%CnMin = -IAG_CnCrit_Disabled
+      end if
+
+   END SUBROUTINE ComputeIAG_CnMaxCnMin
+!----------------------------------------------------------------------------------------------------------------------------------  
 subroutine FindBoundingTables(p, secondaryDepVal, lowerTable, upperTable, xVals)
 
    TYPE (AFI_ParameterType), intent(in   ) :: p                          ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
@@ -1874,7 +2268,7 @@ subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
    character(*), parameter                      :: RoutineName = 'AFI_WrHeader'
    
    integer, parameter                           :: MaxLen = 17
-   integer, parameter                           :: NumChans = 46
+   integer, parameter                           :: NumChans = 51
    character(MaxLen)                            :: ChanName( NumChans)
    character(MaxLen)                            :: ChanUnit( NumChans)
    
@@ -1926,6 +2320,11 @@ subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
    ChanName(i) = 'CnBreakUpper';      ChanUnit(i) = '(-)';        i = i+1;
    ChanName(i) = 'alphaBreakLower';   ChanUnit(i) = '(deg)';      i = i+1;
    ChanName(i) = 'CnBreakLower';      ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Ka';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Kv';                ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'dCNdA';             ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'CnMax';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'CnMin';             ChanUnit(i) = '(-)';        i = i+1;
 
    !$OMP critical(fileopen_critical)
    CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
@@ -1972,7 +2371,7 @@ subroutine AFI_WrData(k, unOutFile, delim, AFInfo)
    integer(IntKi)                               :: i
    
    integer, parameter                           :: MaxLen = 17
-   integer, parameter                           :: NumChans = 46
+   integer, parameter                           :: NumChans = 51
    real(ReKi)                                   :: TmpValues(NumChans)
    character(3)                                 :: MaxLenStr
    character(80)                                :: Fmt
@@ -2028,7 +2427,12 @@ subroutine AFI_WrData(k, unOutFile, delim, AFInfo)
                                     AFInfo%Table(i)%UA_BL%alphaBreakUpper*R2D, &
                                     AFInfo%Table(i)%UA_BL%CnBreakUpper       , &
                                     AFInfo%Table(i)%UA_BL%alphaBreakLower*R2D, &
-                                    AFInfo%Table(i)%UA_BL%CnBreakLower
+                                    AFInfo%Table(i)%UA_BL%CnBreakLower      , &
+                                    AFInfo%Table(i)%UA_BL%Ka                , &
+                                    AFInfo%Table(i)%UA_BL%Kv                , &
+                                    AFInfo%Table(i)%UA_BL%dCNdA             , &
+                                    AFInfo%Table(i)%UA_BL%CnMax             , &
+                                    AFInfo%Table(i)%UA_BL%CnMin
 
       ELSE
          WRITE(unOutFile, Fmt) k, i, TmpValues(3:)
@@ -2117,6 +2521,8 @@ subroutine AFI_WrTables(AFI_Params,UAMod,OutRootName)
          end if
    
       WRITE (unOutFile,'(/,A/)') 'These predictions were generated by AirfoilInfo on '//CurDate()//' at '//CurTime()//'.'
+      WRITE (unOutFile,'(A)')    'The f_st, '//Prefix//'FullySep and '//trim(sFullyAtt)//' columns are built for UAMod = ' &
+                                 //trim(num2lstr(UAMod))//' and are NOT comparable across UA models.'
       WRITE (unOutFile,'(/,A/)')  ' '
 
       if (AFI_Params%ColUAf > 0) then
