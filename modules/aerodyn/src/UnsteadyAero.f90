@@ -750,7 +750,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    p%ShedEffect = InitInp%ShedEffect
    p%UA_OUTS    = InitInp%UA_OUTS
    
-   if (p%UAMod==UA_HGM .or. p%UAMod==UA_HGMV .or. p%UAMod==UA_HGMV360) then
+   if (p%UAMod==UA_HGM .or. p%UAMod==UA_HGMV .or. p%UAMod==UA_HGMV360 .or. p%UAMod==UA_IAG) then
       UA_NumLinStates = 4
       ! set the maximum number of states
       ! note: we will subtract states for nodes where UA is off for good, below
@@ -889,7 +889,7 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
    
    
       ! allocate all the state arrays
-   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod==UA_HGMV360) then
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod==UA_HGMV360 .or. p%UAMod == UA_IAG) then
    
       allocate( x%element( p%nNodesPerBlade, p%numBlades ), stat=ErrStat2 )
       if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,"Cannot allocate x%x.",ErrStat,ErrMsg,RoutineName)
@@ -897,6 +897,11 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       allocate( OtherState%n(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
          if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%n.", ErrStat, ErrMsg, RoutineName)
       
+      if (p%UAMod == UA_IAG) then
+         allocate( OtherState%VortexOn_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%VortexOn_IAG.", ErrStat, ErrMsg, RoutineName)
+      end if
+
       if (p%UAMod == UA_HGMV) then
          allocate( OtherState%t_vortexBegin(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%t_vortexBegin.", ErrStat, ErrMsg, RoutineName)
@@ -1017,7 +1022,7 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       end do
    end do   
    
-   if ( p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod==UA_HGMV360) then
+   if ( p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod==UA_HGMV360 .or. p%UAMod == UA_IAG) then
    
       OtherState%n   = -1  ! we haven't updated OtherState%xdot, yet
       
@@ -1040,6 +1045,10 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
          OtherState%PositivePressure = .true.
          OtherState%vortexOn = .false.
          OtherState%BelowThreshold = .true.
+      end if
+
+      if (p%UAMod == UA_IAG) then
+         OtherState%VortexOn_IAG = .false.
       end if
 
    elseif (p%UAMod == UA_BV) then
@@ -1489,7 +1498,7 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    type(UA_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   integer, parameter :: UA_VALID(8) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM, UA_HGMV, UA_Oye, UA_BV, UA_HGMV360/)
+   integer, parameter :: UA_VALID(9) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM, UA_HGMV, UA_Oye, UA_BV, UA_HGMV360, UA_IAG/)
 
    character(*), parameter                      :: RoutineName = 'UA_ValidateInput'
    
@@ -1498,13 +1507,13 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
 
    if (.not.(any(InitInp%UAMod==UA_VALID))) call SetErrStat( ErrID_Fatal, &
       "In this version, UAMod must be 0 (None), 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
-      &6 (Oye), 7 (Boeing-Vertol), or 8 (HGM-360)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+      &6 (Oye), 7 (Boeing-Vertol), 8 (HGM-360), or 9 (IAG)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
    if (InitInp%a_s <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
 
-   if (InitInp%UAMod == UA_HGM .or. InitInp%UAMod == UA_HGMV .or. InitInp%UAMod == UA_OYE .or. InitInp%UAMod == UA_HGMV360) then ! these are the continuous methods that integrate states
+   if (InitInp%UAMod == UA_HGM .or. InitInp%UAMod == UA_HGMV .or. InitInp%UAMod == UA_OYE .or. InitInp%UAMod == UA_HGMV360 .or. InitInp%UAMod == UA_IAG) then ! these are the continuous methods that integrate states
       if (     InitInp%IntegrationMethod /= UA_Method_RK4  &
          .and. InitInp%IntegrationMethod /= UA_Method_AB4  &
          .and. InitInp%IntegrationMethod /= UA_Method_ABM4 &
@@ -1702,7 +1711,7 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
          ErrStat = ErrID_Fatal
          ErrMsg  = 'UA parameters are not included in airfoil.'
          return
-      else if ( (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV .or. p%UAMod==UA_HGMV360) .and. &
+      else if ( (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV .or. p%UAMod==UA_HGMV360 .or. p%UAMod == UA_IAG) .and. &
                 (maxval( AFInfo%Table(j)%Coefs(:, AFInfo%ColUAf) ) == 0.0_ReKi ) ) then
          ErrStat = ErrID_Fatal
          ErrMsg  = 'separation function is 0 at all values.'
@@ -1736,6 +1745,27 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
    elseif (p%UAMod == UA_HGMV .or. p%UAMod==UA_HGMV360) then
       ! pass
       
+   elseif (p%UAMod == UA_IAG) then
+      ! Get_alphaF's UA_IAG branch divides by dCNdA (Eq. 41), so a zero slope must turn UA off,
+      ! mirroring the C_lalpha treatment for UA_HGM above.
+      do j=1, AFInfo%NumTabs
+         if ( EqualRealNos(AFInfo%Table(j)%UA_BL%dCNdA, 0.0_ReKi) ) then
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'dCNdA is 0.'
+            return
+         end if
+      end do
+
+         ! now check about interpolated values:
+      do j=2, AFInfo%NumTabs
+         if ( sign( 1.0_ReKi, AFInfo%Table(j)%UA_BL%dCNdA) /= &
+              sign( 1.0_ReKi, AFInfo%Table(1)%UA_BL%dCNdA) ) then
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'dCNdA (interpolated value) could be 0.'
+            return
+         end if
+      end do
+
    elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
          ! unsteady aerodynamics will be turned off is Cn,alpha =0
       do j=1, AFInfo%NumTabs
@@ -2383,7 +2413,7 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
          
-   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360 .or. p%UAMod == UA_IAG) then
    
          ! initialize states to steady-state values:
       if (OtherState%FirstPass(i,j)) then
@@ -2534,7 +2564,7 @@ subroutine UA_InitStates_AllNodes( u, p, x, OtherState, AFInfo, AFIndx )
       !...............................................................................................................................
       !  compute UA states at t=0 (with known inputs)
       !...............................................................................................................................
-      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
+      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360 .or. p%UAMod == UA_IAG) then
       
          do j = 1,size(p%UA_off_forGood,2) ! blades
             do i = 1,size(p%UA_off_forGood,1) ! nodes
@@ -2573,6 +2603,7 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
       
    type(AFI_UA_BL_Type)                         :: BL_p        ! potentially interpolated UA parameters
    type(AFI_OutputType)                         :: AFI_Interp
+   type(AFI_OutputType)                         :: AFI_Interp_F ! interpolated values at alphaF (UA_IAG only; alphaF /= alphaE there)
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'HGM_Steady'
@@ -2644,6 +2675,27 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
          ! calculate x%x(4) = fs_aF = f_st(alphaF):
       !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
       !x%x(4) = AFI_interp%f_st
+   elseif (p%UAMod==UA_IAG) then
+      ! IAG Eq. 40 with x3dot = 0 gives x3 = CN^P. At steady state alphadot = 0, so the impulsive
+      ! term CN^I (Eq. 38) vanishes and CN^P = CN^C = dCNdA*sin(alphaE-alpha0) (Eq. 37).
+      call AddOrSub2Pi(BL_p%alpha0, alphaE)                                  ! wrap before the sin()
+      x%x(3)   = BL_p%dCNdA * sin(alphaE - BL_p%alpha0)                      ! Eqs. 37/39/40
+
+      ! Unlike HGM, alphaF does NOT collapse to alphaE for IAG: inverting the sinusoidal CN^C
+      ! through the linearized Eq. 41 gives alphaF = alpha0 + sin(alphaE-alpha0). The offset is
+      ! small (~0.4 deg at 20 deg from alpha0) but f_st is steep near stall, so evaluating the
+      ! separation function at alphaE would produce a visible start-up transient.
+      ! NOTE: x%x(3) MUST already be assigned -- Get_alphaF's UA_IAG branch reads it from x.
+      alphaF   = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE)                 ! Eq. 41
+      call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp_F, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+
+      ! Eq. 43 with x4dot = 0 gives x4 = f_st(alphaF). Set it here rather than falling through to
+      ! the shared assignment below, which uses AFI_interp (populated at alphaE) -- the wrong angle.
+      x%x(4)   = AFI_interp_F%f_st
+      x%x(5)   = 0.0_R8Ki                                                    ! Eq. 45, no active vortex
+      return
    else 
       call WrScr('>>> HGM_steady logic error: should never happen.')
       call SetErrStat(ErrID_FATAL,"Programming error.",ErrStat,ErrMsg,RoutineName)
@@ -2692,8 +2744,11 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    real(ReKi)                                   :: alpha_34
    real(ReKi)                                   :: TuOmega
    real(R8Ki), parameter                        :: U_dot = 0.0_R8Ki ! at some point we may add this term
+   real(R8Ki)                                   :: UdotTerm  ! velocity-transient coefficient added to b1/b2; model-dependent, see below
    TYPE(UA_InputType)                           :: u        ! Inputs at t
    real(R8Ki)                                   :: CnC_dot, One_Plus_Sqrt_x4, cv_dot, CnC
+   real(R8Ki)                                   :: CN_I        ! IAG: impulsive (non-circulatory) normal force, Eq. 38
+   real(R8Ki)                                   :: alphaE_dot  ! IAG: d(alphaE)/dt, used in the Eq. 46 vortex term
 
       ! Initialize ErrStat
 
@@ -2745,12 +2800,31 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
    
+      ! Velocity-transient ("added mass") coefficient added to b1/b2 in the x1/x2 ODEs below.
+      ! The HGM and IAG references disagree by a factor of 2 on this term:
+      !    HGM (Hansen et al. [40], Eqs. 8-9):  c*U_dot/(2*U**2)
+      !    IAG (Bangga et al. 2023, Eqs. 34-35):  c*V_dot/(   V**2)
+      ! Both cite the same lineage, so one of them carries a factor-of-2 error. It cannot be
+      ! adjudicated from the OpenFAST source alone, so each model is implemented to match its
+      ! OWN reference: that keeps HGM/HGMV bit-for-bit unchanged and makes UA_Mod=9 faithful to
+      ! the IAG paper. Note c*V_dot/(2*V**2) = -d(Tu)/dt exactly, which makes the HGM form the
+      ! clean product-rule term for a time-varying Tu -- suggestive, but not decisive.
+      !
+      ! This is currently inert because U_dot is hard-coded to 0.0 (parameter, declared above),
+      ! but it is written to be correct if U_dot is ever made a real input. Do NOT collapse this
+      ! back to a single shared expression on the grounds that "the term is zero anyway".
+   if (p%UAMod == UA_IAG) then
+      UdotTerm = p%c(i,j) * U_dot / (u%u**2)          ! IAG Eqs. 34-35
+   else
+      UdotTerm = p%c(i,j) * U_dot / (2.0_R8Ki*u%u**2) ! HGM Eqs. 8-9 [40]
+   end if
+   
    if (p%ShedEffect) then
-      if (.NOT. EqualRealNos(BL_p%A1,0.0_ReKi)) call AddOrSub2Pi(real(x%x(1)/BL_p%A1,ReKi), alpha_34) ! beause U_dot == 0, dx%x1 is A1*b1/Tu*(alpha_34 - x1/A1), we want the angle difference to be calculated correctly
-      dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34           ! Eq. 8 [40]
+      if (.NOT. EqualRealNos(BL_p%A1,0.0_ReKi)) call AddOrSub2Pi(real(x%x(1)/BL_p%A1,ReKi), alpha_34) ! when U_dot == 0, dx%x1 is A1*b1/Tu*(alpha_34 - x1/A1), we want the angle difference to be calculated correctly
+      dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + UdotTerm) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34           ! Eq. 8 [40] / IAG Eq. 34
       
-      if (.NOT. EqualRealNos(BL_p%A2,0.0_ReKi)) call AddOrSub2Pi(real(x%x(2)/BL_p%A2,ReKi), alpha_34) ! beause U_dot == 0, dx%x2 is A2*b2/Tu*(alpha_34 - x2/A2), we want the angle difference to be calculated correctly
-      dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34           ! Eq. 9 [40]
+      if (.NOT. EqualRealNos(BL_p%A2,0.0_ReKi)) call AddOrSub2Pi(real(x%x(2)/BL_p%A2,ReKi), alpha_34) ! when U_dot == 0, dx%x2 is A2*b2/Tu*(alpha_34 - x2/A2), we want the angle difference to be calculated correctly
+      dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + UdotTerm) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34           ! Eq. 9 [40] / IAG Eq. 35
    else
        dxdt%x(1) = 0.0_R8Ki
        dxdt%x(2) = 0.0_R8Ki
@@ -2808,6 +2882,47 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       
          dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)
       end if
+   elseif (p%UAMod == UA_IAG) then
+
+      ! x1/x2 (Eqs. 34-35) are integrated by the shared `if (p%ShedEffect)` block above --
+      ! including the AddOrSub2Pi angle fix-ups and the ShedEffect=.false. zeroing -- so nothing
+      ! is written for them here. The one place the IAG equations differ from HGM's Eqs. 8/9 is
+      ! the velocity-transient coefficient (factor of 2); that is handled by UdotTerm above,
+      ! which selects the IAG form for UA_IAG. See the comment there.
+      !
+      ! alphaE (Eq. 36) likewise comes from Get_HGM_constants; do not recompute it.
+
+      ! Impulsive (non-circulatory) normal force, Eq. 38: CN^I = 4*Ka*(c/V)*alphadot.
+      ! c/V = 2*Tu, so this is 8*Ka*Tu*omega. TuOmega is the pre-clamped Tu*u%omega.
+      CN_I = 8.0_R8Ki * BL_p%Ka * TuOmega                                       ! Eq. 38
+
+      call AddOrSub2Pi(BL_p%alpha0, alphaE)                                     ! wrap before the sin()
+      CnC  = BL_p%dCNdA * sin(alphaE - BL_p%alpha0)                             ! Eq. 37
+      Clp  = CnC + CN_I                                                         ! Eq. 39 (this is CN^P)
+
+      ! Separated flow. NOTE: BL_p%T_p and BL_p%T_f0 were already multiplied by Tu above, so they
+      ! are in seconds here. T_V0 below is NOT pre-scaled and genuinely needs the *Tu.
+      dxdt%x(3) = ( Clp             - x%x(3) ) / BL_p%T_p                       ! Eq. 40
+      dxdt%x(4) = ( AFI_AlphaF%f_st - x4     ) / BL_p%T_f0                      ! Eq. 43
+         ! AFI_AlphaF was computed above at alphaF = Get_alphaF(...), i.e. Eq. 41, and f_st is the
+         ! IAG-consistent separation column built in AirfoilInfo::CalculateUACoeffs, clamped to [0,1].
+
+      ! Vortex lift, Eqs. 45-46.
+      if (OtherState%VortexOn_IAG(i,j)) then
+         One_Plus_Sqrt_x4 = 1.0_R8Ki + sqrt(x4)
+
+         ! d(alphaE)/dt from Eq. 36 term by term, with d(alpha_34)/dt = u%omega.
+         ! Structurally identical to the HGMV CnC_dot construction above.
+         alphaE_dot = u%omega * (1.0_R8Ki - BL_p%A1 - BL_p%A2) + dxdt%x(1) + dxdt%x(2)
+         CnC_dot    = BL_p%dCNdA * cos(alphaE - BL_p%alpha0) * alphaE_dot        ! d/dt of Eq. 37
+
+         cv_dot = CnC_dot*(1.0_R8Ki - 0.25_R8Ki*(One_Plus_Sqrt_x4)**2)
+         cv_dot = cv_dot - CnC*0.25_R8Ki*One_Plus_Sqrt_x4/sqrt(max(0.0001_R8Ki,x4))*dxdt%x(4)
+      else
+         cv_dot = 0.0_R8Ki
+      end if
+
+      dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)                              ! Eq. 45
    else
       call WrScr('>>> UA_CalcContStateDeriv logic error: should never happen.')
       call SetErrStat(ErrID_FATAL,"Programming error.",ErrStat,ErrMsg,RoutineName)
@@ -2877,6 +2992,15 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
 
       !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
       alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! Eq. 15 [40]
+
+   elseif (p%UAMod == UA_IAG) then
+
+      ! IAG Eq. 41: invert the sinusoidal attached-flow relation CN^C = dCNdA*sin(alphaF-alpha0).
+      ! The paper linearizes the inversion, so this is algebraically the same form as the UA_HGM
+      ! branch above with dCNdA in place of c_lalpha -- it is NOT alpha0 + asin(x3/dCNdA).
+      !note: BL_p%dCNdA cannot be zero. UA is turned off at initialization if this occurs
+      !      (AirfoilInfo.f90 falls back to C_nalpha and then to 2*pi if the linear fit degenerates).
+      alphaF  = x%x(3)/BL_p%dCNdA + BL_p%alpha0                              ! Eq. 41
 
    elseif (p%UAMod==UA_HGMV360 .or. p%UAMod == UA_HGMV) then
       call MPi2Pi(alphaE)
