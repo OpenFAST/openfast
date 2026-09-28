@@ -1590,9 +1590,12 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
 
          if ( tab%InclUAdata ) then
             ! parameters used only for UAMod/=UA_HGM)
-            if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce .or. UAMod == UA_HGMV) then
+            ! NOTE: UA_IAG is included here for the T_VL/T_V0 checks below, which it needs
+            ! (both appear in Eqs. 45 and 31). The inner blocks that do NOT apply to it are
+            ! excluded individually, the same way UA_HGMV is.
+            if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce .or. UAMod == UA_HGMV .or. UAMod == UA_IAG) then
             
-               if (UAMod /= UA_HGMV) then
+               if (UAMod /= UA_HGMV .and. UAMod /= UA_IAG) then
                   if ( EqualRealNos(tab%UA_BL%St_sh, 0.0_ReKi) ) then
                      call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0.', ErrStat_tab, ErrMsg_tab, "" )
                   end if
@@ -1632,8 +1635,33 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
                   call SetErrStat(ErrID_Fatal, 'UA T_V0 parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
                end if
             
-               if (tab%UA_BL%Cn2 >= tab%UA_BL%Cn1) call SetErrStat(ErrID_Fatal, 'Cn2 must be less than Cn1.', ErrStat_tab, ErrMsg_tab, "" )
+                  ! IAG uses CnMax/CnMin as its vortex-onset thresholds and never reads Cn1/Cn2,
+                  ! which are only computed on the non-circular-polar path and may legitimately
+                  ! be absent. Requiring Cn2 < Cn1 would reject otherwise-valid tables.
+               if (UAMod == UA_IAG) then
+                  if (tab%UA_BL%CnMin >= tab%UA_BL%CnMax) call SetErrStat(ErrID_Fatal, 'CnMin must be less than CnMax.', ErrStat_tab, ErrMsg_tab, "" )
+               else
+                  if (tab%UA_BL%Cn2 >= tab%UA_BL%Cn1) call SetErrStat(ErrID_Fatal, 'Cn2 must be less than Cn1.', ErrStat_tab, ErrMsg_tab, "" )
+               end if
                
+            end if
+            
+               ! IAG-specific parameters (Eqs. 38, 31 and 37/41/44 respectively).
+            if (UAMod == UA_IAG) then
+                  ! Ka scales the impulsive normal force CN^I; a negative value would invert it.
+               if ( tab%UA_BL%Ka < 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA Ka parameter must not be negative.', ErrStat_tab, ErrMsg_tab, "" )
+               end if
+                  ! Kv scales the vortex center-of-pressure travel CPv.
+               if ( tab%UA_BL%Kv < 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA Kv parameter must not be negative.', ErrStat_tab, ErrMsg_tab, "" )
+               end if
+                  ! Get_alphaF's UA_IAG branch divides by dCNdA (Eq. 41), and Eq. 44 multiplies
+                  ! by it. AirfoilInfo falls back to 2*pi if its own fit degenerates, so a value
+                  ! of 0 here can only come from the user's table.
+               if ( tab%UA_BL%dCNdA <= 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA dCNdA parameter must be greater than 0.', ErrStat_tab, ErrMsg_tab, "" )
+               end if
             end if
             
             if (UAMod /= UA_HGMV) then
@@ -1642,26 +1670,36 @@ subroutine UA_ValidateAFI(UAMod, FLookup, AFInfo, ErrStat, ErrMsg)
                end if
             end if ! Not UA_HGM
 
-            if ( tab%UA_BL%UACutout < Pi .and. (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. UAMod == UA_HGMV360) ) then
+            if ( tab%UA_BL%UACutout < Pi .and. (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE .or. UAMod == UA_HGMV360 .or. UAMod == UA_IAG) ) then
                cl_fs = InterpStp( tab%UA_BL%UACutout, tab%alpha, tab%Coefs(:,AFInfo%ColUAf), indx, tab%NumAlf )
                if (.not. EqualRealNos( cl_fs, 0.0_ReKi ) ) then
                   call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0;'// &
                        ' separation function is '//trim(num2lstr(cl_fs))//'.' , ErrStat_tab, ErrMsg_tab, "" )
                end if
-               ! C_alpha should have a reasonable value
-               if (abs(tab%UA_BL%C_lalpha)>9.11_ReKi) then ! 45% above 2*pi, arbitrary..
-                  call SetErrStat(ErrID_Severe, 'Large value of C_lalpha.'// &
-                                 " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
-                                 ". We advise to check this value or provide it in the input file.", ErrStat_tab, ErrMsg_tab, "" )
-               endif
-               ! NOTE: check if C_nalpha is alwasy defined
-               ! C_lalpha and C_nalpha should be in the same ballpark
-               if (abs(tab%UA_BL%C_nalpha-tab%UA_BL%C_lalpha)>3.0_ReKi) then ! arbitrary criteria..
-                  call SetErrStat(ErrID_Severe, 'Large difference between C_lalpha and C_nalpha.'// &
-                                 " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
-                                 " C_nalpha="//trim(num2lstr(tab%UA_BL%C_nalpha))//&
-                                 ". We advise to check these values or provide them in the input file.", ErrStat_tab, ErrMsg_tab, "" )
-               endif
+
+                  ! The C_lalpha/C_nalpha sanity checks below do NOT apply to IAG: it blends on
+                  ! dCNdA (Eq. 44) and never reads either of them, so a table tuned for IAG can
+                  ! legitimately carry values that trip these warnings. dCNdA is range-checked
+                  ! separately above. The f_st checks that follow DO apply -- they validate the
+                  ! ColUAf column, which IAG builds itself in AirfoilInfo -- so they are outside
+                  ! this exclusion.
+               if (UAMod /= UA_IAG) then
+                  ! C_alpha should have a reasonable value
+                  if (abs(tab%UA_BL%C_lalpha)>9.11_ReKi) then ! 45% above 2*pi, arbitrary..
+                     call SetErrStat(ErrID_Severe, 'Large value of C_lalpha.'// &
+                                    " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
+                                    ". We advise to check this value or provide it in the input file.", ErrStat_tab, ErrMsg_tab, "" )
+                  endif
+                  ! NOTE: check if C_nalpha is alwasy defined
+                  ! C_lalpha and C_nalpha should be in the same ballpark
+                  if (abs(tab%UA_BL%C_nalpha-tab%UA_BL%C_lalpha)>3.0_ReKi) then ! arbitrary criteria..
+                     call SetErrStat(ErrID_Severe, 'Large difference between C_lalpha and C_nalpha.'// &
+                                    " C_lalpha="//trim(num2lstr(tab%UA_BL%C_lalpha))//&
+                                    " C_nalpha="//trim(num2lstr(tab%UA_BL%C_nalpha))//&
+                                    ". We advise to check these values or provide them in the input file.", ErrStat_tab, ErrMsg_tab, "" )
+                  endif
+               end if
+
                vmax = maxval(tab%Coefs(:,AFInfo%ColUAf))
                if (vmax>1.00_ReKi) then
                   call SetErrStat(ErrID_Severe, 'The separation function f_st exceeds 1;'// &
