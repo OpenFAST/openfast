@@ -27,7 +27,7 @@ False                  CompAA      - Flag to compute AeroAcoustics calculation [
 False                  SkewMomCorr - Turn the skew momentum correction on or off [used only when Skew_Mod=1]
 default                SkewRedistr_Mod - Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, default=1} [used only when Skew_Mod=1]
 "default"              SkewRedistrFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when Skew_Mod=1 and SkewRedistr_Mod=1]
---- BEM algorithm 
+--- BEM algorithm
 True                   TipLoss     - Use the Prandtl tip-loss model? (flag) [unused when Wake_Mod=0 or 3]
 True                   HubLoss     - Use the Prandtl hub-loss model? (flag) [unused when Wake_Mod=0 or 3]
 True                   TanInd      - Include tangential induction in BEMT calculations? (flag) [unused when Wake_Mod=0 or 3]
@@ -146,19 +146,19 @@ False                  SumPrint    - Generate a summary file listing input optio
 "RtAeroMyh"
 "RtAeroMzh"
 "RtAeroPwr"
-"RtSkew"                   
-"RtSpeed"                  
-"RtTSR"                    
-"RtVAvgxh"                 
-"RtVAvgyh"                 
-"RtVAvgzh"                 
+"RtSkew"
+"RtSpeed"
+"RtTSR"
+"RtVAvgxh"
+"RtVAvgyh"
+"RtVAvgzh"
 END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)
 ---------------------- NODE OUTPUTS --------------------------------------------
 1                      BldNd_BladesOut  - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
 ALL                    BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
                        OutList_Nodal - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-"Fx"                       
-"Fy"                       
-"Alpha"                    
+"Fx"
+"Fy"
+"Alpha"
 END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
 ====================================================================================================
