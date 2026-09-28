@@ -1993,7 +1993,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       if (Failed()) return
 
       ! Calculate wind using uInterp
-      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, m, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
+      call AD_CalcWind(BEMT_utimes(i),uInterp, p%FLowField, p, m, OtherState, InflowInterp, ErrStat2, ErrMsg2)
       if (Failed()) return
 
       do iR = 1,size(p%rotors)
