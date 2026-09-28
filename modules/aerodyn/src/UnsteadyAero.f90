@@ -63,6 +63,14 @@ private
    real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
    real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
    real(ReKi), parameter         :: MaxTuOmega = 1.5_ReKi          ! adding a little safety factor for UA models
+      ! IAG model blend limits, in degrees of |alpha|. The dynamic Cd/Cm are faded to static
+      ! between BlendLo and BlendHi, and the vortex state x5 is faded out between x5FadeLo and
+      ! x5FadeHi. Both come from the IAG theory text rather than the paper's equations, so they
+      ! are named constants here rather than user inputs -- see the notes on Task 5.
+   real(ReKi), parameter         :: IAG_BlendLo  = 30.0_ReKi       ! deg; start of the dynamic->static blend
+   real(ReKi), parameter         :: IAG_BlendHi  = 45.0_ReKi       ! deg; end of the dynamic->static blend
+   real(ReKi), parameter         :: IAG_x5FadeLo = 45.0_ReKi       ! deg; start of the x5 fade-out
+   real(ReKi), parameter         :: IAG_x5FadeHi = 75.0_ReKi       ! deg; end of the x5 fade-out
 
    contains
    
@@ -1226,6 +1234,8 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
       p%NumOuts = 21
    elseif(p%UAMod == UA_HGMV360) then
       p%NumOuts = 22
+   elseif(p%UAMod == UA_IAG) then
+      p%NumOuts = 24   ! channels 1-20 as HGM, plus x5, tau_v, alphaF, VortexOn
    elseif(p%UAMod == UA_BV) then
       p%NumOuts = 26
    else
@@ -1287,7 +1297,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             iOffAcc = iOffset+11
 
 
-         elseif (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
+         elseif (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360 .or. p%UAMod == UA_IAG) then
             
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
@@ -1331,6 +1341,16 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
                InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
                InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
                iOffAcc = iOffset+22
+            else if (p%UAmod == UA_IAG) then
+               InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'x5'
+               InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'tau_v'
+               InitOut%WriteOutputHdr(iOffset+23)  = trim(chanPrefix)//'alphaF'
+               InitOut%WriteOutputHdr(iOffset+24)  = trim(chanPrefix)//'VortexOn'
+               InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
+               InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
+               InitOut%WriteOutputUnt(iOffset+23)  = '(deg)'
+               InitOut%WriteOutputUnt(iOffset+24)  = '(-)'
+               iOffAcc = iOffset+24
             end if
 
          elseif(p%UAMod == UA_BV) then
@@ -2623,7 +2643,11 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
                ! next -- a one-step lag, consistent with HGMV's elapsed-time test above.
                ! NOTE: tau_v is dimensionless and T_VL is compared to it directly. Do NOT
                ! multiply T_VL by Tu here; HGMV does, because it stores a wall-clock time.
-            OtherState%VortexOn_IAG(i,j) = upstroke .and. overCrit .and. tau_v_n1 < BL_p%T_VL
+               ! The weight test also terminates a running vortex once UA starts blending off:
+               ! a vortex left running through the cutout blend would keep tau_v advancing
+               ! against loads that are being faded to static.
+            OtherState%VortexOn_IAG(i,j) = upstroke .and. overCrit .and. tau_v_n1 < BL_p%T_VL &
+                                           .and. EqualRealNos(m%weight(i,j),1.0_ReKi)
 
          end if
 
@@ -3178,6 +3202,60 @@ pure LOGICAL FUNCTION IAG_Upstroke( alpha, dAlpha, PosStall )
    end if
 
 END FUNCTION IAG_Upstroke
+!---------------------------------------------------------------------------------
+!> Normal-force coefficient from an airfoil-table interpolation. Consistent with
+!! AirfoilInfo::Calculate_Cn and with the inlined expression in Get_f_from_Lookup.
+!! Cd0 is subtracted so that Cn -> 0 at alpha0.
+!! alpha need not be wrapped: cos/sin are 2*pi-periodic and the table lookup wraps
+!! internally. Do not add a wrap here.
+!! NOTE: AFI_interp%Cd0 is forced to 0 for tables without UA data, so this is only
+!! meaningful for UA-enabled tables -- always true on the IAG code path.
+pure real(ReKi) function Get_Cn( AFI_interp, alpha )
+   type(AFI_OutputType), intent(in) :: AFI_interp
+   real(ReKi),           intent(in) :: alpha
+   Get_Cn = AFI_interp%Cl*cos(alpha) + (AFI_interp%Cd - AFI_interp%Cd0)*sin(alpha)
+end function Get_Cn
+!---------------------------------------------------------------------------------
+!> Chordwise-force coefficient from an airfoil-table interpolation, consistent with the
+!! inlined expression in Get_f_c_from_Lookup. Cd0 is subtracted for the same reason as
+!! in Get_Cn.
+!! NOTE the module is not self-consistent about this: the HGM/HGMV output paths compute
+!! y%Cc = y%Cl*SinAlpha - y%Cd*CosAlpha *without* subtracting Cd0. IAG's Eq. 51 defines
+!! CT_D as the viscous static chordwise force, which is the Cd0-subtracted quantity.
+pure real(ReKi) function Get_Cc( AFI_interp, alpha )
+   type(AFI_OutputType), intent(in) :: AFI_interp
+   real(ReKi),           intent(in) :: alpha
+   Get_Cc = AFI_interp%Cl*sin(alpha) - (AFI_interp%Cd - AFI_interp%Cd0)*cos(alpha)
+end function Get_Cc
+!---------------------------------------------------------------------------------
+!> IAG model: linearly blend the dynamic Cd and Cm back to their static values between
+!! IAG_BlendLo and IAG_BlendHi degrees of incidence.
+!! Past ~30 deg the model's separated-flow construction loses validity, so the dynamic
+!! corrections are faded out rather than extrapolated. Cl/Cn/Cc are deliberately NOT
+!! blended here: Cl is reconstructed from Cn and Cc by Eq. 52, so blending it separately
+!! would make the three mutually inconsistent.
+!! This is applied BEFORE the shared UA_BlendSteady so that the two blends compose: this
+!! one fades dynamic->static, that one fades UA->steady at the cutout.
+subroutine IAG_BlendStatic( alpha_w, AFI_static, AFInfo, y )
+   real(ReKi),              intent(in   ) :: alpha_w     !< angle of attack, wrapped to [-pi,pi]
+   type(AFI_OutputType),    intent(in   ) :: AFI_static  !< static interpolation at u%alpha
+   type(AFI_ParameterType), intent(in   ) :: AFInfo      !< airfoil parameters (for ColCm)
+   type(UA_OutputType),     intent(inout) :: y           !< outputs, modified in place
+
+   real(ReKi) :: w
+
+      ! w = 1 fully dynamic, w = 0 fully static
+   w = 1.0_ReKi - min( max( (abs(alpha_w)*R2D - IAG_BlendLo)/(IAG_BlendHi - IAG_BlendLo), &
+                            0.0_ReKi ), 1.0_ReKi )
+
+   if (w < 1.0_ReKi) then
+      y%Cd = w*y%Cd + (1.0_ReKi - w)*AFI_static%Cd
+      if (AFInfo%ColCm /= 0) then
+         y%Cm = w*y%Cm + (1.0_ReKi - w)*AFI_static%Cm
+      end if
+   end if
+
+end subroutine IAG_BlendStatic
 !---------------------------------------------------------------------------------
 !> Compute angle of attack at 3/4 chord point based on values at Aerodynamic center
 real(ReKi) function Get_Alpha34(v_ac, omega, d_34_to_ac)
@@ -3773,6 +3851,14 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    type(AFI_OutputType)                         :: AFI_interp
    type(AFI_OutputType)                         :: AFI_interpE
    type(AFI_OutputType)                         :: AFI_interpF
+   ! for UA_IAG
+   type(AFI_OutputType)                         :: AFI_interpA   ! static interpolation at u%alpha
+   real(ReKi)                                   :: alpha_w       ! u%alpha wrapped to [-pi,pi]
+   real(ReKi)                                   :: tau_v         ! non-dimensional vortex time
+   real(ReKi)                                   :: CN_I, CN_C, CN_f, CN_D, CT_D, CM_C, CPv
+   real(ReKi)                                   :: One_Plus_Sqrt_x4
+   real(ReKi)                                   :: fs_alpha      ! separation function at u%alpha
+   real(ReKi)                                   :: x5_fade, x5_eff
    
    
    ErrStat   = ErrID_None           ! no error has occurred
@@ -3859,7 +3945,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       call BV_CalcOutput()
       if (ErrStat >= AbortErrLev) return
 
-   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
+   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360 .or. p%UAMod == UA_IAG) then
       ! --- CalcOutput State Space models
       x_in = x%element(i,j)
       
@@ -3878,6 +3964,16 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       
       call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interpE, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+         ! IAG's Eq. 53 and its static blend both need the STATIC values at u%alpha, which the
+         ! other HGM-family models never look up (they work from alphaE). Only done for IAG so
+         ! the other models keep their exact current cost.
+      if (p%UAMod == UA_IAG) then
+         call AFI_ComputeAirfoilCoefs( u%alpha, u%Re, u%UserProp, AFInfo, AFI_interpA, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         fs_alpha = AFI_interpA%f_st
+      end if
 
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
       x4 = max( min( x_in%x(4), 1.0_R8Ki ), 0.0_R8Ki )
@@ -3972,6 +4068,79 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
             
             y%Cm = AFI_interpE%Cm + cn_circ * delta_c_mf_primeprime - 0.0_ReKi * piBy2 * TuOmega - 0.25_ReKi*(1.0_ReKi - cos(pi * tV_ratio ))*x5
          end if
+
+      elseif (p%UAMod == UA_IAG) then
+
+            ! None of alphaF, AFI_interpF, x5, CN_I or CN_C is in scope on this path: alphaF is
+            ! only computed inside the HGMV360 sub-branch, x5 only inside the HGMV sub-branch,
+            ! and CN_I/CN_C are UA_CalcContStateDeriv locals. All are formed here, using the
+            ! SAME expressions as the state-derivative branch so the outputs cannot drift from
+            ! the ODEs. BL_p and the clamped TuOmega are already available above.
+         x5     = x_in%x(5)                                        ! vortex normal force, Eq. 45
+         tau_v  = OtherState%tau_v_IAG(i,j)                         ! written by UA_UpdateStates
+
+         alpha_w = u%alpha
+         call MPi2Pi(alpha_w)                                       ! for the CM_C and blend tests
+
+         alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE)    ! Eq. 41
+         call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interpF, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+
+         call AddOrSub2Pi(BL_p%alpha0, alphaE)                      ! wrap before the sin()
+         CN_I = 8.0_ReKi * BL_p%Ka * real(TuOmega,ReKi)             ! Eq. 38 (clamped TuOmega)
+         CN_C = BL_p%dCNdA * sin(alphaE - BL_p%alpha0)              ! Eq. 37
+
+            ! Kirchhoff blend toward the SINUSOIDAL attached curve -- the same curve the
+            ! IAG separation column was built against in AirfoilInfo (plan section 3.2).
+         One_Plus_Sqrt_x4 = 1.0_ReKi + sqrt(x4)
+         CN_f = BL_p%dCNdA * (0.5_ReKi*One_Plus_Sqrt_x4)**2 * sin(alphaE - BL_p%alpha0) + CN_I   ! Eq. 44
+
+            ! x5 is faded out between 45 and 75 deg (theory text): past deep stall the vortex
+            ! construction is no longer meaningful. Applied to every x5 contribution below.
+         x5_fade = 1.0_ReKi - BlendCosine( abs(alpha_w)*R2D, IAG_x5FadeLo, IAG_x5FadeHi )
+         x5_eff  = x5 * x5_fade
+
+         CN_D = CN_f + x5_eff                                       ! Eq. 50 (CN_V = x5)
+         CT_D = Get_Cc( AFI_interpF, alphaF )                       ! Eq. 51, viscous Cc at alphaF
+
+         y%Cn = CN_D
+         y%Cc = CT_D
+         y%Cl = CN_D*CosAlpha - CT_D*SinAlpha                       ! Eq. 52
+
+            ! Eq. 53. AFI_interp is the static interpolation at u%alpha, made further below for
+            ! the other models; the IAG branch needs it here, so it is computed above.
+         delta_c_df_primeprime = (0.5_ReKi*(1.0_ReKi - sqrt(x4)))**2 &
+                               - (0.5_ReKi*(1.0_ReKi - sqrt(fs_alpha)))**2
+         call AddOrSub2Pi(u%alpha, alphaE)
+         y%Cd = AFI_interpA%Cd + (u%alpha - alphaE)*CN_C &
+              + (AFI_interpA%Cd - BL_p%Cd0)*delta_c_df_primeprime &
+              + x5_eff*SinAlpha
+
+         if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+            y%Cm = 0.0_ReKi
+         else
+               ! Eq. 55. The sign flips when backwinded. Written as an explicit test on the
+               ! WRAPPED alpha rather than SIGN(): Fortran's SIGN(x,0.0) returns +|x|, and an
+               ! unwrapped angle would make abs(alpha) > PiBy2 true for e.g. 2*pi-0.1, which is
+               ! physically a small positive incidence.
+               ! The non-backwinded branch matches the -piBy2*TuOmega added-mass term used by
+               ! HGM and HGMV above; the sign flip is the IAG-specific part.
+            if (abs(alpha_w) > PiBy2) then
+               CM_C =  PiBy2 * real(TuOmega,ReKi)
+            else
+               CM_C = -PiBy2 * real(TuOmega,ReKi)
+            end if
+
+               ! Eq. 31: vortex center-of-pressure travel. tau_v is dimensionless, as is T_VL.
+               ! Clamped so the cosine cannot wrap back down if tau_v overshoots T_VL.
+            CPv  = BL_p%Kv * (1.0_ReKi - cos( pi * min(tau_v/BL_p%T_VL, 1.0_ReKi) ))
+            y%Cm = AFI_interpF%Cm - CPv*x5_eff + CM_C               ! Eqs. 54/29/30
+         end if
+
+            ! IAG-specific linear blend back to static Cd/Cm between 30 and 45 deg, applied
+            ! BEFORE the shared UA_BlendSteady below so the two blends compose.
+         call IAG_BlendStatic( alpha_w, AFI_interpA, AFInfo, y )
 
       else
          call SetErrStat(ErrID_Fatal, "Programming error, UAMod continuous model not accounted for", ErrStat, ErrMsg, RoutineName)
@@ -4163,7 +4332,7 @@ contains
          y%WriteOutput(iOffset+11)    = alpha_34*R2D
          iOffAcc = iOffset+11
    
-      elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360) then
+      elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE .or. p%UAMod == UA_HGMV360 .or. p%UAMod == UA_IAG) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
          y%WriteOutput(iOffset+ 9)    = alphaE*R2D
          y%WriteOutput(iOffset+10)    = Tu
@@ -4187,6 +4356,13 @@ contains
             y%WriteOutput(iOffset+21)    = x_in%x(6) !x%element(i,j)%x(6)
             y%WriteOutput(iOffset+22)    = x_in%x(7) !x%element(i,j)%x(7)
             iOffAcc = iOffset+22
+         else if (p%UAMod == UA_IAG) then
+            y%WriteOutput(iOffset+21)    = x_in%x(5)
+            y%WriteOutput(iOffset+22)    = OtherState%tau_v_IAG(i,j)
+            y%WriteOutput(iOffset+23)    = alphaF*R2D
+               ! LOGICAL has no implicit conversion to real in Fortran; use merge.
+            y%WriteOutput(iOffset+24)    = merge(1.0_ReKi, 0.0_ReKi, OtherState%VortexOn_IAG(i,j))
+            iOffAcc = iOffset+24
          end if
 
       elseif(p%UAMod == UA_BV) then
