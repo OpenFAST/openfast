@@ -3,6 +3,7 @@ use, intrinsic :: iso_fortran_env, only: error_unit
 use testdrive, only: run_testsuite, new_testsuite, testsuite_type
 
 use test_AD_FVW, only: test_AD_FVW_suite
+use test_AD_CalcWind_GS, only: test_AD_CalcWind_GS_suite
 use NWTC_Num
 
 implicit none
@@ -15,7 +16,8 @@ stat = 0
 call SetConstants()
 
 testsuites = [ &
-             new_testsuite("FVW", test_AD_FVW_suite) &
+             new_testsuite("FVW", test_AD_FVW_suite), &
+             new_testsuite("AD_CalcWind_GS", test_AD_CalcWind_GS_suite) &
              ]
 
 total_tests = 0
