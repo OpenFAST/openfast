@@ -535,6 +535,10 @@ same value.
 The impulsive (non-circulatory) normal force is scaled by the airfoil input ``Ka``, and the
 vortex center-of-pressure travel by ``Kv``. Vortex shedding is triggered on the calculated
 ``CnMax``/``CnMin`` thresholds rather than on ``Cn1``/``Cn2``, which the model does not use.
+``CnMax`` and ``CnMin`` are the extrema of the static :math:`C_n` polar and are reported in
+the unsteady-aero summary table; values of :math:`\pm 999` there are a sentinel indicating
+that no stall peak could be identified for that table and that vortex shedding is therefore
+disabled for it (see :numref:`airfoil_data_input_file`).
 
 Beyond roughly 30 degrees of incidence the separated-flow construction loses validity, so
 the dynamic :math:`C_d` and :math:`C_m` are faded linearly back to their static values

@@ -865,6 +865,18 @@ or calculating it based on the polar coefficient data in the airfoil table:
    ``f_st`` values written for ``UA_Mod=9`` are therefore **not** on a common
    basis with those written for ``UA_Mod=5``.
 
+-  ``CnMax`` and ``CnMin`` are not airfoil-file inputs. They are the maximum
+   and minimum of the static :math:`C_n` polar, calculated at initialization,
+   and they set the positive and negative vortex-shedding thresholds of the
+   IAG model. They are reported in the unsteady-aero summary table written
+   when ``UA_Mod=9`` and ``SumPrint = TRUE``. A reported value of
+   ``999.00000`` for ``CnMax`` (and ``-999.00000`` for ``CnMin``) is a
+   sentinel, not a physical coefficient: it means the vortex logic has been
+   disabled for that table, either because the model is not IAG or because
+   the polar has no identifiable stall peak, as for a cylinder-like table at
+   the blade root. Because :math:`|C_n|` can never reach 999, the shedding
+   trigger simply never fires and the model runs without vortex lift.
+
 -  ``T_f0`` is the initial value of the time constant associated with
    *Df* in the expressions of *Df* and *f’*; if the keyword ``DEFAULT`` is
    entered in place of a numerical value, ``T_f0`` is set to 3.0;

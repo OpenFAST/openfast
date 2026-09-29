@@ -43,6 +43,24 @@ MODULE AirfoilInfo
 
    integer, parameter                           :: MaxNumAFCoeffs = 7 !cl,cd,cm,cpMin, UA:f_st, FullySeparate, FullyAttached
 
+   !> Column count and field width of the UA summary table written by AFI_WrHeader / AFI_WrData.
+   !!
+   !! These MUST be shared: the two routines write the header line and the data lines of the same
+   !! file, and nothing else ties them together. They were previously declared as separate local
+   !! parameters in each routine, so adding a channel to one and not the other silently misaligned
+   !! every column of the table -- a failure with no error message and no obvious symptom.
+   !!
+   !! AFI_NumSumChans counts ALL columns, including the two leading integers (AirfoilNumber,
+   !! TableNumber). When adding a channel you must therefore touch three places:
+   !!   1. bump AFI_NumSumChans here;
+   !!   2. add the ChanName/ChanUnit pair in AFI_WrHeader;
+   !!   3. add the matching UA_BL field to the write list in AFI_WrData.
+   !! Step 1 vs 2 is checked at run time by the assertion at the end of the AFI_WrHeader
+   !! assignment block. Step 3 cannot be checked automatically -- a Fortran output list has no
+   !! introspectable length -- so it remains the one manual step.
+   integer, parameter                           :: AFI_NumSumChans = 51
+   integer, parameter                           :: AFI_SumChanWidth = 17
+
    !> Sentinel written into UA_BL%CnMax / CnMin when the IAG (UAMod=9) vortex logic must stay
    !! dormant: non-IAG models, and degenerate (cylinder-like) polars with no stall peak.
    !!
@@ -2267,11 +2285,15 @@ subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AFI_WrHeader'
    
-   integer, parameter                           :: MaxLen = 17
-   integer, parameter                           :: NumChans = 51
+   integer, parameter                           :: MaxLen = AFI_SumChanWidth
+   integer, parameter                           :: NumChans = AFI_NumSumChans
    character(MaxLen)                            :: ChanName( NumChans)
    character(MaxLen)                            :: ChanUnit( NumChans)
    
+   
+   ErrStat   = ErrID_None
+   ErrMsg    = ''
+   unOutFile = -1     ! defined on every path, including the early return below
    
    i=1
    ChanName(i) = 'AirfoilNumber';     ChanUnit(i) = '(-)';        i = i+1;
@@ -2326,6 +2348,18 @@ subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
    ChanName(i) = 'CnMax';             ChanUnit(i) = '(-)';        i = i+1;
    ChanName(i) = 'CnMin';             ChanUnit(i) = '(-)';        i = i+1;
 
+      ! Catch a channel added here without bumping AFI_NumSumChans (or vice versa). Without this,
+      ! too few assignments leave trailing columns filled with uninitialized garbage, and too many
+      ! overrun the array -- neither of which is reported unless bounds checking happens to be on.
+      ! This cannot check AFI_WrData's write list; see the AFI_NumSumChans comment.
+   if ( i-1 /= NumChans ) then
+      call SetErrStat( ErrID_Fatal, 'Programming error: AFI_WrHeader assigned '//trim(num2lstr(i-1))// &
+                       ' channels but AFI_NumSumChans is '//trim(num2lstr(NumChans))// &
+                       '. Update AFI_NumSumChans and the AFI_WrData write list to match.', &
+                       ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
    !$OMP critical(fileopen_critical)
    CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
    if (ErrStat < AbortErrLev) then
@@ -2370,8 +2404,8 @@ subroutine AFI_WrData(k, unOutFile, delim, AFInfo)
    
    integer(IntKi)                               :: i
    
-   integer, parameter                           :: MaxLen = 17
-   integer, parameter                           :: NumChans = 51
+   integer, parameter                           :: MaxLen = AFI_SumChanWidth
+   integer, parameter                           :: NumChans = AFI_NumSumChans
    real(ReKi)                                   :: TmpValues(NumChans)
    character(3)                                 :: MaxLenStr
    character(80)                                :: Fmt
