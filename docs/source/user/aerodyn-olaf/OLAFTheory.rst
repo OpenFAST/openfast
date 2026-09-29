@@ -625,7 +625,7 @@ point-vortex kernel is recovered.
 Exponential
 ^^^^^^^^^^^
 
-If the exponential method is used (**RegFunctionPart=[1]**, the default), the
+If the exponential method is used (**RegFunctionPart=[1]**), the
 regularization factor is
 
 .. math::
@@ -638,7 +638,7 @@ negligible and :math:`g` is set to :math:`1`.
 Compact support
 ^^^^^^^^^^^^^^^^
 
-If the compact-support method is used (**RegFunctionPart=[2]**), the kernel is
+If the compact-support method is used (**RegFunctionPart=[2]**, the default), the kernel is
 *exactly* singular (:math:`g=1`) beyond a finite support radius
 :math:`r_c'=1.6\,r_c`, and inside the support it is given by a polynomial
 mollifier
