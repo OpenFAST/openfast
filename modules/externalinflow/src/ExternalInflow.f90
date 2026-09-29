@@ -90,6 +90,17 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
+      ! ExternalInflow does not export the AeroDyn generalized-support-structure (GS) node positions
+      ! to CFD, nor map velocities back for them. GS nodes are appended to AeroDyn's wind-sampling
+      ! list, so leaving them uncounted here would silently return zero inflow on the GS (and shift
+      ! any OLAF wake-point indices). Reject the combination rather than run with bad inflow.
+   if (u_AD%rotors(1)%GSMotion%NNodes > 0) then
+      call SetErrStat(ErrID_Fatal, 'The AeroDyn generalized support structure (GSPotent/GSShadow/GSAero) '// &
+         'is not supported with ExternalInflow (CompInflow=2). Disable the GS model to use this inflow option.', &
+         ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
       !---------------------------
       ! Motion points from AD15
       !---------------------------

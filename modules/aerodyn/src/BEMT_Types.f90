@@ -204,12 +204,15 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_OutputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vrel      !< Total local relative velocity [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phi      !< angle between the plane of rotation and the direction of the local wind [rad]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phi_qs      !< From quasi-Steady BEM: flow angle solved by the constraint equation [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction      !< axial induction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction      !< tangential induction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction_qs      !< axial induction quasi steady [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction_qs      !< tangential induction quasi steady [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k      !< Factor k in blade element theory thrust coefficient [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k_p      !< Factor kp in blade element theory torque coefficient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cx_qs      !< From quasi-Steady BEM: normal to plane force coefficient, for Polar BEM Cx=cn=Cxl  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cy_qs      !< From quasi-Steady BEM: tangential to plane force coefficient, for Polar BEM Cy=ct=-Cyl  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F      !< Tip/hub loss factor [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Re      !< Reynold's number [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AOA      !< angle of attack [rad]
@@ -251,26 +254,29 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: BEMT_u_toeAngle                  =  23 ! BEMT%toeAngle
    integer(IntKi), public, parameter :: BEMT_y_Vrel                      =  24 ! BEMT%Vrel
    integer(IntKi), public, parameter :: BEMT_y_phi                       =  25 ! BEMT%phi
-   integer(IntKi), public, parameter :: BEMT_y_axInduction               =  26 ! BEMT%axInduction
-   integer(IntKi), public, parameter :: BEMT_y_tanInduction              =  27 ! BEMT%tanInduction
-   integer(IntKi), public, parameter :: BEMT_y_axInduction_qs            =  28 ! BEMT%axInduction_qs
-   integer(IntKi), public, parameter :: BEMT_y_tanInduction_qs           =  29 ! BEMT%tanInduction_qs
-   integer(IntKi), public, parameter :: BEMT_y_k                         =  30 ! BEMT%k
-   integer(IntKi), public, parameter :: BEMT_y_k_p                       =  31 ! BEMT%k_p
-   integer(IntKi), public, parameter :: BEMT_y_F                         =  32 ! BEMT%F
-   integer(IntKi), public, parameter :: BEMT_y_Re                        =  33 ! BEMT%Re
-   integer(IntKi), public, parameter :: BEMT_y_AOA                       =  34 ! BEMT%AOA
-   integer(IntKi), public, parameter :: BEMT_y_Cx                        =  35 ! BEMT%Cx
-   integer(IntKi), public, parameter :: BEMT_y_Cy                        =  36 ! BEMT%Cy
-   integer(IntKi), public, parameter :: BEMT_y_Cz                        =  37 ! BEMT%Cz
-   integer(IntKi), public, parameter :: BEMT_y_Cmx                       =  38 ! BEMT%Cmx
-   integer(IntKi), public, parameter :: BEMT_y_Cmy                       =  39 ! BEMT%Cmy
-   integer(IntKi), public, parameter :: BEMT_y_Cmz                       =  40 ! BEMT%Cmz
-   integer(IntKi), public, parameter :: BEMT_y_Cm                        =  41 ! BEMT%Cm
-   integer(IntKi), public, parameter :: BEMT_y_Cl                        =  42 ! BEMT%Cl
-   integer(IntKi), public, parameter :: BEMT_y_Cd                        =  43 ! BEMT%Cd
-   integer(IntKi), public, parameter :: BEMT_y_chi                       =  44 ! BEMT%chi
-   integer(IntKi), public, parameter :: BEMT_y_Cpmin                     =  45 ! BEMT%Cpmin
+   integer(IntKi), public, parameter :: BEMT_y_phi_qs                    =  26 ! BEMT%phi_qs
+   integer(IntKi), public, parameter :: BEMT_y_axInduction               =  27 ! BEMT%axInduction
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction              =  28 ! BEMT%tanInduction
+   integer(IntKi), public, parameter :: BEMT_y_axInduction_qs            =  29 ! BEMT%axInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction_qs           =  30 ! BEMT%tanInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_k                         =  31 ! BEMT%k
+   integer(IntKi), public, parameter :: BEMT_y_k_p                       =  32 ! BEMT%k_p
+   integer(IntKi), public, parameter :: BEMT_y_Cx_qs                     =  33 ! BEMT%Cx_qs
+   integer(IntKi), public, parameter :: BEMT_y_Cy_qs                     =  34 ! BEMT%Cy_qs
+   integer(IntKi), public, parameter :: BEMT_y_F                         =  35 ! BEMT%F
+   integer(IntKi), public, parameter :: BEMT_y_Re                        =  36 ! BEMT%Re
+   integer(IntKi), public, parameter :: BEMT_y_AOA                       =  37 ! BEMT%AOA
+   integer(IntKi), public, parameter :: BEMT_y_Cx                        =  38 ! BEMT%Cx
+   integer(IntKi), public, parameter :: BEMT_y_Cy                        =  39 ! BEMT%Cy
+   integer(IntKi), public, parameter :: BEMT_y_Cz                        =  40 ! BEMT%Cz
+   integer(IntKi), public, parameter :: BEMT_y_Cmx                       =  41 ! BEMT%Cmx
+   integer(IntKi), public, parameter :: BEMT_y_Cmy                       =  42 ! BEMT%Cmy
+   integer(IntKi), public, parameter :: BEMT_y_Cmz                       =  43 ! BEMT%Cmz
+   integer(IntKi), public, parameter :: BEMT_y_Cm                        =  44 ! BEMT%Cm
+   integer(IntKi), public, parameter :: BEMT_y_Cl                        =  45 ! BEMT%Cl
+   integer(IntKi), public, parameter :: BEMT_y_Cd                        =  46 ! BEMT%Cd
+   integer(IntKi), public, parameter :: BEMT_y_chi                       =  47 ! BEMT%chi
+   integer(IntKi), public, parameter :: BEMT_y_Cpmin                     =  48 ! BEMT%Cpmin
 
 contains
 
@@ -1745,6 +1751,18 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       end if
       DstOutputData%phi = SrcOutputData%phi
    end if
+   if (allocated(SrcOutputData%phi_qs)) then
+      LB(1:2) = lbound(SrcOutputData%phi_qs)
+      UB(1:2) = ubound(SrcOutputData%phi_qs)
+      if (.not. allocated(DstOutputData%phi_qs)) then
+         allocate(DstOutputData%phi_qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%phi_qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%phi_qs = SrcOutputData%phi_qs
+   end if
    if (allocated(SrcOutputData%axInduction)) then
       LB(1:2) = lbound(SrcOutputData%axInduction)
       UB(1:2) = ubound(SrcOutputData%axInduction)
@@ -1816,6 +1834,30 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%k_p = SrcOutputData%k_p
+   end if
+   if (allocated(SrcOutputData%Cx_qs)) then
+      LB(1:2) = lbound(SrcOutputData%Cx_qs)
+      UB(1:2) = ubound(SrcOutputData%Cx_qs)
+      if (.not. allocated(DstOutputData%Cx_qs)) then
+         allocate(DstOutputData%Cx_qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%Cx_qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%Cx_qs = SrcOutputData%Cx_qs
+   end if
+   if (allocated(SrcOutputData%Cy_qs)) then
+      LB(1:2) = lbound(SrcOutputData%Cy_qs)
+      UB(1:2) = ubound(SrcOutputData%Cy_qs)
+      if (.not. allocated(DstOutputData%Cy_qs)) then
+         allocate(DstOutputData%Cy_qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%Cy_qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%Cy_qs = SrcOutputData%Cy_qs
    end if
    if (allocated(SrcOutputData%F)) then
       LB(1:2) = lbound(SrcOutputData%F)
@@ -2000,6 +2042,9 @@ subroutine BEMT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%phi)) then
       deallocate(OutputData%phi)
    end if
+   if (allocated(OutputData%phi_qs)) then
+      deallocate(OutputData%phi_qs)
+   end if
    if (allocated(OutputData%axInduction)) then
       deallocate(OutputData%axInduction)
    end if
@@ -2017,6 +2062,12 @@ subroutine BEMT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
    if (allocated(OutputData%k_p)) then
       deallocate(OutputData%k_p)
+   end if
+   if (allocated(OutputData%Cx_qs)) then
+      deallocate(OutputData%Cx_qs)
+   end if
+   if (allocated(OutputData%Cy_qs)) then
+      deallocate(OutputData%Cy_qs)
    end if
    if (allocated(OutputData%F)) then
       deallocate(OutputData%F)
@@ -2069,12 +2120,15 @@ subroutine BEMT_PackOutput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%Vrel)
    call RegPackAlloc(RF, InData%phi)
+   call RegPackAlloc(RF, InData%phi_qs)
    call RegPackAlloc(RF, InData%axInduction)
    call RegPackAlloc(RF, InData%tanInduction)
    call RegPackAlloc(RF, InData%axInduction_qs)
    call RegPackAlloc(RF, InData%tanInduction_qs)
    call RegPackAlloc(RF, InData%k)
    call RegPackAlloc(RF, InData%k_p)
+   call RegPackAlloc(RF, InData%Cx_qs)
+   call RegPackAlloc(RF, InData%Cy_qs)
    call RegPackAlloc(RF, InData%F)
    call RegPackAlloc(RF, InData%Re)
    call RegPackAlloc(RF, InData%AOA)
@@ -2102,12 +2156,15 @@ subroutine BEMT_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%Vrel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%phi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%phi_qs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%axInduction); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%tanInduction); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%axInduction_qs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%tanInduction_qs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%k); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%k_p); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cx_qs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cy_qs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Re); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AOA); if (RegCheckErr(RF, RoutineName)) return
@@ -2475,6 +2532,9 @@ SUBROUTINE BEMT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
    IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
       y_out%phi = a1*y1%phi + a2*y2%phi
    END IF ! check if allocated
+   IF (ALLOCATED(y_out%phi_qs) .AND. ALLOCATED(y1%phi_qs)) THEN
+      y_out%phi_qs = a1*y1%phi_qs + a2*y2%phi_qs
+   END IF ! check if allocated
    IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
       y_out%axInduction = a1*y1%axInduction + a2*y2%axInduction
    END IF ! check if allocated
@@ -2492,6 +2552,12 @@ SUBROUTINE BEMT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
    END IF ! check if allocated
    IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
       y_out%k_p = a1*y1%k_p + a2*y2%k_p
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cx_qs) .AND. ALLOCATED(y1%Cx_qs)) THEN
+      y_out%Cx_qs = a1*y1%Cx_qs + a2*y2%Cx_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cy_qs) .AND. ALLOCATED(y1%Cy_qs)) THEN
+      y_out%Cy_qs = a1*y1%Cy_qs + a2*y2%Cy_qs
    END IF ! check if allocated
    IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
       y_out%F = a1*y1%F + a2*y2%F
@@ -2600,6 +2666,9 @@ SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
       y_out%phi = a1*y1%phi + a2*y2%phi + a3*y3%phi
    END IF ! check if allocated
+   IF (ALLOCATED(y_out%phi_qs) .AND. ALLOCATED(y1%phi_qs)) THEN
+      y_out%phi_qs = a1*y1%phi_qs + a2*y2%phi_qs + a3*y3%phi_qs
+   END IF ! check if allocated
    IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
       y_out%axInduction = a1*y1%axInduction + a2*y2%axInduction + a3*y3%axInduction
    END IF ! check if allocated
@@ -2617,6 +2686,12 @@ SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    END IF ! check if allocated
    IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
       y_out%k_p = a1*y1%k_p + a2*y2%k_p + a3*y3%k_p
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cx_qs) .AND. ALLOCATED(y1%Cx_qs)) THEN
+      y_out%Cx_qs = a1*y1%Cx_qs + a2*y2%Cx_qs + a3*y3%Cx_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cy_qs) .AND. ALLOCATED(y1%Cy_qs)) THEN
+      y_out%Cy_qs = a1*y1%Cy_qs + a2*y2%Cy_qs + a3*y3%Cy_qs
    END IF ! check if allocated
    IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
       y_out%F = a1*y1%F + a2*y2%F + a3*y3%F
@@ -2970,6 +3045,8 @@ subroutine BEMT_VarPackOutput(V, y, ValAry)
          VarVals = y%Vrel(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
       case (BEMT_y_phi)
          VarVals = y%phi(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_phi_qs)
+         VarVals = y%phi_qs(V%iLB:V%iUB,V%j)                                  ! Rank 2 Array
       case (BEMT_y_axInduction)
          VarVals = y%axInduction(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
       case (BEMT_y_tanInduction)
@@ -2982,6 +3059,10 @@ subroutine BEMT_VarPackOutput(V, y, ValAry)
          VarVals = y%k(V%iLB:V%iUB,V%j)                                       ! Rank 2 Array
       case (BEMT_y_k_p)
          VarVals = y%k_p(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cx_qs)
+         VarVals = y%Cx_qs(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case (BEMT_y_Cy_qs)
+         VarVals = y%Cy_qs(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
       case (BEMT_y_F)
          VarVals = y%F(V%iLB:V%iUB,V%j)                                       ! Rank 2 Array
       case (BEMT_y_Re)
@@ -3036,6 +3117,8 @@ subroutine BEMT_VarUnpackOutput(V, ValAry, y)
          y%Vrel(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
       case (BEMT_y_phi)
          y%phi(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_phi_qs)
+         y%phi_qs(V%iLB:V%iUB, V%j) = VarVals                                 ! Rank 2 Array
       case (BEMT_y_axInduction)
          y%axInduction(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
       case (BEMT_y_tanInduction)
@@ -3048,6 +3131,10 @@ subroutine BEMT_VarUnpackOutput(V, ValAry, y)
          y%k(V%iLB:V%iUB, V%j) = VarVals                                      ! Rank 2 Array
       case (BEMT_y_k_p)
          y%k_p(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cx_qs)
+         y%Cx_qs(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      case (BEMT_y_Cy_qs)
+         y%Cy_qs(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
       case (BEMT_y_F)
          y%F(V%iLB:V%iUB, V%j) = VarVals                                      ! Rank 2 Array
       case (BEMT_y_Re)
@@ -3088,6 +3175,8 @@ function BEMT_OutputFieldName(DL) result(Name)
        Name = "y%Vrel"
    case (BEMT_y_phi)
        Name = "y%phi"
+   case (BEMT_y_phi_qs)
+       Name = "y%phi_qs"
    case (BEMT_y_axInduction)
        Name = "y%axInduction"
    case (BEMT_y_tanInduction)
@@ -3100,6 +3189,10 @@ function BEMT_OutputFieldName(DL) result(Name)
        Name = "y%k"
    case (BEMT_y_k_p)
        Name = "y%k_p"
+   case (BEMT_y_Cx_qs)
+       Name = "y%Cx_qs"
+   case (BEMT_y_Cy_qs)
+       Name = "y%Cy_qs"
    case (BEMT_y_F)
        Name = "y%F"
    case (BEMT_y_Re)

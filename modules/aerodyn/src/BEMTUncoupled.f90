@@ -297,8 +297,8 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    real(ReKi), intent(in   ) :: Cm
    real(ReKi), intent(  out) :: Cx, Cy, Cz
    real(ReKi), intent(  out) :: Cmx, Cmy, Cmz
-   real(ReKi)                :: afAxialVec(3)  !xhat_a_in_l
-   real(ReKi)                :: afNormalVec(3) !yhat_a_in_l
+   real(ReKi)                :: afAxialVec(3)  !yhat_a_in_l
+   real(ReKi)                :: afNormalVec(3) !xhat_a_in_l
    real(ReKi)                :: afRadialVec(3) !zhat_a_in_l
    real(ReKi)                :: coeffVec(3)
    real(ReKi)                :: Cn
