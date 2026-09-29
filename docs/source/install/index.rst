@@ -491,7 +491,6 @@ The CMake options specific to OpenFAST and their default settings are:
     CMAKE_MACOSX_RPATH             - Use RPATH runtime linking (Default: ON)
     CODECOVERAGE                   - Enable infrastructure for measuring code coverage (Default: OFF)
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
-    FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
     GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules (Default: OFF)
     OPENMP                         - Enable OpenMP support (Default: OFF)
     WIN_DLL_LOAD                   - Enable loading of Windows DLLs for OrcaFlex and SoilDyn (Default: ON)
