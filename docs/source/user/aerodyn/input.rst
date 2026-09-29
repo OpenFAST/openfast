@@ -358,8 +358,13 @@ Most ``UA_Mod`` will require `AoA34` to be set to true. But when using quasi-ste
 - ``5``: 5-states continuous-time B-L model similar to HGM with an additional state for vortex generation
 - ``6``: 1-state continuous-time developed by Oye
 - ``7``: discrete-time Boeing-Vertol (BV) model
+- ``9``: 5-states continuous-time IAG model (first-order, state-space), with a vortex state
 
-Linearization is supported with ``UA_Mod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
+Linearization is supported with ``UA_Mod=4,5,6,9`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
+
+.. note::
+    For ``UA_Mod=9``, only the first four states are linearized; the fifth (vortex) state
+    is excluded, exactly as for ``UA_Mod=5``.
 
 .. note::
     Link to old inputs: If `UA_Mod>0`, then this is equivalent to the old `AFAeroMod=2`. 
@@ -840,6 +845,25 @@ or calculating it based on the polar coefficient data in the airfoil table:
 
 -  ``C_lalpha`` is the slope of the 2D normal lift coefficient curve
    in the linear region; Used for ``UA_Mod=4,6``.
+
+-  ``Ka`` is the impulsive (non-circulatory) normal-force gain of the IAG
+   model; used only when ``UA_Mod=9``. If the keyword ``DEFAULT`` is entered
+   in place of a numerical value, ``Ka`` is set to 0.75.
+
+-  ``Kv`` is the amplitude of the vortex center-of-pressure travel in the
+   IAG model; used only when ``UA_Mod=9``. If the keyword ``DEFAULT`` is
+   entered in place of a numerical value, ``Kv`` is set to 0.2.
+
+-  ``dCNdA`` is the slope of the static :math:`C_n` curve used by the IAG
+   model; used only when ``UA_Mod=9``. If the keyword ``DEFAULT`` is entered
+   in place of a numerical value, ``dCNdA`` is obtained from a linear fit to
+   the attached-flow region of the supplied polar. Note that ``UA_Mod=9``
+   uses ``dCNdA`` rather than ``C_nalpha`` or ``C_lalpha``, and that it
+   builds its **own** separation function by tabulating
+   :math:`dCNdA\,\sin(\alpha-\alpha_0)`, rather than using the
+   piecewise-linear fully-attached curve shared by the HGM/HGMV models. The
+   ``f_st`` values written for ``UA_Mod=9`` are therefore **not** on a common
+   basis with those written for ``UA_Mod=5``.
 
 -  ``T_f0`` is the initial value of the time constant associated with
    *Df* in the expressions of *Df* and *f’*; if the keyword ``DEFAULT`` is

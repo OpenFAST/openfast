@@ -494,6 +494,56 @@ The moment coefficient is calculated based on values at the aerodynamic center a
 where :math:`\alpha_{50}` is computed the same way as :math:`\alpha_{34}` (using the velocity at the aerodynamic center and the rotational rate of the airfoil) but using the distance from the aerodynamic center to the mid-chord (see :numref:`ua_notations`).
 
 
+IAG model (UAMod=9)
+~~~~~~~~~~~~~~~~~~~
+
+The IAG model :cite:`ad-Bangga:2020,ad-Bangga:2023` is a five-state, continuous-time
+Beddoes-Leishman variant. Like the HGMV model (``UA_Mod=5``) it carries two downwash memory
+states :math:`x_1,x_2`, a lagged attached-flow state :math:`x_3`, a separation state
+:math:`x_4`, and a vortex state :math:`x_5`. Linearization is supported, but only
+:math:`x_1`-:math:`x_4` are linearized; the vortex state is excluded.
+
+The model differs from HGM/HGMV in three ways that matter when comparing output:
+
+**1. It uses a sinusoidal attached-flow curve, not a piecewise-linear one.** The circulatory
+normal force is
+
+.. math::
+   C_N^C = \frac{\mathrm{d}C_N}{\mathrm{d}\alpha}\,\sin(\alpha_E - \alpha_0)
+
+so the model is driven by the airfoil input ``dCNdA`` rather than by ``C_nalpha`` or
+``C_lalpha``, neither of which it reads. ``dCNdA`` is obtained by a linear fit to the
+attached-flow region of the supplied polar unless the user overrides it.
+
+**2. It builds its own separation function.** The ``f_st`` column used by ``UA_Mod=9`` is
+tabulated by inverting the squared-Kirchhoff relation against the sinusoidal curve above,
+
+.. math::
+   C_N^f = \frac{\mathrm{d}C_N}{\mathrm{d}\alpha}
+           \left(\frac{1+\sqrt{x_4}}{2}\right)^{2}\sin(\alpha_F-\alpha_0) + C_N^I
+
+rather than against the piecewise-linear ``FullyAttached`` curve shared by the HGM/HGMV
+models. **The** ``f_st`` **values written for** ``UA_Mod=9`` **are therefore not on a common
+basis with those written for** ``UA_Mod=5``, and the two should not be compared directly.
+
+**3. The effective and separation angles do not coincide.** Because the attached-flow
+relation is sinusoidal, inverting it for :math:`\alpha_F` gives
+:math:`\alpha_F = \alpha_0 + \sin(\alpha_E-\alpha_0)` under the model's linearized
+inversion, so :math:`\alpha_F \neq \alpha_E` in general. For HGM the two collapse to the
+same value.
+
+The impulsive (non-circulatory) normal force is scaled by the airfoil input ``Ka``, and the
+vortex center-of-pressure travel by ``Kv``. Vortex shedding is triggered on the calculated
+``CnMax``/``CnMin`` thresholds rather than on ``Cn1``/``Cn2``, which the model does not use.
+
+Beyond roughly 30 degrees of incidence the separated-flow construction loses validity, so
+the dynamic :math:`C_d` and :math:`C_m` are faded linearly back to their static values
+between 30 and 45 degrees. This is applied before the shared UA cutout blend, so the two
+compose. :math:`C_l`, :math:`C_n` and :math:`C_c` are deliberately not faded separately,
+since :math:`C_l` is reconstructed from :math:`C_n` and :math:`C_c` and blending it
+independently would make the three mutually inconsistent.
+
+
 
 
 
