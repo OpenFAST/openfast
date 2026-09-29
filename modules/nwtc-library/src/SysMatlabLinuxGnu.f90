@@ -273,50 +273,20 @@ SUBROUTINE ProgExit ( StatCode )
 
 END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
-      
-   ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
-   ! values for not-a-number and infinity in sindle and double 
-   ! precision) F03 has standard intrinsic routines to do this,  
-   ! but Gnu has not yet implemented it. This code will fail if  
-   ! the compiler checks for floating-point-error, hence the  
-   ! compiler directive FPE_TRAP_ENABLED.
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
 
-   REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
-   REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+   USE, INTRINSIC :: ieee_arithmetic
 
-   REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
-   REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+   REAL(DbKi), INTENT(inout) :: NaN_D, Inf_D
+   REAL(ReKi), INTENT(inout) :: NaN, Inf
+   REAL(SiKi), INTENT(inout) :: NaN_S, Inf_S
 
-   REAL(SiKi), INTENT(inout)           :: Inf_S          ! IEEE value for NaN (not-a-number) in single precision
-   REAL(SiKi), INTENT(inout)           :: NaN_S          ! IEEE value for Inf (infinity) in single precision
-
-   real(DbKi)     :: Neg_D
-   real(SiKi)     :: Neg_S
-   real(ReKi)     :: Neg
-
-      ! if compiling with floating-point-exception traps, this will not work, so we've added a compiler directive.
-      !  note that anything that refers to NaN or Inf will be incorrect in that case.
-      
-#ifndef FPE_TRAP_ENABLED      
-      ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
-   Neg_D = -1.0_DbKi
-   Neg_S = -1.0_SiKi
-   Neg   = -1.0_ReKi
-
-   NaN_D = SQRT ( Neg_D )
-   NaN_S = SQRT ( Neg_S )
-   NaN   = SQRT ( Neg )
-
-      ! set variables to zero to calculate Infs (using division by zero)
-   Neg_D = 0.0_DbKi
-   Neg_S = 0.0_SiKi
-   Neg   = 0.0_ReKi
-   
-   Inf_D = 1.0_DbKi / Neg_D
-   Inf_S = 1.0_SiKi / Neg_S
-   Inf   = 1.0_ReKi / Neg
-#endif 
+   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+   NaN = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   Inf = ieee_value(0.0_ReKi, ieee_positive_inf)
+   NaN_S = ieee_value(0.0_SiKi, ieee_quiet_nan)
+   Inf_S = ieee_value(0.0_SiKi, ieee_positive_inf)
 
 END SUBROUTINE Set_IEEE_Constants
 !=======================================================================
