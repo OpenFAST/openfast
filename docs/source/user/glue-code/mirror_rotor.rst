@@ -74,7 +74,8 @@ The flow of the flag through the code, and what changes where:
 
 .. mermaid::
 
-   flowchart TD
+   %%{init: {"theme": "base", "flowchart": {"rankSpacing": 110, "nodeSpacing": 45}, "themeVariables": {"fontSize": "18px", "primaryColor": "#d8e9f7", "primaryTextColor": "#000000", "primaryBorderColor": "#5b8db8", "lineColor": "#5b8db8"}}}%%
+   flowchart LR
        FST["OpenFAST primary input<br/>MirrorRotor = T (per rotor)"] --> GLUE["Glue code<br/>hands the flag to each module at Init"]
 
        GLUE --> ED["ElastoDyn /<br/>Simplified-ElastoDyn"]
@@ -443,6 +444,12 @@ would see on a clockwise machine and behaves identically.  Rotor speed, blade
 pitch, generator and brake torque, shaft azimuth and the blade root moments are
 all converted; the controller needs no mirrored copy and no new input.
 
+Assumptions of even blade spacing *in the direction of rotation* also hold,
+because the blades are numbered that way for either convention: ServoDyn's
+built-in cosine flap schedule and the per-blade azimuth offsets a Bladed-style
+DLL computes for itself from the rotor azimuth are correct for a mirrored rotor
+with no controller-side change.
+
 Yaw is the exception, and it is deliberate.  Yaw acts about the vertical axis in
 the inertial frame, so it is **not** a rotor-convention quantity and is left
 alone.  The yaw angle, the wind direction and hence the yaw error all stay
@@ -595,3 +602,17 @@ turbulence box, for the reason given above.
 
 For a clockwise rotor every mirror-related expression reduces to a multiplication
 by ``+1``, so existing regression baselines reproduce bit-for-bit.
+
+Two further checks live in ``reg_tests/otherTests/``.
+``check_rtest_mirror_pair.py`` compares the committed baselines of every pair
+against each other and carries a **sweep-order assertion** on the ``BAzimuth``
+channels: the blade spacing from blade 1 must read +120° and +240° in the
+rotor's own convention for the clockwise *and* the mirrored half, which guards
+the blade-numbering convention directly — under the reversed numbering the
+mirrored half reads 240° and 120°, a full blade spacing of discrimination.
+``run_guards.sh`` proves every restriction in the table above actually
+**fires** when its combination is requested, and stays silent for a clockwise
+rotor — including the FAST.Farm refusals, which it exercises against the real
+FAST.Farm executable — alongside the visualisation-surface comparison.  A guard
+that is never reached looks exactly like a guard that stayed silent, which is
+why the firing is tested rather than assumed.

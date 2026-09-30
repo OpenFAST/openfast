@@ -26,3 +26,15 @@ table.wrap-last td:last-child {
 }
 
    
+
+/* Mermaid diagrams: fill the content column rather than rendering at
+   natural size (mermaid only scales down, never up). sphinxcontrib-mermaid
+   2.x emits <pre class="mermaid">, older versions <div class="mermaid">,
+   so match the class alone. */
+.mermaid svg {
+    width: 70% !important;
+    max-width: 70% !important;
+    height: auto !important;
+    display: block;
+    margin: 0 auto;
+}
