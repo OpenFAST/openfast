@@ -992,6 +992,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    ! Basic inputs
    real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone, twr2Shft ! Basic inputs when basicHAWTFormat is true
    real(ReKi) :: nacYaw, bldPitch, rotSpeed
+   real(ReKi) :: rotDirDvr     ! +1 normal, -1 when the rotor rotation is mirrored
    errStat = ErrID_None
    errMsg  = ''
    UnIn = -1
@@ -1114,12 +1115,17 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          wt%hub%origin_n      = (/ overhang * cos(shftTilt), 0.0_ReKi, -overhang * sin(shftTilt) + twr2shft /)              ! IDEM
          wt%hub%orientation_n = (/ 0.0_ReKi,  shftTilt, 0.0_ReKi  /)
 
-         ! blades
+         ! blades. The azimuth spacing carries the rotation sense, so the blades are
+         ! numbered in the direction of rotation for a mirrored rotor as well as a
+         ! clockwise one. The advanced format takes BldOrientation_h as given, so the
+         ! user supplies mirrored azimuths there themselves.
+         rotDirDvr = 1.0_ReKi
+         if (wt%MirrorRotor) rotDirDvr = -1.0_ReKi
          allocate(wt%bld(wt%numBlades))
          do iB=1,wt%numBlades
             wt%bld(iB)%pitch              = myNaN
             wt%bld(iB)%origin_h(1:3)      = 0.0_ReKi
-            wt%bld(iB)%orientation_h(1)   = (iB-1)*(2._ReKi*Pi)/wt%numBlades
+            wt%bld(iB)%orientation_h(1)   = rotDirDvr*(iB-1)*(2._ReKi*Pi)/wt%numBlades
             wt%bld(iB)%orientation_h(2)   = precone
             wt%bld(iB)%orientation_h(3)   = 0.0_ReKi
             wt%bld(iB)%hubRad_bl          = hubRad

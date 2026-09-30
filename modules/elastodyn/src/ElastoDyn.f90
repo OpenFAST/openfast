@@ -6265,8 +6265,10 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
 
 
       ! Hub (Prime) coordinate system rotated to match blade K.
+      ! The spacing carries the rotation sense, so the blades are numbered in the
+      ! direction of rotation for a mirrored rotor as well as a clockwise one.
 
-       gRotAng = p%TwoPiNB*(K-1)
+       gRotAng = REAL(p%RotDir,R8Ki)*p%TwoPiNB*(K-1)
       CgRotAng = COS( gRotAng )
       SgRotAng = SIN( gRotAng )
 

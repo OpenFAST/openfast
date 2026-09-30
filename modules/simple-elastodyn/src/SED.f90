@@ -404,8 +404,9 @@ contains
          ! apply to ref orientation of hub
          Orient = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1),transpose(R33b))
 
-         ! now apply azimuth rotation about hub X
-         RootAz = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
+         ! now apply azimuth rotation about hub X. The spacing carries the rotation
+         ! sense, so the blades are numbered in the direction of rotation.
+         RootAz = real(p%RotDir,R8Ki) * real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
          R33c(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
          call Eye(R33b,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
          ! Rodrigues formula for rotation about a vector
