@@ -133,10 +133,10 @@ macro(set_fast_gfortran)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all,no-array-temps -pedantic -fbacktrace -finit-real=inf -finit-integer=9999." )
   endif()
 
-  if(CYGWIN)
-    # increase the default 2MB stack size to 16 MB
+  if(CYGWIN OR MINGW)
+    # increase the default 1-2 MB stack size to 16 MB
     MATH(EXPR stack_size "16 * 1024 * 1024")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,${stack_size}")
   endif()
 
   # Profiling

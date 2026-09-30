@@ -980,6 +980,7 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
             SegConnct(1:2, iMirror) =  SegConnct(1:2, i) + nSegP ! Increased point indices
             SegConnct(3:4, iMirror) =  SegConnct(3:4, i) ! Span and age is copied
             SegGamma(iMirror)       = -SegGamma(i)       ! Vorticity needs mirroring
+            SegEpsilon(iMirror)     =  SegEpsilon(i)     ! Regularization (core size) is copied
          enddo
          do i=1,nSegP
             iMirror = i + nSegP
@@ -1047,7 +1048,8 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          write(*,'(A,1F8.4)')   'RegParam (Input      ) : ',p%WakeRegParam
       endif
 
-      if (p%RegDeterMethod==idRegDeterConstant) then
+      select case (p%RegDeterMethod)
+      case (idRegDeterConstant)
          ! Constant reg param throughout the wake
          if (p%WakeRegMethod==idRegAge) then ! NOTE: age method implies a division by rc
             p%WingRegParam=max(0.01_ReKi, p%WingRegParam)
@@ -1061,7 +1063,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
             x%W(iW)%Eps_NW(1:3,:,2) = p%WakeRegParam ! Second age is always WakeRegParam
          endif
 
-      else if (p%RegDeterMethod==idRegDeterAuto) then
+      case (idRegDeterAuto)
          ! TODO this is beta
          print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
          print*,'!!! NOTE: using optimized wake regularization parameters is still a beta feature!'
@@ -1078,14 +1080,14 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
          write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
          write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
-      ! Set reg param on wing and first NW
-      ! NOTE: setting the same in all three directions for now, TODO!
-      x%W(iW)%Eps_NW(1:3,:,1) = p%WingRegParam ! First age is always WingRegParam (LL)
-      if (p%nNWMax>1) then
-         x%W(iW)%Eps_NW(1:3,:,2) = p%WakeRegParam ! Second age is always WakeRegParam
-      endif
+         ! Set reg param on wing and first NW
+         ! NOTE: setting the same in all three directions for now, TODO!
+         x%W(iW)%Eps_NW(1:3,:,1) = p%WingRegParam ! First age is always WingRegParam (LL)
+         if (p%nNWMax>1) then
+            x%W(iW)%Eps_NW(1:3,:,2) = p%WakeRegParam ! Second age is always WakeRegParam
+         endif
 
-      else if (p%RegDeterMethod==idRegDeterChord) then
+      case (idRegDeterChord)
          ! Using chord to scale the reg param
          do iSpan=1,p%W(iW)%nSpan
             x%W(iW)%Eps_NW(1:3, iSpan, 1) = p%WingRegParam * p%W(iW)%chord_CP(iSpan)
@@ -1094,7 +1096,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
             endif
          enddo
 
-      else if (p%RegDeterMethod==idRegDeterSpan) then
+      case (idRegDeterSpan)
          ! Using dr to scale the reg param
          do iSpan=1,p%W(iW)%nSpan
             ds = p%W(iW)%s_LL(iSpan+1)-p%W(iW)%s_LL(iSpan)
@@ -1103,10 +1105,11 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
                x%W(iW)%Eps_NW(1:3, iSpan, 2) = p%WakeRegParam * ds
             endif
          enddo
-      else ! Should never happen (caught earlier)
+
+      case default ! Should never happen (caught earlier)
          ErrStat = ErrID_Fatal
          ErrMsg ='Regularization determination method not implemented'
-      endif
+      end select
 
       if (iW==1) then
       call WrScr(' - OLAF regularization parameters (for wing 1):')
@@ -1122,28 +1125,29 @@ end subroutine FVW_InitRegularization
 
 
 
-!> Compute induced velocities from all vortex elements onto nPoints
-!! In : x, x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
+!> Compute induced velocities from all vortex elements onto nPoints,
+!! reusing a wake Tree/Panl built once by InducedVelocitiesAll_Init
+!! for all grids at a given output step.
+!! In : Tree, Panl (already built from current wake state)
 !! Out: Vind
-subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
+subroutine InducedVelocitiesAll_OnGrid_Calc(g, p, Sgmt, Part, Tree, Panl, ErrStat, ErrMsg)
    type(GridOutType),               intent(inout) :: g       !< Grid on whcih to compute the velocity
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Segments, already built by InducedVelocitiesAll_Init
+   type(T_Part),                    intent(in   ) :: Part    !< Particle storage, already built by InducedVelocitiesAll_Init
+   type(T_Tree),                    intent(inout) :: Tree    !< Wake tree, already built by InducedVelocitiesAll_Init
+   type(T_Panl),                    intent(in   ) :: Panl    !< Panel storage, already set by InducedVelocitiesAll_Init
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: nCPs, iHeadP
    integer(IntKi) :: i,j,k
    real(ReKi) :: xP,yP,zP
-   ! TODO new options
-   type(T_Tree)   :: Tree
-   type(T_Panl)   :: Panl
    real(ReKi), dimension(:,:), allocatable :: CPs  ! TODO get rid of me with dedicated functions
    real(ReKi), dimension(:,:), allocatable :: Uind ! TODO get rid of me with dedicated functions
    ErrStat= ErrID_None
    ErrMsg =''
-   if (OLAF_PROFILING) call tic('InducedVelocitiesAll_OnGrid')
+   if (OLAF_PROFILING) call tic('InducedVelocitiesAll_OnGrid_Calc')
 
    ! --- Packing control points
    nCPs = g%nx * g%ny * g%nz
@@ -1166,11 +1170,8 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    iHeadP=1
    call FlattenValues(g%uGrid, Uind, iHeadP); ! NOTE: Uind contains uGrid now (Uwnd)
 
-   ! --- Compute induced velocity
-   ! Convert Panels to segments, segments to particles, particles to tree
-   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, Panl, ErrStat, ErrMsg, allocPart=.false.)
-   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, m%Part, Tree, Panl, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_End(p, Tree, m%Part, Panl, ErrStat, ErrMsg, deallocPart=.false.)
+   ! --- Compute induced velocity using the wake Sgmt/Part/Tree/Panl built once
+   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, Panl, ErrStat, ErrMsg)
 
    ! --- Unpacking induced velocity points
    iHeadP=1
@@ -1181,7 +1182,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
 
    if (OLAF_PROFILING) call toc()
 
-end subroutine InducedVelocitiesAll_OnGrid
+end subroutine InducedVelocitiesAll_OnGrid_Calc
 
 !> Wrapper to setup part from set of segments
 subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, allocPart)
@@ -1223,9 +1224,9 @@ subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, all
       Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
    endif
    if (DEV_VERSION) then
-      call find_nan_2D(Part%P    , 'SegmentsToPartWrap Part%P')
-      call find_nan_2D(Part%Alpha, 'SegmentsToPartWrap Part%Alpha')
-      if (any(Part%RegParam(:)<-9999.99_ReKi)) then
+      call find_nan_2D(Part%P(:,1:nPart)    , 'SegmentsToPartWrap Part%P')
+      call find_nan_2D(Part%Alpha(:,1:nPart), 'SegmentsToPartWrap Part%Alpha')
+      if (any(Part%RegParam(1:nPart)<-9999.99_ReKi)) then ! Only the active particles are filled; the preallocated tail keeps its sentinel
          print*,'Error in Segment to part conversion'
          STOP
       endif
@@ -1261,18 +1262,19 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree, Panl, ErrStat, E
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
 
-   ! --- Convert to particles if needed
-   if ((p%VelocityMethod(iVel)==idVelocityTreePart) .or. (p%VelocityMethod(iVel)==idVelocityPart)) then
+   select case (p%VelocityMethod(iVel))
+   case (idVelocityPart)
+      ! --- Convert segments to particles
       call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part, allocPart=allocPart)
-   endif
-
-   ! --- Grow tree if needed
-   if (p%VelocityMethod(iVel)==idVelocityTreePart) then
+   case (idVelocityTreePart)
+      ! --- Convert segments to particles
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part, allocPart=allocPart)
+      ! --- Grow particle tree
       call grow_tree_part(Tree, Part%nAct, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
-
-   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+   case (idVelocityTreeSeg)
+      ! --- Grow segment tree
       call grow_tree_segment(Tree, nSeg, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma(1:nSeg), p%RegFunction, Sgmt%Epsilon(1:nSeg), 0)
-   endif
+   end select
 
    ! --- Src
    Panl%p_Src => p%SrcPnl
@@ -1298,20 +1300,26 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, Panl,
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod(iVel)==idVelocityBasic) then
+   select case (p%VelocityMethod(iVel))
+   case (idVelocityBasic)
       call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
 
-   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
+   case (idVelocityTreePart)
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), 0.0_ReKi, Uind, ErrStat, ErrMsg)
 
-   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
+   case (idVelocityPart)
       call ui_part_nograd(nCPs, CPs, Part%nAct, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind)
 
-   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
-      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
-   endif
+   case (idVelocityTreeSeg)
+      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), 0.0_ReKi, Uind, ErrStat, ErrMsg)
+
+   case default
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Velocity method not implemented'
+
+   end select
 
    ! --- Src Panels
    if (associated(Panl%p_Src)) then
@@ -1338,19 +1346,25 @@ subroutine InducedVelocitiesAll_End(p, Tree, Part, Panl, ErrStat, ErrMsg, deallo
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod(iVel)==idVelocityBasic) then
+   select case (p%VelocityMethod(iVel))
+   case (idVelocityBasic)
       ! Nothing
 
-   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
+   case (idVelocityTreePart)
       if (deallocPart) deallocate(Part%P, Part%Alpha, Part%RegParam)
       call cut_tree(Tree)
 
-   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
+   case (idVelocityPart)
       if (deallocPart) deallocate(Part%P, Part%Alpha, Part%RegParam)
 
-   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+   case (idVelocityTreeSeg)
       call cut_tree(Tree) ! We do not deallocate segment
-   endif
+
+   case default
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Velocity method not implemented'
+
+   end select
 
    ! Src Panels (we nullify only)
    nullify(Panl%p_Src)
@@ -1547,26 +1561,31 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
 
       ! --- Compute velocity on LL
       ! TreeSeg is faster but introduce some noise, so we keep this open for the user to choose
-      if (p%VelocityMethod(iVel) == idVelocityBasic) then
+      select case (p%VelocityMethod(iVel))
+      case (idVelocityBasic)
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
 
-      else if (p%VelocityMethod(iVel) == idVelocityPart) then
+      case (idVelocityPart)
          call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
          call ui_part_nograd(nCPs, CPs, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, Uind)
          !deallocate(Part%P, Part%Alpha, Part%RegParam)
 
-      else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then
+      case (idVelocityTreeSeg)
          call grow_tree_segment(Tree, nSeg, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
          call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
          call cut_tree(Tree)
 
-      else if (p%VelocityMethod(iVel) == idVelocityTreePart) then
+      case (idVelocityTreePart)
          call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
          call grow_tree_part(Tree, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, 0)
          call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
          !deallocate(Part%P, Part%Alpha, Part%RegParam)
          call cut_tree(Tree)
-      endif
+
+      case default
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Velocity method not implemented'
+      end select
       ! --- Src Panel contribution
       if (p%SrcPnl%n>0) then
          call ui_quad_src_nn(CPs, m%SrcPnl%RHS, p%SrcPnl%xi, p%SrcPnl%eta, p%SrcPnl%Pcent, p%SrcPnl%R_g2p, Uind, nCPs, p%SrcPnl%n)

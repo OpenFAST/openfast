@@ -10,6 +10,8 @@ module FVW_BiotSavart
    real(ReKi),parameter :: PRECISION_UI  = epsilon(1.0_ReKi)/100 !< NOTE assuming problem of size 1
    real(ReKi),parameter :: PRECISION_EPS =  epsilon(1.0_ReKi) !< Machine Precision For the given ReKi for problems of scale 1!
    real(ReKi),parameter :: MIN_EXP_VALUE=-10.0_ReKi
+   real(ReKi),parameter :: PART_REG_NRAD =  2.0_ReKi             !< Particle exp mollifier treated as 1 beyond this many core radii (matches 2*rc far-field multipole floor)
+   real(ReKi),parameter :: PART_REG_CUT3 =  PART_REG_NRAD**3     !< Corresponding (r/rc)^3 cutoff
    real(ReKi),parameter :: MINDENOM=0.0_ReKi
 !    real(ReKi),parameter :: MINDENOM=1e-15_ReKi
    real(ReKi),parameter :: MINNORM=1e-4
@@ -374,26 +376,35 @@ subroutine ui_part_nograd_11(DeltaP, Alpha, RegFunction, RegParam, Ui)
    real(ReKi),dimension(3) :: C          !< Cross product of Alpha and r
    real(ReKi)              :: E          !< Exponential poart for the mollifider
    real(ReKi)              :: r3_inv     !< 
+   real(ReKi)              :: r2, r3, rc3!< |r|^2, |r|^3, RegParam^3 (reused to avoid recomputing ** intrinsics)
    real(ReKi)              :: rDeltaP    !< norm , distance between point and particle
    real(ReKi)              :: ScalarPart !< the part containing the inverse of the distance, but not 4pi, Mollifier
-   rDeltaP=sqrt(DeltaP(1)**2+ DeltaP(2)**2+ DeltaP(3)**2)! norm
+   r2      = DeltaP(1)**2+ DeltaP(2)**2+ DeltaP(3)**2
+   rDeltaP = sqrt(r2)! norm
    if (rDeltaP<MINNORM) then !--- Exactly on the Singularity 
       Ui(1:3)  = 0.0_ReKi
       return
    else !--- Normal Procedure 
+      r3 = r2*rDeltaP ! |r|^3, reused below
       C(1) = Alpha(2) * DeltaP(3) - Alpha(3) * DeltaP(2)
       C(2) = Alpha(3) * DeltaP(1) - Alpha(1) * DeltaP(3)
       C(3) = Alpha(1) * DeltaP(2) - Alpha(2) * DeltaP(1)
       select case (RegFunction) !
       case (idRegNone) ! No mollification
-         r3_inv     = 1._ReKi/(rDeltaP**3)
+         r3_inv     = 1._ReKi/r3
          ScalarPart = r3_inv*fourpi_inv
       case (idRegExp) ! Exponential mollifier
-         r3_inv     = 1._ReKi/(rDeltaP**3)
-         E          = exp(-rDeltaP**3/RegParam**3)
-         ScalarPart = (1._ReKi-E)*r3_inv*fourpi_inv
+         rc3        = RegParam*RegParam*RegParam
+         r3_inv     = 1._ReKi/r3
+         if (r3 > PART_REG_CUT3*rc3) then ! r > 2*rc: mollifier -> 1 (skip exp), consistent with far-field multipole floor
+            ScalarPart = r3_inv*fourpi_inv
+         else
+            E          = exp(-r3/rc3)
+            ScalarPart = (1._ReKi-E)*r3_inv*fourpi_inv
+         endif
       case (idRegCompact) ! Compact support
-         r3_inv     = 1._ReKi/sqrt(RegParam**6+rDeltaP**6)
+         rc3        = RegParam*RegParam*RegParam
+         r3_inv     = 1._ReKi/sqrt(rc3*rc3+r3*r3)
          ScalarPart = r3_inv*fourpi_inv
       case default 
          print*,'[ERROR] Wrong regularization function for particles',RegFunction
