@@ -30,48 +30,48 @@ DRIVER = os.path.join(REPO_ROOT, "build-docker-double-debug",
                        "modules", "aerodyn", "aerodyn_driver")
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mirror_sweep")
 
-# name -> (dvr edits, primary edits, mirrored-deck overrides, blade permutation[, tol])
+# name -> (dvr edits, primary edits, mirrored-deck overrides[, tol])
 # Tolerance defaults to 1e-6; raise it only where a stateful model makes exact
 # agreement unreasonable, and say why.
 MATRIX = [
-    ("base",            {}, {}, {}, False),
-    ("pitch_+10",       {"BldPitch(1)": "10.0"}, {}, {}, False),
-    ("pitch_-3",        {"BldPitch(1)": "-3.0"}, {}, {}, False),
-    ("wind_4",          {"HWindSpeed": "4.0"}, {}, {}, False),
-    ("wind_20_stall",   {"HWindSpeed": "20.0"}, {}, {}, False),
-    ("highTSR_25rpm",   {"RotSpeed(1)": "25.0"}, {}, {}, False),
-    ("lowTSR_3rpm",     {"RotSpeed(1)": "3.0"}, {}, {}, False),
+    ("base",            {}, {}, {}),
+    ("pitch_+10",       {"BldPitch(1)": "10.0"}, {}, {}),
+    ("pitch_-3",        {"BldPitch(1)": "-3.0"}, {}, {}),
+    ("wind_4",          {"HWindSpeed": "4.0"}, {}, {}),
+    ("wind_20_stall",   {"HWindSpeed": "20.0"}, {}, {}),
+    ("highTSR_25rpm",   {"RotSpeed(1)": "25.0"}, {}, {}),
+    ("lowTSR_3rpm",     {"RotSpeed(1)": "3.0"}, {}, {}),
     ("propbrake",       {"HWindSpeed": "25.0", "RotSpeed(1)": "3.0",
-                         "BldPitch(1)": "-10.0"}, {}, {}, False),
-    # Shaft tilt skews the inflow, so the rotor sees azimuthal variation and the
-    # blades no longer pair up index for index.
-    ("tilt_5",          {"ShftTilt(1)": "-5.0"}, {}, {}, True),
-    ("precone_2.5",     {"Precone(1)": "2.5"}, {}, {}, False),
+                         "BldPitch(1)": "-10.0"}, {}, {}),
+    # Shaft tilt skews the inflow, so the rotor sees azimuthal variation, but blade
+    # spacing still follows the rotation sense, so the blades pair up index for index.
+    ("tilt_5",          {"ShftTilt(1)": "-5.0"}, {}, {}),
+    ("precone_2.5",     {"Precone(1)": "2.5"}, {}, {}),
     # Vertical shear is symmetric about the mirror plane, so the deck is shared;
-    # the blades still swap sweep order.
-    ("shear_0.2",       {"PLExp": "0.2"}, {}, {}, True),
+    # the blades still pair up index for index.
+    ("shear_0.2",       {"PLExp": "0.2"}, {}, {}),
     # Yaw is a global-frame orientation, so the mirrored run gets -yaw.
-    ("yaw_20",          {"NacYaw(1)": "20.0"}, {}, {"NacYaw(1)": "-20.0"}, True),
+    ("yaw_20",          {"NacYaw(1)": "20.0"}, {}, {"NacYaw(1)": "-20.0"}),
     ("yaw_20_skew",     {"NacYaw(1)": "20.0"}, {"Skew_Mod": "1"},
-                        {"NacYaw(1)": "-20.0"}, True),
-    ("yaw_-20",         {"NacYaw(1)": "-20.0"}, {}, {"NacYaw(1)": "20.0"}, True),
-    ("wake_off",        {}, {"Wake_Mod": "0"}, {}, False),
-    ("bem_polar",       {}, {"BEM_Mod": "2"}, {}, False),
+                        {"NacYaw(1)": "-20.0"}),
+    ("yaw_-20",         {"NacYaw(1)": "-20.0"}, {}, {"NacYaw(1)": "20.0"}),
+    ("wake_off",        {}, {"Wake_Mod": "0"}, {}),
+    ("bem_polar",       {}, {"BEM_Mod": "2"}, {}),
     # The polar BEM path measures skew with its own psiSkewOffset, built from a
     # separate cross product, so it needs covering independently of BEM_Mod=1.
     ("bem_polar_skew",  {"NacYaw(1)": "20.0"}, {"BEM_Mod": "2", "Skew_Mod": "1"},
-                        {"NacYaw(1)": "-20.0"}, True),
-    ("bem_polar_shear", {"PLExp": "0.2"}, {"BEM_Mod": "2"}, {}, True),
-    ("dbemt_2",         {}, {"DBEMT_Mod": "2"}, {}, False),
-    ("ua_3",            {}, {"UA_Mod": "3"}, {}, False),
-    ("ua_6_oye",        {}, {"UA_Mod": "6"}, {}, False),
-    ("ua_4_hgm",        {}, {"UA_Mod": "4"}, {}, False),
+                        {"NacYaw(1)": "-20.0"}),
+    ("bem_polar_shear", {"PLExp": "0.2"}, {"BEM_Mod": "2"}, {}),
+    ("dbemt_2",         {}, {"DBEMT_Mod": "2"}, {}),
+    ("ua_3",            {}, {"UA_Mod": "3"}, {}),
+    ("ua_6_oye",        {}, {"UA_Mod": "6"}, {}),
+    ("ua_4_hgm",        {}, {"UA_Mod": "4"}, {}),
     # Shear + yaw + unsteady aero is the stiffest combination in the matrix. UA carries
     # state and is solved iteratively, so the two runs converge to slightly different
     # round-off; the residual here is ~1.5 N-m on a 9e5 N-m moment.
     ("shear_yaw_ua",    {"PLExp": "0.2", "NacYaw(1)": "15.0"},
                         {"UA_Mod": "3", "Skew_Mod": "1"},
-                        {"NacYaw(1)": "-15.0"}, True, 1e-5),
+                        {"NacYaw(1)": "-15.0"}, 1e-5),
 ]
 
 
@@ -126,8 +126,8 @@ def main():
     fails = 0
     print(f"{'variant':18s} {'chk':>4s}  result")
     for row in rows:
-        name, dvr_e, pri_e, over, permute = row[:5]
-        tol = row[5] if len(row) > 5 else 1e-6
+        name, dvr_e, pri_e, over = row[:4]
+        tol = row[4] if len(row) > 4 else 1e-6
         d = os.path.join(WORK, name)
         try:
             cw = build_case(d, False, dvr_e, pri_e, over)
@@ -148,11 +148,8 @@ def main():
             fails += 1
             continue
 
-        checked, bad, unknown, _ = compare(cw_out, mir_out, tol=tol,
-                                           permute=permute)
-        tag = "perm" if permute else ""
-        if tol != 1e-6:
-            tag += f" tol={tol:g}"
+        checked, bad, unknown, _ = compare(cw_out, mir_out, tol=tol)
+        tag = f"tol={tol:g}" if tol != 1e-6 else ""
         if bad or unknown:
             fails += 1
             print(f"{name:18s} {checked:4d}  FAIL {tag}")

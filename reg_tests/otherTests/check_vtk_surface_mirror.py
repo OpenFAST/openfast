@@ -63,8 +63,9 @@ from render_vtk_pair import read_vtp, S  # noqa: E402
 CW = "5MW_Land_BD_DLL_WTurb"
 MR = "5MW_Land_BD_DLL_WTurb_MirrorRotor"
 
-# Blade 1 lies on the mirror plane; blades 2 and 3 exchange.
-PAIRS = {"1": "1", "2": "3", "3": "2"}
+# Blade spacing follows the rotation sense, so each blade pairs with the
+# same-numbered blade.
+PAIRS = {"1": "1", "2": "2", "3": "3"}
 
 # The ASCII .vtp files carry five decimal places, so agreement cannot be
 # demonstrated below 1e-5 m no matter how exact the arithmetic is.

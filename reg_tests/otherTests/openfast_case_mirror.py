@@ -28,7 +28,7 @@ WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "of_case_mirror")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, f"{REPO}/reg_tests/lib")
-from compare_mirror import classify, blade_permutation  # noqa: E402
+from compare_mirror import classify  # noqa: E402
 import fast_io  # noqa: E402
 
 DIAG = {"Time", "ConvError", "ConvIter", "NumUJac"}
@@ -40,45 +40,6 @@ def set_var(text, var, value):
     if n != 1:
         raise KeyError(f"could not set {var!r}")
     return new
-
-
-def add_partner_channels(path, nblades):
-    """Ensure every blade-indexed output has its mirror partner in the OutList.
-
-    A case that only prints blades 1 and 3 gives the mirrored run's blade 3 nothing
-    to be compared against, since it corresponds to the clockwise run's blade 2.
-    """
-    txt = open(path, errors="replace").read()
-    lines = txt.split("\n")
-    cand = [i for i, l in enumerate(lines) if "outlist" in l.lower() and '"' not in l]
-    if not cand:
-        return
-    # These files carry a second, usually empty, nodal-output OutList at the end.
-    start = cand[0]
-    end = next((i for i in range(start, len(lines)) if lines[i].strip().upper().startswith("END")), None)
-    if end is None:
-        return
-
-    have, order = set(), []
-    for i in range(start + 1, end):
-        for ch in re.findall(r'"([^"]+)"', lines[i]):
-            for c in ch.split(","):
-                c = c.strip()
-                if c:
-                    have.add(c)
-                    order.append(c)
-
-    add = []
-    for c in order:
-        mate = blade_permutation(c, nblades)
-        if mate != c and mate not in have:
-            have.add(mate)
-            add.append(mate)
-    if not add:
-        return
-
-    lines[end:end] = [f'"{c}"' for c in add]
-    open(path, "w").write("\n".join(lines))
 
 
 def negate_vars(d, names):
@@ -159,17 +120,6 @@ def build(case, mirrored, tmax, negate=(), series=(), reuse=False):
         txt = set_var(txt, "TMax", str(tmax))
     open(fst, "w").write(txt)
 
-    # Give every blade-indexed channel a partner to be compared against.
-    for f in os.listdir(d):
-        if not f.lower().endswith(".dat"):
-            continue
-        p = os.path.join(d, f)
-        body = open(p, errors="replace").read()
-        head = body[:400].upper()
-        if "ELASTODYN" in head or "AERODYN" in head:
-            m = re.search(r"^\s*(\d+)\s+NumBl\b", body, re.MULTILINE)
-            add_partner_channels(p, int(m.group(1)) if m else 3)
-
     if mirrored and negate:
         negate_vars(d, negate)
     if mirrored and series:
@@ -201,9 +151,11 @@ def main():
     negate = sys.argv[sys.argv.index("--negate") + 1].split(",") if "--negate" in sys.argv else ()
     series = sys.argv[sys.argv.index("--mirror-series") + 1].split(",") if "--mirror-series" in sys.argv else ()
 
-    # Components that are not blades also permute under the mirror, but which ones pair up
-    # depends on the layout rather than on blade order -- the OC4 semi's mooring line 2
-    # lies on the mirror plane, so lines 1 and 3 swap. State those pairings explicitly.
+    # Mooring lines and other layout components also swap under the mirror, but which
+    # ones pair up depends on the layout rather than being fixed by channel name -- the
+    # OC4 semi's mooring line 2 lies on the mirror plane, so lines 1 and 3 swap. Blades
+    # need no such mapping: blade numbering now follows the rotation sense directly, so
+    # each pairs with the same number. State the layout pairings explicitly.
     swap = {}
     if "--swap" in sys.argv:
         for pair in sys.argv[sys.argv.index("--swap") + 1].split(","):
@@ -220,7 +172,6 @@ def main():
     sl = slice(int(0.25 * len(a)), None)
     phys = [idx[c] for c in n1 if c not in DIAG]
     floor = 1e-9 * np.abs(a[sl][:, phys]).max()
-    nb = int(sys.argv[sys.argv.index("--nblades") + 1]) if "--nblades" in sys.argv else 3
 
     if "--dump" in sys.argv:
         rows = list(range(0, len(a), max(1, len(a) // 14)))
@@ -235,7 +186,7 @@ def main():
     for ch in n1:
         if ch in DIAG:
             continue
-        mate = swap.get(ch) or blade_permutation(ch, nb)
+        mate = swap.get(ch) or ch
         if mate not in idx:
             mate = ch
         got, rel = classify(a[sl, idx[ch]], b[sl, idx[mate]], tol, floor)

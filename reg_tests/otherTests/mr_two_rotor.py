@@ -6,7 +6,8 @@ and rotor 2 is mirrored, and the platform, substructure, mooring and sea are all
 symmetric about y = 0, the whole system maps onto itself under y -> -y, so R2
 must be the mirror image of R1 within the same solve.
 
-Blade 1 lies on the mirror plane at azimuth 0, so blades 2 and 3 exchange.
+Blade spacing follows the rotation sense, so a mirrored blade compares directly
+against the clockwise blade of the same number.
 
 Shared (unprefixed) channels belong to the single platform. Under a symmetric
 solution the antisymmetric ones must vanish, which is a much sharper statement
@@ -14,7 +15,6 @@ than any pairwise comparison, so they are reported separately.
 """
 import argparse
 import os
-import re
 import sys
 from collections import Counter
 
@@ -34,24 +34,6 @@ ANTISYM_SHARED = ("HydroFyi", "HydroMxi", "HydroMzi",
                   "RBTDYss", "RBRDXss", "RBRDZss")
 SYM_SHARED = ("HydroFxi", "HydroFzi", "HydroMyi",
               "RBTDXss", "RBTDZss", "RBRDYss")
-
-BLADE_RE = re.compile(r"^(.*?)([123])(N\d+)?(.*)$")
-
-
-def swap_blade(name):
-    """Exchange blades 2 and 3; blade 1 sits on the mirror plane."""
-    for pat, rep in ((r"^B2N", "B3N"), (r"^B3N", "B2N")):
-        if re.match(pat, name):
-            return re.sub(pat, rep, name)
-    m = re.match(r"^(Root[A-Za-z]+)([123])$", name)
-    if m:
-        return m.group(1) + {"1": "1", "2": "3", "3": "2"}[m.group(2)]
-    m = re.match(r"^(.*?)([123])$", name)
-    if m and m.group(1).startswith(("OoPDefl", "IPDefl", "TwstDefl", "BldPitch",
-                                    "TipDx", "TipDy", "TipClrnc")):
-        return m.group(1) + {"1": "1", "2": "3", "3": "2"}[m.group(2)]
-    return name
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -74,17 +56,16 @@ def main():
 
     counts, unresolved, rows = Counter(), [], []
     for base in sorted(r1):
-        partner = swap_blade(base)
-        if partner not in r2:
+        if base not in r2:
             counts["missing"] += 1
             continue
-        cls, res = classify(col[r1[base]], col[r2[partner]], a.tol, a.floor)
+        cls, res = classify(col[r1[base]], col[r2[base]], a.tol, a.floor)
         counts[cls] += 1
-        rows.append((base, partner, cls, res))
+        rows.append((base, cls, res))
         if cls == "?":
-            unresolved.append((base, partner, res,
+            unresolved.append((base, res,
                                np.abs(col[r1[base]]).max(),
-                               np.abs(col[r2[partner]]).max()))
+                               np.abs(col[r2[base]]).max()))
 
     label = {"S": "same", "F": "flipped", "A": "angle-wrapped",
              "negligible": "negligible", "?": "unresolved"}
@@ -94,14 +75,13 @@ def main():
             print(f"{label.get(key, key):16s} {counts[key]}")
 
     if a.show:
-        for base, partner, cls, res in rows:
-            tag = base if base == partner else f"{base}->{partner}"
-            print(f"  {tag:22s} {label.get(cls, cls):14s} {res:.3e}")
+        for base, cls, res in rows:
+            print(f"  {base:22s} {label.get(cls, cls):14s} {res:.3e}")
 
     if unresolved:
         print("\nunresolved:")
-        for base, partner, res, p1, p2 in unresolved:
-            print(f"  {base:20s} vs {partner:20s} res={res:.3e} "
+        for base, res, p1, p2 in unresolved:
+            print(f"  {base:20s} res={res:.3e} "
                   f"peakR1={p1:.6g} peakR2={p2:.6g}")
 
     print("\n--- shared platform channels")

@@ -75,6 +75,14 @@ echo
 echo "=== VTK surface mirror ==="
 python3 "$HERE/check_vtk_surface_mirror.py"
 
+# The blade renumbering (spacing carries the rotation sense) is nearly invisible
+# to the channel comparisons on an axisymmetric case, so the pair check carries a
+# dedicated sweep-order assertion on the BAzimuth channels. This reads the stored
+# baselines only, no simulation.
+echo
+echo "=== mirror pairs and blade sweep order (stored baselines) ==="
+python3 "$HERE/check_rtest_mirror_pair.py"
+
 # ---------------------------------------------------------------------------
 # FAST.Farm guards
 #

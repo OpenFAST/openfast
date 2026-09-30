@@ -26,55 +26,34 @@ import pass_fail  # noqa: E402
 R = os.path.join(REPO_ROOT, "reg_tests", "r-test")
 GC = f"{R}/glue-codes/openfast"
 
-# label, clockwise case, mirrored case, blades
+# label, clockwise case, mirrored case
 FILE_PAIRS = [
     ("ElastoDyn + AeroDyn", "5MW_Land_noDLL_Steady_CW",
-     "5MW_Land_noDLL_Steady_MirrorRotor", 3),
+     "5MW_Land_noDLL_Steady_MirrorRotor"),
     ("BeamDyn blades", "5MW_Land_BD_noDLL_Steady_CW",
-     "5MW_Land_BD_noDLL_Steady_MirrorRotor", 3),
+     "5MW_Land_BD_noDLL_Steady_MirrorRotor"),
     ("MHK buoyancy", "MHK_RM1_Floating_Steady_CW",
-     "MHK_RM1_Floating_Steady_MirrorRotor", 2),
+     "MHK_RM1_Floating_Steady_MirrorRotor"),
     ("AeroDisk, yawed", "5MW_Land_ADsk_SED_Yaw_CW",
-     "5MW_Land_ADsk_SED_Yaw_MirrorRotor", 3),
+     "5MW_Land_ADsk_SED_Yaw_MirrorRotor"),
     ("OLAF free wake",
      f"{R}/modules/aerodyn/ad_B1n2_OLAF_CW/ad_driver.outb",
-     f"{R}/modules/aerodyn/ad_B1n2_OLAF_MirrorRotor/ad_driver.outb", 1),
+     f"{R}/modules/aerodyn/ad_B1n2_OLAF_MirrorRotor/ad_driver.outb"),
 ]
 
-# label, single output file, per-rotor channel prefixes, blades
+# label, single output file, per-rotor channel prefixes
 WITHIN_PAIRS = [
     ("AeroDyn nodal outputs",
      os.path.join(REPO_ROOT, "build-docker-double", "reg_tests", "modules",
                    "aerodyn", "ad_MultipleHAWT_MirrorRotor", "ad_driver.T1.outb"),
      os.path.join(REPO_ROOT, "build-docker-double", "reg_tests", "modules",
                    "aerodyn", "ad_MultipleHAWT_MirrorRotor", "ad_driver.T2.outb"),
-     None, 3),
+     None),
     ("Twin-rotor semisubmersible",
      f"{GC}/5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor/"
      "5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor.outb",
-     None, ("R1", "R2"), 3),
+     None, ("R1", "R2")),
 ]
-
-
-def swap_blades(name, nblades):
-    """Blade 1 lies on the mirror plane; the others exchange in reverse order."""
-    if nblades < 3:
-        return name
-    order = {"1": "1", "2": "3", "3": "2"}
-    # AeroDyn module and nodal blade channels: B2N003Fn, AB2N003Fn
-    m = re.match(r"^(A?)B([123])(N\d+.*)$", name)
-    if m:
-        return f"{m.group(1)}B{order[m.group(2)]}{m.group(3)}"
-    # Any other per-blade channel named B<k><word>: B2RootFxr, B2TipTDxr,
-    # B2AeroPwr.  Must follow the node pattern above, which is more specific.
-    m = re.match(r"^B([123])([A-Za-z].*)$", name)
-    if m:
-        return f"B{order[m.group(1)]}{m.group(2)}"
-    # ElastoDyn trailing-index channels: RootMxc2, OoPDefl3
-    m = re.match(r"^(.*?[A-Za-z])([123])$", name)
-    if m and not re.search(r"\d$", m.group(1)):
-        return m.group(1) + order[m.group(2)]
-    return name
 
 
 # Mooring lines and connections exchange in mirror pairs as well, but the pairing
@@ -82,11 +61,11 @@ def swap_blades(name, nblades):
 MOORING = re.compile(r"^(FAIRTEN|ANCHTEN|CON\d|L\d+N|M\d+N|P\d+F)")
 
 
-def measure(a, na, b, nb, nblades, tol, floor):
+def measure(a, na, b, nb, tol, floor):
     out = {}
     idx = {n: i for i, n in enumerate(nb)}
     for i, n in enumerate(na):
-        j = idx.get(swap_blades(n, nblades), idx.get(n))
+        j = idx.get(n)
         if j is None:
             continue
         cls, res = classify(a[:, i], b[:, j], tol, floor)
@@ -182,8 +161,8 @@ simulation the tower, support structure and inflow are not mirrored, so a
 quantity such as ``TwrBsMxt`` is simply the response of an unchanged structure to
 a counter-clockwise rotor.
 
-Blade 1 lies on the mirror plane and blades 2 and 3 exchange, so a mirrored
-blade 2 is compared against the clockwise blade 3.  Mooring channels are set
+Blade spacing follows the rotation direction, so a mirrored blade is compared
+against the clockwise blade of the same number.  Mooring channels are set
 aside because which line pairs with which depends on the layout.
 
 """)
@@ -230,7 +209,7 @@ def main():
     seen = defaultdict(set)
     origin = defaultdict(set)
 
-    for label, cw, mir, nb_ in FILE_PAIRS:
+    for label, cw, mir in FILE_PAIRS:
         if cw.startswith("/") or "/" in cw:
             pa, pb = cw, mir          # explicit paths, for the module-level driver cases
         else:
@@ -241,7 +220,7 @@ def main():
         da, ia, _ = pass_fail.readFASTOut(pa)
         db, ib, _ = pass_fail.readFASTOut(pb)
         res = measure(da, list(ia["attribute_names"]), db,
-                      list(ib["attribute_names"]), nb_, a.tol, a.floor)
+                      list(ib["attribute_names"]), a.tol, a.floor)
         c = Counter(v[0] for v in res.values())
         print(f"{label:28s} same={c['S']:4d} flipped={c['F']:3d} "
               f"wrapped={c['A']:3d} negligible={c['negligible']:3d} "
@@ -250,7 +229,7 @@ def main():
             seen[n].add(cl)
             origin[n].add(label)
 
-    for label, pa, pb, prefixes, nb_ in WITHIN_PAIRS:
+    for label, pa, pb, prefixes in WITHIN_PAIRS:
         if not os.path.exists(pa):
             print(f"  skip {label}: missing output", file=sys.stderr)
             continue
@@ -268,13 +247,13 @@ def main():
             idx = {n: i for i, n in enumerate(nbn)}
             for n in na2:
                 base = n[len(p1):]
-                j = idx.get(p2 + swap_blades(base, nb_), idx.get(p2 + base))
+                j = idx.get(p2 + base)
                 if j is None:
                     continue
                 cls, r = classify(da[:, na.index(n)], db[:, j], a.tol, a.floor)
                 res[base] = (cls, r)
         else:
-            res = measure(da, na, db, nbn, nb_, a.tol, a.floor)
+            res = measure(da, na, db, nbn, a.tol, a.floor)
         c = Counter(v[0] for v in res.values())
         print(f"{label:28s} same={c['S']:4d} flipped={c['F']:3d} "
               f"wrapped={c['A']:3d} negligible={c['negligible']:3d} "

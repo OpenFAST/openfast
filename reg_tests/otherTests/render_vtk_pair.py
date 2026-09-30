@@ -767,20 +767,14 @@ def animate(cw_meshes, mr_meshes, frames, out_dir, want, fps, dpi, dt):
 # They are compared as point clouds instead.
 _SWEPT = ("GroundSurface", "TowerSurface", "NacelleSurface", "HubSurface")
 
-# The blade index is not reliably the end of a mesh name: it is followed by
-# "_Reference" on reference meshes and by "Surface" on surface meshes.  Matching
-# the end of the name silently compared a blade against itself, which shows up as
-# a clean 120 degree azimuth error and looks convincingly like a real defect.
-_BLADE_RE = re.compile(r"B(\d+)")
-
-
 def partner(name):
     """The mirrored mesh a clockwise mesh should be compared against.
 
-    Blade 1 lies on the mirror plane and blades 2 and 3 exchange.
+    Blade spacing follows the rotation sense, so a mirrored blade's mesh is
+    directly the mirror image of the same-numbered clockwise blade: the
+    partner mesh is simply the same name.
     """
-    swap = {"2": "3", "3": "2"}
-    return _BLADE_RE.sub(lambda m: "B" + swap.get(m.group(1), m.group(1)), name, count=1)
+    return name
 
 
 def _cloud_sep(a, b):
@@ -891,7 +885,7 @@ def main(argv=None):
     print(f"rendered {label}")
     print(f"{len(cw)} meshes\n")
     print("largest node separation after re-applying the mirror, per mesh")
-    print("(blades 2 and 3 compared against their permuted partners)")
+    print("(each blade compared against the same-numbered mirrored blade)")
     for name in sorted(devs, key=lambda n: devs[n][0], reverse=True):
         val, ordered = devs[name]
         note = "" if ordered else "   (point cloud; vertex order reverses)"

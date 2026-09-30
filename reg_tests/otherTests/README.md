@@ -22,9 +22,9 @@ expressed in different frames.
 
 | Script | What it does |
 |---|---|
-| `compare_mirror.py` | the shared classifier. `classify(x, y, tol, floor)` returns `S`, `F`, `A`, `negligible` or `?`. Also holds `blade_permutation`, since blade 1 lies on the mirror plane and blades 2 and 3 exchange. Everything else imports this |
+| `compare_mirror.py` | the shared classifier. `classify(x, y, tol, floor)` returns `S`, `F`, `A`, `negligible` or `?`. Blade spacing follows the rotation sense, so blade k pairs with blade k directly and no permutation is needed; the mooring `--swap` mapping (layout pairings) remains where a script needs it. Everything else imports this |
 | `emit_sign_table.py` | regenerates the measured sign table in `mirror_rotor.rst` by running every registered mirrored pair and classifying every channel |
-| `check_rtest_mirror_pair.py` | checks the registered clockwise/mirrored pairs, with per-pair blade count, tolerance and start time |
+| `check_rtest_mirror_pair.py` | checks the registered clockwise/mirrored pairs, with per-pair tolerance and start time |
 | `openfast_case_mirror.py` | clones a regression case verbatim and toggles only `MirrorRotor` |
 | `mr_two_rotor.py` | compares rotor 1 against rotor 2 inside one multi-rotor glue-code run |
 | `v2_two_rotor.py` | the same for the AeroDyn driver, handling the `A?B<k>N...` nodal naming |

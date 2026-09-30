@@ -5,11 +5,10 @@ same machine in the same uniform inflow. Their loads must therefore be exact
 mirror images of each other, with no run-to-run difference of any kind to hide
 behind: same solver, same time steps, same wind.
 
-Mirroring reverses the order in which the blades sweep, so blade 1 keeps its
-place and blades 2 and 3 exchange.
+Blade spacing follows the rotation sense, so a mirrored blade compares directly
+against the clockwise blade of the same number.
 """
 import os
-import re
 import sys
 
 import numpy as np
@@ -23,19 +22,6 @@ import fast_io  # noqa: E402
 WORK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
     os.environ.get("TMPDIR", "/tmp"), "v2test", "mir")
 TOL = float(sys.argv[sys.argv.index("--tol") + 1]) if "--tol" in sys.argv else 1e-6
-
-# Driver channels are AB<blade>N<node><quantity>; the module form is B<blade>N<node>...
-AB = re.compile(r"^(A?B)(\d+)(N.*)$")
-
-
-def swap(name, nblades=3):
-    m = AB.match(name)
-    if not m:
-        return name
-    k = int(m.group(2))
-    if not 1 <= k <= nblades:
-        return name
-    return f"{m.group(1)}{1 if k == 1 else nblades - k + 2}{m.group(3)}"
 
 
 def load(path):
@@ -64,10 +50,7 @@ groups = {}
 for ch in n1:
     if ch == "Time":
         continue
-    mate = swap(ch)
-    if mate not in idx:
-        mate = ch
-    x, y = a[sl, idx[ch]], b[sl, idx[mate]]
+    x, y = a[sl, idx[ch]], b[sl, idx[ch]]
     peak = np.abs(x).max()
     if peak < floor:
         groups.setdefault("negligible", []).append((ch, 0.0))

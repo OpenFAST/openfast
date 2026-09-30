@@ -30,7 +30,7 @@ EXE = f"{REPO}/build-docker-double-debug/glue-codes/openfast/openfast"
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "of_mirror")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compare_mirror import classify, blade_permutation  # noqa: E402
+from compare_mirror import classify  # noqa: E402
 
 RIGID = "--rigid" in sys.argv
 # Free drivetrain: exercises the gearbox efficiency factor and shaft torque paths,
@@ -281,10 +281,7 @@ def main():
     for ch in n1:
         if ch == "Time":
             continue
-        mate = blade_permutation(ch)
-        if mate not in idx:
-            mate = ch
-        got, rel = classify(a[sl, idx[ch]], b[sl, idx[mate]], TOL, floor)
+        got, rel = classify(a[sl, idx[ch]], b[sl, idx[ch]], TOL, floor)
         if ch in DIAG:
             got = "diagnostic"
             groups.setdefault("diagnostic", []).append(ch)
@@ -293,7 +290,7 @@ def main():
         print(f"{ch:14s} {np.abs(a[sl, idx[ch]]).max():12.5g} "
               f"{got:>10s} {rel:10.2e}")
 
-    print("\n--- measured summary (blade permutation applied) ---")
+    print("\n--- measured summary ---")
     for k in ("S", "F", "A", "negligible", "?"):
         if groups[k]:
             print(f"{k:11s} ({len(groups[k]):2d}): {' '.join(groups[k])}")
