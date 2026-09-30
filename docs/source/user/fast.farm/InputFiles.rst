@@ -390,6 +390,13 @@ For each wind turbine:
    :numref:`FF:Input:OFInput` for information on the contents of
    the OpenFAST input files.
 
+   Two OpenFAST features are refused under FAST.Farm at initialization,
+   with a fatal error, rather than run unverified: an OpenFAST model with
+   more than one rotor (**NRotors** > 1 — only one rotor per OpenFAST
+   instance is supported with FAST.Farm), and a mirrored rotor
+   (**MirrorRotor** = True — the wake coupling has not yet been verified
+   for a counter-clockwise rotor; see :numref:`glue-code-mirror-rotor`).
+
 -  When **Mod_AmbWind** = 2 or 3, the Wind Turbines table has six
    additional columns to complete the spatial discretization of the
    high-resolution wind domain for each wind turbine:

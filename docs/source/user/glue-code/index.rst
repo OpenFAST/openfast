@@ -15,4 +15,5 @@ the glue code from a user and module-developer perspective.
    modvar
    modglue
    solver
+   mirror_rotor
    linearization

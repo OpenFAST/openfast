@@ -49,6 +49,7 @@ typedef  ^        InitInputType     CHARACTER(1024)      RootName          -  - 
 typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
 typedef  ^        InitInputType     LOGICAL              UseInputFile      - .TRUE.  - "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef  ^        InitInputType     FileInfoType         PassedFileData    -  - -   "If we don't use the input file, pass everything through this"   -
+typedef  ^        InitInputType     LOGICAL              MirrorRotor       -  .FALSE. - "Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)" -
 
 
 # outputs from initialization:
@@ -135,6 +136,7 @@ typedef  ^        ParameterType        R8Ki              InitAzimuth       -  - 
 typedef  ^        ParameterType        ReKi              RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        ParameterType        ReKi              GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
 typedef  ^        ParameterType        ReKi              GBoxRatio         -  - -   "Gearbox ratio" -
+typedef  ^        ParameterType        ReKi              RotDir            -  1.0 - "Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW)" -
 typedef  ^        ParameterType        IntKi             NumBl             -  - -   "Number of blades on the turbine" -
 typedef  ^        ParameterType        ReKi              TipRad            -  - -   "Preconed blade-tip radius (distance from the rotor apex to the blade tip)" m
 typedef  ^        ParameterType        ReKi              HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)" m

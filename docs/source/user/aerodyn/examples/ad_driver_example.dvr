@@ -26,7 +26,8 @@ False           Echo         - Echo input parameters to "<rootname>.ech"?
 ----- Turbine Data ----------------------------------------------------------------------
 1               NumTurbines  - Number of turbines
 ----- Turbine(1) Geometry ---------------------------------------------------------------
-        True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+        True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+False           MirrorRotor(1) - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
        0,0,0    BaseOriginInit(1) - Coordinate of tower base in base coordinates (m)
            3    NumBlades(1)    - Number of blades (-)
           3.    HubRad(1)       - Hub radius (m)

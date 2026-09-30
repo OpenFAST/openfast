@@ -26,7 +26,8 @@ False           Echo        - Echo input parameters to "<rootname>.ech"?
 ----- Turbine Data ----------------------------------------------------------------------
 2               NumTurbines - Number of turbines
 ----- Turbine(1) ------------------------------------------------------------------------
-     False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+     False      BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+False           MirrorRotor(1) - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
 00,00,00        BaseOriginInit(1)      - x,y,z coordinates of base origin (m)
 0,0,0           BaseOrientationInit(1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the base frame from the global frame (e.g. roll, tilt, yaw) (deg)
 True            HasTower(1)            - True if turbine has a tower (flag)
@@ -66,7 +67,8 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
 "unused" BldMotionFileName(1_2)  - Filename containing blade pitch motion [used only when BldMotionType=1]
 "unused" BldMotionFileName(1_3)  - Filename containing blade pitch motion [used only when BldMotionType=1]
 ----- Turbine(2) Geometry ---------------------------------------------------------------
-        True    BasicHAWTFormat(2) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+        True    BasicHAWTFormat(2) - Flag to switch between basic or generic input format {True: basic HAWT inputs BaseOriginInit to Twr2Shft, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+False           MirrorRotor(2) - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)
 100,0,0         BaseOriginInit(2) - Coordinate of tower base in base coordinates [used only when HasTower is True] (m)
            3    NumBlades(2)    - Number of blades (-)
         3.      HubRad(2)       - Hub radius (m)

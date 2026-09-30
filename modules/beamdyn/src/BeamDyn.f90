@@ -117,6 +117,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL DispNVD( BeamDyn_Ver )
 
    CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2); if (Failed()) return
+      ! Mirrored before validating, so the validator also checks the mirrored blade.
+   if (InitInp%MirrorRotor)  CALL BD_MirrorBladeData( InputFileData )
    CALL BD_ValidateInputData( InitInp, InputFileData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
 

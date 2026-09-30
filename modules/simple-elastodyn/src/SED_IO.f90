@@ -309,17 +309,23 @@ subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutp
    if (.not. CalcWriteOutput) return
 
    ! Azimuth
-   m%AllOuts( Azimuth  ) = x%QT( DOF_Az)
+   ! MirrorRotor: the states are physical; these channels report the rotor's own
+   ! convention, so a mirrored rotor reads the same as its CW twin.
+   m%AllOuts( Azimuth  ) = p%RotDir * x%QT( DOF_Az)
    call Zero2TwoPi(m%AllOuts( Azimuth  ))    ! modulo
    m%AllOuts( Azimuth  ) = m%AllOuts( Azimuth  ) * R2D
 
    ! speed
-   m%AllOuts( RotSpeed ) = x%QDT(DOF_Az) * RPS2RPM
-   m%AllOuts( GenSpeed ) = x%QDT(DOF_Az) * RPS2RPM    * p%GBoxRatio
+   m%AllOuts( RotSpeed ) = p%RotDir * x%QDT(DOF_Az) * RPS2RPM
+   m%AllOuts( GenSpeed ) = p%RotDir * x%QDT(DOF_Az) * RPS2RPM    * p%GBoxRatio
 
    ! accel
-   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az) * RPS2RPM
-   m%AllOuts( GenAcc   ) = dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio
+   m%AllOuts( RotAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * RPS2RPM
+   m%AllOuts( GenAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio
+
+   ! MirrorRotor: physical components about the shaft x axis, which do change sign.
+   m%AllOuts( LSSTipVxa ) = x%QDT(DOF_Az)    * RPS2RPM
+   m%AllOuts( LSSTipAxa ) = dxdt%QDT(DOF_Az) * RPS2RPM
 
    ! Yaw commands
    m%AllOuts( Yaw      ) = y%Yaw     * R2D
@@ -379,8 +385,8 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                "YAWRATE  "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(25) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                   Azimuth ,  BlPitch1 ,  BlPitch2 ,  BlPitch3 ,  BlPitch1 ,  BlPitch2 ,  BlPitch3 ,    GenAcc , &
-                                 GenSpeed ,    GenAcc ,  GenSpeed ,    RotPwr ,   RotTorq ,    RotAcc ,    RotAcc ,    RotAcc , &
-                                 RotSpeed ,  RotSpeed ,  RotSpeed ,    RotAcc ,    RotPwr ,  RotSpeed ,   RotTorq ,       Yaw , &
+                                 GenSpeed ,    GenAcc ,  GenSpeed ,    RotPwr ,   RotTorq , LSSTipAxa , LSSTipAxa , LSSTipAxa , &
+                                 LSSTipVxa , LSSTipVxa , LSSTipVxa ,    RotAcc ,    RotPwr ,  RotSpeed ,   RotTorq ,       Yaw , &
                                   YawRate /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(25) =  (/  &  ! This lists the units corresponding to the allowed parameters
                                "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s^2)", &

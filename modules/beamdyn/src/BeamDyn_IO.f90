@@ -508,6 +508,54 @@ MODULE BeamDyn_IO
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Mirror the blade description about its local x-z plane, so a deck written for a
+!! clockwise rotor describes the counter-clockwise mirror image of the same blade.
+!!
+!! The sectional degrees of freedom are ordered [u_x, u_y, u_z, theta_x, theta_y, theta_z].
+!! Reflecting y negates u_y and, because rotations are pseudovectors, theta_x and theta_z,
+!! giving T = diag(1,-1,1,-1,1,-1). The 6x6 matrices transform as T*M*T^T, which in
+!! practice flips every entry with exactly one index in {2,4,6}. T is its own inverse, so
+!! applying this twice returns the original blade.
+!!
+!! Diagonal entries never flip, so the mass0(6,6) = mass0(4,4) + mass0(5,5) check in
+!! BD_ValidateInputData still holds afterwards.
+SUBROUTINE BD_MirrorBladeData( InputFileData )
+
+   TYPE(BD_InputFile), INTENT(INOUT)  :: InputFileData    !< Data stored in the module's input file
+
+   REAL(BDKi), PARAMETER :: T(6) = (/ 1.0_BDKi, -1.0_BDKi, 1.0_BDKi, -1.0_BDKi, 1.0_BDKi, -1.0_BDKi /)
+   INTEGER(IntKi)        :: i, j, k
+
+      ! Key points: reflect the y offset and the twist. Note the twist stored here is
+      ! already the negative of the value in the file (see BD_ReadBladeFileInput), so this
+      ! leaves it equal to the file value rather than doubly negated.
+   if (allocated(InputFileData%kp_coordinate)) then
+      InputFileData%kp_coordinate(:,2) = -InputFileData%kp_coordinate(:,2)
+      InputFileData%kp_coordinate(:,4) = -InputFileData%kp_coordinate(:,4)
+   end if
+
+   if (allocated(InputFileData%InpBl%stiff0)) then
+      do k = 1,size(InputFileData%InpBl%stiff0,3)
+         do j = 1,6
+            do i = 1,6
+               InputFileData%InpBl%stiff0(i,j,k) = T(i)*T(j)*InputFileData%InpBl%stiff0(i,j,k)
+            end do
+         end do
+      end do
+   end if
+
+   if (allocated(InputFileData%InpBl%mass0)) then
+      do k = 1,size(InputFileData%InpBl%mass0,3)
+         do j = 1,6
+            do i = 1,6
+               InputFileData%InpBl%mass0(i,j,k) = T(i)*T(j)*InputFileData%InpBl%mass0(i,j,k)
+            end do
+         end do
+      end do
+   end if
+
+END SUBROUTINE BD_MirrorBladeData
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrStat,ErrMsg)
 
    ! Passed Variables:

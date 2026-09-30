@@ -52,6 +52,7 @@ IMPLICIT NONE
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: DynamicSolve = .TRUE.      !< Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code). [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
+    LOGICAL  :: MirrorRotor = .FALSE.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -354,6 +355,7 @@ subroutine BD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%DynamicSolve = SrcInitInputData%DynamicSolve
    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
+   DstInitInputData%MirrorRotor = SrcInitInputData%MirrorRotor
 end subroutine
 
 subroutine BD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -381,6 +383,7 @@ subroutine BD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Linearize)
    call RegPack(RF, InData%DynamicSolve)
    call RegPack(RF, InData%CompAeroMaps)
+   call RegPack(RF, InData%MirrorRotor)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -400,6 +403,7 @@ subroutine BD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DynamicSolve); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)

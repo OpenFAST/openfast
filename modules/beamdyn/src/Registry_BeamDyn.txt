@@ -33,7 +33,7 @@ typedef   ^         InitInputType ReKi            RootVel   {6}    - - "Initial 
 typedef   ^         InitInputType Logical         Linearize - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 typedef   ^         InitInputType Logical         DynamicSolve - .TRUE. - "Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code)." -
 typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
-
+typedef   ^         InitInputType LOGICAL         MirrorRotor  -   .FALSE. - "Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)"	-
 
 # Define outputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.

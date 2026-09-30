@@ -153,8 +153,13 @@ contains
             DP_LE(1)   = -p%W(iW)%chord_LL(iSpan)/4.
             DP_TE(1:3) =  0.0
             DP_TE(1)   = +3.*p%W(iW)%chord_LL(iSpan)/4. 
-            m%W(iW)%LE(1:3, iSpan) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
-            m%W(iW)%TE(1:3, iSpan) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
+            ! MirrorRotor: the section is used as the mirror image of the tabulated one,
+            ! so its leading and trailing edges lie on the other side of the reference
+            ! point. Without this the bound vortex and the shedding line sit on the wrong
+            ! side of the chord, and the wake is not the mirror image of the clockwise
+            ! one - an error of order chord over span.
+            m%W(iW)%LE(1:3, iSpan) = P_ref + p%W(iW)%RotDir*DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
+            m%W(iW)%TE(1:3, iSpan) = P_ref + p%W(iW)%RotDir*DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
       enddo
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
@@ -564,7 +569,18 @@ contains
             Vjouk_orth_norm = TwoNorm(Vjouk_orth)
             Vrel_norm = TwoNorm(Vrel)
 
-            alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
+            ! MirrorRotor: the airfoil tables describe the clockwise section, so the angle
+            ! of attack has to be taken in the clockwise-equivalent frame. Note that the
+            ! factor sits on the normal term here, not the tangential one as it does in
+            ! FVW_AeroOuts. Tang is a true vector but Norm is a cross product of two true
+            ! vectors, so it is a pseudovector and picks up the extra sign of the
+            ! reflection; the two routines describe the same angle through oppositely
+            ! signed quantities.
+            ! With the leading and trailing edges mirrored above, Tang reflects as a true
+            ! vector while Norm, being their cross product with the span, reflects as a
+            ! pseudovector and carries the extra sign. So RotDir sits on the normal term
+            ! here, unlike FVW_AeroOuts, which works from the airfoil DCM instead.
+            alpha = atan2(p%W(iW)%RotDir*dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]
             Re = p%W(iW)%chord_CP(icp) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
@@ -577,7 +593,11 @@ contains
             ! Simple method:
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:
-            Gamma_LL(kCP) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%W(iW)%Area(icp)/(Vjouk_orth_norm)) ! TODO
+            ! MirrorRotor: Cl above is the clockwise-equivalent value, so this is the
+            ! clockwise circulation. Bound circulation is a pseudovector along the span
+            ! while the span axis itself is a true vector, so the scalar strength
+            ! reverses on a mirrored wing. The wake stays in the physical frame.
+            Gamma_LL(kCP) = p%W(iW)%RotDir*(0.5_ReKi * Cl * Vrel_orth_norm**2*m%W(iW)%Area(icp)/(Vjouk_orth_norm)) ! TODO
             ! Convenient storage
             m%W(iW)%alpha_LL(icp) = alpha ! [rad]
             m%W(iW)%Vreln_LL(icp) = Vrel_norm
