@@ -503,7 +503,7 @@ states :math:`x_1,x_2`, a lagged attached-flow state :math:`x_3`, a separation s
 :math:`x_4`, and a vortex state :math:`x_5`. Linearization is supported, but only
 :math:`x_1`-:math:`x_4` are linearized; the vortex state is excluded.
 
-The model differs from HGM/HGMV in three ways that matter when comparing output:
+The model differs from HGM/HGMV in four ways that matter when comparing output:
 
 **1. It uses a sinusoidal attached-flow curve, not a piecewise-linear one.** The circulatory
 normal force is
@@ -531,6 +531,21 @@ relation is sinusoidal, inverting it for :math:`\alpha_F` gives
 :math:`\alpha_F = \alpha_0 + \sin(\alpha_E-\alpha_0)` under the model's linearized
 inversion, so :math:`\alpha_F \neq \alpha_E` in general. For HGM the two collapse to the
 same value.
+
+**4. The** ``Cc`` **output channel is a different quantity than for the other models.**
+When unsteady-aero outputs are enabled, ``UA_Mod=9`` writes the *viscous* chordwise force
+evaluated at :math:`\alpha_F` with :math:`C_{d0}` removed,
+
+.. math::
+   C_c = C_l^{st}(\alpha_F)\sin\alpha_F - \left[C_d^{st}(\alpha_F) - C_{d0}\right]\cos\alpha_F
+
+which is the :math:`C_T^D` of the IAG formulation. The HGM and HGMV models instead write
+:math:`C_c = C_l\sin\alpha - C_d\cos\alpha` evaluated at the instantaneous :math:`\alpha`
+and **without** subtracting :math:`C_{d0}`. The two are not the same quantity and **the**
+``Cc`` **column should not be compared between** ``UA_Mod=9`` **and the other models.**
+This affects the reported channel only: :math:`C_l`, :math:`C_d` and :math:`C_m` are the
+quantities passed to the rest of AeroDyn, and for the IAG model those are reconstructed
+from :math:`C_N^D` and :math:`C_T^D` before they are returned, so loads are unaffected.
 
 The impulsive (non-circulatory) normal force is scaled by the airfoil input ``Ka``, and the
 vortex center-of-pressure travel by ``Kv``. Vortex shedding is triggered on the calculated

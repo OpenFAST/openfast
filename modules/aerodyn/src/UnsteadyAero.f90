@@ -59,6 +59,9 @@ private
    public :: UA_ReInit
    public :: UA_InitStates_AllNodes ! used for AD linearization initialization
 
+   public :: UA_SetIAGBlendBounds   ! verification hook; see the declarations below
+   public :: UA_GetIAGBlendBounds
+
    real(ReKi), parameter         :: Gonzalez_factor = 0.2_ReKi     ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
    real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
    real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
@@ -66,11 +69,26 @@ private
       ! IAG model blend limits, in degrees of |alpha|. The dynamic Cd/Cm are faded to static
       ! between BlendLo and BlendHi, and the vortex state x5 is faded out between x5FadeLo and
       ! x5FadeHi. Both come from the IAG theory text rather than the paper's equations, so they
-      ! are named constants here rather than user inputs -- see the notes on Task 5.
-   real(ReKi), parameter         :: IAG_BlendLo  = 30.0_ReKi       ! deg; start of the dynamic->static blend
-   real(ReKi), parameter         :: IAG_BlendHi  = 45.0_ReKi       ! deg; end of the dynamic->static blend
-   real(ReKi), parameter         :: IAG_x5FadeLo = 45.0_ReKi       ! deg; start of the x5 fade-out
-   real(ReKi), parameter         :: IAG_x5FadeHi = 75.0_ReKi       ! deg; end of the x5 fade-out
+      ! are not exposed in the user input files -- see the notes on Task 5.
+      !
+      ! They are module variables rather than PARAMETERs so that verification drivers can widen
+      ! the bands and reach model branches that the default schedule makes unreachable. In
+      ! particular the backwinded (|alpha| > 90 deg) CM_C sign flip in the IAG CalcOutput branch
+      ! is multiplied by a blend weight that is identically zero for |alpha| >= IAG_BlendHi, so
+      ! with the defaults that branch can never influence y%Cm. See UA_SetIAGBlendBounds.
+      !
+      ! These are PROTECTED: only UA_SetIAGBlendBounds may modify them, and it is intended for
+      ! test/verification use. They are global (not per-instance), so a driver that changes them
+      ! changes them for every UA instance in the process.
+   real(ReKi), parameter         :: IAG_BlendLo_Def  = 30.0_ReKi   ! deg; default start of the dynamic->static blend
+   real(ReKi), parameter         :: IAG_BlendHi_Def  = 45.0_ReKi   ! deg; default end of the dynamic->static blend
+   real(ReKi), parameter         :: IAG_x5FadeLo_Def = 45.0_ReKi   ! deg; default start of the x5 fade-out
+   real(ReKi), parameter         :: IAG_x5FadeHi_Def = 75.0_ReKi   ! deg; default end of the x5 fade-out
+
+   real(ReKi), protected         :: IAG_BlendLo  = IAG_BlendLo_Def
+   real(ReKi), protected         :: IAG_BlendHi  = IAG_BlendHi_Def
+   real(ReKi), protected         :: IAG_x5FadeLo = IAG_x5FadeLo_Def
+   real(ReKi), protected         :: IAG_x5FadeHi = IAG_x5FadeHi_Def
 
    contains
    
@@ -3266,6 +3284,95 @@ pure real(ReKi) function Get_Cc( AFI_interp, alpha )
    Get_Cc = AFI_interp%Cl*sin(alpha) - (AFI_interp%Cd - AFI_interp%Cd0)*cos(alpha)
 end function Get_Cc
 !---------------------------------------------------------------------------------
+!> Override the IAG blend/fade-out bounds, in degrees of |alpha|.
+!!
+!! *** THIS IS A VERIFICATION HOOK, NOT A USER INPUT. ***
+!!
+!! The defaults (30/45 deg for the Cd/Cm dynamic->static blend, 45/75 deg for the x5
+!! vortex fade) reproduce the IAG theory text and are what production runs must use.
+!! They are exposed here only so that unit-test drivers can widen the bands and reach
+!! branches of the IAG output path that the default schedule renders unreachable --
+!! most notably the backwinded (|alpha| > 90 deg) CM_C sign flip, whose contribution to
+!! y%Cm is multiplied by a weight that is identically zero for |alpha| >= IAG_BlendHi.
+!!
+!! Passing a bound as absent leaves that bound at its current value. Call with no
+!! optional arguments plus Reset=.true. to restore all four defaults.
+!!
+!! NOTE: these are module-global, not per-instance. Changing them affects every UA
+!! instance in the process, and they are not saved/restored across UA_Init.
+subroutine UA_SetIAGBlendBounds( BlendLo, BlendHi, x5FadeLo, x5FadeHi, Reset, ErrStat, ErrMsg )
+   real(ReKi),     optional, intent(in   ) :: BlendLo   !< deg; start of the dynamic->static Cd/Cm blend
+   real(ReKi),     optional, intent(in   ) :: BlendHi   !< deg; end of the dynamic->static Cd/Cm blend
+   real(ReKi),     optional, intent(in   ) :: x5FadeLo  !< deg; start of the x5 vortex fade-out
+   real(ReKi),     optional, intent(in   ) :: x5FadeHi  !< deg; end of the x5 vortex fade-out
+   logical,        optional, intent(in   ) :: Reset     !< if .true., restore defaults first
+   integer(IntKi),           intent(  out) :: ErrStat   !< error status
+   character(*),             intent(  out) :: ErrMsg    !< error message
+
+   character(*), parameter :: RoutineName = 'UA_SetIAGBlendBounds'
+   real(ReKi) :: bLo, bHi, xLo, xHi
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if (present(Reset)) then
+      if (Reset) then
+         IAG_BlendLo  = IAG_BlendLo_Def
+         IAG_BlendHi  = IAG_BlendHi_Def
+         IAG_x5FadeLo = IAG_x5FadeLo_Def
+         IAG_x5FadeHi = IAG_x5FadeHi_Def
+      end if
+   end if
+
+      ! stage into locals so a rejected set leaves the module state untouched
+   bLo = IAG_BlendLo;  bHi = IAG_BlendHi
+   xLo = IAG_x5FadeLo; xHi = IAG_x5FadeHi
+
+   if (present(BlendLo))  bLo = BlendLo
+   if (present(BlendHi))  bHi = BlendHi
+   if (present(x5FadeLo)) xLo = x5FadeLo
+   if (present(x5FadeHi)) xHi = x5FadeHi
+
+      ! The blends are written as (|alpha|-Lo)/(Hi-Lo), so Hi must be strictly greater than Lo
+      ! or the weight is a divide-by-zero. |alpha| is wrapped to [-pi,pi], so 180 deg is the
+      ! largest meaningful bound and a bound at/above it simply disables the blend.
+   if (bHi <= bLo) then
+      call SetErrStat(ErrID_Fatal, 'IAG BlendHi ('//trim(num2lstr(bHi))//' deg) must be greater '// &
+                      'than BlendLo ('//trim(num2lstr(bLo))//' deg).', ErrStat, ErrMsg, RoutineName)
+   end if
+   if (xHi <= xLo) then
+      call SetErrStat(ErrID_Fatal, 'IAG x5FadeHi ('//trim(num2lstr(xHi))//' deg) must be greater '// &
+                      'than x5FadeLo ('//trim(num2lstr(xLo))//' deg).', ErrStat, ErrMsg, RoutineName)
+   end if
+   if (bLo < 0.0_ReKi .or. xLo < 0.0_ReKi) then
+      call SetErrStat(ErrID_Fatal, 'IAG blend lower bounds must be non-negative (degrees of |alpha|).', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+   if (ErrStat >= AbortErrLev) return
+
+   IAG_BlendLo  = bLo
+   IAG_BlendHi  = bHi
+   IAG_x5FadeLo = xLo
+   IAG_x5FadeHi = xHi
+
+end subroutine UA_SetIAGBlendBounds
+!---------------------------------------------------------------------------------
+!> Report the IAG blend/fade-out bounds currently in effect, in degrees of |alpha|.
+!! Lets a driver record what it actually ran with, and lets a test assert that the
+!! defaults are unchanged.
+subroutine UA_GetIAGBlendBounds( BlendLo, BlendHi, x5FadeLo, x5FadeHi )
+   real(ReKi), optional, intent(  out) :: BlendLo
+   real(ReKi), optional, intent(  out) :: BlendHi
+   real(ReKi), optional, intent(  out) :: x5FadeLo
+   real(ReKi), optional, intent(  out) :: x5FadeHi
+
+   if (present(BlendLo))  BlendLo  = IAG_BlendLo
+   if (present(BlendHi))  BlendHi  = IAG_BlendHi
+   if (present(x5FadeLo)) x5FadeLo = IAG_x5FadeLo
+   if (present(x5FadeHi)) x5FadeHi = IAG_x5FadeHi
+
+end subroutine UA_GetIAGBlendBounds
+!---------------------------------------------------------------------------------
 !> IAG model: linearly blend the dynamic Cd and Cm back to their static values between
 !! IAG_BlendLo and IAG_BlendHi degrees of incidence.
 !! Past ~30 deg the model's separated-flow construction loses validity, so the dynamic
@@ -4143,6 +4250,12 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          CT_D = Get_Cc( AFI_interpF, alphaF )                       ! Eq. 51, viscous Cc at alphaF
 
          y%Cn = CN_D
+            ! NOTE y%Cc is NOT the same quantity here as on the HGM/HGMV paths, which set
+            ! y%Cc = y%Cl*SinAlpha - y%Cd*CosAlpha at u%alpha and do NOT subtract Cd0.
+            ! This is CT_D: the viscous chordwise force at alphaF, Cd0 removed (Eq. 51).
+            ! Nothing downstream reads y%Cc -- BEMT, AeroDyn and FVW take only Cl/Cd/Cm -- so
+            ! this affects the UA_OUTS 'Cc' channel and nothing else. It does mean the Cc
+            ! column is not comparable between UA_Mod=9 and UA_Mod=4/5; see theory_ua.rst.
          y%Cc = CT_D
          y%Cl = CN_D*CosAlpha - CT_D*SinAlpha                       ! Eq. 52
 
