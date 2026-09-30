@@ -149,7 +149,7 @@ typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor aver
 typedef   ^ MiscVarType    IntKi    planeDomainExit      {:}{:}{:} 0 -  "Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine]" -
 
 #visualization
-typedef   ^ MiscVarType    IntKi    WakeVTK_StartN       {:}{:} - - "Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum]" -
+typedef   ^ MiscVarType    IntKi    WakeVTK_StartN       {:}{:} - - "VTK output index (n/WrDisSkp1) when wake plane is first written. Indices [wakenum,turbnum]" -
 
 # Low-resolution grid chunk data
 typedef   ^ LRGChunkType     IntKi    iChunk                  {3} -  -  "XYZ index of chunk" -

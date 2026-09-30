@@ -171,7 +171,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
     INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: planeDomainExit      !< Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine] [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum] [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< VTK output index (n/WrDisSkp1) when wake plane is first written. Indices [wakenum,turbnum] [-]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  LRGChunkType  =======

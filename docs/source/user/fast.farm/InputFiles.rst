@@ -827,13 +827,15 @@ but include leading zeros.
 
 **WrDisDT** [sec] specifies the time step (inverse of the frame rate) of
 all disturbed wind data output files and must be an integer multiple
-larger than or equal to **DT_Low**. This input is unused when
-**WrDisWind** = FALSE and when **NOutDisWindXY**, **NOutDisWindYZ**, and
-**NOutDisWindXZ** are set to zero. If the DEFAULT keyword is specified
-in place of a numerical value, **WrDisDT** is set to **DT_Low**. Note
-that the full high-resolution disturbed wind data output files are not
-output at a frame rate of 1/**DT_High**, but are only output every
-**WrDisDT** seconds.
+larger than or equal to **DT_Low**. **WrDisDT** also sets the output
+time step of the ambient wind and array effects wake-plane files written
+to ``vtk_ff/wakes`` when **OutAllPlanes** = TRUE. This input is unused when
+**WrDisWind** = FALSE, **OutAllPlanes** = FALSE, and **NOutDisWindXY**,
+**NOutDisWindYZ**, and **NOutDisWindXZ** are set to zero. If the DEFAULT
+keyword is specified in place of a numerical value, **WrDisDT** is set to
+**DT_Low**. Note that the full high-resolution disturbed wind data output
+files are not output at a frame rate of 1/**DT_High**, but are only output
+every **WrDisDT** seconds.
 
 Visualizing the ambient wind and wake interactions can be useful for
 interpreting results and debugging problems. However, FAST.Farm will
@@ -888,7 +890,8 @@ details on time-series results files.
 **OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
 This controls both the Wake Dynamics plane files written to ``vtk_ff_planes`` and the
 wake-plane files written by the ambient wind and array effects module to ``vtk_ff/wakes``
-(see :numref:`FF:Output:Planes`).
+(see :numref:`FF:Output:Planes`). The ``vtk_ff/wakes`` files are written every **WrDisDT**
+seconds, so increasing **WrDisDT** reduces the number of files written.
 Note: this option requires intensive writing to disk and will drastically slow down the simulation.
 DEFAULT is False.
 

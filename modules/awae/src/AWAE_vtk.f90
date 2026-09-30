@@ -229,8 +229,9 @@ subroutine Write_Planes_Data(p, u, m, n, t, Tstr)
               "Wake plane "//trim(PlaneNum)//" at time = "// &
               trim(num2lstr(t))//" seconds.", nY, nZ, Pts, Vel)
 
-         ! track what plane this was first written out at (initialized to huge, so this will catch only the first)
-         if (m%WakeVTK_StartN(np_wp,nt_wp) > n)    m%WakeVTK_StartN(np_wp,nt_wp) = n
+         ! track the VTK output index this plane was first written at (initialized to huge, so this will catch only the first).
+         ! Stored as the output index (n/WrDisSkp1), matching Tstr and the series-file loop in Write_WakePlane_Series.
+         if (m%WakeVTK_StartN(np_wp,nt_wp) > n/p%WrDisSkp1)    m%WakeVTK_StartN(np_wp,nt_wp) = n/p%WrDisSkp1
       end do
    end do
 
@@ -296,8 +297,8 @@ subroutine Write_WakePlane_Series(p, m)
    do nt_wp = 1, p%NumTurbines
       write(TurbNumStr, FmtStrT) "T", nt_wp
       do np_wp = 0, p%MaxPlanes - 1
-         ! Skip planes that were never written during the simulation
-         if (m%WakeVTK_StartN(np_wp, nt_wp) > n_final) cycle
+         ! Skip planes that were never written during the simulation (WakeVTK_StartN is a VTK output index)
+         if (m%WakeVTK_StartN(np_wp, nt_wp) > n_out) cycle
 
          write(PlaneNum, FmtStrWk) np_wp
          VTKprefix  = trim(TurbNumStr)//".WakePlane_"//trim(PlaneNum)
