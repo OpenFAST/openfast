@@ -28,13 +28,13 @@ simulation the tower, support structure and inflow are not mirrored, so a
 quantity such as ``TwrBsMxt`` is simply the response of an unchanged structure to
 a counter-clockwise rotor.
 
-Blade 1 lies on the mirror plane and blades 2 and 3 exchange, so a mirrored
-blade 2 is compared against the clockwise blade 3.  Mooring channels are set
+Blade spacing follows the rotation direction, so a mirrored blade is compared
+against the clockwise blade of the same number.  Mooring channels are set
 aside because which line pairs with which depends on the layout.
 
-Measured at a relative tolerance of ``0.005`` with a noise floor of ``1e-08``, across 1203 channels.
+Measured at a relative tolerance of ``0.005`` with a noise floor of ``1e-08``, across 1206 channels.
 
-* **identical** (686) -- v' = v
+* **identical** (689) -- v' = v
 * **sign-flipped** (328) -- v' = -v
 * **mirrored angle** (1) -- v' = -v, wrapped
 * **below the noise floor** (55) -- indistinguishable from zero everywhere
@@ -2537,6 +2537,9 @@ Measured at a relative tolerance of ``0.005`` with a noise floor of ``1e-08``, a
    * - ``B1AeroPwr``
      - identical
      - ElastoDyn + AeroDyn
+   * - ``B1Azimuth``
+     - identical
+     - ElastoDyn + AeroDyn
    * - ``B1FldFz``
      - identical
      - MHK buoyancy
@@ -2750,6 +2753,9 @@ Measured at a relative tolerance of ``0.005`` with a noise floor of ``1e-08``, a
    * - ``B2AeroPwr``
      - identical
      - ElastoDyn + AeroDyn
+   * - ``B2Azimuth``
+     - identical
+     - ElastoDyn + AeroDyn
    * - ``B2FldMx``
      - sign-flipped
      - MHK buoyancy
@@ -2808,6 +2814,9 @@ Measured at a relative tolerance of ``0.005`` with a noise floor of ``1e-08``, a
      - identical
      - BeamDyn blades
    * - ``B3AeroPwr``
+     - identical
+     - ElastoDyn + AeroDyn
+   * - ``B3Azimuth``
      - identical
      - ElastoDyn + AeroDyn
    * - ``B3N3Clrnc``

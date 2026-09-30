@@ -845,6 +845,7 @@ channels:
   ANCHTEN4: {behaviour: mooring, measured_in: [MHK buoyancy]}
   Azimuth: {behaviour: S, measured_in: [AeroDisk, yawed, AeroDyn nodal outputs, BeamDyn blades, ElastoDyn + AeroDyn, OLAF free wake, Twin-rotor semisubmersible]}
   B1AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B1Azimuth: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
   B1FldFz: {behaviour: S, measured_in: [MHK buoyancy]}
   B1N1Alpha: {behaviour: S, measured_in: [BeamDyn blades, ElastoDyn + AeroDyn]}
   B1N1Cd: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
@@ -916,6 +917,7 @@ channels:
   B1TipTDyr: {behaviour: F, measured_in: [BeamDyn blades]}
   B1TipTDzr: {behaviour: S, measured_in: [BeamDyn blades]}
   B2AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B2Azimuth: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
   B2FldMx: {behaviour: F, measured_in: [MHK buoyancy]}
   B2N3Clrnc: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
   B2N3Mbt: {behaviour: S, measured_in: [MHK buoyancy]}
@@ -936,6 +938,7 @@ channels:
   B2TipTDyr: {behaviour: F, measured_in: [BeamDyn blades]}
   B2TipTDzr: {behaviour: S, measured_in: [BeamDyn blades]}
   B3AeroPwr: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
+  B3Azimuth: {behaviour: S, measured_in: [ElastoDyn + AeroDyn]}
   B3N3Clrnc: {behaviour: S, measured_in: [Twin-rotor semisubmersible]}
   B3RootFxr: {behaviour: S, measured_in: [BeamDyn blades]}
   B3RootFyr: {behaviour: F, measured_in: [BeamDyn blades]}

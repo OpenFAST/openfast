@@ -166,7 +166,12 @@ geometry formats described below, followed by `MirrorRotor`. `MirrorRotor` is
 read for both formats. Setting it to `True` runs the turbine as its mirror
 image, so the rotor turns counter-clockwise viewed from upwind, without changing
 any of the geometry, blade or airfoil inputs that describe it. The driver
-mirrors the prescribed hub motion and blade pitch to match. See
+mirrors the prescribed hub motion and blade pitch to match. In the basic HAWT
+format the blade azimuth spacing also carries the rotation sense, so the blades
+are numbered in the direction of rotation and blade k of a mirrored rotor is
+the mirror image of blade k of a clockwise one. The advanced format takes the
+blade azimuths (`BldOrientation_h`) as given, so for a mirrored rotor the user
+supplies the mirrored azimuths themselves. See
 :numref:`glue-code-mirror-rotor` for what the flag does and what it does not
 mirror.
 

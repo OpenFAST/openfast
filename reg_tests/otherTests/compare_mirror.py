@@ -36,12 +36,12 @@ for _b in range(1, 4):
                    "Vdisy", "Vundy"):
             EXPECT[f"B{_b}N{_n}{_q}"] = "F"
 
-# Reported but not asserted. Per-blade azimuth is a wrapped diagnostic angle whose
-# mirror reference depends on blade index and rotor tilt (under tilt it picks up a
-# clean 180 deg offset). Whether it mirrors cleanly under the new blade-numbering
-# convention is still to be measured before it is asserted. It carries no load
-# information, and the rotor-level "Azimuth" channel is asserted.
-INFORMATIONAL = [r"^B\d+Azimuth$"]
+# Reported but not asserted. Under the old blade numbering the per-blade azimuth's
+# mirror reference depended on blade index and rotor tilt, so B*Azimuth sat here.
+# With the blades numbered in the direction of rotation it measures as identical
+# (class S) across every registered pair -- 2026-09-30, emit_sign_table at
+# tol 5e-3 -- so it is asserted like any other channel and this list is empty.
+INFORMATIONAL = []
 
 
 def load(path):
