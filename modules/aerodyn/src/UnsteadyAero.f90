@@ -2885,7 +2885,9 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
       ! small (~0.4 deg at 20 deg from alpha0) but f_st is steep near stall, so evaluating the
       ! separation function at alphaE would produce a visible start-up transient.
       ! NOTE: x%x(3) MUST already be assigned -- Get_alphaF's UA_IAG branch reads it from x.
-      alphaF   = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE)                 ! Eq. 41
+      alphaF   = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE, ErrStat2, ErrMsg2)                 ! Eq. 41
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
       call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp_F, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -2982,7 +2984,9 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
 
       ! calculate fs_aF (stored in AFI_interp%f_st):
     ! find alphaF where FullyAttached(alphaF) = x(3)
-   alphaF = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE)
+   alphaF = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
    
    call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_AlphaF, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3165,7 +3169,15 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
 
 END SUBROUTINE Get_HGM_constants
 !---------------------------------------------------------------------------------
-FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
+!> Invert the fully-attached normal-force (or lift) curve to find the angle alphaF at which the
+!! attached-flow coefficient equals the lagged state x3. Dispatches on p%UAMod.
+!!
+!! ErrStat/ErrMsg are mandatory: the final ELSE of the dispatcher is reachable only if a new
+!! UAMod is added without a branch here, and the failure mode is silent rather than loud
+!! (alphaF = 0 places the separation lookup at the wrong angle, typically giving f_st ~ 1, i.e.
+!! stall quietly switched off, and the run completes with plausible-looking but wrong loads).
+!! Callers must therefore check ErrStat and abort.
+FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in, ErrStat, ErrMsg) RESULT(alphaF)
    TYPE(UA_InputType),                  INTENT(IN   )  :: u           ! Inputs at t
    TYPE(UA_ParameterType),              INTENT(IN   )  :: p           ! Parameters
    TYPE(UA_ElementContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
@@ -3173,13 +3185,18 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
    
    REAL(ReKi),                          INTENT(IN   )  :: alpha_34
    REAL(ReKi),                          INTENT(IN   )  :: alphaE_in
+   INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    REAL(ReKi)                                          :: alphaF        ! function result
    
    REAL(ReKi)                                          :: alphaE ! value that can be changed (+/- 2pi)
    REAL(ReKi)                                          :: alpha_(2), c_(2)
    REAL(ReKi)                                          :: alphaN_(4), cN_(4)
    integer(IntKi)                                      :: Indx
+   character(*), parameter                             :: RoutineName = 'Get_alphaF'
    
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
    alphaE = alphaE_in
    
@@ -3229,8 +3246,11 @@ FUNCTION Get_alphaF(p, u, x, BL_p, alpha_34, alphaE_in) RESULT(alphaF)
       end if
       
    else
-      !PROGRAMMING ERROR IF WE GET TO THIS PART OF THE IF STATEMENT!
-      alphaF = 0
+      ! PROGRAMMING ERROR: a UAMod reached this routine without an inversion branch. Returning
+      ! 0 silently would disable stall rather than stop, so raise a fatal error instead.
+      alphaF = 0.0_ReKi
+      call SetErrStat(ErrID_Fatal, 'Programming error: Get_alphaF has no branch for UAMod='// &
+                      trim(num2lstr(p%UAMod))//'.', ErrStat, ErrMsg, RoutineName)
    end if   
      
    
@@ -4151,7 +4171,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 
          y%Cl = y%Cn * CosAlpha + y%Cc * SinAlpha;
 
-         alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE)
+         alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
          call AFI_ComputeAirfoilCoefs( alphaF,   u%Re, u%UserProp, AFInfo, AFI_interpF, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
@@ -4227,7 +4249,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          alpha_w = u%alpha
          call MPi2Pi(alpha_w)                                       ! for the CM_C and blend tests
 
-         alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE)    ! Eq. 41
+         alphaF = Get_alphaF(p, u, x_in, BL_p, alpha_34, alphaE, ErrStat2, ErrMsg2)    ! Eq. 41
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
          call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interpF, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
