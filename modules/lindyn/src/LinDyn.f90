@@ -724,9 +724,9 @@ subroutine Init_Lin(p, InitOut, errStat, errMsg)
 !   LinNames_y                      {:}           -         -        "Names of the outputs used in linearization" -
 !   LinNames_x                      {:}           -         -        "Names of the continuous states used in linearization" -
 !   LinNames_u                      {:}           -         -        "Names of the inputs used in linearization" -
-!   RotFrame_y                      {:}           -         -        "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-!   RotFrame_x                      {:}           -         -        "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
-!   RotFrame_u                      {:}           -         -        "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+!   RotFrame_y                      {:}           -         -        "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+!   RotFrame_x                      {:}           -         -        "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame" -
+!   RotFrame_u                      {:}           -         -        "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 !   IsLoad_u                        {:}           -         -        "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 !   DerivOrder_x                    {:}           -         -        "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
    !Appropriate Jacobian row/column names and rotating-frame flags here:   

@@ -157,6 +157,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: CoreSpreadEddyVisc = 0.0_ReKi      !< Eddy viscosity used in the core spreading method [-]
     INTEGER(IntKi)  :: RegDeterMethod = 0_IntKi      !< Regularization determinatino method (manual, automatic) [-]
     INTEGER(IntKi)  :: RegFunction = 0_IntKi      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
+    INTEGER(IntKi)  :: RegFunctionPart = 0_IntKi      !< Type of particle regularization function (None, Exp, Compact; see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod = 0_IntKi      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegParam = 0.0_ReKi      !< Initial value of the regularization parameter [-]
     REAL(ReKi)  :: WingRegParam = 0.0_ReKi      !< Regularization parameter of the wing [-]
@@ -385,6 +386,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: CoreSpreadEddyVisc = 0.0_ReKi      !< Eddy viscosity used in the core spreading method [-]
     INTEGER(IntKi)  :: RegDeterMethod = 0_IntKi      !< Regularization determinatino method (manual, automatic) [-]
     INTEGER(IntKi)  :: RegFunction = 0_IntKi      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
+    INTEGER(IntKi)  :: RegFunctionPart = 0_IntKi      !< Type of particle regularization function (None, Exp, Compact; see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod = 0_IntKi      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegParam = 0.0_ReKi      !< Factor used in the regularization  [-]
     REAL(ReKi)  :: WingRegParam = 0.0_ReKi      !< Factor used in the regularization  [-]
@@ -1541,6 +1543,7 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%CoreSpreadEddyVisc = SrcParamData%CoreSpreadEddyVisc
    DstParamData%RegDeterMethod = SrcParamData%RegDeterMethod
    DstParamData%RegFunction = SrcParamData%RegFunction
+   DstParamData%RegFunctionPart = SrcParamData%RegFunctionPart
    DstParamData%WakeRegMethod = SrcParamData%WakeRegMethod
    DstParamData%WakeRegParam = SrcParamData%WakeRegParam
    DstParamData%WingRegParam = SrcParamData%WingRegParam
@@ -1641,6 +1644,7 @@ subroutine FVW_PackParam(RF, Indata)
    call RegPack(RF, InData%CoreSpreadEddyVisc)
    call RegPack(RF, InData%RegDeterMethod)
    call RegPack(RF, InData%RegFunction)
+   call RegPack(RF, InData%RegFunctionPart)
    call RegPack(RF, InData%WakeRegMethod)
    call RegPack(RF, InData%WakeRegParam)
    call RegPack(RF, InData%WingRegParam)
@@ -1719,6 +1723,7 @@ subroutine FVW_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%CoreSpreadEddyVisc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RegDeterMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RegFunction); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RegFunctionPart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WakeRegMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WakeRegParam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WingRegParam); if (RegCheckErr(RF, RoutineName)) return
@@ -4232,6 +4237,7 @@ subroutine FVW_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    DstInputFileData%CoreSpreadEddyVisc = SrcInputFileData%CoreSpreadEddyVisc
    DstInputFileData%RegDeterMethod = SrcInputFileData%RegDeterMethod
    DstInputFileData%RegFunction = SrcInputFileData%RegFunction
+   DstInputFileData%RegFunctionPart = SrcInputFileData%RegFunctionPart
    DstInputFileData%WakeRegMethod = SrcInputFileData%WakeRegMethod
    DstInputFileData%WakeRegParam = SrcInputFileData%WakeRegParam
    DstInputFileData%WingRegParam = SrcInputFileData%WingRegParam
@@ -4281,6 +4287,7 @@ subroutine FVW_PackInputFile(RF, Indata)
    call RegPack(RF, InData%CoreSpreadEddyVisc)
    call RegPack(RF, InData%RegDeterMethod)
    call RegPack(RF, InData%RegFunction)
+   call RegPack(RF, InData%RegFunctionPart)
    call RegPack(RF, InData%WakeRegMethod)
    call RegPack(RF, InData%WakeRegParam)
    call RegPack(RF, InData%WingRegParam)
@@ -4322,6 +4329,7 @@ subroutine FVW_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%CoreSpreadEddyVisc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RegDeterMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RegFunction); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RegFunctionPart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WakeRegMethod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WakeRegParam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WingRegParam); if (RegCheckErr(RF, RoutineName)) return

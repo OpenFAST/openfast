@@ -74,6 +74,17 @@ add_library(aerodynlib STATIC
 )
 target_link_libraries(aerodynlib basicaerolib aeroacousticslib seastlib nwtclibs)
 
+# OLAF vortex kernels: gfortran's default -ftrapping-math blocks SIMD if-conversion of the branchless
+# compact-C2 merge; Skip when FPE trapping is requested either via FPE_TRAP_ENABLED or an -ffpe-trap
+# in CMAKE_Fortran_FLAGS, so those traps stay meaningful.
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND NOT FPE_TRAP_ENABLED AND NOT CMAKE_Fortran_FLAGS MATCHES "-ffpe-trap")
+  set_source_files_properties(
+    src/FVW_BiotSavart.f90
+    src/FVW_VortexTools.f90
+    PROPERTIES COMPILE_FLAGS "-fno-trapping-math"
+  )
+endif()
+
 # ADI lib
 add_library(adilib STATIC
   src/AeroDyn_Inflow.f90
