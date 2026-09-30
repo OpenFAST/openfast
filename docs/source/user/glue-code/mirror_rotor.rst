@@ -70,6 +70,36 @@ out.  Inside ElastoDyn the azimuth and rotor speed states are the **physical**
 ones, so a mirrored rotor really does have a negative shaft speed about the
 :math:`+x` axis.
 
+The flow of the flag through the code, and what changes where:
+
+.. mermaid::
+
+   flowchart TD
+       FST["OpenFAST primary input<br/>MirrorRotor = T (per rotor)"] --> GLUE["Glue code<br/>hands the flag to each module at Init"]
+
+       GLUE --> ED["ElastoDyn /<br/>Simplified-ElastoDyn"]
+       GLUE --> AD["AeroDyn"]
+       GLUE --> BD["BeamDyn"]
+       GLUE --> SRV["ServoDyn + DLL"]
+       GLUE --> X["Refused combinations"]
+       GLUE -.-> K["Physics kernels unchanged:<br/>BEMT, UA, DBEMT, AirfoilInfo,<br/>BD finite elements, HydroDyn, MoorDyn;<br/>airfoil polars used verbatim"]
+
+       ED --> ED1["Azimuth, rotor speed and<br/>acceleration reversed"]
+       ED --> ED2["Blade spacing carries the rotation<br/>sense: blades numbered in the<br/>direction of rotation"]
+       ED --> ED3["Rotor-convention channels and pitch<br/>presented in the clockwise convention<br/>at the boundary"]
+
+       AD --> AD1["Per-blade azimuth taken from<br/>the mirrored root meshes"]
+       AD --> AD2["Angle of attack in the clockwise-<br/>equivalent airfoil frame"]
+       AD --> AD3["OLAF: bound circulation sign and<br/>lifting-line LE/TE mirrored per wing —<br/>mixed CW/mirrored rotors share one wake"]
+       AD --> AD4["AeroDisk: lateral force and<br/>moment components signed"]
+       AD --> AD5["VTK blade surfaces: airfoil section<br/>drawn as its mirror image"]
+
+       BD --> BD1["Blade mass/stiffness transformed on<br/>read: M' = T M T', T = diag(1,-1,1,-1,1,-1)<br/>root motion follows ElastoDyn"]
+
+       SRV --> SRV1["Sees the clockwise convention —<br/>no controller change; yaw untouched<br/>(inertial-frame quantity)"]
+
+       X --> X1["Linearization · aero-map solver ·<br/>ExtLoads · FAST.Farm · AeroAcoustics:<br/>fatal error at Init"]
+
 .. _glue-code-mirror-rotor-where:
 
 Where the mirror is applied
@@ -340,58 +370,45 @@ tower, support structure and inflow are not mirrored, so a quantity such as
 ``TwrBsMxt`` is simply the response of an unchanged structure to a
 counter-clockwise rotor.
 
+The table lists only what **changes** between the two runs of the symmetric
+comparison, grouped by the physical rule that flips each family.  Every channel
+not listed here measures **identical**; the complete per-channel classification
+of all 1206 channels, identical ones included, is generated as
+:download:`mirror_rotor_sign_map.yaml <mirror_rotor_sign_map.yaml>`.
+
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 35 65
 
-   * - Behaviour
-     - Channels
-   * - Identical
-     - ``RotSpeed``, ``RotAccel``, ``Azimuth``, ``RotTorq``, ``LSShftTq``,
-       ``RotPwr``, ``RotThrust``, ``GenSpeed``, ``GenAccel``, ``GenTq``,
-       ``GenPwr``, ``HSShftTq``, ``HSShftPwr``, ``LSShftFxa``, ``LSShftFza``,
-       ``LSSTipMya``, ``LSSGagMya``, ``YawBrFxp``, ``YawBrFzp``, ``YawBrMyp``,
-       ``TwrBsFxt``, ``TwrBsFzt``, ``TwrBsMyt``, ``TTDspFA``, ``TwrTpTDxi``,
-       ``TwrTpTDzi``, ``NcIMUTAxs``, ``NcIMUTAzs``, ``PtfmSurge``,
-       ``PtfmHeave``, ``PtfmPitch``, ``HydroFxi``, ``HydroFzi``,
-       ``OoPDefl*``, ``TipDxc*``, ``RootFxc*``, ``RootFzc*``, ``RootMyc*``,
-       ``RootFxb*``, ``RootFzb*``, ``RootMyb*``;
-       the BeamDyn ``B*RootFxr``, ``B*RootFzr``, ``B*RootMyr``, ``B*TipTDxr``,
-       ``B*TipTDzr``, ``B*TipRDyr``, ``B*FldFz`` families;
-       the AeroDyn ``*Alpha``, ``*Theta``, ``*Phi``, ``*Fn``, ``*Fl``,
-       ``*Fd``, ``*Fx``, ``*Cl``, ``*Cd``, ``*Cx``, ``*Cn``, ``*Vrel``,
-       ``*Vindx``, ``*AxInd``, ``*TnInd``, ``*Gam``, ``*VUndx``,
-       ``*VDisx`` families, in both the module (``B1N001Fn``) and nodal
-       (``AB1N001Fn``) forms;
-       the per-blade ``B*AeroPwr``;
-       the AeroDisk ``ADFx``, ``ADFy``, ``ADFz``, ``ADFxi``, ``ADFzi``,
-       ``ADMyi``, ``ADCp``, ``ADCq``, ``ADCt``, ``ADPower``, ``ADSkew``,
-       ``ADTSR``, ``ADVRel`` channels;
-       ``RtAeroFxh``, ``RtAeroFzh``, ``RtAeroMyh``, ``RtAeroPwr``,
-       ``RtAeroCp``, ``RtAeroCt``, ``RtArea``, ``RtSkew``, ``RtTSR``,
-       ``RtSpeed``, ``RtVAvgxh``, ``RtVAvgzh``, ``RtFldFxh``, ``RtFldFzg``,
-       ``RtFldMyg``; and for a marine turbine the buoyant ``*Fbn``, ``*Fbs``,
-       ``*Mbt``, ``HbFbx``, ``HbFbz``, ``HbMby`` families together with
-       ``*SgCav``, ``*SigCr`` and ``*Clrnc``
-   * - Sign-flipped
-     - ``LSShftMxa``, ``LSShftFya``, ``LSSTipMza``, ``LSSGagMxa``,
-       ``LSSGagMza``, ``LSSTipVxa``, ``LSSTipAxa``, ``YawBrFyp``,
-       ``YawBrMxp``, ``YawBrMzp``, ``TwrBsFyt``, ``TwrBsMxt``, ``TwrBsMzt``,
-       ``TTDspSS``, ``TwrTpTDyi``, ``NcIMUTAys``, ``PtfmSway``, ``PtfmRoll``,
-       ``PtfmYaw``, ``HydroFyi``,
-       ``IPDefl*``, ``TipDyc*``, ``RootFyc*``, ``RootMxc*``, ``RootMzc*``,
-       ``RootFyb*``, ``RootMxb*``, ``RootMzb*``;
-       the BeamDyn ``B*RootFyr``, ``B*RootMxr``, ``B*RootMzr``, ``B*TipTDyr``,
-       ``B*TipRDxr``, ``B*TipRDzr``, ``B*FldMx`` families;
-       the AeroDyn ``*Ft``, ``*Fy``, ``*Cy``, ``*Cm``, ``*Ct``, ``*Vindy``,
-       ``*STVy``, ``*Mm`` families, again in both the module and nodal forms;
-       the AeroDisk ``ADMx``, ``ADMy``, ``ADMz``, ``ADFyi``, ``ADMxi``,
-       ``ADMzi``, ``ADSpeed`` channels;
-       ``RtAeroFyh``, ``RtAeroMxh``, ``RtAeroMzh``, ``RtAeroCq``,
-       ``RtVAvgyh``, ``RtFldFyh``, ``RtFldMxh``, ``RtFldMzh``; and for a
-       marine turbine the buoyant ``*Fbt``, ``*Mbn``, ``*Mbs``, ``HbFby``,
-       ``HbMbx``, ``HbMbz`` families
-   * - Mirrored angle
+   * - Sign-flipped family
+     - Representative channels
+   * - Lateral (:math:`y`) structural forces, deflections, velocities and
+       accelerations — the mirrored axis itself
+     - ``LSShftFya``, ``YawBrFyp``, ``TwrBsFyt``, ``TTDspSS``, ``TwrTpTDyi``,
+       ``NcIMUTAys``, ``PtfmSway``, ``HydroFyi``, ``IPDefl*``, ``TipDyc*``,
+       ``RootFyc*``, ``RootFyb*``, BeamDyn ``B*RootFyr`` and ``B*TipTDyr``
+   * - Moments and rotations about the :math:`x`- and :math:`z`-axes —
+       pseudovector components in the mirror plane
+     - ``TwrBsMxt``, ``TwrBsMzt``, ``YawBrMxp``, ``YawBrMzp``, ``PtfmRoll``,
+       ``PtfmYaw``, ``RootMxc*``, ``RootMzc*``, ``RootMxb*``, ``RootMzb*``,
+       BeamDyn ``B*RootMxr``, ``B*RootMzr``, ``B*TipRDxr``, ``B*TipRDzr``
+   * - Shaft quantities in the physical ``xa``/``xs`` frames (the
+       rotor-convention twins ``RotSpeed``, ``RotTorq`` etc. stay identical)
+     - ``LSSTipVxa``, ``LSSTipAxa``, ``LSShftMxa``, ``LSShftFya``,
+       ``LSSTipMza``, ``LSSGagMxa``, ``LSSGagMza``
+   * - Aerodynamic tangential and in-plane families, in both the module
+       (``B1N001Ft``) and nodal (``AB1N001Ft``) forms
+     - ``*Ft``, ``*Fy``, ``*Cy``, ``*Cm``, ``*Ct``, ``*Mm``, ``*Vindy``,
+       ``*STVy``, ``*VUndy``, ``*VDisy``
+   * - Rotor-aggregate lateral loads and inflow
+     - ``RtAeroFyh``, ``RtAeroMxh``, ``RtAeroMzh``, ``RtAeroCq``,
+       ``RtVAvgyh``, ``RtFldFyh``, ``RtFldMxh``, ``RtFldMzh``
+   * - AeroDisk lateral loads and speed
+     - ``ADFyi``, ``ADMx``, ``ADMy``, ``ADMz``, ``ADMxi``, ``ADMzi``,
+       ``ADSpeed``
+   * - Marine-turbine buoyancy, tangential and moment components
+     - ``*Fbt``, ``*Mbn``, ``*Mbs``, ``HbFby``, ``HbMbx``, ``HbMbz``
+   * - **Mirrored angle** (:math:`v' = -v`, wrapped)
      - ``LSSTipPxa``, ``LSSGagPxa``
 
 Every channel that carries a mirror sign in the code is now requested by at
@@ -406,11 +423,12 @@ and one mirrored angle, with a further 55 below the noise floor in every case an
 133 mooring channels set aside because their pairing is layout-specific.  No
 channel is unresolved.
 
-The grouped form above is the one to read.  The complete per-channel map, listing
-all 1206 channels alphabetically with the pairs each was measured in, is at
-:ref:`glue-code-mirror-rotor-sign-map`; the same data is available as
-``mirror_rotor_sign_map.yaml`` for anything that wants to consume it.  Both are
-generated by the same measurement and neither should be edited by hand.
+The grouped form above is the one to read.  The complete per-channel map,
+listing all 1206 channels alphabetically with the pairs each was measured in,
+is generated by the same measurement as
+:download:`mirror_rotor_sign_map.yaml <mirror_rotor_sign_map.yaml>` — run
+``reg_tests/otherTests/emit_sign_table.py --tol 0.005 --emit-map`` to
+regenerate it; it should never be edited by hand.
 
 
 .. _glue-code-mirror-rotor-control:

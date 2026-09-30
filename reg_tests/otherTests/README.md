@@ -23,7 +23,7 @@ expressed in different frames.
 | Script | What it does |
 |---|---|
 | `compare_mirror.py` | the shared classifier. `classify(x, y, tol, floor)` returns `S`, `F`, `A`, `negligible` or `?`. Blade spacing follows the rotation sense, so blade k pairs with blade k directly and no permutation is needed; the mooring `--swap` mapping (layout pairings) remains where a script needs it. Everything else imports this |
-| `emit_sign_table.py` | regenerates the measured sign table in `mirror_rotor.rst` by running every registered mirrored pair and classifying every channel |
+| `emit_sign_table.py` | measures the sign map by running every registered mirrored pair and classifying every channel; `--emit-map` regenerates `docs/source/user/glue-code/mirror_rotor_sign_map.yaml` (the rendered per-channel page was retired 2026-09-30 — the grouped summary in `mirror_rotor.rst` is maintained by hand) |
 | `check_rtest_mirror_pair.py` | checks the registered clockwise/mirrored pairs, with per-pair tolerance and start time |
 | `openfast_case_mirror.py` | clones a regression case verbatim and toggles only `MirrorRotor` |
 | `mr_two_rotor.py` | compares rotor 1 against rotor 2 inside one multi-rotor glue-code run |
