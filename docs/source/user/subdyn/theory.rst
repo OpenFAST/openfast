@@ -718,21 +718,20 @@ from the same linear interpolation of the displacement field used above:
    \label{eq:MassMatrixPreTension}\end{aligned}
 
 with :math:`L_0` the *rest* (unstretched) length of the cable,
-:math:`L_0=L_e/(1+\epsilon_0)`. (Note that the above mass matrix is
-also used for rigid-link members, in which case, :math:`L_0=L_e`.)
+:math:`L_0=L_e/(1+\epsilon_0)`.
 
 Because the displacement varies linearly along the element (the cable is
 never subdivided and carries no bending shape), the translational mass is
 isotropic: the diagonal terms are :math:`1/3` and the terms coupling the
 two nodes are :math:`1/6`, identical in the axial and transverse
 directions. No inertia is associated with the rotational degrees of
-freedom, consistent with the slender-rod idealization. This element mass
+freedom, consistent with the slender-rod idealization. A purely collinear
+assembly therefore carries no inertia about its own axis. This element mass
 reproduces the rigid-body inertia of a uniform thin rod exactly: a total
-mass :math:`m=\rho L_e`, an inertia :math:`m L_e^2/3` about an end, and
-:math:`m L_e^2/12` about its centre. The same mass matrix is used for
-*rigid-link* members, which share this straight two-node formulation. A
-purely collinear assembly therefore carries no inertia about its own
-axis.
+mass :math:`m=\rho L_0`, an inertia :math:`m L_e^2/3` about an end, and
+:math:`m L_e^2/12` about its centre. The same mass matrix is also used for
+*rigid-link* members, which share this straight two-node formulation. In
+the case of rigid-link members, :math:`L_0=L_e`.
 
 .. _SD_ControlCable:
 
