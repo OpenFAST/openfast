@@ -64,7 +64,16 @@ if(APPLE OR UNIX)
    target_compile_definitions(beamdyn_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-install(TARGETS beamdynlib beamdyn_driver_subs beamdyn_driver beamdyn_c_binding beamdyn_c_bind_static
+# C driver for the C-bindings interface (example of driving a standalone beam from C, and checks of the interface)
+add_executable(beamdyn_c_binding_driver
+  src/BeamDyn_C_Binding_Driver.c
+)
+target_link_libraries(beamdyn_c_binding_driver beamdyn_c_binding)
+if(UNIX AND NOT APPLE)
+   target_link_libraries(beamdyn_c_binding_driver m)
+endif()
+
+install(TARGETS beamdynlib beamdyn_driver_subs beamdyn_driver beamdyn_c_binding beamdyn_c_bind_static beamdyn_c_binding_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
