@@ -108,7 +108,7 @@ typedef   ^                            UA_KelvinChainType            ReKi       
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                7            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
+typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                7            -         -        "continuous states for UA_Mod=4,5,6,8,9 (x1,x2: downwash memory terms; x3: lagged attached-flow coefficient -- Clp' for UA_Mod=4, Cnp for UA_Mod=5,8,9; x4: f'', final separation point function; x5: vortex-lift normal force, UA_Mod=5,9)"        "{rad, rad, - -}"
 typedef   ^                            ContinuousStateType           UA_ElementContinuousStateType  element                   {:}{:}        -         -        "continuous states when UA_Mod=4 for each blade/node"        "-"
 
 # Define discrete (non-differentiable) states here:
@@ -168,6 +168,10 @@ typedef   ^                            OtherStateType                ReKi       
 typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
 typedef   ^                            OtherStateType                LOGICAL                  vortexOn                        {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift term is active"   -
 typedef   ^                            OtherStateType                LOGICAL                  BelowThreshold                  {:}{:}        -         -        "HGMV model: logical flag indicating if cn fell below threshold to form another vortex"   -
+typedef   ^                            OtherStateType                ReKi                     tau_v_IAG                       {:}{:}        -         -        "IAG model: non-dimensional vortex time"   -
+typedef   ^                            OtherStateType                LOGICAL                  VortexOn_IAG                    {:}{:}        -         -        "IAG model: logical flag indicating if the vortex lift term is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  PositiveStall                   {:}{:}        -         -        "IAG model: sign of the stall state (x3>=0) latched at vortex initiation"   -
+typedef   ^                            OtherStateType                ReKi                     alpha_minus1_IAG                {:}{:}        -         -        "IAG model: angle of attack at the previous step, used for the upstroke test"   rad
 typedef   ^                            OtherStateType                LOGICAL                  activeL                         {:}{:}        -         -        "BV model: logical flag indicating if the lift stall is active"   -
 typedef   ^                            OtherStateType                LOGICAL                  activeD                         {:}{:}        -         -        "BV model: logical flag indicating if the drag stall is active"   -
 

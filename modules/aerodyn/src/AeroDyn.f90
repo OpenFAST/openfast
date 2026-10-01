@@ -4894,8 +4894,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
          call SetErrStat( ErrID_Fatal, 'Wake_Mod must be 0 or 1 for linearization.', ErrStat, ErrMsg, RoutineName )
       endif
 
-      if (InputFileData%UA_Init%UAMod /= UA_None .and. InputFileData%UA_Init%UAMod /= UA_HGM .and. InputFileData%UA_Init%UAMod /= UA_HGMV .and. InputFileData%UA_Init%UAMod /= UA_OYE) then
-         call SetErrStat( ErrID_Fatal, 'UA_Mod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
+         ! NOTE: this is a chain of exclusions, not an allowed-list, so a new model is
+         ! REJECTED for linearization unless it is named here. UA_IAG is admitted on the
+         ! same basis as UA_HGMV: both carry a 5th (vortex) state that is not linearized,
+         ! and both linearize x1-x4 only (see p%lin_nx in UA_SetParameters). UA_HGMV360 is
+         ! deliberately still absent.
+      if (InputFileData%UA_Init%UAMod /= UA_None .and. InputFileData%UA_Init%UAMod /= UA_HGM .and. InputFileData%UA_Init%UAMod /= UA_HGMV .and. InputFileData%UA_Init%UAMod /= UA_OYE .and. InputFileData%UA_Init%UAMod /= UA_IAG) then
+         call SetErrStat( ErrID_Fatal, 'UA_Mod must be 0, 4, 5, 6, or 9 for linearization.', ErrStat, ErrMsg, RoutineName )
       end if
 
       select case(InputFileData%DBEMT_Mod)
