@@ -27,15 +27,47 @@ add_library(beamdynlib STATIC
 )
 target_link_libraries(beamdynlib nwtclibs)
 
-add_executable(beamdyn_driver 
-  src/Driver_Beam.f90
+# Driver subroutines (also used by the C-bindings interface for writing the output file)
+add_library(beamdyn_driver_subs STATIC
   src/Driver_Beam_Subs.f90
 )
-target_link_libraries(beamdyn_driver beamdynlib versioninfolib)
+target_link_libraries(beamdyn_driver_subs beamdynlib versioninfolib)
 
-install(TARGETS beamdynlib beamdyn_driver
+add_executable(beamdyn_driver
+  src/Driver_Beam.f90
+)
+target_link_libraries(beamdyn_driver beamdyn_driver_subs)
+
+# C-bindings interface library
+#   create object instead of directly linking into shared and static -- causes issues in parallel builds
+#   NOTE: target linking at the object, static, and shared libraries.  Different CMake versions handle this
+#         slightly differently with unpredictable results if I don't.
+add_library(beamdyn_c_binding_object OBJECT src/BeamDyn_C_Binding.f90)
+target_link_libraries(beamdyn_c_binding_object beamdynlib beamdyn_driver_subs nwtclibs versioninfolib)
+set_property(TARGET beamdyn_c_binding_object PROPERTY POSITION_INDEPENDENT_CODE 1) # required for shared libs
+if(APPLE OR UNIX)
+   target_compile_definitions(beamdyn_c_binding_object PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+
+# Shared
+add_library(beamdyn_c_binding SHARED $<TARGET_OBJECTS:beamdyn_c_binding_object>)
+target_link_libraries(beamdyn_c_binding beamdynlib beamdyn_driver_subs nwtclibs versioninfolib)
+target_include_directories(beamdyn_c_binding PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+)
+set_target_properties(beamdyn_c_binding PROPERTIES PUBLIC_HEADER src/BeamDyn_C_Binding.h)
+
+# C-bindings non-shared interface
+add_library(beamdyn_c_bind_static STATIC $<TARGET_OBJECTS:beamdyn_c_binding_object>)
+target_link_libraries(beamdyn_c_bind_static beamdynlib beamdyn_driver_subs nwtclibs versioninfolib)
+if(APPLE OR UNIX)
+   target_compile_definitions(beamdyn_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+
+install(TARGETS beamdynlib beamdyn_driver_subs beamdyn_driver beamdyn_c_binding beamdyn_c_bind_static
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
+  PUBLIC_HEADER DESTINATION include
 )
