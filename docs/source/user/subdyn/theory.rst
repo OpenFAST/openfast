@@ -698,7 +698,7 @@ from the same linear interpolation of the displacement field used above:
 .. math::
 
    \begin{aligned}
-   \boldsymbol{M}_e = \rho L_e
+   \boldsymbol{M}_e = \rho L_0
    \left[
    \begin{array}{*{12}c}
    1/3   & 0       & 0   & &         & & 1/6   & 0       & 0   & &         & \\
@@ -717,8 +717,9 @@ from the same linear interpolation of the displacement field used above:
    \right]
    \label{eq:MassMatrixPreTension}\end{aligned}
 
-with :math:`L_e` the *undisplaced* length of the element (not
-:math:`L_0`).
+with :math:`L_0` the *rest* (unstretched) length of the cable,
+:math:`L_0=L_e/(1+\epsilon_0)`. (Note that the above mass matrix is
+also used for rigid-link members, in which case, :math:`L_0=L_e`.)
 
 Because the displacement varies linearly along the element (the cable is
 never subdivided and carries no bending shape), the translational mass is
