@@ -295,10 +295,11 @@ SUBROUTINE BD_C_Init(                                                      &
    ! Remove the temporary input file now that it has been read
    IF (LEN_TRIM(TmpFileName) > 0) CALL DeleteFile( TmpFileName )
 
-   ! The states are advanced by DT_C here, so BeamDyn must use the same timestep (DTBeam in the input file must be DEFAULT or equal to DT_C)
-   IF ( .NOT. EqualRealNos( p%dt, dT_Global ) ) THEN
+   ! The states are advanced by DT_C here, so BeamDyn must use the same timestep (DTBeam in the input file must be DEFAULT or equal to DT_C).
+   ! BD_Init returns the timestep it uses in dT_Interval.
+   IF ( .NOT. EqualRealNos( dT_Interval, dT_Global ) ) THEN
       ErrStat_F2 = ErrID_Fatal
-      ErrMsg_F2  = 'The BeamDyn timestep DTBeam ('//TRIM(Num2LStr(p%dt))//' s) must be DEFAULT or equal to the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
+      ErrMsg_F2  = 'The BeamDyn timestep DTBeam ('//TRIM(Num2LStr(dT_Interval))//' s) must be DEFAULT or equal to the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
       IF (Failed()) RETURN
    ENDIF
 
