@@ -3563,7 +3563,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
    CALL WaveField_GetWaveKin( p%WaveField, m%WaveField_m, Time, m%DispNodePosHdn, .FALSE., .TRUE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
-     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+     if (Failed()) return
    ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
       m%vrel(:,j)  = ( m%FV(:,j) - u%Mesh%TranslationVel(:,j) ) * m%nodeInWater(j)
@@ -3607,8 +3607,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    DO im = 1, p%NMembers    
       mem = p%Members(im)
       N   = mem%NElements
-      call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2); if (Failed()) return
 
       !zero member loads
       m%memberLoads(im)%F_B   = 0.0_ReKi
@@ -3658,8 +3657,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             pos1    = m%DispNodePosHst(:, mem%NodeIndx(i  ))
             pos2    = m%DispNodePosHst(:, mem%NodeIndx(i+1))
 
-            call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 )
-              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 ); if (Failed()) return
             ! Compute element to global DirCos matrix for undisplaced structure first
             call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
             ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
@@ -3769,16 +3767,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             case (1)
 
                IF ( p%HstMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
-                  CALL GetTotalWaveElev(p, m, Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
-                  CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  CALL GetTotalWaveElev(p, m, Time, pos1, Zeta1, ErrStat2, ErrMsg2 ); if (Failed()) return
+                  CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2 ); if (Failed()) return
                ELSE ! Without wave stretching, compute buoyancy based on SWL
                   Zeta1 = 0.0_ReKi
                   Zeta2 = 0.0_ReKi
                END IF
                Is1stElement = ( i .EQ. 1)
                CALL getElementHstLds_Mod1(p, m, mem, Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1b, r2b, dl, mem%alpha(i), Is1stElement, F_B0, F_B1, F_B2, ErrStat2, ErrMsg2 )
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                 if (Failed()) return
                ! Add nodal loads to mesh
                IF ( .NOT. Is1stElement ) THEN
                   m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B0
@@ -3799,10 +3796,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                posMid = 0.5 * (pos1+pos2)
 
                IF (p%HstMod > 0_IntKi) THEN
-                  CALL GetTotalWaveElev(p, m, Time, posMid, ZetaMid, ErrStat2, ErrMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  CALL GetFreeSurfaceNormal( p, m, Time, posMid, n_hat, ErrStat2, ErrMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  CALL GetTotalWaveElev(p, m, Time, posMid, ZetaMid, ErrStat2, ErrMsg2 ); if (Failed()) return
+                  CALL GetFreeSurfaceNormal( p, m, Time, posMid, n_hat, ErrStat2, ErrMsg2 ); if (Failed()) return
                   FSPt = (/posMid(1),posMid(2),ZetaMid/) ! Reference point on the free surface
                ELSE
                   FSPt = (/posMid(1),posMid(2),0.0_ReKi/)
@@ -3816,8 +3811,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
                   CALL getElementHstLds_Mod2_Rec( p, pos1, pos2, FSPt, k_hat, x_hat, y_hat, n_hat, Sa1b, Sa2b, Sb1b, Sb2b, dl, F_B1, F_B2, ErrStat2, ErrMsg2)
                END IF
-
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               if (Failed()) return
 
                ! Add nodal loads to mesh
                m%memberLoads(im)%F_B(:,i  ) = m%memberLoads(im)%F_B(:,i  ) + F_B1
@@ -4056,7 +4050,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         0.5*mem%AxCd(i)*p%WaveField%WtrDens * pi*mem%RMG(i)*dRdl_p * &                                               ! axial part
                         abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
            ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
-              Call GetDistDrag_Rec(p, m, u, xd, Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              Call GetDistDrag_Rec(p, m, u, xd, Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2); if (Failed()) return
            END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
@@ -4139,7 +4133,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!   
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
         CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, FSInt, .TRUE., .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (Failed()) return
         FDynPFSInt = REAL(FDynP,ReKi)
         FVFSInt    = REAL(FV,   ReKi)
         FAFSInt    = REAL(FA,   ReKi)
@@ -4209,7 +4203,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            AxCpFSInt = SubRatio * mem%AxCp(FSElem+1) + (1.0-SubRatio) * mem%AxCp(FSElem)
 
            Call GetDistDrag_Rec(p, m, u, xd, Time,mem,FSElem,dSadl_p,dSbdl_p,F_DS,ErrStat2,ErrMsg2,SubRatio,vrelFSInt)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (Failed()) return
 
            ! Hydrodynamic added mass and inertia loads
            IF ( .NOT. mem%PropPot ) THEN
@@ -4420,8 +4414,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         0.5*mem%AxCd(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*dRdl_p * &                                                 ! axial part
                         abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
            ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
-              Call GetDistDrag_Rec(p, m, u, xd, Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2)
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              Call GetDistDrag_Rec(p, m, u, xd, Time,mem,i,dSadl_p,dSbdl_p,f_hydro,ErrStat2,ErrMsg2); if (Failed()) return
            END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
@@ -4527,15 +4520,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos1 = m%DispNodePosHst(:,mem%NodeIndx(1))
       pos2 = m%DispNodePosHst(:,mem%NodeIndx(2))
-      call GetElementAxialVec( pos1, pos2, k_hat1, errStat2, errMsg2 )
-        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call GetElementAxialVec( pos1, pos2, k_hat1, errStat2, errMsg2 ); if (Failed()) return
       if ( N == 1 ) then       ! Only one element in member
          k_hat2 = k_hat1
       else
          pos1 = m%DispNodePosHst(:, mem%NodeIndx(N  ))
          pos2 = m%DispNodePosHst(:, mem%NodeIndx(N+1))
-         call GetElementAxialVec( pos1, pos2, k_hat2, errStat2, errMsg2 )
-           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call GetElementAxialVec( pos1, pos2, k_hat2, errStat2, errMsg2 ); if (Failed()) return
       end if
       ! z-coordinates of the two ends of the member
       z1 = m%DispNodePosHst(3,mem%NodeIndx(  1))
@@ -4630,8 +4621,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
 
       ! Joint yaw offset
-      call YawJoint(p, J,u%PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call YawJoint(p, J,u%PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat2,ErrMsg2); if (Failed()) return
       
       ! Lumped added mass loads
       qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
@@ -4689,8 +4679,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    ! map the motion to the visulization mesh
    if (p%VisMeshes) then
-      !FIXME: error handling is incorrect here (overwrites all previous errors/warnings)
-      call Transfer_Point_to_Line2( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat, ErrMsg )
+      call Transfer_Point_to_Line2( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat2, ErrMsg2 ); if (Failed()) return
    endif
 
 
@@ -4709,10 +4698,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       integer(IntKi) :: secStatL
 
       if (p%HstMod > 0_IntKi) then
-         call GetTotalWaveElev(p, m, Time, pos, ZetaL, ErrStat2, ErrMsg2)
-           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         call GetFreeSurfaceNormal(p, m, Time, pos, n_hatL, ErrStat2, ErrMsg2)
-           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call GetTotalWaveElev(p, m, Time, pos, ZetaL, ErrStat2, ErrMsg2);      if (Failed()) return
+         call GetFreeSurfaceNormal(p, m, Time, pos, n_hatL, ErrStat2, ErrMsg2); if (Failed()) return
          FSPtL = (/pos(1),pos(2),ZetaL/) ! Reference point on the free surface
       else
          FSPtL = (/pos(1),pos(2),0.0_ReKi/)
