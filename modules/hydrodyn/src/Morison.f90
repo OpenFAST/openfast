@@ -457,44 +457,29 @@ FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
    RETURN
 END FUNCTION InterpWrappedStpLogical ! ( XVal, XAry, YAry, Ind, AryLen )
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat, errMsg)
+subroutine GetElementAxialVec(p1, p2, k_hat, errStat, errMsg)
+   ! Instantaneous elemental axial unit vector from node p1 to node p2.
+   ! Guards against zero-length elements (do not assume rigid structure).
    real(ReKi),   intent(in   ) :: p1(3),p2(3)
-   real(ReKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat(3)
-   integer,      intent(  out) :: errStat              ! returns a non-zero value when an error occurs  
+   real(ReKi),   intent(  out) :: k_hat(3)
+   integer,      intent(  out) :: errStat              ! returns a non-zero value when an error occurs
    character(*), intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
-   character(*), parameter     :: RoutineName = 'GetOrientationAngles'
-   
-   real(ReKi) :: vec(3), vecLen, vecLen2D, beta
-   
-      ! Initialize errStat
-         
-   errStat = ErrID_None         
-   errMsg  = "" 
-   
-            ! calculate isntantaneous incline angle and heading, and related trig values
-         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-         vec      = p2 - p1   
-         vecLen   = SQRT(Dot_Product(vec,vec))
-         vecLen2D = SQRT(vec(1)**2+vec(2)**2)
-         if ( vecLen < 0.000001 ) then
-            call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, RoutineName )
-            return
-         else
-            k_hat = vec / vecLen 
-            phi   = atan2(vecLen2D, vec(3))  ! incline angle   
-         end if
-         if ( EqualRealNos(phi, 0.0_ReKi) ) then
-            beta = 0.0_ReKi
-         else
-            beta = atan2(vec(2), vec(1))                    ! heading of incline     
-         endif
-         sinPhi  = sin(phi)
-         cosPhi  = cos(phi)  
-         tanPhi  = tan(phi)     
-         sinBeta = sin(beta)
-         cosBeta = cos(beta)
-         
-end subroutine GetOrientationAngles
+   character(*), parameter     :: RoutineName = 'GetElementAxialVec'
+
+   real(ReKi) :: vec(3), vecLen
+
+   errStat = ErrID_None
+   errMsg  = ""
+
+   vec    = p2 - p1
+   vecLen = SQRT(Dot_Product(vec,vec))
+   if ( vecLen < 0.000001 ) then
+      call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, RoutineName )
+      return
+   end if
+   k_hat = vec / vecLen
+
+end subroutine GetElementAxialVec
 !----------------------------------------------------------------------------------------------------------------------------------
 !function to return conical taper geometry calculations (volume and center of volume)
 SUBROUTINE CylTaperCalc(R1, R2, H, taperV, h_c)
@@ -3496,12 +3481,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    INTEGER                  :: N       ! Number of elements within a given member
    REAL(ReKi)               :: dl      ! Element length within a given member, m
    REAL(ReKi)               :: vec(3)  ! Vector pointing from a member's 1st node to its last node
-   REAL(ReKi)               :: phi, phi1, phi2     ! member tilt angle
-   REAL(ReKi)               :: cosPhi, cosPhi1, cosPhi2
-   REAL(ReKi)               :: sinPhi, sinPhi1, sinPhi2
-   REAL(ReKi)               :: tanPhi
-   REAL(ReKi)               :: sinBeta, sinBeta1, sinBeta2
-   REAL(ReKi)               :: cosBeta, cosBeta1, cosBeta2
    REAL(ReKi)               :: CMatrix(3,3), CMatrix1(3,3), CMatrix2(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
    REAL(ReKi)               :: l, z1, z2, zMid, r1, r2, r1b, r2b, r1In, r2In, rMidIn, z_hi, zFillGroup
    REAL(ReKi)               :: Sa1, Sa2, Sa1b, Sa2b, SaMidb, Sa1In, Sa2In, SaMidIn
@@ -3674,12 +3653,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
          DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
-            ! calculate instantaneous incline angle and heading, and related trig values
+            ! instantaneous elemental axial unit vector (1st -> 2nd node)
             ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
             pos1    = m%DispNodePosHst(:, mem%NodeIndx(i  ))
             pos2    = m%DispNodePosHst(:, mem%NodeIndx(i+1))
 
-            call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
+            call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 )
               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             ! Compute element to global DirCos matrix for undisplaced structure first
             call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
@@ -3723,16 +3702,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             ! lower node
             F_WMG(3) = - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
-            F_WMG(4) = - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * sinBeta! weight force
-            F_WMG(5) =   mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * cosBeta! weight force
+            F_WMG(4) = - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* k_hat(2) ! weight force
+            F_WMG(5) =   mem%m_mg_l(i)*g * mem%h_cmg_l(i)* k_hat(1) ! weight force
             m%memberLoads(im)%F_WMG(:,i) = m%memberLoads(im)%F_WMG(:,i) + F_WMG
             y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_WMG(1:3)
             y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_WMG(4:6)
             
             ! upper node
             F_WMG(3) = - mem%m_mg_u(i)*g ! weight force  : Note: this is a constant 
-            F_WMG(4) = - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * sinBeta! weight force
-            F_WMG(5) =   mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * cosBeta! weight force
+            F_WMG(4) = - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* k_hat(2) ! weight force
+            F_WMG(5) =   mem%m_mg_u(i)*g * mem%h_cmg_u(i)* k_hat(1) ! weight force
             m%memberLoads(im)%F_WMG(:,i+1) = m%memberLoads(im)%F_WMG(:,i+1) + F_WMG  
             y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_WMG(1:3)
             y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_WMG(4:6)
@@ -3858,12 +3837,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          zFillGroup = m%zFillGroup(mem%MmbrFilledIDIndx)
          DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
             IF (mem%floodstatus(i)>0) THEN
-               ! calculate instantaneous incline angle and heading, and related trig values
+               ! instantaneous elemental axial unit vector (1st -> 2nd node)
                ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
                pos1 = m%DispNodePosHst(:,mem%NodeIndx(i  ))
                pos2 = m%DispNodePosHst(:,mem%NodeIndx(i+1))
 
-               call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 ); if (Failed()) return
+               call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 ); if (Failed()) return
                ! Compute element to global DirCos matrix for undisplaced structure first
                call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
                ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
@@ -4223,9 +4202,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            dSbdl_pp =     mem%dSbdl_mg(FSElem)
            SaMGFSInt = SubRatio * mem%SaMG(FSElem+1) + (1.0-SubRatio) * mem%SaMG(FSElem)
            SbMGFSInt = SubRatio * mem%SbMG(FSElem+1) + (1.0-SubRatio) * mem%SbMG(FSElem)
-           ! CdAFSInt  = SubRatio * mem%CdA( FSElem+1) + (1.0-SubRatio) * mem%CdA( FSElem)
-           ! CdBFSInt  = SubRatio * mem%CdB( FSElem+1) + (1.0-SubRatio) * mem%CdB( FSElem)
-           ! AxCdFSInt = SubRatio * mem%AxCd(FSElem+1) + (1.0-SubRatio) * mem%AxCd(FSElem)
            CaAFSInt  = SubRatio * mem%CaA( FSElem+1) + (1.0-SubRatio) * mem%CaA( FSElem)
            CaBFSInt  = SubRatio * mem%CaB( FSElem+1) + (1.0-SubRatio) * mem%CaB( FSElem)
            AxCaFSInt = SubRatio * mem%AxCa(FSElem+1) + (1.0-SubRatio) * mem%AxCa(FSElem)
@@ -4551,19 +4527,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos1 = m%DispNodePosHst(:,mem%NodeIndx(1))
       pos2 = m%DispNodePosHst(:,mem%NodeIndx(2))
-      call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
+      call GetElementAxialVec( pos1, pos2, k_hat1, errStat2, errMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if ( N == 1 ) then       ! Only one element in member
-         sinPhi2  = sinPhi1
-         cosPhi2  = cosPhi1
-         sinBeta2 = sinBeta1
-         cosBeta2 = cosBeta1
-         k_hat2   = k_hat1
+         k_hat2 = k_hat1
       else
-         !  We need to subtract the MSL2SWL offset to place this  in the SWL reference system
          pos1 = m%DispNodePosHst(:, mem%NodeIndx(N  ))
          pos2 = m%DispNodePosHst(:, mem%NodeIndx(N+1))
-         call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
+         call GetElementAxialVec( pos1, pos2, k_hat2, errStat2, errMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
       ! z-coordinates of the two ends of the member
