@@ -4595,92 +4595,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Sb1     = mem%SbMGB(  1)
             Sb2     = mem%SbMGB(N+1)
          end if
-         if (mem%i_floor == 0) then  ! both ends above or at seabed
-            ! Compute loads on the end plate of node 1
-            IF (p%HstMod > 0_IntKi) THEN
-               CALL GetTotalWaveElev(p, m, Time, pos1, Zeta1, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos1, n_hat, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FSPt = (/pos1(1),pos1(2),Zeta1/) ! Reference point on the free surface
-            ELSE
-               FSPt = (/pos1(1),pos1(2),0.0_ReKi/)
-               n_hat = (/0.0,0.0,1.0/)
-            END IF
-
-            if (mem%MSecGeom==MSecGeom_Cyl) then
-               CALL GetSectionUnitVectors_Cyl( k_hat1, y_hat, z_hat )
-               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos1,DbKi), REAL(FSPt,DbKi), k_hat1, y_hat, z_hat, n_hat, REAL(r1,DbKi), theta1, theta2, secStat)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetEndPlateHstLds_Cyl(p, pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
-               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
-                  END IF
-               END IF
-            else if (mem%MSecGeom==MSecGeom_Rec) then
-               CALL GetSectionUnitVectors_Rec( CMatrix1, x_hat, y_hat )
-               CALL GetEndPlateHstLds_Rec(p, pos1, k_hat1, x_hat, y_hat, Sa1, Sb1, FSPt, n_hat, F_B_End)
-            end if
-            m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
-
-            ! Compute loads on the end plate of node N+1
-            IF (p%HstMod > 0_IntKi) THEN
-               CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos2, n_hat, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
-            ELSE
-               FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
-               n_hat = (/0.0,0.0,1.0/)
-            END IF
-
-            if (mem%MSecGeom==MSecGeom_Cyl) then
-               CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
-               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetEndPlateHstLds_Cyl(p, pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
-               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
-                  END IF
-               END IF
-            else if (mem%MSecGeom==MSecGeom_Rec) then
-               CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat, y_hat )
-               CALL GetEndPlateHstLds_Rec(p, pos2, k_hat2, x_hat, y_hat, Sa2, Sb2, FSPt, n_hat, F_B_End)
-            end if
-            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
-
-         elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
-            ! Only compute the loads on the end plate of node N+1
-            IF (p%HstMod > 0_IntKi) THEN
-               CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos2, n_hat, ErrStat2, ErrMsg2)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
-            ELSE
-               FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
-               n_hat = (/0.0,0.0,1.0/)
-            END IF
-
-            if (mem%MSecGeom==MSecGeom_Cyl) then
-               CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
-               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetEndPlateHstLds_Cyl(p, pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
-               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
-                  END IF
-               END IF
-            else if (mem%MSecGeom==MSecGeom_Rec) then
-               CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat, y_hat )
-               CALL GetEndPlateHstLds_Rec(p, pos2, k_hat2, x_hat, y_hat, Sa2, Sb2, FSPt, n_hat, F_B_End)
-            end if
-            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
-
+         if (mem%i_floor == 0) then        ! both ends at or above the seabed: load on both end plates
+            call AddEndBuoyancy(mem%NodeIndx(  1), pos1, k_hat1, r1, Sa1, Sb1, CMatrix1,  1.0_ReKi, 'first node')
+            call AddEndBuoyancy(mem%NodeIndx(N+1), pos2, k_hat2, r2, Sa2, Sb2, CMatrix2, -1.0_ReKi, 'last node')
+         elseif ( mem%doEndBuoyancy ) then ! seabed-crossing member: load only on the upper (N+1) end plate
+            call AddEndBuoyancy(mem%NodeIndx(N+1), pos2, k_hat2, r2, Sa2, Sb2, CMatrix2, -1.0_ReKi, 'last node')
          ! else
             ! entire member is buried below the seabed
          end if
@@ -4776,6 +4695,45 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
 
    CONTAINS
+
+   subroutine AddEndBuoyancy(iNode, pos, k_hatE, rE, SaE, SbE, CMatrixE, sgn, nodeLabel)
+      ! Accumulate the external hydrostatic (buoyancy) load on one member end plate.
+      integer(IntKi), intent(in) :: iNode               ! mesh node index of the end plate
+      real(ReKi),     intent(in) :: pos(3), k_hatE(3)   ! end node position and axial unit vector
+      real(ReKi),     intent(in) :: rE, SaE, SbE        ! scaled end radius (Cyl) or side lengths (Rec)
+      real(ReKi),     intent(in) :: CMatrixE(3,3)       ! end section orientation (Rec only)
+      real(ReKi),     intent(in) :: sgn                 ! +1 at the lower end, -1 at the upper end
+      character(*),   intent(in) :: nodeLabel           ! node description used in warning messages
+      real(ReKi)     :: FSPtL(3), n_hatL(3), ZetaL, F_B_EndL(6)
+      real(DbKi)     :: th1, th2
+      integer(IntKi) :: secStatL
+
+      if (p%HstMod > 0_IntKi) then
+         call GetTotalWaveElev(p, m, Time, pos, ZetaL, ErrStat2, ErrMsg2)
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call GetFreeSurfaceNormal(p, m, Time, pos, n_hatL, ErrStat2, ErrMsg2)
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         FSPtL = (/pos(1),pos(2),ZetaL/) ! Reference point on the free surface
+      else
+         FSPtL = (/pos(1),pos(2),0.0_ReKi/)
+         n_hatL = (/0.0,0.0,1.0/)
+      end if
+
+      select case (mem%MSecGeom)
+      case (MSecGeom_Cyl)
+         call GetSectionUnitVectors_Cyl( k_hatE, y_hat, z_hat )
+         call GetSectionFreeSurfaceIntersects_Cyl( REAL(pos,DbKi), REAL(FSPtL,DbKi), k_hatE, y_hat, z_hat, n_hatL, REAL(rE,DbKi), th1, th2, secStatL)
+         call GetEndPlateHstLds_Cyl(p, pos, k_hatE, y_hat, z_hat, rE, th1, th2, F_B_EndL)
+         if (mem%MHstLMod == 1 .and. secStatL == 1) then ! secStatL == 1: end plate crosses the free surface (partially wetted)
+            call SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the '//trim(nodeLabel)//' of Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+         end if
+      case (MSecGeom_Rec)
+         call GetSectionUnitVectors_Rec( CMatrixE, x_hat, y_hat )
+         call GetEndPlateHstLds_Rec(p, pos, k_hatE, x_hat, y_hat, SaE, SbE, FSPtL, n_hatL, F_B_EndL)
+      end select
+
+      m%F_B_End(:, iNode) = m%F_B_End(:, iNode) + sgn * F_B_EndL
+   end subroutine AddEndBuoyancy
 
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
