@@ -24,21 +24,14 @@ MODULE Morison
    USE Morison_Types  
    USE Morison_Output
    USE SeaSt_WaveField
-  ! USE HydroDyn_Output_Types
    USE NWTC_Library
    USE YawOffset
-
    
    IMPLICIT NONE
    
    PRIVATE
 
    TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', '', '' )
-
-   INTERFACE Morison_DirCosMtrx
-      MODULE PROCEDURE Morison_DirCosMtrx_Spin
-      MODULE PROCEDURE Morison_DirCosMtrx_noSpin
-   END INTERFACE
 
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC:: Morison_GenerateSimulationNodes
@@ -49,7 +42,7 @@ MODULE Morison
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_DirCosMtrx_Spin( pos0, pos1, spin, DirCos )
+SUBROUTINE Morison_DirCosMtrx( pos0, pos1, spin, DirCos )
 ! Compute the direction cosine matrix given two end points and a spin angle for rectangular members
 ! Left multiplying DirCos with a vector in element local sys returns vector in global sys
 ! Updated to match the convention in SubDyn for consistency
@@ -105,54 +98,7 @@ SUBROUTINE Morison_DirCosMtrx_Spin( pos0, pos1, spin, DirCos )
       DirCos  =  matmul(DirCos,Rspin)
    END IF
 
-END SUBROUTINE Morison_DirCosMtrx_Spin
-
-SUBROUTINE Morison_DirCosMtrx_noSpin( pos0, pos1, DirCos )
-! Compute the direction cosine matrix given two end points without spin for cylindrical members
-! Left multiplying DirCos with a vector in element local sys returns vector in global sys
-! Updated to match the convention in SubDyn for consistency
-
-   REAL(ReKi), INTENT( IN    )  ::   pos0(3), pos1(3)
-   Real(ReKi), INTENT(   OUT )  ::   DirCos(3,3)
-   Real(DbKi)                   ::   Le, Lexy
-   Real(DbKi)                   ::   dx, dy, dz
-
-   DirCos = 0.0
-
-   dx = pos1(1) - pos0(1)
-   dy = pos1(2) - pos0(2)
-   dz = pos1(3) - pos0(3)
-
-   Lexy = sqrt( dx*dx + dy*dy )
-
-   IF ( EqualRealNos(Lexy, 0.0_DbKi) ) THEN
-      IF (dz > 0) THEN
-         DirCos(1,1) =  1.0
-         DirCos(2,2) =  1.0
-         DirCos(3,3) =  1.0
-      ELSE
-         DirCos(1,1) =  1.0
-         DirCos(2,2) = -1.0
-         DirCos(3,3) = -1.0
-      END IF
-   ELSE
-      Le = sqrt( dx*dx + dy*dy + dz*dz )
-
-      DirCos(1, 1) =  dy/Lexy
-      DirCos(1, 2) =  dx*dz/(Lexy*Le)
-      DirCos(1, 3) =  dx/Le
-
-      DirCos(2, 1) = -dx/Lexy
-      DirCos(2, 2) =  dy*dz/(Lexy*Le)
-      DirCos(2, 3) =  dy/Le
-
-      DirCos(3, 1) =  0.0
-      DirCos(3, 2) = -Lexy/Le
-      DirCos(3, 3) =  dz/Le
-   END IF
-
-END SUBROUTINE Morison_DirCosMtrx_noSpin
-
+END SUBROUTINE Morison_DirCosMtrx
 
 SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
    TYPE(Morison_InputType),     INTENT(IN   ) :: u              !< Inputs at Time
@@ -182,7 +128,6 @@ SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
    END IF
 
 END SUBROUTINE GetDisplacedNodePosition
-
 
 SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
    Type(Morison_MemberType), intent(inout) :: member
@@ -238,222 +183,6 @@ SUBROUTINE GetDistance ( a, b, l )
    
 END SUBROUTINE GetDistance
 
-!====================================================================================================
-SUBROUTINE ElementCentroid ( Rs, Re, p1, h, DCM, centroid )
-!    This private subroutine computes the centroid of a tapered right cylinder element.
-!---------------------------------------------------------------------------------------------------- 
-
-   REAL(ReKi), INTENT ( IN    )  :: Rs          ! starting radius
-   REAL(ReKi), INTENT ( IN    )  :: Re          ! ending radius
-   REAL(ReKi), INTENT ( IN    )  :: p1(3)       ! starting point of the element in global coordinates
-   REAL(ReKi), INTENT ( IN    )  :: h           ! height of the element
-   REAL(ReKi), INTENT ( IN    )  :: DCM(3,3)    ! direction cosine matrix to transform local element coordinates to global coordinates
-   REAL(ReKi), INTENT (   OUT )  :: centroid(3) ! centroid of the element in local coordinates
-   
-   centroid(1) = 0.0
-   centroid(2) = 0.0
-   centroid(3) = h * (Rs*Rs + 2.0*Rs*Re +  3.0*Re*Re) / (4.0*( Rs*Rs + Rs*Re +  Re*Re  ) )                    !( 2.0*Re + Rs ) / ( 3.0 * ( Rs + Re ) )
-   centroid    = matmul( DCM, centroid ) + p1
-   
-END SUBROUTINE ElementCentroid
-
-!====================================================================================================
-REAL(ReKi) FUNCTION ElementVolume ( Rs, Re, h )
-!    This private function computes the volume of a tapered right cylinder element.
-!---------------------------------------------------------------------------------------------------- 
-
-   REAL(ReKi), INTENT ( IN    )  :: Rs          ! starting radius
-   REAL(ReKi), INTENT ( IN    )  :: Re          ! ending radius
-   REAL(ReKi), INTENT ( IN    )  :: h           ! height of the element
-   
-   ElementVolume = Pi*h*( Rs*Rs + Re*Re + Rs*Re  ) / 3.0
-   
-END FUNCTION ElementVolume
-
-!====================================================================================================
-SUBROUTINE    FindInterpFactor( p, p1, p2, s )
-
-   REAL(ReKi),  INTENT ( IN    )  :: p, p1, p2
-   REAL(ReKi),  INTENT (   OUT )  :: s
-   
-   REAL(ReKi)                     :: dp
-! find normalized interpolation factor, s, such:
-! p = p1*(1-s) + p2*s
-!  *--------------*--------------------------------*
-!  p1             p                                p2
-!
-!  0-----------------------------------------------1
-!  <------- s ---->
-   
-   dp = p2 - p1
-   IF ( EqualRealNos(dp, 0.0_ReKi) ) THEN
-      s = 0
-   ELSE
-      s = ( p - p1  ) / dp 
-   END IF
-         
-END SUBROUTINE FindInterpFactor
-!=======================================================================
-FUNCTION InterpWrappedStpInt( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This function returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [1-XAry(AryLen).  It finds a x-value which corresponds to a value in the XAry where XAry(Ind-1) < MOD(XValIn, XAry(AryLen)) <= XAry(Ind)
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  .
-      ! 
-      ! This routine assumes YAry is INTEGER.
-
-
-      ! Function declaration.
-
-   INTEGER                  :: InterpWrappedStpInt                                  ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XValIn                                          ! X value to be interpolated.
-   INTEGER, INTENT(IN)          :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(SiKi)                   :: XVal                                            ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   
-        ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpWrappedStpInt = YAry(1)
-      Ind           = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpWrappedStpInt = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpWrappedStpInt = YAry(Ind) 
-         RETURN
-
-      END IF
-
-   END DO
-
-   RETURN
-END FUNCTION InterpWrappedStpInt ! ( XVal, XAry, YAry, Ind, AryLen )
-   
-   
-!=======================================================================
-FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This function returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
-
-      ! Function declaration.
-
-   LOGICAL                  :: InterpWrappedStpLogical                                  ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   LOGICAL, INTENT(IN)          :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(SiKi)                   :: XVal                                           ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   
-        ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpWrappedStpLogical = YAry(1)
-      Ind           = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpWrappedStpLogical = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpWrappedStpLogical = YAry(Ind) 
-         RETURN
-
-      END IF
-
-   END DO
-
-   RETURN
-END FUNCTION InterpWrappedStpLogical ! ( XVal, XAry, YAry, Ind, AryLen )
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine GetElementAxialVec(p1, p2, k_hat, errStat, errMsg)
    ! Instantaneous elemental axial unit vector from node p1 to node p2.
@@ -1374,8 +1103,6 @@ SUBROUTINE SetDepthBasedCoefs_Cyl( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxC
    END DO
    
       ! Linearly interpolate the coef values based on depth
-   !CALL FindInterpFactor( z, CoefDpths(indx1)%Dpth, CoefDpths(indx2)%Dpth, s )
-      
    dd = CoefDpths(indx1)%Dpth - CoefDpths(indx2)%Dpth
    IF ( EqualRealNos(dd, 0.0_ReKi) ) THEN
       s = 0
@@ -1448,8 +1175,6 @@ SUBROUTINE SetDepthBasedCoefs_Rec( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, 
    END DO
    
       ! Linearly interpolate the coef values based on depth
-   !CALL FindInterpFactor( z, CoefDpths(indx1)%Dpth, CoefDpths(indx2)%Dpth, s )
-      
    dd = CoefDpths(indx1)%Dpth - CoefDpths(indx2)%Dpth
    IF ( EqualRealNos(dd, 0.0_ReKi) ) THEN
       s = 0
@@ -6313,54 +6038,6 @@ subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
    lumpedLoad(1:3) = f_hydro*dl
    lumpedLoad(4:6) = cross_product(k_hat*h_c, f_hydro)*dl
 end subroutine LumpDistrHydroLoads
-!----------------------------------------------------------------------------------------------------------------------------------
-! Takes loads on node i in element tilted frame and converts to 6DOF loads at node i and adjacent node
-PURE SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, alpha, F1, F2)
-   
-   REAL(ReKi),                     INTENT    ( IN    )  :: Fl        ! (N)   axial load about node i
-   REAL(ReKi),                     INTENT    ( IN    )  :: Fr        ! (N)   radial load about node i in direction of tilt
-   REAL(ReKi),                     INTENT    ( IN    )  :: M         ! (N-m) radial moment about node i, positive in direction of tilt angle
-   REAL(ReKi),                     INTENT    ( IN    )  :: sinPhi    ! trig functions of  tilt angle 
-   REAL(ReKi),                     INTENT    ( IN    )  :: cosPhi   
-   REAL(ReKi),                     INTENT    ( IN    )  :: sinBeta   ! trig functions of heading of tilt
-   REAL(ReKi),                     INTENT    ( IN    )  :: cosBeta  
-   REAL(ReKi),                     INTENT    ( IN    )  :: alpha     ! fraction of load staying with node i (1-alpha goes to other node)  
-   
-   REAL(ReKi),                     INTENT    ( OUT   )  :: F1(6)   ! (N, Nm) force/moment vector for node i
-   REAL(ReKi),                     INTENT    ( OUT   )  :: F2(6)   ! (N, Nm) force/moment vector for the other node (whether i+1, or i-1)
-   REAL(ReKi)                                           :: F(6)
-   
-   F(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)
-   F(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)
-   F(3) =          (Fl*cosPhi - Fr*sinPhi)
-   F(4) = -sinBeta * M                    
-   F(5) =  cosBeta * M                    
-   F(6) =  0.0
-
-   F1 = F*alpha
-   F2 = F*(1.0_ReKi-alpha)
-   
-END SUBROUTINE DistributeElementLoads
-!----------------------------------------------------------------------------------------------------------------------------------
-! Takes loads on end node i and converts to 6DOF loads, adding to the nodes existing loads
-PURE SUBROUTINE AddEndLoad(Fl, M, sinPhi, cosPhi, SinBeta, cosBeta, Fi)
-   
-   REAL(ReKi),                     INTENT    ( IN    )  :: Fl        ! (N)   axial load about node i
-   REAL(ReKi),                     INTENT    ( IN    )  :: M         ! (N-m) radial moment about node i, positive in direction of tilt angle
-   REAL(ReKi),                     INTENT    ( IN    )  :: sinPhi    ! trig functions of  tilt angle 
-   REAL(ReKi),                     INTENT    ( IN    )  :: cosPhi   
-   REAL(ReKi),                     INTENT    ( IN    )  :: sinBeta   ! trig functions of heading of tilt
-   REAL(ReKi),                     INTENT    ( IN    )  :: cosBeta  
-   REAL(ReKi),                     INTENT    ( INOUT )  :: Fi(6)   ! (N, Nm) force/moment vector for end node i
-   
-   Fi(1) = Fi(1) + Fl*sinPhi*cosBeta
-   Fi(2) = Fi(2) + Fl*sinPhi*sinBeta
-   Fi(3) = Fi(3) + Fl*cosPhi
-   Fi(4) = Fi(4) - M*sinBeta
-   Fi(5) = Fi(5) + M*cosBeta
-   
-END SUBROUTINE AddEndLoad
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for updating discrete states
