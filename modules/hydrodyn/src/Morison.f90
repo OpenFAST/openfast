@@ -121,54 +121,50 @@ SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
          ! Use displaced Z position only when wave stretching is enabled
          pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
       END IF
-   ELSE ! p%WaveDisp=0 implies PtfmYMod=0
-      ! Rotate the structure based on PtfmRefY (constant)
+   ELSE ! WaveDisp=0: position the structure using the reference yaw only
+      ! Rotate the structure based on PtfmRefY (reference yaw, may be static or dynamic; no instantaneous translation)
       call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
       pos = matmul(transpose(Orient),pos)
    END IF
 
 END SUBROUTINE GetDisplacedNodePosition
 
-SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
+SUBROUTINE RotateMemberNode(p, im, member, PtfmRefY, NOrientation, ErrStat, ErrMsg)
+   TYPE(Morison_ParameterType), INTENT(IN   ) :: p
+   Integer(IntKi),           intent(in   ) :: im            ! Member index into p%Members (pristine reference)
    Type(Morison_MemberType), intent(inout) :: member
    Real(ReKi),               intent(in   ) :: PtfmRefY
+   Real(R8Ki),               intent(in   ) :: NOrientation(3,3)
    Integer(IntKi),           intent(  out) :: ErrStat
    Character(*),             intent(  out) :: ErrMsg
 
-   Real(ReKi)                              :: k(3), x_hat(3), y_hat(3)
-   Real(ReKi)                              :: kkt(3,3)
-   Real(ReKi)                              :: Ak(3,3)
-   Integer(IntKi)                          :: ErrStat2
-   Character(ErrMsgLen)                    :: ErrMsg2
+   Real(ReKi)                              :: Rg2b(3,3), Rb2g(3,3)
 
-   Character(*), parameter                 :: RoutineName = 'YawMember'
+   Character(*), parameter                 :: RoutineName = 'RotateMemberNode'
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   call hiFrameTransform(h2i,PtfmRefY,member%k,k,ErrStat2,ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   member%k   = k
+   select case (p%WaveDisp)
+   case (0)
+      call GetPtfmRefYOrient(PtfmRefY, Rg2b, ErrStat, ErrMsg) 
+      if (ErrStat /= ErrID_None) return
+   case (1)
+      Rg2b = NOrientation
+   end select
+   Rb2g = transpose(Rg2b)
 
-   call hiFrameTransform(h2i,PtfmRefY,member%kkt,kkt,ErrStat2,ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   member%kkt = kkt
-
-   call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   member%Ak  = Ak
-
-   call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   member%x_hat   = x_hat
-
-   call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   member%y_hat   = y_hat
+   ! Rotate the reference-configuration vectors to the current global orientation at this node.
+   ! Source is p%Members(im) so repeated per-node calls do not compound on the overwritten local copy.
+   member%k     = matmul(Rb2g, p%Members(im)%k)
+   member%kkt   = matmul(Rb2g, matmul(p%Members(im)%kkt, Rg2b))
+   member%Ak    = matmul(Rb2g, matmul(p%Members(im)%Ak, Rg2b))
+   member%x_hat = matmul(Rb2g, p%Members(im)%x_hat)
+   member%y_hat = matmul(Rb2g, p%Members(im)%y_hat)
 
    ! Note: Deliberately left member%CMatrix unchanged because we need the undisplaced version outside when constructing the full nodal orientation.
 
-END SUBROUTINE YawMember
+END SUBROUTINE RotateMemberNode
 
 !====================================================================================================
 SUBROUTINE GetDistance ( a, b, l )
@@ -3315,7 +3311,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    DO im = 1, p%NMembers    
       mem = p%Members(im)
       N   = mem%NElements
-      call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2); if (Failed()) return
 
       !zero member loads
       m%memberLoads(im)%F_B   = 0.0_ReKi
@@ -3701,6 +3696,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            Zeta1 = m%WaveElev(mem%NodeIndx(i))
            Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
 
+           ! Rotate member properties based on local node orientation
+           call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(i)), ErrStat2, ErrMsg2); if (Failed()) return
+
            ! Compute deltal and h_c
            IF ( i == 1 ) THEN ! First node
               deltal = mem%dl/2.0_ReKi
@@ -3847,6 +3845,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
+        ! Rotate member properties to the free-surface-crossing element (its starting node is representative)
+        call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(FSElem)), ErrStat2, ErrMsg2); if (Failed()) return
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
         CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, FSInt, .TRUE., .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           if (Failed()) return
@@ -4040,6 +4040,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            z1   = m%DispNodePosHdn(3, mem%NodeIndx(i))
            pos1 = m%DispNodePosHdn(:, mem%NodeIndx(i))
+           ! Rotate member properties based on local node orientation
+           call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(i)), ErrStat2, ErrMsg2); if (Failed()) return
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Cannot make any assumption about WaveStMod and member orientation 
            IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 0_IntKi ) THEN ! Node is out of water
@@ -4343,8 +4345,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
       ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
 
-      ! Joint yaw offset
-      call YawJoint(p, J,u%PtfmRefY,AM_End,An_End,DP_Const_End,I_MG_End,ErrStat2,ErrMsg2); if (Failed()) return
+      ! Rotate joint properties
+      call RotateJoint(p, J,u%PtfmRefY,u%Mesh%Orientation(:,:,J),AM_End,An_End,DP_Const_End,I_MG_End,ErrStat2,ErrMsg2); if (Failed()) return
       
       ! Lumped added mass loads
       qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
@@ -5700,10 +5702,11 @@ END SUBROUTINE Morison_CalcOutput
       END IF
    END SUBROUTINE getElementHstLds_Mod1
 
-   SUBROUTINE YawJoint(p, JointNo, PtfmRefY, AM_End, An_End, DP_Const_End, I_MG_End, ErrStat, ErrMsg)
+   SUBROUTINE RotateJoint(p, JointNo, PtfmRefY, JOrientation, AM_End, An_End, DP_Const_End, I_MG_End, ErrStat, ErrMsg)
       TYPE(Morison_ParameterType), INTENT( IN    ) :: p
       Integer(IntKi),           intent(in   ) :: JointNo
       Real(ReKi),               intent(in   ) :: PtfmRefY
+      Real(R8Ki),               intent(in   ) :: JOrientation(3,3)
       Real(ReKi),               intent(  out) :: AM_End(3,3)
       Real(ReKi),               intent(  out) :: An_End(3)
       Real(ReKi),               intent(  out) :: DP_Const_End(3)
@@ -5711,24 +5714,29 @@ END SUBROUTINE Morison_CalcOutput
       Integer(IntKi),           intent(  out) :: ErrStat
       Character(*),             intent(  out) :: ErrMsg
       
-      Integer(IntKi)                          :: ErrStat2
-      Character(ErrMsgLen)                    :: ErrMsg2
+      Real(ReKi)                              :: Rg2b(3,3)
+      Real(ReKi)                              :: Rb2g(3,3)
 
-      Character(*), parameter                 :: RoutineName = 'YawJoint'
+      Character(*), parameter                 :: RoutineName = 'RotateJoint'
       
       ErrStat = ErrID_None
       ErrMsg  = ''
 
-      call hiFrameTransform(h2i,PtfmRefY,p%AM_End(:,:,jointNo),AM_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,PtfmRefY,p%An_End(:,jointNo),An_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,PtfmRefY,p%DP_Const_End(:,jointNo),DP_Const_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call hiFrameTransform(h2i,PtfmRefY,p%I_MG_End(:,:,jointNo),I_MG_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      select case (p%WaveDisp)
+      case (0)
+         call GetPtfmRefYOrient(PtfmRefY, Rg2b, ErrStat, ErrMsg) 
+         if (ErrStat /= ErrID_None) return
+      case (1)
+         Rg2b = JOrientation
+      end select
+      Rb2g = transpose(Rg2b)
 
-   END SUBROUTINE YawJoint
+      AM_End = matmul(matmul(Rb2g,p%AM_End(:,:,jointNo)),Rg2b)
+      An_End = matmul(Rb2g,p%An_End(:,jointNo))
+      DP_Const_End = matmul(Rb2g,p%DP_Const_End(:,jointNo))
+      I_MG_End = matmul(matmul(Rb2g,p%I_MG_End(:,:,jointNo)),Rg2b)
+
+   END SUBROUTINE RotateJoint
 
    SUBROUTINE getMemBallastHiPt(p, m, u, member, z_hi, ErrStat, ErrMsg)
       ! This subroutine returns the highest point of a member's internal ballast
@@ -6042,6 +6050,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    INTEGER(IntKi)                                    :: I, J, im, N
    INTEGER(IntKi)                                    :: nodeInWater, tmpInt
    REAL(ReKi)                                        :: pos(3), vrel(3), FV(3), vmag, vmagf, An_End(3)
+   REAL(ReKi)                                        :: Rg2b(3,3)
    REAL(ReKi)                                        :: posFC(3), SVFC(3), vrelFC, vrelFCf
    REAL(SiKi)                                        :: FVTmp(3),FATmp(3)
    TYPE(Morison_MemberType)                          :: mem         !< Current member
@@ -6065,13 +6074,19 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
       ! Get fluid velocity at the joint
       CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .FALSE., .TRUE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (Failed()) return
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater
 
-      ! Transform An_End based on reference yaw offset
-      call hiFrameTransform(h2i,u%PtfmRefY,p%An_End(:,j),An_End,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ! Rotate An_End based on p%WaveDisp: reference yaw only (0) or full instantaneous orientation (1)
+      select case (p%WaveDisp)
+      case (0)
+         call GetPtfmRefYOrient(u%PtfmRefY, Rg2b, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      case (1)
+         Rg2b = u%Mesh%Orientation(:,:,J)
+      end select
+      An_End = matmul(transpose(Rg2b),p%An_End(:,j))
 
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
       vmag  = vrel(1)*An_End(1) + vrel(2)*An_End(2) + vrel(3)*An_End(3)
@@ -6088,22 +6103,22 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
          N   = p%Members(im)%NElements
          mem = p%Members(im)
-         call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          DO I = mem%i_floor+1, N+1
 
             pos = m%DispNodePosHdn(:, mem%NodeIndx(I))
             CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .FALSE., .TRUE.,  nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (Failed()) return
 
             IF (nodeInWater .EQ. 1_IntKi) THEN
+
+              call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(i)), ErrStat2, ErrMsg2); if (Failed()) return
 
               ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
               ! Side B - +x_hat side
               posFC = pos + mem%x_hat * 0.5 * mem%SaMG(i)
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
-              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC,  mem%x_hat )
               vrelFCf = mem%VRelNFiltConstB * ( vrelFC + xd%MV_rel_n_FiltStat(1,mem%NodeIndx(I)) )
               xd%MV_rel_n_FiltStat(1,mem%NodeIndx(I)) = vrelFCf - vrelFC
@@ -6111,7 +6126,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
               ! Side B - -x_hat side
               posFC = pos - mem%x_hat * 0.5 * mem%SaMG(i)
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
-              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC, -mem%x_hat )
               vrelFCf = mem%VRelNFiltConstB * ( vrelFC + xd%MV_rel_n_FiltStat(2,mem%NodeIndx(I)) )
               xd%MV_rel_n_FiltStat(2,mem%NodeIndx(I)) = vrelFCf - vrelFC
@@ -6119,7 +6134,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
               ! Side A - +y_hat side
               posFC = pos + mem%y_hat * 0.5 * mem%SbMG(i)
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
-              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC,  mem%y_hat )
               vrelFCf = mem%VRelNFiltConstA * ( vrelFC + xd%MV_rel_n_FiltStat(3,mem%NodeIndx(I)) )
               xd%MV_rel_n_FiltStat(3,mem%NodeIndx(I)) = vrelFCf - vrelFC
@@ -6127,7 +6142,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
               ! Side A - -y_hat side
               posFC = pos - mem%y_hat * 0.5 * mem%SbMG(i)
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
-              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC, -mem%y_hat )
               vrelFCf = mem%VRelNFiltConstA * ( vrelFC + xd%MV_rel_n_FiltStat(4,mem%NodeIndx(I)) )
               xd%MV_rel_n_FiltStat(4,mem%NodeIndx(I)) = vrelFCf - vrelFC
@@ -6152,6 +6167,12 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
          END DO    ! Iterate through member nodes
       END IF    ! If rectangular member
    END DO    ! Iterate through members
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
 
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------

@@ -2745,10 +2745,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       if ( InputFileData%PtfmYCutOff <= 0.0_ReKi ) then
          CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
       end if
-      if ( InputFileData%Morison%WaveDisp == 0 .AND. InputFileData%Morison%NMembers > 0 ) then
-         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
       if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%ExctnMod == 2 ) then
          call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with state-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
          return
