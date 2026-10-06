@@ -912,6 +912,11 @@ computing the wave load even if second-order wave kinematics are enabled in SeaS
 However, the MacCamy-Fuchs diffraction model can be used in conjunction with any of 
 the available wave-stretching models.
 
+Keulegan-Carpenter number dependent drag coefficient model
+++++++++++++++++++++++++++++++++++++
+The Keulegan-Carpenter number dependent drag coefficient model can be enabled for circular or rectangular strip-theory 
+members using member-based coefficients. To enable the model, **MemberCd1** and **MemberCd2** for circular members, or **MemberCdA1**, **MemberCdA2**, **MemberCdB1**, and **MemberCdB2** for rectangular members should be set to the keyword **KC#**, where **#** is an integer indicating which KC-Cd function is used. KC-Cd functions are set in an optional section preceding the Member Output List. For a given member, the same KC-Cd function must be used for both ends of the member (e.g. **MemberCdA1** = **MemberCdA2**). 
+
 .. _hd-members:
 
 Members
@@ -983,6 +988,12 @@ bounds, you must generate depth entries which explicitly set **MGThck**
 to zero. The hydrodynamic coefficient tables contain coefficients with
 and without marine growth. If **MGThck** = 0 for a particular node, the
 coefficients not associated with marine growth are used.
+
+.. _hd-keulegan-carpenter-drag-coefficient-functions:
+
+Keulegan-Carpenter Drag Coefficient Functions
+-------------
+KC-Cd functions are set in an optional section preceding the Member Output List. **NKCCd** defines the number of KC-Cd functions. It is followed by a list of path names for KC-Cd function files. KC-Cd function files are a two column file, where the first column contains increasing Keulegan-Carpenter numbers and the second column contains corresponding drag coefficients. Each of these KC-Cd function files should begin with **NKC**, which sets the number of Keulegan-Carpenter numbers in the function. Note that the functions are linearly interpolated between provided Keulegan-Carpenter numbers, and are constantly extrapolated below the lowest and above the highest Keulegan-Carpenter numbers. 
 
 .. _hd-member-output-list:
 
