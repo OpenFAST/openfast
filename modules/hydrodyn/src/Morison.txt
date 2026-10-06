@@ -180,6 +180,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           alpha_fb_star            {:}        -        -         "load distribution factor for each element after adjusting alpha_fb for node reference depths"    -
 typedef   ^                            ^                             ReKi           Cd                       {:}        -        -         "Member Cd at each node"    -
 typedef   ^                            ^                             INTEGER        iKC                      {:}        -        -         "Member KC-Cd function index at each node"  - 
+typedef   ^                            ^                             INTEGER        iKCB                     {:}        -        -         "Member KC-Cd function index at each node for rectangular members Side B"  - 
 typedef   ^                            ^                             ReKi           Ca                       {:}        -        -         "Member Ca at each node"    -
 typedef   ^                            ^                             ReKi           CdA                      {:}        -        -         "Member Cd normal to side A at each node"    -
 typedef   ^                            ^                             ReKi           CaA                      {:}        -        -         "Member Ca normal to side A at each node"    -
@@ -288,6 +289,8 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            Morison_CoefMembersRec        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCdA1               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdA2               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             INTEGER          MemberiKC                -          -        -         "Rectangular member-based coefs, same iKC for both ends -
+typedef   ^                            ^                             INTEGER          MemberiKCB               -          -        -         "Rectangular member-based coefs, same iKC for both ends -
 typedef   ^                            ^                             ReKi             MemberCdAMG1             -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdAMG2             -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdB1               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -437,8 +440,10 @@ typedef   ^                            ContinuousStateType           SiKi       
 #
 typedef   ^                            DiscreteStateType             ReKi                     V_rel_n_FiltStat               {:}      -         -         "State of the high-pass filter for the joint relative normal velocity" m/s
 typedef   ^                            DiscreteStateType             ReKi                     AKC                            {:}      -         -         "State of the KC number amplitude for instantaneous KC dependent drag"
+typedef   ^                            DiscreteStateType             ReKi                     AKCB                           {:}      -         -         "State of the KC number amplitude for instantaneous KC dependent drag for rectangular member B side"
 typedef   ^                            DiscreteStateType             ReKi                     vrel_ax_prev                   {:}{:}   -         -         "Relative axial velocity vector from previous time step"
 typedef   ^                            DiscreteStateType             ReKi                     vrel_rad_prev                  {:}{:}   -         -         "Relative radial velocity vector from previous time step"
+typedef   ^                            DiscreteStateType             ReKi                     vrel_rad_prevB                 {:}{:}   -         -         "Relative radial velocity vector from previous time step for rectangular member B side"
 typedef   ^                            DiscreteStateType             ReKi                     MV_rel_n_FiltStat              {:}{:}   -         -         "State of the high-pass filter for the rectangular member relative normal velocity" m/s
 #
 #

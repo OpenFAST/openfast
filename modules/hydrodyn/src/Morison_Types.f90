@@ -233,6 +233,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: alpha_fb_star      !< load distribution factor for each element after adjusting alpha_fb for node reference depths [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cd      !< Member Cd at each node [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iKC      !< Member KC-Cd function index at each node [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iKCB      !< Member KC-Cd function index at each node for rectangular members Side B [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Ca      !< Member Ca at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CdA      !< Member Cd normal to side A at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CaA      !< Member Ca normal to side A at each node [-]
@@ -344,6 +345,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-specified integer id for the Member-based coefs [-]
     REAL(ReKi)  :: MemberCdA1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberCdA2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    INTEGER(IntKi)  :: MemberiKC = 0_IntKi 
+    INTEGER(IntKi)  :: MemberiKCB = 0_IntKi 
     REAL(ReKi)  :: MemberCdAMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberCdAMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberCdB1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
@@ -504,8 +507,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_DiscreteStateType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_FiltStat      !< State of the high-pass filter for the joint relative normal velocity [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AKC      !< State of the KC number amplitude for instantaneous KC dependent drag [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AKCB      !< State of the KC number amplitude for instantaneous KC dependent drag for rectangular member B side [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vrel_ax_prev      !< Relative axial velocity vector from previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vrel_rad_prev      !< Relative radial velocity vector from previous time step [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vrel_rad_prevB      !< Relative radial velocity vector from previous time step for rectangular member B side [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MV_rel_n_FiltStat      !< State of the high-pass filter for the rectangular member relative normal velocity [m/s]
   END TYPE Morison_DiscreteStateType
 ! =======================
@@ -1676,6 +1681,18 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%iKC = SrcMemberTypeData%iKC
    end if
+   if (allocated(SrcMemberTypeData%iKCB)) then
+      LB(1:1) = lbound(SrcMemberTypeData%iKCB)
+      UB(1:1) = ubound(SrcMemberTypeData%iKCB)
+      if (.not. allocated(DstMemberTypeData%iKCB)) then
+         allocate(DstMemberTypeData%iKCB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%iKCB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%iKCB = SrcMemberTypeData%iKCB
+   end if
    if (allocated(SrcMemberTypeData%Ca)) then
       LB(1:1) = lbound(SrcMemberTypeData%Ca)
       UB(1:1) = ubound(SrcMemberTypeData%Ca)
@@ -2201,6 +2218,9 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%iKC)) then
       deallocate(MemberTypeData%iKC)
    end if
+   if (allocated(MemberTypeData%iKCB)) then
+      deallocate(MemberTypeData%iKCB)
+   end if
    if (allocated(MemberTypeData%Ca)) then
       deallocate(MemberTypeData%Ca)
    end if
@@ -2362,6 +2382,7 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%alpha_fb_star)
    call RegPackAlloc(RF, InData%Cd)
    call RegPackAlloc(RF, InData%iKC)
+   call RegPackAlloc(RF, InData%iKCB)
    call RegPackAlloc(RF, InData%Ca)
    call RegPackAlloc(RF, InData%CdA)
    call RegPackAlloc(RF, InData%CaA)
@@ -2477,6 +2498,7 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%alpha_fb_star); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iKC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iKCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ca); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CdA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CaA); if (RegCheckErr(RF, RoutineName)) return
@@ -2918,6 +2940,8 @@ subroutine Morison_CopyCoefMembersRec(SrcCoefMembersRecData, DstCoefMembersRecDa
    DstCoefMembersRecData%MemberID = SrcCoefMembersRecData%MemberID
    DstCoefMembersRecData%MemberCdA1 = SrcCoefMembersRecData%MemberCdA1
    DstCoefMembersRecData%MemberCdA2 = SrcCoefMembersRecData%MemberCdA2
+   DstCoefMembersRecData%MemberiKC = SrcCoefMembersRecData%MemberiKC
+   DstCoefMembersRecData%MemberiKCB = SrcCoefMembersRecData%MemberiKCB
    DstCoefMembersRecData%MemberCdAMG1 = SrcCoefMembersRecData%MemberCdAMG1
    DstCoefMembersRecData%MemberCdAMG2 = SrcCoefMembersRecData%MemberCdAMG2
    DstCoefMembersRecData%MemberCdB1 = SrcCoefMembersRecData%MemberCdB1
@@ -2972,6 +2996,8 @@ subroutine Morison_PackCoefMembersRec(RF, Indata)
    call RegPack(RF, InData%MemberID)
    call RegPack(RF, InData%MemberCdA1)
    call RegPack(RF, InData%MemberCdA2)
+   call RegPack(RF, InData%MemberiKC)
+   call RegPack(RF, InData%MemberiKCB)
    call RegPack(RF, InData%MemberCdAMG1)
    call RegPack(RF, InData%MemberCdAMG2)
    call RegPack(RF, InData%MemberCdB1)
@@ -3018,6 +3044,8 @@ subroutine Morison_UnPackCoefMembersRec(RF, OutData)
    call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MemberCdA1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MemberCdA2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberiKC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberiKCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MemberCdAMG1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MemberCdAMG2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MemberCdB1); if (RegCheckErr(RF, RoutineName)) return
@@ -4420,6 +4448,18 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
       end if
       DstDiscStateData%AKC = SrcDiscStateData%AKC
    end if
+   if (allocated(SrcDiscStateData%AKCB)) then
+      LB(1:1) = lbound(SrcDiscStateData%AKCB)
+      UB(1:1) = ubound(SrcDiscStateData%AKCB)
+      if (.not. allocated(DstDiscStateData%AKCB)) then
+         allocate(DstDiscStateData%AKCB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%AKCB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%AKCB = SrcDiscStateData%AKCB
+   end if
    if (allocated(SrcDiscStateData%vrel_ax_prev)) then
       LB(1:2) = lbound(SrcDiscStateData%vrel_ax_prev)
       UB(1:2) = ubound(SrcDiscStateData%vrel_ax_prev)
@@ -4443,6 +4483,18 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
          end if
       end if
       DstDiscStateData%vrel_rad_prev = SrcDiscStateData%vrel_rad_prev
+   end if
+   if (allocated(SrcDiscStateData%vrel_rad_prevB)) then
+      LB(1:2) = lbound(SrcDiscStateData%vrel_rad_prevB)
+      UB(1:2) = ubound(SrcDiscStateData%vrel_rad_prevB)
+      if (.not. allocated(DstDiscStateData%vrel_rad_prevB)) then
+         allocate(DstDiscStateData%vrel_rad_prevB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%vrel_rad_prevB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%vrel_rad_prevB = SrcDiscStateData%vrel_rad_prevB
    end if
    if (allocated(SrcDiscStateData%MV_rel_n_FiltStat)) then
       LB(1:2) = lbound(SrcDiscStateData%MV_rel_n_FiltStat)
@@ -4471,11 +4523,17 @@ subroutine Morison_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    if (allocated(DiscStateData%AKC)) then
       deallocate(DiscStateData%AKC)
    end if
+   if (allocated(DiscStateData%AKCB)) then
+      deallocate(DiscStateData%AKCB)
+   end if
    if (allocated(DiscStateData%vrel_ax_prev)) then
       deallocate(DiscStateData%vrel_ax_prev)
    end if
    if (allocated(DiscStateData%vrel_rad_prev)) then
       deallocate(DiscStateData%vrel_rad_prev)
+   end if
+   if (allocated(DiscStateData%vrel_rad_prevB)) then
+      deallocate(DiscStateData%vrel_rad_prevB)
    end if
    if (allocated(DiscStateData%MV_rel_n_FiltStat)) then
       deallocate(DiscStateData%MV_rel_n_FiltStat)
@@ -4489,8 +4547,10 @@ subroutine Morison_PackDiscState(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%V_rel_n_FiltStat)
    call RegPackAlloc(RF, InData%AKC)
+   call RegPackAlloc(RF, InData%AKCB)
    call RegPackAlloc(RF, InData%vrel_ax_prev)
    call RegPackAlloc(RF, InData%vrel_rad_prev)
+   call RegPackAlloc(RF, InData%vrel_rad_prevB)
    call RegPackAlloc(RF, InData%MV_rel_n_FiltStat)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -4505,8 +4565,10 @@ subroutine Morison_UnPackDiscState(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%V_rel_n_FiltStat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AKC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AKCB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%vrel_ax_prev); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%vrel_rad_prev); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%vrel_rad_prevB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MV_rel_n_FiltStat); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

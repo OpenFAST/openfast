@@ -83,6 +83,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    CHARACTER(MaxFileInfoLineLen)                :: Line                 ! String to temporarially hold value of read line
    CHARACTER(16)                                :: KCFile1              ! String to temporarilly hold value of KC-Cd function name and number
    CHARACTER(16)                                :: KCFile2              ! String to temporarilly hold value of KC-Cd function name and number
+   CHARACTER(16)                                :: KCFile3              ! String to temporarilly hold value of KC-Cd function name and number
+   CHARACTER(16)                                :: KCFile4              ! String to temporarilly hold value of KC-Cd function name and number
    CHARACTER(8)                                 :: CpMCF1, CpMCF2, CpMCFMG1, CpMCFMG2  ! Strings to temporarilly hold MemberCp entries, which may be the 'MCF' keyword
    CHARACTER(1024)                              :: KCPath               ! String to temporarilly hold path name of KC-Cd function file
    TYPE(FileInfoType)                           :: FileInfo_KC          ! Temporary derived type to hold KC file information                               
@@ -816,21 +818,35 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       DO I = 1,InputFileData%Morison%NCoefMembersCyl
 
          Line = FileInfo_In%Lines(CurLine)
-         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersCyl(I)%MemberID,  &
-                                    KCFile1, KCFile2,  &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG1,  InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG2, &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCa1, InputFileData%Morison%CoefMembersCyl(I)%MemberCa2,  &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG1,  InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG2, &
-                                    CpMCF1, CpMCF2,  &
-                                    CpMCFMG1,  CpMCFMG2, &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd1,  InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd2, &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG1,   InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG2,   &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa1,  InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa2, &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG1,   InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG2,   &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp1,  InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp2, &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG1,   InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG2,   &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCb1, InputFileData%Morison%CoefMembersCyl(I)%MemberCb2,  &
-                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG1,  InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG2
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersCyl(I)%MemberID, &
+                                    KCFile1, &
+                                    KCFile2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCdMG2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCa1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCa2,  &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCaMG2, &
+                                    CpMCF1, &
+                                    CpMCF2, &
+                                    CpMCFMG1, &
+                                    CpMCFMG2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCd2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCdMG2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCa2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCaMG2,   &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCp2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberAxCpMG2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCb1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCb2, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG1, &
+                                    InputFileData%Morison%CoefMembersCyl(I)%MemberCbMG2
 
          if ( KCFile1(1:2) == "KC" ) then
             InputFileData%Morison%CoefMembersCyl(I)%MemberCd1 = 0.0
@@ -927,48 +943,126 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       END IF
 
       DO I = 1,InputFileData%Morison%NCoefMembersRec
-            
-         CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Member-based rectangular member hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
-                      'MCF', 1.0_ReKi, (/18,19,20,21/), InputFileData%Morison%CoefMembersRec(I)%MemberMCF, ErrStat2, ErrMsg2, UnEc )
-            if (Failed())  return
 
-         InputFileData%Morison%CoefMembersRec(I)%MemberID         = NINT(tmpReArray( 1))
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdA1       =      tmpReArray( 2)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdA2       =      tmpReArray( 3)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG1     =      tmpReArray( 4)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG2     =      tmpReArray( 5)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdB1       =      tmpReArray( 6)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdB2       =      tmpReArray( 7)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG1     =      tmpReArray( 8)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG2     =      tmpReArray( 9)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaA1       =      tmpReArray(10)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaA2       =      tmpReArray(11)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG1     =      tmpReArray(12)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG2     =      tmpReArray(13)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaB1       =      tmpReArray(14)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaB2       =      tmpReArray(15)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG1     =      tmpReArray(16)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG2     =      tmpReArray(17)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCp1        =      tmpReArray(18)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCp2        =      tmpReArray(19)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCpMG1      =      tmpReArray(20)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCpMG2      =      tmpReArray(21)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCd1      =      tmpReArray(22)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCd2      =      tmpReArray(23)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG1    =      tmpReArray(24)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG2    =      tmpReArray(25)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCa1      =      tmpReArray(26)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCa2      =      tmpReArray(27)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG1    =      tmpReArray(28)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG2    =      tmpReArray(29)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCp1      =      tmpReArray(30)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCp2      =      tmpReArray(31)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG1    =      tmpReArray(32)
-         InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG2    =      tmpReArray(33)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCb1        =      tmpReArray(34)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCb2        =      tmpReArray(35)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCbMG1      =      tmpReArray(36)
-         InputFileData%Morison%CoefMembersRec(I)%MemberCbMG2      =      tmpReArray(37)
+         Line = FileInfo_In%Lines(CurLine)
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberID, &
+                                    KCFile1, &
+                                    KCFile2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCdAMG2, &
+                                    KCFile3, &
+                                    KCFile4, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCdBMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaA1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaA2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaAMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaB1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaB2,  &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG1,  &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCaBMG2, &
+                                    CpMCF1, &
+                                    CpMCF2, &
+                                    CpMCFMG1, &
+                                    CpMCFMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCd1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCd2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCdMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCa1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCa2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCaMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCp1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCp2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberAxCpMG2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCb1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCb2, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCbMG1, &
+                                    InputFileData%Morison%CoefMembersRec(I)%MemberCbMG2
+
+         if ( KCFile1(1:2) == "KC" ) then
+            InputFileData%Morison%CoefMembersRec(I)%MemberCdA1 = 0.0
+            InputFileData%Morison%CoefMembersRec(I)%MemberCdA2 = 0.0
+            InputFileData%Morison%CoefMembersRec(I)%MemberCdB1 = 0.0
+            InputFileData%Morison%CoefMembersRec(I)%MemberCdB2 = 0.0
+            if ( trim(KCFile1) /= trim(KCFile2) ) then
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2 = "MemberCdA1 and MemberCdA2 must be the same KC file reference when using KC-based input (e.g., KC1 and KC1)."
+               if (Failed())  return
+            end if
+            READ( KCFile1(3:), '(I10)', iostat=ErrStat2 ) InputFileData%Morison%CoefMembersRec(I)%MemberiKC
+            if ( KCFile3(1:2) == "KC" ) then
+               if ( KCFile4(1:2) == "KC" ) then
+                  READ( KCFile3(3:), '(I10)', iostat=ErrStat2 ) InputFileData%Morison%CoefMembersRec(I)%MemberiKCB
+               else
+                  ErrStat2 = ErrID_Fatal
+                  ErrMsg2 = "If KC-based input is used for CdA it must also be used for CdB for the same member."
+                  if (Failed())  return
+               end if
+            end if
+         else
+            READ(KCFile1,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCdA1
+            if (ErrStat2 /= 0) then 
+               ErrMsg2 = "MemberCdA1 input needs to either be a real number or a string starting with 'KC' followed by an integer between 1 and NKCCd"
+            end if
+            READ(KCFile2,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCdA2
+            if (ErrStat2 /= 0) then 
+               ErrMsg2 = "MemberCdA2 input needs to either be a real number or a string starting with 'KC' followed by an integer between 1 and NKCCd"
+            end if
+            READ(KCFile3,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCdB1
+            if (ErrStat2 /= 0) then 
+               ErrMsg2 = "MemberCdB1 input needs to either be a real number or a string starting with 'KC' followed by an integer between 1 and NKCCd"
+            end if
+            READ(KCFile4,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCdB2
+            if (ErrStat2 /= 0) then 
+               ErrMsg2 = "MemberCdB2 input needs to either be a real number or a string starting with 'KC' followed by an integer between 1 and NKCCd"
+            end if
+            InputFileData%Morison%CoefMembersRec(I)%MemberiKC = 0
+            InputFileData%Morison%CoefMembersRec(I)%MemberiKCB = 0
+            if (Failed())  return
+         end if
+
+         ! MCF keyword must appear in all four of MemberCp1, MemberCp2, MemberCpMG1, MemberCpMG2, or none of them
+         IF ( trim(CpMCF1) == 'MCF' .OR. trim(CpMCF2) == 'MCF' .OR. trim(CpMCFMG1) == 'MCF' .OR. trim(CpMCFMG2) == 'MCF' ) THEN
+            IF ( trim(CpMCF1) /= 'MCF' .OR. trim(CpMCF2) /= 'MCF' .OR. trim(CpMCFMG1) /= 'MCF' .OR. trim(CpMCFMG2) /= 'MCF' ) THEN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2 = "When parsing member-based rectangular member hydrodynamic coefficients table, MCF is used at some but not all of MemberCp1, MemberCp2, MemberCpMG1, MemberCpMG2."
+               if (Failed())  return
+            END IF
+            InputFileData%Morison%CoefMembersRec(I)%MemberMCF   = .true.
+            InputFileData%Morison%CoefMembersRec(I)%MemberCp1   = 1.0_ReKi
+            InputFileData%Morison%CoefMembersRec(I)%MemberCp2   = 1.0_ReKi
+            InputFileData%Morison%CoefMembersRec(I)%MemberCpMG1 = 1.0_ReKi
+            InputFileData%Morison%CoefMembersRec(I)%MemberCpMG2 = 1.0_ReKi
+         ELSE
+            InputFileData%Morison%CoefMembersRec(I)%MemberMCF = .false.
+            READ(CpMCF1,  *,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCp1
+            if (ErrStat2 /= 0) then
+               ErrMsg2 = "MemberCp1 input needs to either be a real number or 'MCF'"
+            end if
+            if (Failed())  return
+            READ(CpMCF2,  *,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCp2
+            if (ErrStat2 /= 0) then
+               ErrMsg2 = "MemberCp2 input needs to either be a real number or 'MCF'"
+            end if
+            if (Failed())  return
+            READ(CpMCFMG1,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCpMG1
+            if (ErrStat2 /= 0) then
+               ErrMsg2 = "MemberCpMG1 input needs to either be a real number or 'MCF'"
+            end if
+            if (Failed())  return
+            READ(CpMCFMG2,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembersRec(I)%MemberCpMG2
+            if (ErrStat2 /= 0) then
+               ErrMsg2 = "MemberCpMG2 input needs to either be a real number or 'MCF'"
+            end if
+            if (Failed())  return
+         END IF
+
+         CurLine = CurLine + 1
+
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
