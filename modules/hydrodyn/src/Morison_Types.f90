@@ -577,6 +577,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_InputType
     TYPE(MeshType)  :: Mesh      !< Kinematics of each node input mesh [-]
     REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference platform yaw offset [(rad)]
+    REAL(ReKi) , DIMENSION(1:2)  :: PtfmRefXY = 0.0_ReKi      !< x,y drift of the HydroDyn origin (PRP), consistent with potential-flow body ExctnDisp. Used to displace the Morison members when WaveDisp=0 [(m)]
     REAL(ReKi) , DIMENSION(1:3)  :: PRP = 0.0_ReKi      !< Coordinates of the principal reference point [(m)]
   END TYPE Morison_InputType
 ! =======================
@@ -590,10 +591,11 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: Morison_x_DummyContState         =   1 ! Morison%DummyContState
    integer(IntKi), public, parameter :: Morison_u_Mesh                   =   2 ! Morison%Mesh
    integer(IntKi), public, parameter :: Morison_u_PtfmRefY               =   3 ! Morison%PtfmRefY
-   integer(IntKi), public, parameter :: Morison_u_PRP                    =   4 ! Morison%PRP
-   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   5 ! Morison%Mesh
-   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   6 ! Morison%VisMesh
-   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   7 ! Morison%WriteOutput
+   integer(IntKi), public, parameter :: Morison_u_PtfmRefXY              =   4 ! Morison%PtfmRefXY
+   integer(IntKi), public, parameter :: Morison_u_PRP                    =   5 ! Morison%PRP
+   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   6 ! Morison%Mesh
+   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   7 ! Morison%VisMesh
+   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   8 ! Morison%WriteOutput
 
 contains
 
@@ -5474,6 +5476,7 @@ subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInputData%PtfmRefY = SrcInputData%PtfmRefY
+   DstInputData%PtfmRefXY = SrcInputData%PtfmRefXY
    DstInputData%PRP = SrcInputData%PRP
 end subroutine
 
@@ -5497,6 +5500,7 @@ subroutine Morison_PackInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
    call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PtfmRefXY)
    call RegPack(RF, InData%PRP)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -5508,6 +5512,7 @@ subroutine Morison_UnPackInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
    call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefXY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PRP); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5685,6 +5690,7 @@ SUBROUTINE Morison_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Err
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
+   u_out%PtfmRefXY = a1*u1%PtfmRefXY + a2*u2%PtfmRefXY
    u_out%PRP = a1*u1%PRP + a2*u2%PRP
 END SUBROUTINE
 
@@ -5746,6 +5752,7 @@ SUBROUTINE Morison_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
+   u_out%PtfmRefXY = a1*u1%PtfmRefXY + a2*u2%PtfmRefXY + a3*u3%PtfmRefXY
    u_out%PRP = a1*u1%PRP + a2*u2%PRP + a3*u3%PRP
 END SUBROUTINE
 
@@ -6044,6 +6051,8 @@ subroutine Morison_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
       case (Morison_u_PtfmRefY)
          VarVals(1) = u%PtfmRefY                                              ! Scalar
+      case (Morison_u_PtfmRefXY)
+         VarVals = u%PtfmRefXY(V%iLB:V%iUB)                                   ! Rank 1 Array
       case (Morison_u_PRP)
          VarVals = u%PRP(V%iLB:V%iUB)                                         ! Rank 1 Array
       case default
@@ -6072,6 +6081,8 @@ subroutine Morison_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
       case (Morison_u_PtfmRefY)
          u%PtfmRefY = VarVals(1)                                              ! Scalar
+      case (Morison_u_PtfmRefXY)
+         u%PtfmRefXY(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
       case (Morison_u_PRP)
          u%PRP(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
       end select
@@ -6086,6 +6097,8 @@ function Morison_InputFieldName(DL) result(Name)
        Name = "u%Mesh"
    case (Morison_u_PtfmRefY)
        Name = "u%PtfmRefY"
+   case (Morison_u_PtfmRefXY)
+       Name = "u%PtfmRefXY"
    case (Morison_u_PRP)
        Name = "u%PRP"
    case default

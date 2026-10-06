@@ -1506,15 +1506,16 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    END IF
    
+   ! ExctnCutOff - validate before ExctnDisp may be forced to 0 below. ExctnDisp=2 also drives the Morison WaveDisp=0 drift
+   ! (PtfmRefXY), so a valid cutoff is required whenever ExctnDisp=2, even without potential-flow bodies.
+   if ( InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
+      CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+   end if
+
       ! ExctnDisp - Method of computing Wave Excitation
    if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveField%WaveMod == WaveMod_None) then
       InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
    end if
-   
-   ! ExctnCutOff
-   if ( InputFileData%PotMod == 1 .and. InputFileData%WAMIT%ExctnMod  > 0 .and. InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
-      CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-   end if   
       
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 

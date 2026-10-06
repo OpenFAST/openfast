@@ -122,9 +122,12 @@ SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
          pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
       END IF
    ELSE ! WaveDisp=0: position the structure using the reference yaw only
-      ! Rotate the structure based on PtfmRefY (reference yaw, may be static or dynamic; no instantaneous translation)
+      ! Rotate the structure based on PtfmRefY (reference yaw, may be static or dynamic)
       call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
       pos = matmul(transpose(Orient),pos)
+      ! Add the x,y drift of the HD origin so Morison tracks the potential-flow bodies
+      pos(1,:) = pos(1,:) + u%PtfmRefXY(1)
+      pos(2,:) = pos(2,:) + u%PtfmRefXY(2)
    END IF
 
 END SUBROUTINE GetDisplacedNodePosition

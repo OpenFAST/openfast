@@ -511,6 +511,7 @@ typedef   ^                            ^                             Morison_Fil
 #
 typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
 typedef   ^                            ^                             ReKi                     PtfmRefY                      -          -        -         "Reference platform yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     PtfmRefXY                     {2}        -        -         "x,y drift of the HydroDyn origin (PRP), consistent with potential-flow body ExctnDisp. Used to displace the Morison members when WaveDisp=0" (m)
 typedef   ^                            ^                             ReKi                     PRP                           {3}        -        -         "Coordinates of the principal reference point" (m)
 #
 #
