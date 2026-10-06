@@ -135,6 +135,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
 typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
+typedef   ^                            ^                             ReKi           CMatrix                  {3}{3}     -        -         "Rotation matrix from the section local system to the global system" -
 typedef   ^                            ^                             ReKi           x_hat                    {3}        -        -         "unit vector of rectangular member local x-axis aligned with Side A" -
 typedef   ^                            ^                             ReKi           y_hat                    {3}        -        -         "unit vector of rectangular member local y-axis aligned with Side B" -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m

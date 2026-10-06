@@ -213,17 +213,15 @@ SUBROUTINE YawMember(member, PtfmRefY, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    member%Ak  = Ak
 
-   IF (member%MSecGeom == MSecGeom_Rec) THEN
+   call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   member%x_hat   = x_hat
 
-      call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%x_hat   = x_hat
+   call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   member%y_hat   = y_hat
 
-      call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      member%y_hat   = y_hat
-
-   END IF
+   ! Note: Deliberately left member%CMatrix unchanged because we need the undisplaced version outside when constructing the full nodal orientation.
 
 END SUBROUTINE YawMember
 
@@ -2007,7 +2005,10 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    sinPhi = sin(phi)
    cosPhi = cos(phi)  
    member%cosPhi_ref = cosPhi
-   
+   CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, 0.0_ReKi, member%CMatrix ) 
+   member%x_hat = member%CMatrix(1:3,1)
+   member%y_hat = member%CMatrix(1:3,2)
+
    ! These are all per node and not done here, yet
    
    do i = 1, member%NElements+1
@@ -2335,7 +2336,7 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    real(ReKi)     :: Lmid
    real(ReKi)     :: li
    real(ReKi)     :: Vinner_l, Vinner_u, Vouter_l, Vouter_u, Vballast_l, Vballast_u
-   real(ReKi)     :: tk(1,3), Imat(3,3), CMatrix(3,3)
+   real(ReKi)     :: tk(1,3), Imat(3,3)
    REAL(ReKi)     :: h_c    ! center of mass offset from first node
    
    errStat = ErrID_None
@@ -2355,11 +2356,9 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    member%kkt    = matmul(transpose(tk),tk)
    call Eye(Imat,errStat,errMsg)
    member%Ak     =  Imat - member%kkt
-   IF (member%MSecGeom == MSecGeom_Rec) THEN
-      CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, member%MSpinOrient, CMatrix )
-      member%x_hat = CMatrix(1:3,1)
-      member%y_hat = CMatrix(1:3,2)
-   END IF
+   CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, member%MSpinOrient, member%CMatrix )
+   member%x_hat = member%CMatrix(1:3,1)
+   member%y_hat = member%CMatrix(1:3,2)
    phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
    sinPhi = sin(phi)
    cosPhi = cos(phi)  
@@ -3658,10 +3657,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             pos2    = m%DispNodePosHst(:, mem%NodeIndx(i+1))
 
             call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 ); if (Failed()) return
-            ! Compute element to global DirCos matrix for undisplaced structure first
-            call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
-            ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
-            CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),CMatrix)
+            ! Compute total element orientation matrix assuming the rotation of the starting node is representative of the whole element
+            CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),mem%CMatrix)
             CTrans  = transpose(CMatrix)
             ! Note: CMatrix is element local to global displaced. CTrans is the opposite.
             ! save some commonly used variables   
@@ -3841,10 +3838,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                pos2 = m%DispNodePosHst(:,mem%NodeIndx(i+1))
 
                call GetElementAxialVec( pos1, pos2, k_hat, errStat2, errMsg2 ); if (Failed()) return
-               ! Compute element to global DirCos matrix for undisplaced structure first
-               call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
-               ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
-               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),CMatrix)
+               ! Compute total element orientation matrix assuming the rotation of the starting node is representative of the whole element
+               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),mem%CMatrix)
                CTrans  = transpose(CMatrix)
                ! Note: CMatrix is element local to global displaced. CTrans is the opposite.
                ! save some commonly used variables
@@ -4551,10 +4546,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
       if (mem%MSecGeom == MSecGeom_Rec) then
          ! Compute total orientation matrix of starting and ending joints
-         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(1)), u%Mesh%Position(:,mem%NodeIndx(N+1)), mem%MSpinOrient, CMatrix )
-         CMatrix1 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(1  ))),CMatrix)
+         CMatrix1 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(1  ))),mem%CMatrix)
          CALL GetSectionUnitVectors_Rec( CMatrix1, x_hat1, y_hat1 )
-         CMatrix2 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(N+1))),CMatrix)
+         CMatrix2 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(N+1))),mem%CMatrix)
          CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat2, y_hat2 )
       end if
 
@@ -6038,7 +6032,7 @@ END SUBROUTINE Morison_CalcOutput
       Character(*),             intent(  out) :: ErrMsg
 
       Integer(IntKi)                          :: N, elemNo
-      Real(ReKi)                              :: CMatrix0(3,3), CMatrix(3,3)
+      Real(ReKi)                              :: CMatrix(3,3)
       Real(ReKi)                              :: k_hat(3), x_hat(3), y_hat(3), z_hat(3)
       Real(ReKi)                              :: l, rIn, SaIn, SbIn, z0, pos1(3), pos2(3)
 
@@ -6085,13 +6079,11 @@ END SUBROUTINE Morison_CalcOutput
             z_hi   = MAX( pos2(3) + rIn * z_hat(3), z_hi)
          END IF
       ELSE IF (member%MSecGeom == MSecGeom_Rec) THEN
-         ! DirCos matrix of undisplaced member
-         CALL Morison_DirCosMtrx( u%Mesh%Position(:,member%NodeIndx(1  )), u%Mesh%Position(:,member%NodeIndx(N+1)), member%MSpinOrient, CMatrix0 )
          ! Check the vertices of the starting section
          pos1  = m%DispNodePosHst(:,member%NodeIndx(1))
          pos2  = m%DispNodePosHst(:,member%NodeIndx(2))
          z0 = pos1(3)
-         CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(1  ))),CMatrix0)
+         CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(1  ))),member%CMatrix)
          CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
          SaIn = member%SaIn(1)
          SbIn = member%SbIn(1)
@@ -6104,7 +6096,7 @@ END SUBROUTINE Morison_CalcOutput
             pos1  = m%DispNodePosHst(:,member%NodeIndx(N  ))
             pos2  = m%DispNodePosHst(:,member%NodeIndx(N+1))
             z0 = pos2(3)
-            CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(N+1))),CMatrix0)
+            CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(N+1))),member%CMatrix)
             CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
             SaIn = member%SaIn(N+1)
             SbIn = member%SbIn(N+1)
@@ -6117,9 +6109,9 @@ END SUBROUTINE Morison_CalcOutput
             pos1  = m%DispNodePosHst(:,member%NodeIndx(elemNo  ))
             pos2  = m%DispNodePosHst(:,member%NodeIndx(elemNo+1))
             if ( member%h_fill>0.5*member%dl ) then
-               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo+1))),CMatrix0)
+               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo+1))),member%CMatrix)
             else
-               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo  ))),CMatrix0)
+               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo  ))),member%CMatrix)
             end if
             CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
             k_hat = Cross_Product(x_hat,y_hat)

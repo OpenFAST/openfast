@@ -188,6 +188,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: k = 0.0_ReKi      !< unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn) [m]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: kkt = 0.0_ReKi      !< matrix of matmul(k_hat, transpose(k_hat) [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: Ak = 0.0_ReKi      !< matrix of I - kkt [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: CMatrix = 0.0_ReKi      !< Rotation matrix from the section local system to the global system [-]
     REAL(ReKi) , DIMENSION(1:3)  :: x_hat = 0.0_ReKi      !< unit vector of rectangular member local x-axis aligned with Side A [-]
     REAL(ReKi) , DIMENSION(1:3)  :: y_hat = 0.0_ReKi      !< unit vector of rectangular member local y-axis aligned with Side B [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: R      !< outer member radius at each node [m]
@@ -1296,6 +1297,7 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%k = SrcMemberTypeData%k
    DstMemberTypeData%kkt = SrcMemberTypeData%kkt
    DstMemberTypeData%Ak = SrcMemberTypeData%Ak
+   DstMemberTypeData%CMatrix = SrcMemberTypeData%CMatrix
    DstMemberTypeData%x_hat = SrcMemberTypeData%x_hat
    DstMemberTypeData%y_hat = SrcMemberTypeData%y_hat
    if (allocated(SrcMemberTypeData%R)) then
@@ -2286,6 +2288,7 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPack(RF, InData%k)
    call RegPack(RF, InData%kkt)
    call RegPack(RF, InData%Ak)
+   call RegPack(RF, InData%CMatrix)
    call RegPack(RF, InData%x_hat)
    call RegPack(RF, InData%y_hat)
    call RegPackAlloc(RF, InData%R)
@@ -2400,6 +2403,7 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpack(RF, OutData%k); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%kkt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ak); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CMatrix); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%x_hat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%y_hat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%R); if (RegCheckErr(RF, RoutineName)) return
