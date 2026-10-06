@@ -183,7 +183,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-supplied integer ID for this member [-]
     INTEGER(IntKi)  :: NElements = 0_IntKi      !< number of elements in this member [-]
     REAL(ReKi)  :: RefLength = 0.0_ReKi      !< the reference total length for this member [m]
-    REAL(ReKi)  :: cosPhi_ref = 0.0_ReKi      !< the reference cosine of the inclination angle of the member [-]
     REAL(ReKi)  :: dl = 0.0_ReKi      !< the reference element length for this member (may be less than MDivSize to achieve uniform element lengths) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: k = 0.0_ReKi      !< unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn) [m]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: kkt = 0.0_ReKi      !< matrix of matmul(k_hat, transpose(k_hat) [-]
@@ -1292,7 +1291,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%MemberID = SrcMemberTypeData%MemberID
    DstMemberTypeData%NElements = SrcMemberTypeData%NElements
    DstMemberTypeData%RefLength = SrcMemberTypeData%RefLength
-   DstMemberTypeData%cosPhi_ref = SrcMemberTypeData%cosPhi_ref
    DstMemberTypeData%dl = SrcMemberTypeData%dl
    DstMemberTypeData%k = SrcMemberTypeData%k
    DstMemberTypeData%kkt = SrcMemberTypeData%kkt
@@ -2283,7 +2281,6 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPack(RF, InData%MemberID)
    call RegPack(RF, InData%NElements)
    call RegPack(RF, InData%RefLength)
-   call RegPack(RF, InData%cosPhi_ref)
    call RegPack(RF, InData%dl)
    call RegPack(RF, InData%k)
    call RegPack(RF, InData%kkt)
@@ -2398,7 +2395,6 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NElements); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%cosPhi_ref); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%k); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%kkt); if (RegCheckErr(RF, RoutineName)) return

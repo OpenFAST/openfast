@@ -130,7 +130,6 @@ typedef   ^                            Morison_MemberType            INTEGER    
 typedef   ^                            ^                             INTEGER        MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER        NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi           RefLength                -          -        -         "the reference total length for this member"    m
-typedef   ^                            ^                             ReKi           cosPhi_ref               -          -        -         "the reference cosine of the inclination angle of the member" -
 typedef   ^                            ^                             ReKi           dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
 typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
 typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -

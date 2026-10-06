@@ -1697,7 +1697,6 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    real(ReKi)     :: memLength 
    real(ReKi)     :: Za 
    real(ReKi)     :: Zb 
-   real(ReKi)     :: phi 
    real(ReKi)     :: sinPhi
    real(ReKi)     :: cosPhi
    real(ReKi)     :: Rmid  
@@ -1726,10 +1725,8 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    member%kkt    = matmul(transpose(tk),tk)
    call Eye(Imat,errStat,errMsg)
    member%Ak     =  Imat - member%kkt
-   phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
-   sinPhi = sin(phi)
-   cosPhi = cos(phi)  
-   member%cosPhi_ref = cosPhi
+   cosPhi = member%k(3)                             ! cosine of inclination from vertical (z-component of axial unit vector)
+   sinPhi = sqrt( member%k(1)**2 + member%k(2)**2 ) ! sine of inclination from vertical
    CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, 0.0_ReKi, member%CMatrix ) 
    member%x_hat = member%CMatrix(1:3,1)
    member%y_hat = member%CMatrix(1:3,2)
@@ -1775,7 +1772,7 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
          RETURN
       END IF
       ! Check inclination
-      If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
+      If ( ABS(cosPhi) <= 0.9848077530_ReKi ) THEN ! If inclination from vertical is greater than 10 deg
          CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
@@ -1838,7 +1835,7 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
             call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          end if
       end if
-      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
+      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( ABS(cosPhi) < 0.9848077530_ReKi .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
          call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       end if
       
@@ -1854,7 +1851,7 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
          Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
          if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
             
-            if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
+            if (ABS(cosPhi) < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
                call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )
             end if
             
@@ -2052,8 +2049,6 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    real(ReKi)     :: memLength 
    real(ReKi)     :: Za 
    real(ReKi)     :: Zb 
-   real(ReKi)     :: phi 
-   real(ReKi)     :: sinPhi
    real(ReKi)     :: cosPhi
    real(ReKi)     :: SaMid, SbMid  
    real(ReKi)     :: SaMidMG, SbMidMG
@@ -2084,10 +2079,7 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, member%MSpinOrient, member%CMatrix )
    member%x_hat = member%CMatrix(1:3,1)
    member%y_hat = member%CMatrix(1:3,2)
-   phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
-   sinPhi = sin(phi)
-   cosPhi = cos(phi)  
-   member%cosPhi_ref = cosPhi
+   cosPhi = member%k(3) ! cosine of inclination from vertical (z-component of axial unit vector)
    
    ! These are all per node and not done here, yet
    
@@ -2174,16 +2166,8 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
 
     ! Check the member does not exhibit any of the following conditions
    if (.not. member%PropPot) then 
-      ! MHstLMod=1 is not allowed for rectangular members at the moment. Skip the following check.
-      ! if (member%MHstLMod == 1) then
-      !    if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
-      !       call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
-      !    end if
-      !    if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
-      !       call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
-      !    end if
-      ! end if
-      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%SaMG(N+1) - member%SaMG(1))/member%RefLength)>0.1 .or. abs((member%SbMG(N+1) - member%SbMG(1))/member%RefLength)>0.1 ) ) then
+      ! MHstLMod=1 is not allowed for rectangular members. Skip the check for partially wetted endplates.
+      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( ABS(cosPhi) < 0.9848077530_ReKi .or. abs((member%SaMG(N+1) - member%SaMG(1))/member%RefLength)>0.1 .or. abs((member%SbMG(N+1) - member%SbMG(1))/member%RefLength)>0.1 ) ) then
          call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       end if      
    end if
@@ -2197,7 +2181,7 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
          Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
          if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
             
-            if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
+            if (ABS(cosPhi) < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
                call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )
             end if
             
@@ -3809,7 +3793,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
                     z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the next node
                     IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
-                       h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                       h = -z1 / mem%k(3) ! Length of Element i between SWL and node i, h>=0
                        deltal_AM = mem%dl/2.0 + h
                        h_c_AM    = 0.5*(h-mem%dl/2.0)
                     ELSE
@@ -4184,7 +4168,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     ELSE
                        z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%WaveField%MSL2SWL
                        IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
-                          deltalRight = -z1 / mem%cosPhi_ref
+                          deltalRight = -z1 / mem%k(3)
                        ELSE
                           deltalRight = 0.5_ReKi * mem%dl
                        END IF
