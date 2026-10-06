@@ -244,6 +244,14 @@ motion to prevent double counting the contributions from first-order
 structural motion already included in the second-order potential-flow wave 
 excitation.
 
+Beyond the potential-flow wave excitation, **ExctnDisp** and **ExctnCutOff** also
+govern the horizontal x-y drift applied to the strip-theory (Morison) members
+when **WaveDisp** = 0, as described under Strip theory options below. These inputs
+are honored regardless of whether potential-flow bodies are present, so a
+strip-theory-only model can use the same reference-position treatment. When
+**ExctnDisp** = 2, **ExctnCutOff** must be greater than zero even without
+potential-flow bodies.
+
 HydroDyn now supports large but slow (well below wave frequencies) 
 transient platform yaw motion with both strip-theory only and hybrid 
 potential-flow models. To enable this capability, the inputs 
@@ -313,13 +321,15 @@ both **DiffQTF** and **SumQTF** to be set to 0. However, mean- or
 slow-drift loads based on Newman's approximation can be included through 
 the **MnDrift** or **NewmanApp** inputs explained below.
 
-Note that the inputs **PtfmYMod** and **PtfmRefY** also affect the 
-strip-theory hydrodynamic load. This is because the orientation of 
-the strip-theory members is updated based on **PtfmRefY** instead 
-of the instantaneous platform yaw rotation. Behavior of previous 
-versions of HydroDyn can be approximately recovered by setting 
-**PtfmYMod** = 0 and **PtfmRefY** = 0 deg, in which case, the 
-inputs **PtfmYCutoff** and **NExctnHdg** are not used.
+Note that **PtfmYMod** and **PtfmRefY** also affect the strip-theory 
+hydrodynamic load when **WaveDisp** = 0. In that mode, the displacement
+and rotation of the strip-theory members and joints are based on
+**PtfmRefY** (together with the x-y drift from **ExctnDisp**) rather than 
+the full 6DOF instantaneous structure motion, as described under Strip
+theory options below. When **WaveDisp** = 1, the exact instantaneous
+member and joint orientations are used instead, so **PtfmRefY** does not
+affect the strip-theory load. The inputs **PtfmYCutoff** and **NExctnHdg**
+are not used when **PtfmYMod** = 0.
 
 HydroDyn has two methods for calculating the radiation memory effect.
 Set **RdtnMod** to 1 for the convolution method, 2 for the linear
@@ -707,19 +717,36 @@ apply constant hydrostatic/buoyancy loads to the generalized modes.
 
 Strip theory options
 --------------------
-**WaveDisp** can be set to 0 to compute the strip-theory loads using the 
-wave kinematics and dynamic pressure at the undisplaced position of the 
-structure. If set to 1, the loads will be computed using the wave kinematics 
-and dynamic pressure at the instantaneous displaced positions of the strip-theory 
-members. Note that when wave stretching is not used (\ **WaveStMod** = 0 in 
-SeaState), only the *X*- and *Y*-displacements of the strip-theory member 
-nodes are considered when **WaveDisp** = 1, while the vertical *Z*-displacement is 
-ignored. This is done to avoid discontinuous nodal loads that can result in 
-unphysical structural vibration with a SubDyn substructure model. When 
-**WaveStMod** > 0 and **WaveDisp** = 1, displacements of strip-theory members 
-in all three directions are considered when computing the wave kinematics. 
-A load smoothing procedure is performed to avoid discontinuous nodal loads 
-in this case.
+**WaveDisp** controls both the position at which the wave kinematics and dynamic 
+pressure are evaluated and the orientation of the strip-theory members and joints 
+used when computing the hydrodynamic loads.
+
+Setting **WaveDisp** = 0 evaluates the loads at a reference configuration of the 
+strip-theory members that is consistent with the potential-flow model. Rather 
+than holding the members at their undisplaced position and orientation, HydroDyn 
+positions and orients them using the reference yaw (set through **PtfmYMod** and 
+**PtfmRefY**) together with a horizontal x-y drift of the HydroDyn origin (PRP) 
+governed by **ExctnDisp** and **ExctnCutOff** (see above). This results in 3DOF
+horizontal-plane displacements only (surge, sway, and yaw). Both the member and 
+joint orientations used to compute the hydrodynamic loads and the node positions 
+at which the wave kinematics and dynamic pressure are queried follow this 
+reference configuration, so a mixed potential-flow/strip-theory model remains 
+geometrically self-consistent. The behavior of previous versions of HydroDyn with
+**WaveDisp** = 0 can be recovered by setting **PtfmYMod** = 0 and **ExctnDisp** = 0.
+
+With **WaveDisp** = 1, the strip-theory loads are computed considering the full
+6DOF instantaneous motion of the strip-theory members and joints. The wave
+kinematics and dynamic pressure are evaluated at the exact instantaneous positions
+of the strip-theory member nodes and joints, and member and joint orientations
+consider full 3DOF rotation of the structure. Note that when wave stretching is
+not used (\ **WaveStMod** = 0 in SeaState), only the *X*- and *Y*-displacements
+of the strip-theory member nodes are considered, while the vertical *Z*-displacement
+is ignored when computing the wave kinematics and dynamic pressure. This is done
+to avoid discontinuous nodal loads that can result in unphysical structural
+vibration with a SubDyn substructure model. When **WaveStMod** > 0, displacements
+of strip-theory members in all three directions are considered when computing
+the wave kinematics. A load smoothing procedure is performed to avoid discontinuous
+nodal loads in this case.
 
 **AMMod** controls the computation of distributed strip-theory added-mass force. 
 If **AMMod** = 0, the strip-theory added-mass force is always evaluated up 
