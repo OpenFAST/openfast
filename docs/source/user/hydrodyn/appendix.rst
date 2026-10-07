@@ -68,7 +68,6 @@ structure::
                    0             0             0             0             0             0
       ---------------------- STRIP THEORY OPTIONS --------------------------------------
                    0   WaveDisp       - Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} (switch)
-                   0   AMMod          - Method of computing distributed added-mass force. {0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
                    0   HstMod         - Method of computing hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
       ---------------------- AXIAL COEFFICIENTS --------------------------------------
                    2   NAxCoef        - Number of axial coefficients (-)

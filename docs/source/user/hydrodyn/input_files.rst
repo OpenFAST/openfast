@@ -741,16 +741,6 @@ of the strip-theory member nodes and joints, and member and joint orientations
 consider full 3DOF rotation of the structure. A load smoothing procedure is
 performed to avoid discontinuous nodal loads as members cross the free surface.
 
-**AMMod** controls the computation of distributed strip-theory added-mass force. 
-If **AMMod** = 0, the strip-theory added-mass force is always evaluated up 
-to the SWL while neglecting the vertical displacement of the strip-theory member 
-nodes, even if wave stretching is enabled. With **AMMod** = 1, the strip-theory 
-added-mass force is evaluated up to the instantaneous free surface if 
-**WaveStMod** > 0. The vertical displacement of strip-theory members will also be 
-accounted for if **WaveDisp** = 1. **AMMod** should only be set to 0 if wave 
-stretching is causing numerical instabilities with flexible fixed-bottom support 
-structures modeled in SubDyn.
-
 **HstMod** controls the computation of distributed hydrostatic loads on 
 strip-theory members. If **HstMod** = 0, the hydrostatic pressure is always 
 integrated on the instantaneous wetted surface up to the SWL, even if wave 

@@ -364,10 +364,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'WaveDisp', InputFileData%Morison%WaveDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 1: Up to the free surface} (switch)
-   call ParseVar( FileInfo_In, CurLine, 'AMMod', InputFileData%Morison%AMMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
    ! HstMod - Method of computing strip-theory hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch)
    call ParseVar( FileInfo_In, CurLine, 'HstMod', InputFileData%Morison%HstMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
@@ -1873,10 +1869,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    IF ( InputFileData%Morison%WaveDisp /= 0 .AND. InputFileData%Morison%WaveDisp /= 1) THEN
       CALL SetErrStat( ErrID_Fatal,'WaveDisp must be 0 or 1',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%AMMod /= 0 .AND. InputFileData%Morison%AMMod /= 1) THEN
-      CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
    IF ( InputFileData%Morison%HstMod /= 0 .AND. InputFileData%Morison%HstMod /= 1) THEN
