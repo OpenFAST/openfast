@@ -3674,9 +3674,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            pos1 = m%DispNodePosHdn(:,mem%NodeIndx(i  ))
            pos2 = m%DispNodePosHdn(:,mem%NodeIndx(i+1))
 
-           ! Free surface elevation above or below node i and i+1
-           Zeta1 = m%WaveElev(mem%NodeIndx(i))
-           Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
+           ! Free surface elevation above or below node i and i+1.
+           ! Without wave stretching the free surface is the SWL (z=0), consistent with how nodeInWater/MemSubStat are determined.
+           IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN
+              Zeta1 = m%WaveElev(mem%NodeIndx(i  ))
+              Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
+           ELSE
+              Zeta1 = 0.0_ReKi
+              Zeta2 = 0.0_ReKi
+           END IF
 
            ! Rotate member properties based on local node orientation
            call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(i)), ErrStat2, ErrMsg2); if (Failed()) return
@@ -3803,6 +3809,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            END IF
            
         END DO ! i =1,N+1    ! loop through member nodes  
+
+        IF ( FSElem < 1_IntKi ) THEN ! No free-surface-crossing element found; guard against invalid FSElem indexing below
+           ErrStat2 = ErrID_Fatal
+           ErrMsg2  = 'Failed to locate the free-surface-crossing element for Member ID '//trim(num2lstr(mem%MemberID))//'.'
+           if (Failed()) return
+        END IF
 
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
