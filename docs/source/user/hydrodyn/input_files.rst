@@ -738,15 +738,8 @@ With **WaveDisp** = 1, the strip-theory loads are computed considering the full
 6DOF instantaneous motion of the strip-theory members and joints. The wave
 kinematics and dynamic pressure are evaluated at the exact instantaneous positions
 of the strip-theory member nodes and joints, and member and joint orientations
-consider full 3DOF rotation of the structure. Note that when wave stretching is
-not used (\ **WaveStMod** = 0 in SeaState), only the *X*- and *Y*-displacements
-of the strip-theory member nodes are considered, while the vertical *Z*-displacement
-is ignored when computing the wave kinematics and dynamic pressure. This is done
-to avoid discontinuous nodal loads that can result in unphysical structural
-vibration with a SubDyn substructure model. When **WaveStMod** > 0, displacements
-of strip-theory members in all three directions are considered when computing
-the wave kinematics. A load smoothing procedure is performed to avoid discontinuous
-nodal loads in this case.
+consider full 3DOF rotation of the structure. A load smoothing procedure is
+performed to avoid discontinuous nodal loads as members cross the free surface.
 
 **AMMod** controls the computation of distributed strip-theory added-mass force. 
 If **AMMod** = 0, the strip-theory added-mass force is always evaluated up 

@@ -103,7 +103,7 @@ END SUBROUTINE Morison_DirCosMtrx
 SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
    TYPE(Morison_InputType),     INTENT(IN   ) :: u              !< Inputs at Time
    TYPE(Morison_ParameterType), INTENT(IN   ) :: p              !< Parameters
-   LOGICAL,                     INTENT(IN   ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
+   LOGICAL,                     INTENT(IN   ) :: forceDisplaced ! Set to true to return the exact displaced position regardless of WaveDisp
    REAL(ReKi),                  INTENT(  OUT) :: pos(:,:)       ! Displaced node positions
 
    REAL(ReKi)                                 :: Orient(3,3)
@@ -114,13 +114,10 @@ SUBROUTINE GetDisplacedNodePosition( u, p, forceDisplaced, pos )
    pos      = u%Mesh%Position
    pos(3,:) = pos(3,:) - p%WaveField%MSL2SWL ! Z position measured from the SWL
    IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN
-      ! Use displaced X and Y position
+      ! Use the full displaced position (X, Y, and Z)
       pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
       pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
-      IF ( (p%WaveField%WaveStMod > 0) .OR. forceDisplaced ) THEN
-         ! Use displaced Z position only when wave stretching is enabled
-         pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
-      END IF
+      pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
    ELSE ! WaveDisp=0: position the structure using the reference yaw only
       ! Rotate the structure based on PtfmRefY (reference yaw, may be static or dynamic)
       call GetPtfmRefYOrient(u%PtfmRefY, Orient, ErrStat2, ErrMsg2)
@@ -3264,7 +3261,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    !===============================================================================================
    ! Get displaced positions of the hydrodynamic nodes   
-   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp
    CALL GetDisplacedNodePosition( u, p, .TRUE. , m%DispNodePosHst ) ! For hydrostatic loads;  always use actual displaced position
 
    !===============================================================================================
@@ -3325,32 +3322,22 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_IMG = 0.0_ReKi
       m%memberLoads(im)%F_If  = 0.0_ReKi
 
-      ! Determine member submergence status
-      IF ( p%WaveField%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
-         IF ( m%nodeInWater(mem%NodeIndx(1)) .NE. m%nodeInWater(mem%NodeIndx(N+1)) ) THEN
-            MemSubStat = 1_IntKi  ! Member centerline crosses the SWL once
-         ELSE IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
+      ! Determine member submergence status - check every node because members can deform
+      NumFSX = 0_IntKi ! Number of free-surface crossing
+      DO i = 1, N ! loop through member elements
+         IF ( m%nodeInWater(mem%NodeIndx(i)) .NE. m%nodeInWater(mem%NodeIndx(i+1)) ) THEN
+            NumFSX = NumFSX + 1
+         END IF
+      END DO
+      IF (NumFSX .EQ. 1_IntKi) THEN
+         MemSubStat = 1_IntKi  ! Member centerline crosses the free surface once
+      ELSE IF (NumFSX .GT. 1_IntKi) THEN
+         MemSubStat = 2_IntKi  ! Member centerline crosses the free surface multiple time
+      ELSE ! Member centerline does not cross the free surface
+         IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
             MemSubStat = 3_IntKi  ! Member centerline completely above water
          ELSE
-            MemSubStat = 0_IntKi  ! Member centerline fully submerged
-         END IF 
-      ELSE IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN ! Has wave stretching - Need to check every node
-         NumFSX = 0_IntKi ! Number of free-surface crossing
-         DO i = 1, N ! loop through member elements
-            IF ( m%nodeInWater(mem%NodeIndx(i)) .NE. m%nodeInWater(mem%NodeIndx(i+1)) ) THEN
-               NumFSX = NumFSX + 1
-            END IF
-         END DO
-         IF (NumFSX .EQ. 1_IntKi) THEN
-            MemSubStat = 1_IntKi  ! Member centerline crosses the free surface once
-         ELSE IF (NumFSX .GT. 1_IntKi) THEN
-            MemSubStat = 2_IntKi  ! Member centerline crosses the free surface multiple time
-         ELSE ! Member centerline does not cross the free surface
-            IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
-               MemSubStat = 3_IntKi  ! Member centerline completely above water
-            ELSE
-               MemSubStat = 0_IntKi  ! Member centerline completely submerged
-            END IF
+            MemSubStat = 0_IntKi  ! Member centerline completely submerged
          END IF
       END IF
 
@@ -3680,10 +3667,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      IF ( p%WaveField%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
+      IF ( (p%WaveField%WaveStMod > 0 .OR. p%WaveDisp == 1_IntKi) .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN
       !----------------------------Apply load smoothing----------------------------!
       ! only when:
-      ! 1. wave stretching is enabled
+      ! 1. wave stretching is enabled or WaveDisp=1. Either can lead to member nodes going in and out of water
       ! 2. member centerline crosses the free surface exactly once
       ! 3. the last node is out of water, which implies the first node is in water
                 
@@ -6067,7 +6054,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    errMsg  = ""               
 
 
-   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( u, p, .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp
 
    ! Update state of the relative normal velocity high-pass filter at each joint
    DO J = 1, p%NJoints
