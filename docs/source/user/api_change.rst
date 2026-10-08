@@ -41,6 +41,38 @@ AeroDyn                                       \*                            (-) 
 OLAF                                          26       RegFunctionPart            2  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 1} [only if VelocityMethod=2,3] (switch)
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
+The meaning of the HydroDyn ``WaveDisp`` input has changed, although its valid values (0 and 1) are unchanged.
+``WaveDisp`` now controls both where the wave kinematics and dynamic pressure are evaluated and the orientation
+of the strip-theory (Morison) members and joints. With ``WaveDisp=0``, the strip-theory members are placed at a
+reference configuration consistent with the potential-flow model—the reference yaw (from ``PtfmYMod``/``PtfmRefY``)
+plus a horizontal x-y drift of the platform reference point governed by ``ExctnDisp`` and ``ExctnCutOff``—rather
+than being held at the undisplaced position. With ``WaveDisp=1``, the exact instantaneous displaced position and
+orientation are used. The previous ``WaveDisp=0`` behavior is recovered by also setting ``PtfmYMod=0`` and
+``ExctnDisp=0``.
+
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+Modified in OpenFAST `5.1.0`                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+HydroDyn                                      \*       WaveDisp             0   WaveDisp       - Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} (switch)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+
+In previous versions of OpenFAST, HydroDyn's input file included the ``AMMod`` option to control the method of computing
+distributed strip-theory added-mass force. Setting ``AMMod`` to 0 forces HydroDyn to always compute the added-mass
+force up to the still water level (SWL). This switch was added because of numerical stability issues encountered when
+evaluating the added-mass force up to the instantaneous free surface with some hydroelastic models. With the improved
+solver stability of OpenFAST `5.1.0`, the ``AMMod`` option was deemed no longer necessary based on user feedback and was
+removed.
+
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+Removed in OpenFAST `5.1.0`                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+HydroDyn                                      \*       AMMod                0   AMMod       - Method of computing distributed strip-theory added-mass force {0: evaluate up to SWL, 1: evaluate up to instantaneous free surface if WaveStMod > 0} (switch)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+
 OpenFAST v4.2.x to OpenFAST  v5.0.0
 -----------------------------------
 

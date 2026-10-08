@@ -184,6 +184,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
       p%WaveField    =>  InitInp%WaveField
       p%PtfmYMod     =   InputFileData%PtfmYMod
+      ! Capture the user-specified ExctnDisp/ExctnCutOff that drive the Morison WaveDisp=0 horizontal drift (PtfmRefXY) here,
+      ! before HydroDynInput_ProcessInitData may force ExctnDisp=0 for the WAMIT excitation grid. This lets the Morison drift
+      ! follow the user settings regardless of whether potential-flow bodies are present (0: none, 1: instantaneous, 2: filtered).
+      p%PtfmXYMod    =   InputFileData%WAMIT%ExctnDisp
+      p%CXYFilt      =   exp(-TwoPi*Interval*InputFileData%WAMIT%ExctnCutOff)
       
       InputFileData%Morison%WaveField => InitInp%WaveField
       InputFileData%WAMIT%WaveField   => InitInp%WaveField
@@ -247,6 +252,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          RETURN
       END IF
       xd%PtfmRefY = InputFileData%PtfmRefY
+
+      ! Seed the filtered Morison WaveDisp=0 drift from the initial platform offset (matches WAMIT BdyPosFilt) to avoid a startup transient
+      xd%PtfmRefXY(1,:) = InitInp%PlatformPos(1)
+      xd%PtfmRefXY(2,:) = InitInp%PlatformPos(2)
 
          ! Open a summary of the HydroDyn Initialization. Note: OutRootName must be set by the caller because there may not be an input file to obtain this rootname from.
          
@@ -636,6 +645,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%VisMeshes = p%VisMeshes
             ! Additional Morison inputs to be initialized just in case
          u%Morison%PtfmRefY = 0.0_ReKi
+         u%Morison%PtfmRefXY = 0.0_ReKi
          u%Morison%PRP = [0.0_ReKi,0.0_ReKi,0.0_ReKi]
             ! Initialize the Morison Element Calculations 
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
@@ -1223,24 +1233,32 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       nTime = size(Inputs)
 
       ! Update PtfmRefY
-      IF (p%PtfmYMod .EQ. 1) THEN
+      IF (p%PtfmYMod .EQ. 1 .OR. p%PtfmXYMod .EQ. 2) THEN
          ! Inefficient. Only need to interp PRPMesh below. Fix later.
          CALL HydroDyn_CopyInput(Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL HydroDyn_Input_ExtrapInterp(Inputs, InputTimes, u, t, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         PRPRotation = EulerExtractZYX(u%PRPMesh%Orientation(:,:,1))
-         ! Yaw angle from EulerExtractZYX might not be continous in time and can contain jumps of TwoPi
-         ! Adjust past xd%PtfmRefY to follow.
-         IF ( ABS(PRPRotation(3)-xd%PtfmRefY(1)) > ABS(PRPRotation(3)-(xd%PtfmRefY(1)-TwoPi)) ) THEN
-            xd%PtfmRefY = xd%PtfmRefY - TwoPi
-         ELSE IF ( ABS(PRPRotation(3)-xd%PtfmRefY(1)) > ABS(PRPRotation(3)-(xd%PtfmRefY(1)+TwoPi)) ) THEN
-            xd%PtfmRefY = xd%PtfmRefY + TwoPi
+         IF (p%PtfmYMod .EQ. 1) THEN
+            PRPRotation = EulerExtractZYX(u%PRPMesh%Orientation(:,:,1))
+            ! Yaw angle from EulerExtractZYX might not be continous in time and can contain jumps of TwoPi
+            ! Adjust past xd%PtfmRefY to follow.
+            IF ( ABS(PRPRotation(3)-xd%PtfmRefY(1)) > ABS(PRPRotation(3)-(xd%PtfmRefY(1)-TwoPi)) ) THEN
+               xd%PtfmRefY = xd%PtfmRefY - TwoPi
+            ELSE IF ( ABS(PRPRotation(3)-xd%PtfmRefY(1)) > ABS(PRPRotation(3)-(xd%PtfmRefY(1)+TwoPi)) ) THEN
+               xd%PtfmRefY = xd%PtfmRefY + TwoPi
+            END IF
+            ! Update PtfmRefY states
+            xd%PtfmRefY(3) = xd%PtfmRefY(2)
+            xd%PtfmRefY(2) = xd%PtfmRefY(1)
+            xd%PtfmRefY(1) = p%CYawFilt * xd%PtfmRefY(1) + (1.0-p%CYawFilt) * PRPRotation(3)
          END IF
-         ! Update PtfmRefY states
-         xd%PtfmRefY(3) = xd%PtfmRefY(2)
-         xd%PtfmRefY(2) = xd%PtfmRefY(1)
-         xd%PtfmRefY(1) = p%CYawFilt * xd%PtfmRefY(1) + (1.0-p%CYawFilt) * PRPRotation(3)
+         IF (p%PtfmXYMod .EQ. 2) THEN
+            ! Low-pass filter the PRP x,y displacement (parallel to PtfmRefY)
+            xd%PtfmRefXY(:,3) = xd%PtfmRefXY(:,2)
+            xd%PtfmRefXY(:,2) = xd%PtfmRefXY(:,1)
+            xd%PtfmRefXY(:,1) = p%CXYFilt * xd%PtfmRefXY(:,1) + (1.0-p%CXYFilt) * u%PRPMesh%TranslationDisp(1:2,1)
+         END IF
          CALL HydroDyn_DestroyInput(u, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
@@ -1257,6 +1275,14 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
             CALL Morison_CopyInput(Inputs(i)%Morison, Inputs_Morison(i), MESH_NEWCOPY, ErrStat2, ErrMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             Inputs_Morison(i)%PtfmRefY = xd%PtfmRefY(i)
+            select case (p%PtfmXYMod)
+            case (1)  ! instantaneous PRP x,y drift
+               Inputs_Morison(i)%PtfmRefXY = Inputs(i)%PRPMesh%TranslationDisp(1:2,1)
+            case (2)  ! low-pass filtered PRP x,y drift
+               Inputs_Morison(i)%PtfmRefXY = xd%PtfmRefXY(:,i)
+            case default  ! 0: no drift
+               Inputs_Morison(i)%PtfmRefXY = 0.0_ReKi
+            end select
             Inputs_Morison(i)%PRP = Inputs(i)%PRPMesh%Position(:,1) + Inputs(i)%PRPMesh%TranslationDisp(:,1)
          END DO
          CALL Morison_CopyInput(Inputs(1)%Morison, u_Morison, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -1491,6 +1517,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       integer(IntKi)                       :: iBody, indxStart, indxEnd, AddDOFCntr   ! Counters
       REAL(ReKi), ALLOCATABLE              :: RRg2b(:,:), RRb2g(:,:)
       REAL(ReKi)                           :: PtfmRefY
+      REAL(ReKi)                           :: PtfmRefXY(2)
       REAL(R8Ki)                           :: PRPRotation(3)
 
       REAL(ReKi)                           :: NLFKForce(3,p%NBody)
@@ -1546,6 +1573,16 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          FrstWarn_LrgY = .FALSE.
          if (Failed()) return
       END IF
+
+      ! Fresh x,y drift of the HD origin for WaveDisp=0 Morison (parallel to PtfmRefY)
+      SELECT CASE (p%PtfmXYMod)
+      CASE (1)  ! instantaneous PRP x,y drift
+         PtfmRefXY = u%PRPMesh%TranslationDisp(1:2,1)
+      CASE (2)  ! low-pass filtered PRP x,y drift
+         PtfmRefXY = p%CXYFilt * xd%PtfmRefXY(:,1) + (1.0-p%CXYFilt) * u%PRPMesh%TranslationDisp(1:2,1)
+      CASE DEFAULT  ! 0: no drift
+         PtfmRefXY = 0.0_ReKi
+      END SELECT
 
          !-------------------------------------------------------------------
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
@@ -1835,6 +1872,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
       IF ( u%Morison%Mesh%Committed ) THEN  ! Make sure we are using Morison / there is a valid mesh
          u%Morison%PtfmRefY = PtfmRefY
+         u%Morison%PtfmRefXY = PtfmRefXY
          u%Morison%PRP = u%PRPMesh%Position(:,1)+u%PRPMesh%TranslationDisp(:,1)
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, x%Morison, xd%Morison,  &
                                  z%Morison, OtherState%Morison, y%Morison, m%Morison, &

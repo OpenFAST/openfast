@@ -130,11 +130,11 @@ typedef   ^                            Morison_MemberType            INTEGER    
 typedef   ^                            ^                             INTEGER        MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER        NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi           RefLength                -          -        -         "the reference total length for this member"    m
-typedef   ^                            ^                             ReKi           cosPhi_ref               -          -        -         "the reference cosine of the inclination angle of the member" -
 typedef   ^                            ^                             ReKi           dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
 typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
 typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
+typedef   ^                            ^                             ReKi           CMatrix                  {3}{3}     -        -         "Rotation matrix from the section local system to the global system" -
 typedef   ^                            ^                             ReKi           x_hat                    {3}        -        -         "unit vector of rectangular member local x-axis aligned with Side A" -
 typedef   ^                            ^                             ReKi           y_hat                    {3}        -        -         "unit vector of rectangular member local y-axis aligned with Side B" -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
@@ -339,7 +339,6 @@ typedef   ^                            ^                             INTEGER    
 #
 typedef   ^                            InitInputType                 ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
 typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  HstMod                           -          -        -         "Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
@@ -476,7 +475,6 @@ typedef   ^                            ^                             GridInterp_
 typedef   ^                            ParameterType                 DbKi                     DT                            -          -        -         "Time step for continuous state integration & discrete state update"  (sec)
 typedef   ^                            ^                             ReKi                     Gravity                       -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
 typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                         -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  HstMod                           -          -        -         "Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                      -          -        -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                       {:}        -        -         "Array of Morison members used during simulation"    -
@@ -511,6 +509,7 @@ typedef   ^                            ^                             Morison_Fil
 #
 typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
 typedef   ^                            ^                             ReKi                     PtfmRefY                      -          -        -         "Reference platform yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     PtfmRefXY                     {2}        -        -         "x,y drift of the HydroDyn origin (PRP), consistent with potential-flow body ExctnDisp. Used to displace the Morison members when WaveDisp=0" (m)
 typedef   ^                            ^                             ReKi                     PRP                           {3}        -        -         "Coordinates of the principal reference point" (m)
 #
 #
