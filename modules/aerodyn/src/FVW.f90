@@ -23,6 +23,7 @@ module FVW
    PRIVATE
 
    type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'OLAF', '', '' )
+   integer(IntKi), parameter  :: FINAL_STEP = 999999999  ! VTK file index used for the forced wake output at the end of the simulation
 
    public   :: FVW_Init             ! Initialization routine
    public   :: FVW_End
@@ -500,20 +501,16 @@ subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    real(DbKi) :: t
-   integer, parameter :: FINAL_STEP = 999999999
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
-   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
-      call WrScr('OLAF: writing final VTK outputs')
-      t=-1.0_ReKi
-      if (p%WrVTK==1) then
-         if (m%VTKstep<m%iStep+1) then
-            call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
-         endif
-      elseif (p%WrVTK==2) then
-         call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
-      endif
+   ! NOTE: the driver's main loop calls CalcOutput one step behind UpdateStates, so the very last
+   !       simulated state is never seen by CalcOutput. Write it here if the wake/grid schedules require it.
+   if ((p%WrVTK>0 .or. p%nGridOut>0) .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
+      t = real(m%iStep+1, DbKi) * p%DTaero
+      if (p%WrVTK==2) call WrScr('OLAF: writing final VTK outputs')
+      ! WrVTK=2 forces the wake output regardless of VTK_fps. Grids never use force, only their own schedule.
+      call WriteVTKOutputs(t, p%WrVTK==2, m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
       m%VTKstep = FINAL_STEP ! We make sure we don't write again
    endif
 end subroutine FVW_FinalWrite
@@ -1567,6 +1564,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
    character(*), parameter :: RoutineName = 'WriteVTKOutputs'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   integer(IntKi) :: VTKstepWake
    logical, allocatable :: bDoGrid(:) ! Flag per output grid: .true. if it needs to be written now
    type(T_Tree)   :: Tree
    type(T_Panl)   :: Panl
@@ -1576,6 +1574,9 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
 
    ! --- Write VTK of wake/blade filaments/panels
    if (p%WrVTK>0) then
+      ! A forced wake write (WrVTK=2, end of simulation) uses the FINAL_STEP index. Grids are not affected.
+      VTKstepWake = VTKstep
+      if (force) VTKstepWake = FINAL_STEP
       if (m%FirstCall .or. force) then
          call MKDIR(p%VTK_OutFileRoot)
       endif
@@ -1594,14 +1595,14 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
                call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             endif
             ! We ouput in first rotor frame
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', VTKstep, 9, bladeFrame=.TRUE.,  &
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', VTKstepWake, 9, bladeFrame=.TRUE.,  &
                      HubOrientation=real(u%rotors(1)%HubOrientation,ReKi),HubPosition=real(u%rotors(1)%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', VTKstep, 9, bladeFrame=.FALSE.)
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', VTKstepWake, 9, bladeFrame=.FALSE.)
          endif
-         m%VTKstep=VTKstep ! We save the step at which writing occurred
+         m%VTKstep=VTKstepWake ! We save the step at which writing occurred
       endif
    endif
    ! --- Write VTK grids
@@ -1617,7 +1618,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
       do iGrid=1,p%nGridOut
          bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
          bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout - 0.25_DbKi*p%DTaero
-         bDoGrid(iGrid) = force .or. (bWithinTime .and. bTimeToOutput)
+         bDoGrid(iGrid) = bWithinTime .and. bTimeToOutput
       enddo
       if (any(bDoGrid)) then
          ! Build the wake segments/tree once and reuse it for all grids below
