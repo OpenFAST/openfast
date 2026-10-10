@@ -1349,7 +1349,7 @@ contains
    end function
 end subroutine
 
-subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdu, dXdu, dYdu_glue, dXdu_glue)
+subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdu, dXdu, dYdu_glue, dXdu_glue, IsLin)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: iInput      !< Input index
@@ -1361,6 +1361,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
    real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :)
    real(R8Ki), optional, intent(inout)                :: dYdu_glue(:, :)
    real(R8Ki), optional, intent(inout)                :: dXdu_glue(:, :)
+   logical, optional, intent(in)                      :: IsLin       !< True when called from the linearization path (Jacobians are exported to the .lin file)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
    integer(IntKi)             :: ErrStat2
@@ -1387,7 +1388,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
                              T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
                              T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                              T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                             dYdu=dYdu, dXdu=dXdu)
+                             dYdu=dYdu, dXdu=dXdu, IsLin=IsLin)
 
    case (Module_ED)
       call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(iInput, ModData%Ins), T%ED%p(ModData%Ins), &
@@ -1459,7 +1460,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
 
 end subroutine
 
-subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdx, dXdx, dYdx_glue, dXdx_glue)
+subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdx, dXdx, dYdx_glue, dXdx_glue, IsLin)
    type(ModDataType), intent(inout)                   :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: iInput      !< Input index
@@ -1471,6 +1472,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
    real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :)
    real(R8Ki), optional, intent(inout)                :: dYdx_glue(:, :)
    real(R8Ki), optional, intent(inout)                :: dXdx_glue(:, :)
+   logical, optional, intent(in)                      :: IsLin       !< True when called from the linearization path (Jacobians are exported to the .lin file)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
    integer(IntKi)             :: ErrStat2
@@ -1496,7 +1498,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                  T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
                                  T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                                  T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx)
+                                 dYdx=dYdx, dXdx=dXdx, IsLin=IsLin)
 
    case (Module_ED)
       call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(iInput, ModData%Ins), T%ED%p(ModData%Ins), &

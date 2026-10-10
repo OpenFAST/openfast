@@ -986,13 +986,13 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
          ! Derivatives with respect to input
          call FAST_JacobianPInput(ModData, t_global, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                   dYdu=ModData%Lin%dYdu, dYdu_glue=m%ModGlue%Lin%dYdu, &
-                                  dXdu=ModData%Lin%dXdu, dXdu_glue=m%ModGlue%Lin%dXdu)
+                                  dXdu=ModData%Lin%dXdu, dXdu_glue=m%ModGlue%Lin%dXdu, IsLin=.true.)
          if (Failed()) return
 
          ! Derivatives with respect to continuous state
          call FAST_JacobianPContState(ModData, t_global, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
                                       dYdx=ModData%Lin%dYdx, dYdx_glue=m%ModGlue%Lin%dYdx, &
-                                      dXdx=ModData%Lin%dXdx, dXdx_glue=m%ModGlue%Lin%dXdx)
+                                      dXdx=ModData%Lin%dXdx, dXdx_glue=m%ModGlue%Lin%dXdx, IsLin=.true.)
          if (Failed()) return
 
          ! Operating point values (must come after Jacobian routines because
