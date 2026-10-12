@@ -4428,8 +4428,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%F_IMG_End(1:3,j) = -p%Mass_MG_End(j)*qdotdot(1:3)
       m%F_IMG_End(4:6,j) = -matmul(I_MG_End,qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(I_MG_End,u%Mesh%RotationVel(:,J)))
 
-      ! Compute the dot product of the relative velocity vector with the directional Area of the Joint, scaled by the wetted fraction
-      vmag  = -HM_rJ * DOT_PRODUCT( HM_vr, An_End )
+      ! Relative normal velocity weighted by sqrt(r) so the quadratic drag scales with the wetted fraction r
+      vmag  = -SQRT(HM_rJ) * DOT_PRODUCT( HM_vr, An_End )
       ! High-pass filtering
       vmagf = p%VRelNFiltConst(J) * (vmag + xd%v_rel_n_FiltStat(J))
 
@@ -6393,14 +6393,14 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       ! Wetted fraction of the joint end plate
       CALL GetJointWetting( p, m, Time, pos, An_End, rJ, drJdH, S, n_w, zeta, ErrStat2, ErrMsg2 ); if (Failed()) return
 
-      ! Relative normal velocity scaled by the wetted fraction; flow velocity at the joint if submerged, otherwise on the free surface
+      ! Relative normal velocity weighted by sqrt(r); flow velocity at the joint if submerged, otherwise on the free surface
       vmag = 0.0_ReKi
       IF ( rJ > 0.0_ReKi ) THEN
          pos(3) = MIN( pos(3), zeta )
          CALL WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, pos, .TRUE., .TRUE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
              if (Failed()) return
          vrel = REAL(FVTmp, ReKi) - u%Mesh%TranslationVel(:,J)
-         vmag = rJ * DOT_PRODUCT( vrel, An_End )
+         vmag = SQRT(rJ) * DOT_PRODUCT( vrel, An_End )
       END IF
 
       ! High-pass filtering
