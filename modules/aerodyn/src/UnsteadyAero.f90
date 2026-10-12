@@ -2825,6 +2825,9 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    REAL(R8Ki),                          INTENT(  OUT)  :: Tu
    REAL(ReKi), optional,                INTENT(  OUT)  :: alpha_34
    REAL(ReKi), optional,                INTENT(  OUT)  :: alphaE
+   
+   REAL(ReKi)                                          :: alpha_x1   ! alpha_34 on the 2*pi branch nearest x1/A1
+   REAL(ReKi)                                          :: alpha_x2   ! alpha_34 on the 2*pi branch nearest x2/A2
 
    ! Variables derived from inputs
    !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
@@ -2838,10 +2841,16 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
          if (p%UAMod == UA_OYE .or. .not. p%ShedEffect) then
             alphaE  = alpha_34
          else
-            !call AddOrSub2Pi( real(x%x(1) + x%x(2),ReKi), alpha_34 ) ! Ensure that alpha_34 is well behaved during +/-180 deg wrap
-            call MPi2Pi(alpha_34) ! let's not make alphaE too large?
+            call MPi2Pi(alpha_34)
+            alpha_x1 = alpha_34
+            alpha_x2 = alpha_34
+            if (.NOT. EqualRealNos(BL_p%A1,0.0_ReKi)) call AddOrSub2Pi(real(x%x(1)/BL_p%A1,ReKi), alpha_x1)
+            if (.NOT. EqualRealNos(BL_p%A2,0.0_ReKi)) call AddOrSub2Pi(real(x%x(2)/BL_p%A2,ReKi), alpha_x2)
             
-            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+            ! Eq. 12 written as alpha_34 minus the lag deficits of x1 and x2, each evaluted on the 2*pi branch
+            ! nearest that state (same convention as dxdt%x(1:2)), so alphaE does not depend on the branch of x1, x2
+            alphaE  = alpha_34 - (BL_p%A1*alpha_x1 - real(x%x(1), ReKi)) &
+                               - (BL_p%A2*alpha_x2 - real(x%x(2), ReKi))    ! Eq. 12
          endif
          
       end if
