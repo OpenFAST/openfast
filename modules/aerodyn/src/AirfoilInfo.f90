@@ -1198,7 +1198,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                   call ComputeIAG_SeparationFunctions( p, ColUAf, Cn, iLower, iUpper, CheckConsistency=.true., ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      if (ErrStat >= AbortErrLev) return
-                  call ComputeIAG_CnMaxCnMin( p, cn, iLower, iUpper )
+                  call ComputeIAG_CnMaxCnMin( p, cn )
                else
                   call ComputeUA360_updateSeparationF( p, ColUAf, Cn, iLower, iUpper )
                   call ComputeUA360_updateCnSeparated( p, ColUAf, Cn, iLower )
@@ -1938,58 +1938,141 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
 
    END SUBROUTINE ComputeIAG_SeparationFunctions
 !----------------------------------------------------------------------------------------------------------------------------------  
-   SUBROUTINE ComputeIAG_CnMaxCnMin( p, cn, iLower, iUpper )
+   SUBROUTINE ComputeIAG_CnMaxCnMin( p, cn )
    ! Compute the IAG critical normal-force coefficients CnMax / CnMin: the static stall peaks
    ! either side of alpha0. These are NOT Cn1/Cn2 (which are cn at f = 0.7).
    !
-   ! The search window matters. A global maxval over a 360-deg table can return the deep-stall
-   ! secondary peak near +/-45 deg, which on thin sections exceeds the stall peak; CN_CRIT would
-   ! then be unreachable and vortex shedding silently disabled. A window that is too narrow
-   ! (e.g. the +/-20 deg LimitAlphaRange) clips the genuine peak on thick sections and the vortex
-   ! fires far too early. Both failures are silent, so both bounds are checked below.
+   ! WHY THIS IS A TURNING-POINT SEARCH AND NOT A WINDOWED maxval
+   ! ------------------------------------------------------------
+   ! The quantity wanted is the FIRST stall peak either side of alpha0 -- the point where the
+   ! static polar stops rising and the flow separates. The obvious implementation, maxval over
+   ! [alpha0, alphaUpper + margin], is only equivalent to that when the stall peak is an
+   ! INTERIOR maximum of the window, and on a 360-deg polar it frequently is not.
+   !
+   ! The S809 is the case in point: cn peaks at 0.860 (13.3 deg), dips to 0.702 (16.1 deg), then
+   ! rises MONOTONICALLY to 1.670 at 39.9 deg in deep stall. For any window edge landing in
+   ! roughly 16-40 deg the window maximum is the right-hand ENDPOINT, never the stall peak. The
+   ! previous code detected that case ("peak at the window edge => clipped") and substituted
+   ! Cn1, but Cn1 is cn at f = 0.7, which lies BELOW the peak on the rising branch -- so the
+   ! fallback fired the vortex early, and whether it fired at all depended on whether the window
+   ! edge happened to land within PeakEdgeTol of a table row. The resulting CnMax was
+   ! non-monotonic and grid-dependent: sweeping alphaUpper over 4.0, 6.1, 8.2, 10.1, 11.1, 12.2,
+   ! 13.3 deg gave CnMax = 0.930, 0.930, 0.658, 0.658, 1.246, 0.658, 1.356 -- alternating between
+   ! the Cn1 fallback and escalating deep-stall values, none of them the stall peak.
+   !
+   ! Scanning outward from alpha0 for the first turning point instead returns 0.860 at 13.3 deg
+   ! for the S809, is independent of alphaUpper, and cannot walk into the deep-stall ramp,
+   ! because it stops at the first peak rather than taking an extremum over a region.
+   !
+   ! A bare local-maximum test would be defeated by measurement ripple on a noisy polar, so a
+   ! candidate is accepted only once cn subsequently falls by PeakDropTol below it (within
+   ! ConfirmSpan). If no confirmed turning point exists -- a polar that rises all the way to the
+   ! edge of the table, e.g. a cylinder or a truncated table -- the vortex logic is disabled
+   ! rather than left keyed to an arbitrary endpoint.
       TYPE (AFI_Table_Type),    intent(inout) :: p                             ! airfoil table
       REAL(ReKi),               intent(in   ) :: cn(:)                         ! static normal force coefficient
-      INTEGER(IntKi),           intent(in   ) :: iLower                        ! lower index of the fully attached region
-      INTEGER(IntKi),           intent(in   ) :: iUpper                        ! upper index of the fully attached region
 
-      REAL(ReKi)                              :: SearchMargin                  ! how far past alphaUpper/alphaLower to look
-      REAL(ReKi)                              :: PeakEdgeTol                   ! how close to the window edge counts as "clipped"
-      REAL(ReKi)                              :: aMaxSearch, aMinSearch
-      INTEGER(IntKi)                          :: iPeak
+      REAL(ReKi)                              :: PeakDropTol                   ! cn must fall this far past a peak to confirm it
+      REAL(ReKi)                              :: ConfirmSpan                   ! how far past a peak to look for that fall (rad)
+      REAL(ReKi)                              :: SearchLimit                   ! never search past this |alpha| (rad)
+      LOGICAL                                 :: FoundMax, FoundMin
 
-      PeakEdgeTol = 0.5_ReKi*D2R
+      PeakDropTol = 0.01_ReKi
+      ConfirmSpan = 10.0_ReKi*D2R
 
-      SearchMargin = 20.0_ReKi*D2R
+         ! Stay on the near side of the +/-90 deg crossflow region; a genuine stall peak is
+         ! always well inside this, and beyond it the 360-deg polar is no longer a wing curve.
+      SearchLimit = 90.0_ReKi*D2R
 
-      aMaxSearch = p%UA_BL%alphaUpper + SearchMargin
-      aMinSearch = p%UA_BL%alphaLower - SearchMargin
+      call FirstTurningPoint( p%alpha, cn, p%UA_BL%alpha0,  1, PeakDropTol, ConfirmSpan, &
+                              SearchLimit, p%UA_BL%CnMax, FoundMax )
+      call FirstTurningPoint( p%alpha, cn, p%UA_BL%alpha0, -1, PeakDropTol, ConfirmSpan, &
+                              SearchLimit, p%UA_BL%CnMin, FoundMin )
 
-      p%UA_BL%CnMax = maxval( cn, MASK = p%alpha >= p%UA_BL%alpha0 .and. p%alpha <= aMaxSearch )
-      p%UA_BL%CnMin = minval( cn, MASK = p%alpha <= p%UA_BL%alpha0 .and. p%alpha >= aMinSearch )
-
-         ! Sanity: detect a search window that CLIPPED the stall peak rather than containing it.
-         ! The symptom of clipping is that the extremum lies at the outer edge of the window, so
-         ! that is what we test. Do NOT test CnMax > cn(iUpper): the stall peak legitimately
-         ! coincides with alphaUpper on many airfoils (it is roughly where the attached region is
-         ! defined to end), and that comparison then falls back to Cn1 on perfectly good polars.
-      iPeak = maxloc( cn, DIM=1, MASK = p%alpha >= p%UA_BL%alpha0 .and. p%alpha <= aMaxSearch )
-      if ( iPeak >= 1 ) then
-         if ( p%alpha(iPeak) >= aMaxSearch - PeakEdgeTol ) p%UA_BL%CnMax = p%UA_BL%Cn1  ! peak at window edge => clipped
-      end if
-
-      iPeak = minloc( cn, DIM=1, MASK = p%alpha <= p%UA_BL%alpha0 .and. p%alpha >= aMinSearch )
-      if ( iPeak >= 1 ) then
-         if ( p%alpha(iPeak) <= aMinSearch + PeakEdgeTol ) p%UA_BL%CnMin = p%UA_BL%Cn2  ! peak at window edge => clipped
-      end if
-
-         ! Last resort: if the result is still degenerate, disable the vortex logic entirely
-         ! rather than leaving CnMax near zero, which would chatter the vortex on and off.
-      if ( p%UA_BL%CnMin >= p%UA_BL%CnMax ) then
+         ! No confirmed peak on one side, or a degenerate ordering: disable the vortex logic
+         ! outright rather than leaving CN_CRIT at an arbitrary value, which would either chatter
+         ! the vortex on and off or fire it on every upstroke regardless of stall.
+      if ( .not. FoundMax .or. .not. FoundMin .or. p%UA_BL%CnMin >= p%UA_BL%CnMax ) then
          p%UA_BL%CnMax =  IAG_CnCrit_Disabled
          p%UA_BL%CnMin = -IAG_CnCrit_Disabled
       end if
 
    END SUBROUTINE ComputeIAG_CnMaxCnMin
+!----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE FirstTurningPoint( alpha, cn, alpha0, Direction, PeakDropTol, ConfirmSpan, SearchLimit, CnPeak, Found )
+   ! Scan outward from alpha0 in the given Direction (+1 = increasing alpha, -1 = decreasing)
+   ! and return cn at the first CONFIRMED turning point: a local extremum past which cn moves
+   ! back by at least PeakDropTol within ConfirmSpan. The confirmation is what makes this robust
+   ! to ripple in a measured polar -- without it, the first pair of noisy samples would be
+   ! mistaken for stall.
+   !
+   ! Direction = +1 looks for a maximum, -1 for a minimum; the two are handled by one routine
+   ! with a sign factor so the positive- and negative-alpha branches cannot drift apart.
+      REAL(ReKi),               intent(in   ) :: alpha(:)                      ! table angles of attack (rad), ascending
+      REAL(ReKi),               intent(in   ) :: cn(:)                         ! static normal force coefficient
+      REAL(ReKi),               intent(in   ) :: alpha0                        ! zero-lift angle (rad)
+      INTEGER(IntKi),           intent(in   ) :: Direction                     ! +1 searches up from alpha0, -1 searches down
+      REAL(ReKi),               intent(in   ) :: PeakDropTol                   ! required fall-back past the peak
+      REAL(ReKi),               intent(in   ) :: ConfirmSpan                   ! window (rad) in which that fall must occur
+      REAL(ReKi),               intent(in   ) :: SearchLimit                   ! give up past this |alpha| (rad)
+      REAL(ReKi),               intent(  out) :: CnPeak                        ! cn at the confirmed turning point
+      LOGICAL,                  intent(  out) :: Found                         ! .false. if no turning point was confirmed
+
+      INTEGER(IntKi)                          :: i, j, iStart, iEnd, iStep, N
+      REAL(ReKi)                              :: s                             ! +1/-1, converts "max" into "min"
+
+      N      = size(alpha)
+      Found  = .false.
+      CnPeak = 0.0_ReKi
+      s      = real(Direction, ReKi)
+
+         ! First table row strictly beyond alpha0 in the search direction.
+      if (Direction > 0) then
+         iStep  = 1
+         iEnd   = N
+         iStart = N + 1
+         do i = 1, N
+            if ( alpha(i) > alpha0 ) then
+               iStart = i
+               exit
+            end if
+         end do
+      else
+         iStep  = -1
+         iEnd   = 1
+         iStart = 0
+         do i = N, 1, -1
+            if ( alpha(i) < alpha0 ) then
+               iStart = i
+               exit
+            end if
+         end do
+      end if
+
+      if ( iStart < 1 .or. iStart > N ) return
+
+      do i = iStart, iEnd, iStep
+         if ( i-iStep < 1 .or. i-iStep > N ) cycle           ! no predecessor yet
+         if ( i+iStep < 1 .or. i+iStep > N ) exit            ! ran out of table
+         if ( abs(alpha(i)) > SearchLimit ) exit             ! past the useful range
+
+            ! Turning point: cn stops advancing in the search direction. Using s* makes
+            ! "larger" mean "more positive" for Direction=+1 and "more negative" for -1.
+         if ( s*cn(i) >= s*cn(i-iStep) .and. s*cn(i) > s*cn(i+iStep) ) then
+
+               ! Confirm it with a sustained fall-back of PeakDropTol within ConfirmSpan.
+            do j = i+iStep, iEnd, iStep
+               if ( abs( alpha(j) - alpha(i) ) > ConfirmSpan ) exit
+               if ( s*cn(j) <= s*cn(i) - PeakDropTol ) then
+                  CnPeak = cn(i)
+                  Found  = .true.
+                  return
+               end if
+            end do
+         end if
+      end do
+
+   END SUBROUTINE FirstTurningPoint
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine FindBoundingTables(p, secondaryDepVal, lowerTable, upperTable, xVals)
 
