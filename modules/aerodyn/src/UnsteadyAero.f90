@@ -933,6 +933,9 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
          allocate( OtherState%PositiveStall(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%PositiveStall.", ErrStat, ErrMsg, RoutineName)
 
+         allocate( OtherState%VortexSpent_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%VortexSpent_IAG.", ErrStat, ErrMsg, RoutineName)
+
          allocate( OtherState%alpha_minus1_IAG(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%alpha_minus1_IAG.", ErrStat, ErrMsg, RoutineName)
       end if
@@ -1086,6 +1089,8 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
          OtherState%VortexOn_IAG = .false.
          OtherState%tau_v_IAG    = 0.0_ReKi
          OtherState%PositiveStall = .true.
+            ! Not spent: the first qualifying upstroke is allowed to fire a vortex.
+         OtherState%VortexSpent_IAG = .false.
             ! Sentinel, NOT 0 and NOT u%alpha: UA_ReInit has no access to the inputs, so there is
             ! no previous angle yet. The n > 0 guard in UA_UpdateStates skips the dAlpha test on
             ! the first step and the unconditional write-back there seeds the real value.
@@ -2672,10 +2677,31 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
             end if
             upstroke = IAG_Upstroke( alpha_w, dAlpha, PosStall )
 
-               ! Do not start a vortex while UA is being blended off (mirrors HGMV), and never
-               ! on the first step, when alpha_minus1_IAG is still the huge() sentinel from
-               ! UA_ReInit and dAlpha is therefore meaningless.
-            if (upstroke .and. overCrit .and. EqualRealNos(m%weight(i,j),1.0_ReKi) .and. n > 0) then
+               ! ONE VORTEX PER UPSTROKE (Eq. 48).
+               !
+               ! Eq. 48 states the vortex condition as a single uniform test,
+               !    True if Upstroke .and. x3 > CN_CRIT .and. 0 < tau_v < T_VL,
+               ! with Eq. 49 advancing tau_v while that holds and relaxing it exponentially
+               ! otherwise. Read literally there is no re-initiation: once tau_v passes T_VL
+               ! the state is False, and the decay branch approaches zero from ABOVE, so the
+               ! 0 < tau_v < T_VL window never reopens within an upstroke. The vortex fires
+               ! once, convects, and is done.
+               !
+               ! Splitting the test into separate initiate/terminate branches (as below, which
+               ! is needed anyway to latch PositiveStall) breaks that, because initiation does
+               ! not see tau_v and resets the clock to zero. x3 is the lagged ATTACHED-flow
+               ! normal force (Eqs. 37/39) and so climbs monotonically through the upstroke
+               ! without ever saturating, while CN_CRIT is the fixed static polar peak; for
+               ! a deep-stall case x3 > CN_CRIT is therefore true over most of the upstroke
+               ! and CANNOT re-close. Termination and re-initiation then happen on consecutive
+               ! steps, the clock restarts at zero, and x5 is continuously re-fed.
+               !
+               ! VortexSpent_IAG restores the Eq. 48 behaviour: it is set when a vortex ends
+               ! by completing its chord travel, blocks any further initiation, and is cleared
+               ! below when the motion reverses. A vortex cut short by the UA cutout blend
+               ! does NOT set it -- that is not a completed convection.
+            if (upstroke .and. overCrit .and. .not. OtherState%VortexSpent_IAG(i,j) &
+                .and. EqualRealNos(m%weight(i,j),1.0_ReKi) .and. n > 0) then
                OtherState%VortexOn_IAG(i,j)  = .true.
                OtherState%PositiveStall(i,j) = PosStall   ! latch for this vortex's lifetime
                tau_v_n1                      = 0.0_ReKi   ! restart the convection clock
@@ -2705,6 +2731,24 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
             OtherState%VortexOn_IAG(i,j) = upstroke .and. overCrit .and. tau_v_n1 < BL_p%T_VL &
                                            .and. EqualRealNos(m%weight(i,j),1.0_ReKi)
 
+               ! Mark the vortex spent only when it ended by completing its chord travel.
+               ! Ending because the motion reversed, because x3 fell back below CN_CRIT, or
+               ! because UA is blending off are all states that the rearm test below would
+               ! clear anyway (or that should not consume the upstroke's single vortex).
+            if (.not. OtherState%VortexOn_IAG(i,j) .and. tau_v_n1 >= BL_p%T_VL) then
+               OtherState%VortexSpent_IAG(i,j) = .true.
+            end if
+
+         end if
+
+            ! Rearm on flow reversal: a new upstroke gets a new vortex. Tested on the CURRENT
+            ! step's dAlpha against the latched stall sign, so it mirrors IAG_Upstroke rather
+            ! than assuming a positive-stall sinusoid -- for negative stall the "upstroke" that
+            ! sheds a vortex is the one driving alpha more negative.
+         if (OtherState%VortexSpent_IAG(i,j) .and. n > 0) then
+            if (.not. IAG_Upstroke( alpha_w, dAlpha, OtherState%PositiveStall(i,j) )) then
+               OtherState%VortexSpent_IAG(i,j) = .false.
+            end if
          end if
 
             ! Eq. 49, advancing n-1 -> n. Get_Tu clamps Tu to [0.001,50] s, so 2*Tu is never 0.

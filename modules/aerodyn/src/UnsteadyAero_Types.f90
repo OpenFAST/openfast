@@ -190,6 +190,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tau_v_IAG      !< IAG model: non-dimensional vortex time [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VortexOn_IAG      !< IAG model: logical flag indicating if the vortex lift term is active [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: PositiveStall      !< IAG model: sign of the stall state (x3>=0) latched at vortex initiation [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VortexSpent_IAG      !< IAG model: a vortex has completed its chord travel on this upstroke; blocks re-initiation until the next downstroke rearms it [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1_IAG      !< IAG model: angle of attack at the previous step, used for the upstroke test [rad]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeL      !< BV model: logical flag indicating if the lift stall is active [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeD      !< BV model: logical flag indicating if the drag stall is active [-]
@@ -1661,6 +1662,18 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       end if
       DstOtherStateData%PositiveStall = SrcOtherStateData%PositiveStall
    end if
+   if (allocated(SrcOtherStateData%VortexSpent_IAG)) then
+      LB(1:2) = lbound(SrcOtherStateData%VortexSpent_IAG)
+      UB(1:2) = ubound(SrcOtherStateData%VortexSpent_IAG)
+      if (.not. allocated(DstOtherStateData%VortexSpent_IAG)) then
+         allocate(DstOtherStateData%VortexSpent_IAG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%VortexSpent_IAG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%VortexSpent_IAG = SrcOtherStateData%VortexSpent_IAG
+   end if
    if (allocated(SrcOtherStateData%alpha_minus1_IAG)) then
       LB(1:2) = lbound(SrcOtherStateData%alpha_minus1_IAG)
       UB(1:2) = ubound(SrcOtherStateData%alpha_minus1_IAG)
@@ -1764,6 +1777,9 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%PositiveStall)) then
       deallocate(OtherStateData%PositiveStall)
    end if
+   if (allocated(OtherStateData%VortexSpent_IAG)) then
+      deallocate(OtherStateData%VortexSpent_IAG)
+   end if
    if (allocated(OtherStateData%alpha_minus1_IAG)) then
       deallocate(OtherStateData%alpha_minus1_IAG)
    end if
@@ -1806,6 +1822,7 @@ subroutine UA_PackOtherState(RF, Indata)
    call RegPackAlloc(RF, InData%tau_v_IAG)
    call RegPackAlloc(RF, InData%VortexOn_IAG)
    call RegPackAlloc(RF, InData%PositiveStall)
+   call RegPackAlloc(RF, InData%VortexSpent_IAG)
    call RegPackAlloc(RF, InData%alpha_minus1_IAG)
    call RegPackAlloc(RF, InData%activeL)
    call RegPackAlloc(RF, InData%activeD)
@@ -1845,6 +1862,7 @@ subroutine UA_UnPackOtherState(RF, OutData)
    call RegUnpackAlloc(RF, OutData%tau_v_IAG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%VortexOn_IAG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PositiveStall); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VortexSpent_IAG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%alpha_minus1_IAG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%activeL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%activeD); if (RegCheckErr(RF, RoutineName)) return
