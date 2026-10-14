@@ -310,16 +310,14 @@ should be set appropriately to ensure adequate angular resolution in
 platform heading. However, a high **NExctnHdg** can increase memory use 
 by OpenFAST substantially.
 
-Additional constraints on HydroDyn inputs apply when **PtfmYMod** = 1. 
-The strip-theory hydrodynamic load must be evaluated using the wave 
-kinematics and dynamic pressure at the displaced structure position 
-by setting **WaveDisp** = 1. State-space wave excitation cannot be used. 
-**ExctnMod** must be either 0 (no wave excitation) or 1 (frequency-to-time 
-domain transform using inverse discrete Fourier transform). Lastly, 
-full difference- and sum-frequency QTFs are not supported, requiring 
-both **DiffQTF** and **SumQTF** to be set to 0. However, mean- or 
-slow-drift loads based on Newman's approximation can be included through 
-the **MnDrift** or **NewmanApp** inputs explained below.
+Additional restrictions on HydroDyn inputs apply when **PtfmYMod** = 1.
+First, state-space wave excitation cannot be used. **ExctnMod** must be
+either 0 (no wave excitation) or 1 (frequency-to-time domain transform
+using inverse discrete Fourier transform). Secondly, full difference-
+and sum-frequency QTFs are not supported, requiring both **DiffQTF**
+and **SumQTF** to be set to 0. However, mean- or slow-drift loads based
+on Newman's approximation can be included through the **MnDrift** or
+**NewmanApp** inputs explained below.
 
 Note that **PtfmYMod** and **PtfmRefY** also affect the strip-theory 
 hydrodynamic load when **WaveDisp** = 0. In that mode, the displacement

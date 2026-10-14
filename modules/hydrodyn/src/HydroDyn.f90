@@ -1567,7 +1567,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             PtfmRefY = p%CYawFilt * xd%PtfmRefY(1) + (1.0-p%CYawFilt) * PRPRotation(3)
          END IF
       END IF
-      IF ( (ABS( WrapToPi(PRPRotation(3)-PtfmRefY) ) > LrgAngle) .AND. FrstWarn_LrgY ) THEN
+      ! PtfmRefY is only used by potential-flow bodies and by strip-theory members with WaveDisp=0
+      IF ( (ABS( WrapToPi(PRPRotation(3)-PtfmRefY) ) > LrgAngle) .AND. FrstWarn_LrgY .AND. &
+           ( p%PotMod == 1 .OR. ( u%Morison%Mesh%Committed .AND. p%Morison%WaveDisp == 0 ) ) ) THEN
          ErrStat2 = ErrID_Severe
          ErrMsg2  = 'Yaw angle at PRP relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff. Simulation continuing, but future warnings will be suppressed.'
          FrstWarn_LrgY = .FALSE.
