@@ -1504,7 +1504,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    
    ! ExctnCutOff - validate before ExctnDisp may be forced to 0 below. ExctnDisp=2 also drives the Morison WaveDisp=0 drift
    ! (PtfmRefXY), so a valid cutoff is required whenever ExctnDisp=2, even without potential-flow bodies.
-   if ( InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
+   if ( InputFileData%WAMIT%ExctnDisp < 0 .or. InputFileData%WAMIT%ExctnDisp > 2 ) then
+      CALL SetErrStat( ErrID_Fatal,'ExctnDisp must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
+   else if ( InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
       CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
    end if
 
