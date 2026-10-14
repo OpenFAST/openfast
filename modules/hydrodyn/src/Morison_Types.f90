@@ -406,7 +406,7 @@ IMPLICIT NONE
 ! =========  Morison_InitInputType  =======
   TYPE, PUBLIC :: Morison_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
+    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} [-]
     INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !< Total number of nodes in the final software model [-]
@@ -541,7 +541,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [(sec)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
+    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} [-]
     INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
