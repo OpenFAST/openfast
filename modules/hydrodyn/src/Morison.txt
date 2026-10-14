@@ -80,7 +80,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             AxCp                     -          -        -         "Axial Cp"    -
 typedef   ^                            ^                             ReKi             AxVnCOff                 -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
 typedef   ^                            ^                             ReKi             AxFDLoFSc                -          -        -         "Scaling factor for low frequency axial drag force" -
-typedef   ^                            ^                             IntKi            AxFDMod                  -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
+typedef   ^                            ^                             IntKi            AxFDMod                  -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}"
+typedef   ^                            ^                             INTEGER          AxiKC                    -          -        -         "Integer of KC-Cd file to use if instantaneous KC dependent drag is enabled (0 if constant drag coefficient is used)"
 #
 typedef   ^                            Morison_MemberInputType       INTEGER          MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER          NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
@@ -121,6 +122,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         "Nodal lumped (joint) axial Ca"    -
 typedef   ^                            ^                             ReKi             JAxVnCOff                -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
 typedef   ^                            ^                             ReKi             JAxFDLoFSc               -          -        -         "Scaling factor for low frequency axial drag force" -
+typedef   ^                            ^                             INTEGER          JAxiKC                   -          -        -         "Integer of KC-Cd file to use if instantaneous KC dependent drag is enabled (0 if constant drag coefficient is used)"
 typedef   ^                            ^                             IntKi            JAxFDMod                 -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
 typedef   ^                            ^                             ReKi             FillDensity              -          -        -         "Fill fluid density"   kg/m^3
 typedef   ^                            ^                             ReKi             tMG                      -          -        -         "Nodal thickness with marine growth "    m
@@ -177,6 +179,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           alpha_fb                 {:}        -        -         "relative volume centroid of each element's flooded ballast, from node i to node i+1"    -
 typedef   ^                            ^                             ReKi           alpha_fb_star            {:}        -        -         "load distribution factor for each element after adjusting alpha_fb for node reference depths"    -
 typedef   ^                            ^                             ReKi           Cd                       {:}        -        -         "Member Cd at each node"    -
+typedef   ^                            ^                             INTEGER        iKC                      {:}        -        -         "Member KC-Cd function index at each node"  - 
+typedef   ^                            ^                             INTEGER        iKCB                     {:}        -        -         "Member KC-Cd function index at each node for rectangular members Side B"  - 
 typedef   ^                            ^                             ReKi           Ca                       {:}        -        -         "Member Ca at each node"    -
 typedef   ^                            ^                             ReKi           CdA                      {:}        -        -         "Member Cd normal to side A at each node"    -
 typedef   ^                            ^                             ReKi           CaA                      {:}        -        -         "Member Ca normal to side A at each node"    -
@@ -254,6 +258,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            Morison_CoefMembersCyl        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCd2                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             INTEGER          MemberiKC                -          -        -         "Cylindrical member-based coefs, same iKC for both ends -
 typedef   ^                            ^                             ReKi             MemberCdMG1              -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdMG2              -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCa1                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -284,6 +289,8 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            Morison_CoefMembersRec        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCdA1               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdA2               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             INTEGER          MemberiKC                -          -        -         "Rectangular member-based coefs, same iKC for both ends -
+typedef   ^                            ^                             INTEGER          MemberiKCB               -          -        -         "Rectangular member-based coefs, same iKC for both ends -
 typedef   ^                            ^                             ReKi             MemberCdAMG1             -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdAMG2             -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdB1               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -412,6 +419,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                        -       .false.     -         "Output visualization meshes" -
 typedef   ^                            ^                             INTEGER                  PtfmYMod                         -          -        -         "Large yaw model" -
+typedef   ^                            ^                             ReKi                     KCCd                             {:}{:}     -        -         "Concatenated array of KC-Cd functions for KC-dependent drag"
+typedef   ^                            ^                             INTEGER                  iKCstart                         {:}{:}     -        -         "Start and stop indices for each KC-Cd function within the concatenated 'KCCd' array"        
 #
 #
 # Define outputs from the initialization routine here:
@@ -430,6 +439,11 @@ typedef   ^                            ContinuousStateType           SiKi       
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     V_rel_n_FiltStat               {:}      -         -         "State of the high-pass filter for the joint relative normal velocity" m/s
+typedef   ^                            DiscreteStateType             ReKi                     AKC                            {:}      -         -         "State of the KC number amplitude for instantaneous KC dependent drag"
+typedef   ^                            DiscreteStateType             ReKi                     AKCB                           {:}      -         -         "State of the KC number amplitude for instantaneous KC dependent drag for rectangular member B side"
+typedef   ^                            DiscreteStateType             ReKi                     vrel_ax_prev                   {:}{:}   -         -         "Relative axial velocity vector from previous time step"
+typedef   ^                            DiscreteStateType             ReKi                     vrel_rad_prev                  {:}{:}   -         -         "Relative radial velocity vector from previous time step"
+typedef   ^                            DiscreteStateType             ReKi                     vrel_rad_prevB                 {:}{:}   -         -         "Relative radial velocity vector from previous time step for rectangular member B side"
 typedef   ^                            DiscreteStateType             ReKi                     MV_rel_n_FiltStat              {:}{:}   -         -         "State of the high-pass filter for the rectangular member relative normal velocity" m/s
 #
 #
@@ -487,6 +501,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     DragConst_End                 {:}        -        -         ""        -
 typedef   ^                            ^                             ReKi                     VRelNFiltConst                {:}        -        -         ""        -
 typedef   ^                            ^                             IntKi                    DragMod_End                   {:}        -        -         ""        -
+typedef   ^                            ^                             IntKi                    DragAxiKC                     {:}        -        -         ""
 typedef   ^                            ^                             ReKi                     DragLoFSc_End                 {:}        -        -         ""        -
 typedef   ^                            ^                             ReKi                     F_WMG_End                     {:}{:}     -        -         "Joint marine growth weight loads, constant for all t"   N
 typedef   ^                            ^                             ReKi                     DP_Const_End                  {:}{:}     -        -         "Constant part of Joint dynamic pressure term"   N
@@ -504,6 +519,8 @@ typedef   ^                            ^                             logical    
 typedef   ^                            ^                             INTEGER                  PtfmYMod                      -          -        -         "Large yaw model" -
 typedef   ^                            ^                             INTEGER                  NFillGroups                   -          -        -         ""        -
 typedef   ^                            ^                             Morison_FilledGroupType  FilledGroups                  {:}        -        -         ""        -
+typedef   ^                            ^                             ReKi                     KCCd                          {:}{:}     -        -         ""
+typedef   ^                            ^                             INTEGER                  iKCstart                      {:}{:}     -        -         ""
 #
 #
 # ..... Inputs ....................................................................................................................
