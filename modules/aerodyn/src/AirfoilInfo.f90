@@ -432,10 +432,21 @@ CONTAINS
       CHARACTER(1024)                         :: PriPath
       
       TYPE (AFI_UA_BL_Default_Type), ALLOCATABLE :: CalcDefaults(:)            ! Whether to calculate default values for the UA parameters
+
+      REAL(ReKi)                              :: Def_T_VL                      ! "DEFAULT" value for T_VL, which depends on UAMod
+      REAL(ReKi)                              :: Def_b1                        ! "DEFAULT" value for b1,   which depends on UAMod
       
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
+
+      if (InitInp%UAMod == UA_IAG) then
+         Def_T_VL = 6.0_ReKi   ! IAG Table 1
+         Def_b1   = 0.7_ReKi   ! IAG Table 1
+      else
+         Def_T_VL = 11.0_ReKi  ! Beddoes-Leishman
+         Def_b1   = 0.14_ReKi  ! Beddoes-Leishman
+      end if
       
       ! Getting parent folder of airfoils data (e.g. "Arifoils/")
       CALL GetPath( InitInp%FileName, PriPath )
@@ -627,10 +638,10 @@ CONTAINS
                CALL ParseVarWDefault ( FileInfo, CurLine, 'T_p', p%Table(iTable)%UA_BL%T_p, 1.7_ReKi, ErrStat2, ErrMsg2, UnEc )
                CalcDefaults(iTable)%T_p = ErrStat2 >= AbortErrLev
 
-               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_VL', p%Table(iTable)%UA_BL%T_VL, 11.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_VL', p%Table(iTable)%UA_BL%T_VL, Def_T_VL, ErrStat2, ErrMsg2, UnEc )
                CalcDefaults(iTable)%T_VL = ErrStat2 >= AbortErrLev
 
-               CALL ParseVarWDefault ( FileInfo, CurLine, 'b1', p%Table(iTable)%UA_BL%b1, .14_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'b1', p%Table(iTable)%UA_BL%b1, Def_b1, ErrStat2, ErrMsg2, UnEc )
                CalcDefaults(iTable)%b1 = ErrStat2 >= AbortErrLev
 
                CALL ParseVarWDefault ( FileInfo, CurLine, 'b2', p%Table(iTable)%UA_BL%b2, .53_ReKi, ErrStat2, ErrMsg2, UnEc )
