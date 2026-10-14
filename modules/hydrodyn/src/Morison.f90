@@ -6396,13 +6396,13 @@ END SUBROUTINE Morison_CalcOutput
 
          IF ( mem%iKC(i) > 0_IntKi ) THEN
             Ilo = 1_IntKi
-            Cd_KC = InterpBin( xd%AKCB(mem%NodeIndx(i))*2*Pi/(mem%RMG(i)*2), &
+            Cd_KC = InterpBin( xd%AKCB(mem%NodeIndx(i))*2*Pi/(mem%SaMG(i)*2), &
             p%KCCd(p%iKCstart(mem%iKCB(i),1):p%iKCstart(mem%iKCB(i),2),1), &
             p%KCCd(p%iKCstart(mem%iKCB(i),1):p%iKCstart(mem%iKCB(i),2),2), Ilo, &
             (p%iKCstart(mem%iKCB(i),2)-p%iKCstart(mem%iKCB(i),1)+1) )
             f_hydro = f_hydro + 0.5*Cd_KC*p%WaveField%WtrDens*SbMG*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat    ! local x-direction
             Ilo = 1_IntKi
-            Cd_KC = InterpBin( xd%AKC(mem%NodeIndx(i))*2*Pi/(mem%RMG(i)*2), &
+            Cd_KC = InterpBin( xd%AKC(mem%NodeIndx(i))*2*Pi/(mem%SbMG(i)*2), &
             p%KCCd(p%iKCstart(mem%iKC(i),1):p%iKCstart(mem%iKC(i),2),1), &
             p%KCCd(p%iKCstart(mem%iKC(i),1):p%iKCstart(mem%iKC(i),2),2), Ilo, &
             (p%iKCstart(mem%iKC(i),2)-p%iKCstart(mem%iKC(i),1)+1) )
@@ -6458,14 +6458,14 @@ END SUBROUTINE Morison_CalcOutput
          ! Dimensional drag coefficient for each face
          IF ( mem%iKC(i) > 0_IntKi ) THEN
             Ilo = 1_IntKi
-            Cd_KC = InterpBin( xd%AKCB(mem%NodeIndx(i))*2*Pi/(mem%RMG(i)*2), &
+            Cd_KC = InterpBin( xd%AKCB(mem%NodeIndx(i))*2*Pi/(mem%SaMG(i)*2), &
             p%KCCd(p%iKCstart(mem%iKCB(i),1):p%iKCstart(mem%iKCB(i),2),1), &
             p%KCCd(p%iKCstart(mem%iKCB(i),1):p%iKCstart(mem%iKCB(i),2),2), Ilo, &
             (p%iKCstart(mem%iKCB(i),2)-p%iKCstart(mem%iKCB(i),1)+1) )
             Cd(1) = Cd_KC*p%WaveField%WtrDens*SbMG
             Cd(2) = Cd(1)
             Ilo = 1_IntKi
-            Cd_KC = InterpBin( xd%AKC(mem%NodeIndx(i))*2*Pi/(mem%RMG(i)*2), &
+            Cd_KC = InterpBin( xd%AKC(mem%NodeIndx(i))*2*Pi/(mem%SbMG(i)*2), &
             p%KCCd(p%iKCstart(mem%iKC(i),1):p%iKCstart(mem%iKC(i),2),1), &
             p%KCCd(p%iKCstart(mem%iKC(i),1):p%iKCstart(mem%iKC(i),2),2), Ilo, &
             (p%iKCstart(mem%iKC(i),2)-p%iKCstart(mem%iKC(i),1)+1) )
