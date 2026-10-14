@@ -31,6 +31,7 @@ param     AirfoilInfo/AFI       -                INTEGER           UA_HGMV      
 param     AirfoilInfo/AFI       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
 param     AirfoilInfo/AFI       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
 param     AirfoilInfo/AFI       -                INTEGER           UA_HGMV360       -        8   -   "continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_IAG           -        9   -   "IAG dynamic stall model (first-order, state-space)" -
 
 
 # ..... Airfoil data ...............................................................................................................
@@ -82,6 +83,12 @@ typedef   ^                     ^                ReKi                CnBreakUppe
 typedef   ^                     ^                ReKi                alphaBreakLower    -  -  2pi  "(calculated) Angle of attack where normal and reverse flow CnAttached intersect; between -pi and 0; will be near -pi/2 deg in most cases" "rad"
 typedef   ^                     ^                ReKi                CnBreakLower       -  -  -    "(calculated) CnAttached value at alphaBreakLower where normal and reverse flow CnAttached intersect; will be negative" "-"
 
+typedef   ^                     ^                ReKi                Ka           -        -   -   "IAG model: impulsive (non-circulatory) normal-force gain [default=0.75]" -
+typedef   ^                     ^                ReKi                Kv           -        -   -   "IAG model: center-of-pressure amplitude for vortex moment [default=0.2]" -
+typedef   ^                     ^                ReKi                dCNdA        -        -   -   "IAG model: static normal-force curve slope from linear-fit approach" 1/rad
+typedef   ^                     ^                ReKi                CnMax        -        -   -   "IAG model: (calculated) maximum static Cn, used as positive CN_CRIT" -
+typedef   ^                     ^                ReKi                CnMin        -        -   -   "IAG model: (calculated) minimum static Cn, used as negative CN_CRIT" -
+
 typedef   AirfoilInfo/AFI AFI_UA_BL_Default_Type LOGICAL             alpha0       -        .true.   -   "Calculate value for this input?" -
 typedef   ^                     ^                LOGICAL             alpha1       -        .true.   -   "Calculate value for this input?" -
 typedef   ^                     ^                LOGICAL             alpha2       -        .true.   -   "Calculate value for this input?" -
@@ -119,6 +126,10 @@ typedef   ^                     ^                LOGICAL             filtCutOff 
 
 typedef   ^                     ^                LOGICAL             alphaUpper   -        .true.   -  "Calculate value for this input?" -
 typedef   ^                     ^                LOGICAL             alphaLower   -        .true.   -  "Calculate value for this input?" -
+
+typedef   ^                     ^                LOGICAL             Ka           -        .true.   -  "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             Kv           -        .true.   -  "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             dCNdA        -        .true.   -  "Calculate value for this input?" -
 
 
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
