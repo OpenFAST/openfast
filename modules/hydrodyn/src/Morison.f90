@@ -47,6 +47,7 @@ MODULE Morison
    REAL(ReKi),     PARAMETER :: HM_Eps      = 0.2_ReKi                  ! Smoothing length of the water entry/exit force normalized by R
    REAL(ReKi),     PARAMETER :: HM_HbarDeep = 5.0_ReKi                  ! Normalized center depth beyond which the added mass is the deeply submerged value
    REAL(DbKi),     PARAMETER :: HM_AsymTol  = 1.0E-3_DbKi               ! Switch to asymptotic heave added mass when 2*pi-theta is below this
+   LOGICAL,        PARAMETER :: HM_SwayZeroFreq = .TRUE.                ! Sway added mass: zero-frequency (.TRUE.) or infinite-frequency (.FALSE.); entry/exit force always uses infinite frequency
    ! Polynomial coefficients (ascending powers of Hbar) of the normalized added mass (Table 1)
    REAL(DbKi),     PARAMETER :: HM_CoefSub(0:5)  = (/ -5.782806107250993E-02_DbKi, 1.043012143185959E+00_DbKi, -4.153257652497481E-01_DbKi, &
                                                        8.303624394187833E-02_DbKi, -8.289169840152171E-03_DbKi, 3.286758827989542E-04_DbKi /) ! Heave and sway, 1 <= Hbar <= 5
@@ -54,6 +55,11 @@ MODULE Morison
                                                        1.321603211375043E-01_DbKi,  8.957417595114259E-02_DbKi /)                             ! Sway, -1 <= Hbar <= 0
    REAL(DbKi),     PARAMETER :: HM_CoefSwy2(0:4) = (/  2.026423672846756E-01_DbKi, 3.582967038045703E-01_DbKi,  1.982404817062560E-01_DbKi, &
                                                       -1.321603211375040E-01_DbKi,  1.791483519022852E-02_DbKi /)                             ! Sway,  0 <= Hbar <= 1
+   ! Zero-frequency sway added mass: bridge across the cusp at Hbar = 1 (powers of Hbar-1) and submerged tail (powers of 1/Hbar)
+   REAL(DbKi),     PARAMETER :: HM_CoefSwyZ1(0:5) = (/ 2.104159421957775E+00_DbKi, -2.965948375729567E+00_DbKi, -3.919588885535995E+01_DbKi, &
+                                                        5.558658150878864E+01_DbKi,  1.319449187374385E+03_DbKi,  3.136836992349601E+03_DbKi /) ! 0.8 <= Hbar <= 1.1
+   REAL(DbKi),     PARAMETER :: HM_CoefSwyZ2(0:4) = (/ 1.207805984092653E+00_DbKi, -2.502373347997483E+00_DbKi,  9.714661186777143E+00_DbKi, &
+                                                       -1.337160281428654E+01_DbKi,  6.909412843781649E+00_DbKi /)                             ! 1.1 <= Hbar <= 5, refit if HM_HbarDeep changes
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4829,12 +4835,13 @@ END SUBROUTINE Morison_CalcOutput
       dmu = REAL(dmuD,ReKi)
    END SUBROUTINE HM_AddedMassHeave
 
-   !> Normalized infinite-frequency sway added mass mu_xx/(rho*pi*R^2) of a circular section and its derivative w.r.t. Hbar = H/R
+   !> Normalized sway added mass mu_xx/(rho*pi*R^2) of a circular section (zero or infinite frequency per HM_SwayZeroFreq)
+   !! and the infinite-frequency derivative w.r.t. Hbar = H/R
    PURE SUBROUTINE HM_AddedMassSway( HbarIn, mu, dmu )
       REAL(ReKi), INTENT( IN  ) :: HbarIn
       REAL(ReKi), INTENT( OUT ) :: mu
       REAL(ReKi), INTENT( OUT ) :: dmu
-      REAL(DbKi)                :: Hbar, muD, dmuD
+      REAL(DbKi)                :: Hbar, phi, s, muD, dmuD, NotUsed
       Hbar = REAL(HbarIn,DbKi)
       IF ( Hbar <= -1.0_DbKi ) THEN
          muD  = 0.0_DbKi
@@ -4849,6 +4856,23 @@ END SUBROUTINE Morison_CalcOutput
          muD  = 1.0_DbKi
          dmuD = 0.0_DbKi
       END IF
+
+      IF ( HM_SwayZeroFreq ) THEN  ! Replace the value only; dmuD stays infinite-frequency
+         IF ( Hbar <= -1.0_DbKi ) THEN
+            muD = 0.0_DbKi
+         ELSE IF ( Hbar <= 0.8_DbKi ) THEN  ! Surface piercing (double body); s and phi as in HM_AddedMassHeave
+            s   = SQRT( (1.0_DbKi-Hbar)*(1.0_DbKi+Hbar) )
+            phi = 2.0_DbKi*ATAN2(s,Hbar)
+            muD = (-2.0_DbKi*s*Hbar-TwoPi_D+phi+TwoPi_D/3.0_DbKi*(TwoPi_D-phi)*s*s*(TwoPi_D+phi)/(phi*phi))/TwoPi_D
+         ELSE IF ( Hbar <= 1.1_DbKi ) THEN
+            CALL HM_PolyEval( HM_CoefSwyZ1, Hbar-1.0_DbKi, muD, NotUsed )
+         ELSE IF ( Hbar <= REAL(HM_HbarDeep,DbKi) ) THEN
+            CALL HM_PolyEval( HM_CoefSwyZ2, 1.0_DbKi/Hbar, muD, NotUsed )
+         ELSE
+            muD = 1.0_DbKi
+         END IF
+      END IF
+
       mu  = REAL(muD, ReKi)
       dmu = REAL(dmuD,ReKi)
    END SUBROUTINE HM_AddedMassSway
