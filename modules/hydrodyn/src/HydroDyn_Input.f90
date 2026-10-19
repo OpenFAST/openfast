@@ -136,12 +136,11 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'ExctnMod', InputFileData%WAMIT%ExctnMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-      ! ExctnDisp  - Use body displacements to compute Wave Excitations {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]} (switch)
+      ! ExctnDisp  - Use body displacements to compute Wave Excitations {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position} [used by potential flow when PotMod=1, ExctnMod>0, and WaveMod>0; also used by strip theory when WaveDisp=0] (switch)
    call ParseVar( FileInfo_In, CurLine, 'ExctnDisp', InputFileData%WAMIT%ExctnDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-      ! ExctnCutOff  - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2])
-      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+      ! ExctnCutOff  - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0; only used when ExctnDisp=2]
    call ParseVar( FileInfo_In, CurLine, 'ExctnCutOff', InputFileData%WAMIT%ExctnCutOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 

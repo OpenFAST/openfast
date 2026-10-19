@@ -10,11 +10,11 @@ structure::
       ------- HydroDyn Input File ----------------------------------------------------
       historic NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
       False            Echo           - Echo the input file data (flag)
-      ---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
+      ---------------------- FLOATING PLATFORM --------------------------------------- [only ExctnDisp, ExctnCutOff, PtfmYMod, PtfmRefY, and PtfmYCutOff used with WaveMod=6]
                    1   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)
                    1   ExctnMod       - Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE; if PtfmYMod=1, need ExctnMod=0 or 1]
-                   0   ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
-                  10   ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
+                   0   ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position} [used by potential flow when PotMod=1, ExctnMod>0, and SeaState's WaveMod>0; also used by strip theory when WaveDisp=0] (switch)
+                  10   ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0; only used when ExctnDisp=2]
                    0   PtfmYMod       - Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)
                    0   PtfmRefY       - Constant (if PtfmYMod=0) or initial (if PtfmYMod=1) platform reference yaw offset (deg)
                 0.01   PtfmYCutOff    - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [>0.0; unused when PtfmYMod=0] (Hz)
