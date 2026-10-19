@@ -1571,7 +1571,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       IF ( (ABS( WrapToPi(PRPRotation(3)-PtfmRefY) ) > LrgAngle) .AND. FrstWarn_LrgY .AND. &
            ( p%PotMod == 1 .OR. ( u%Morison%Mesh%Committed .AND. p%Morison%WaveDisp == 0 ) ) ) THEN
          ErrStat2 = ErrID_Severe
-         ErrMsg2  = 'Yaw angle at PRP relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff. Simulation continuing, but future warnings will be suppressed.'
+         ErrMsg2  = 'Yaw angle at PRP relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutOff. Simulation continuing, but future warnings will be suppressed.'
          FrstWarn_LrgY = .FALSE.
          if (Failed()) return
       END IF

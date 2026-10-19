@@ -219,7 +219,10 @@ nonzero **MSL2SWL** or **WaveMod** = 6 in SeaState.
 If the load contributions from potential-flow theory are to be included, set
 **PotMod** to 1 to use frequency-to-time domain transforms based
 on WAMIT output or 2 to use FIT (FIT is not yet documented in
-this manual). The remaining parameters in this section are only used when 
+this manual). The inputs **ExctnDisp**, **ExctnCutOff**, **PtfmYMod**,
+**PtfmRefY**, and **PtfmYCutOff** also affect the strip-theory (Morison)
+loads when **WaveDisp** = 0, even if **PotMod** = 0, as explained under Strip theory
+options below. The remaining parameters in this section are only used when
 **PotMod** = 1.
 
 **ExctnMod** can be set to 0 for no wave excitation, 1 for 
@@ -255,9 +258,21 @@ potential-flow bodies.
 HydroDyn now supports large but slow (well below wave frequencies) 
 transient platform yaw motion with both strip-theory only and hybrid 
 potential-flow models. To enable this capability, the inputs 
-**PtfmYMod**, **PtfmRefY**, **PtfmYCutoff**, and **NExctnHdg** must 
-be set appropriately. Note that HydroDyn still requires the platform 
-roll and pitch angles to be small, i.e., within +/-15 deg.
+**PtfmYMod**, **PtfmRefY**, **PtfmYCutOff**, and **NExctnHdg** must 
+be set appropriately. **PtfmYMod**, **PtfmRefY**, and **PtfmYCutOff**
+also set the reference yaw orientation of the strip-theory members
+when **WaveDisp** = 0 even if potential flow is not used
+(**PotMod** = 0), as described below. **NExctnHdg** only affects the
+potential-flow wave excitation and has no impact on the strip-theory
+members. Strip-theory-only models with **WaveDisp** = 1 support large
+yaw motion without any of these inputs. Note that HydroDyn still
+requires the platform roll and pitch angles to be small, i.e., within
++/-15 deg, with the only exception being strip-theory only models with
+**WaveDisp** = 1. In this latter case, HydroDyn places no restriction
+on platform rotation. A severe warning is displayed if the roll or pitch
+angle of a potential-flow body exceeds this limit. Strip-theory-only
+models with **WaveDisp** = 0 are not checked, even though their loads
+assume small roll and pitch angles.
 
 To conform with the first- and second-order potential-flow theory, 
 which limits the structure to small displacement about a reference 
@@ -281,8 +296,8 @@ platform yaw rotation, analogous to the modeling of slow-drift motion
 with **ExctnDisp** = 2 above. In this case, the **PtfmRefY** input 
 allows the user to specify the initial reference yaw position at 
 **t** = 0. The cutoff frequency of the first-order low-pass filter 
-for platform yaw rotation can be set with **PtfmYCutoff** in Hz. 
-Ideally, **PtfmYCutoff** should be placed between the wave frequency 
+for platform yaw rotation can be set with **PtfmYCutOff** in Hz. 
+Ideally, **PtfmYCutOff** should be placed between the wave frequency 
 region and the characteristic frequency of any slow but large change 
 in platform heading to filter out as much wave-frequency platform 
 motion as possible while minimizing the phase shift in the low-frequency 
@@ -291,6 +306,11 @@ platform yaw rotation should stay within +/-15 deg of the now
 time-dependent **PtfmRefY**. A severe warning will be displayed if 
 this requirement is not met at any point during the simulation, while 
 still allowing the simulation to continue if possible. 
+
+With either **PtfmYMod** option, the +/-15 deg yaw requirement and the
+associated warning only apply when **PtfmRefY** is used, i.e., with
+potential-flow bodies or with strip-theory members and **WaveDisp** = 0.
+They do not apply to strip-theory-only models with **WaveDisp** = 1.
 
 With **PtfmYMod** = 1, HydroDyn requires the first- and second-order 
 (mean- or slow-drift loads from Newman's approximation only) 
@@ -326,7 +346,7 @@ and rotation of the strip-theory members and joints are based on
 the full 6DOF instantaneous structure motion, as described under Strip
 theory options below. When **WaveDisp** = 1, the exact instantaneous
 member and joint orientations are used instead, so **PtfmRefY** does not
-affect the strip-theory load. The inputs **PtfmYCutoff** and **NExctnHdg**
+affect the strip-theory load. The inputs **PtfmYCutOff** and **NExctnHdg**
 are not used when **PtfmYMod** = 0.
 
 HydroDyn has two methods for calculating the radiation memory effect.
@@ -557,12 +577,12 @@ pressure above the still water level is negative. See **Note** below. The
 instantaneous displaced position of the body is always used to obtain the 
 correct hydrostatic restoring force and moment. Note that when **FKMod** = 1,
 the **ExctnDisp** and **ExctnCutOff** settings only affect the scattering
-part of the wave excitation based on the *.3sc* file. Similarly, **PtfmYMod**,
-**PtfmRefY**, and **PtfmYCutOff** will only affect the scattering part of the
-wave excitation and the wave radiation load calculation, with the Froude-Krylov
-wave excitation and hydrostatic load calculation superseded by the body-exact
-pressure integration. These inputs can still be set freely by the user as
-appropriate.
+part of the wave excitation of that body based on the *.3sc* file. Similarly,
+**PtfmYMod**, **PtfmRefY**, and **PtfmYCutOff** will only affect the scattering
+part of the wave excitation and the wave radiation load calculation for that
+body, with the Froude-Krylov wave excitation and hydrostatic load calculation
+superseded by the body-exact pressure integration. These inputs can still be
+set freely by the user as appropriate.
 
 **Note:** While OpenFAST allows the user to select any of the available
 **WaveStMod** options with the nonlinear Froude-Krylov and hydrostatic load
