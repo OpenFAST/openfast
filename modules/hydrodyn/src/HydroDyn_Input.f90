@@ -136,12 +136,11 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'ExctnMod', InputFileData%WAMIT%ExctnMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-      ! ExctnDisp  - Use body displacements to compute Wave Excitations {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]} (switch)
+      ! ExctnDisp  - Use body displacements to compute Wave Excitations {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position} [used by potential flow when PotMod=1, ExctnMod>0, and WaveMod>0; also used by strip theory when WaveDisp=0] (switch)
    call ParseVar( FileInfo_In, CurLine, 'ExctnDisp', InputFileData%WAMIT%ExctnDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-      ! ExctnCutOff  - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2])
-      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+      ! ExctnCutOff  - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0; only used when ExctnDisp=2]
    call ParseVar( FileInfo_In, CurLine, 'ExctnCutOff', InputFileData%WAMIT%ExctnCutOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
@@ -364,10 +363,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'WaveDisp', InputFileData%Morison%WaveDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 1: Up to the free surface} (switch)
-   call ParseVar( FileInfo_In, CurLine, 'AMMod', InputFileData%Morison%AMMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
    ! HstMod - Method of computing strip-theory hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch)
    call ParseVar( FileInfo_In, CurLine, 'HstMod', InputFileData%Morison%HstMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
@@ -1506,15 +1501,18 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    END IF
    
+   ! ExctnCutOff - validate before ExctnDisp may be forced to 0 below. ExctnDisp=2 also drives the Morison WaveDisp=0 drift
+   ! (PtfmRefXY), so a valid cutoff is required whenever ExctnDisp=2, even without potential-flow bodies.
+   if ( InputFileData%WAMIT%ExctnDisp < 0 .or. InputFileData%WAMIT%ExctnDisp > 2 ) then
+      CALL SetErrStat( ErrID_Fatal,'ExctnDisp must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
+   else if ( InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
+      CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+   end if
+
       ! ExctnDisp - Method of computing Wave Excitation
    if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveField%WaveMod == WaveMod_None) then
       InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
    end if
-   
-   ! ExctnCutOff
-   if ( InputFileData%PotMod == 1 .and. InputFileData%WAMIT%ExctnMod  > 0 .and. InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
-      CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-   end if   
       
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
@@ -1872,10 +1870,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    IF ( InputFileData%Morison%WaveDisp /= 0 .AND. InputFileData%Morison%WaveDisp /= 1) THEN
       CALL SetErrStat( ErrID_Fatal,'WaveDisp must be 0 or 1',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   IF ( InputFileData%Morison%AMMod /= 0 .AND. InputFileData%Morison%AMMod /= 1) THEN
-      CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
    IF ( InputFileData%Morison%HstMod /= 0 .AND. InputFileData%Morison%HstMod /= 1) THEN
@@ -2744,10 +2738,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    IF ( InputFileData%PtfmYMod .EQ. 1_IntKi ) THEN
       if ( InputFileData%PtfmYCutOff <= 0.0_ReKi ) then
          CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
-      end if
-      if ( InputFileData%Morison%WaveDisp == 0 .AND. InputFileData%Morison%NMembers > 0 ) then
-         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
-         return
       end if
       if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%ExctnMod == 2 ) then
          call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with state-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
