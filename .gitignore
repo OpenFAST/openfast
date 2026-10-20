@@ -52,6 +52,7 @@ gitVersionInfo.h
 .devcontainer
 .idea
 .env
+.venv
 
 # backup files
 *.asv
