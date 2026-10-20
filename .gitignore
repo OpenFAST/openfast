@@ -16,6 +16,10 @@
 # Fortran module files
 *.mod
 *.smod
+*__genmod.f90
+*__genmod.mod
+*.i90
+*.optrpt
 
 # Compiled Static libraries
 *.lai
@@ -27,7 +31,7 @@
 *.exe
 *.out
 *.app
-__pycache__/*
+__pycache__/
 __init__.py
 *.pyc
 *.egg-info
@@ -38,11 +42,18 @@ _build*/
 install/
 vs-build/
 gitVersionInfo.h
+compile_commands.json
+CMakeUserPresets.json
+.cache/
+*.gcda
+*.gcno
 
 # vs-build files
 .vs
 *.user
 *.u2d
+*.pdb
+*.ilk
 
 # OS and IDE specific files
 .DS_Store
@@ -53,11 +64,15 @@ gitVersionInfo.h
 .idea
 .env*
 .venv
+venv/
+.ipynb_checkpoints/
 
 # backup files
 *.asv
 ~$*.xlsx
 .*.swp
+*.swo
+*~
 
 # LaTeX compiling files
 *.aux
@@ -80,12 +95,20 @@ docker-compose.yml
 # simulation output files
 *.outb
 *.pkl.gz
+*.ech
+*.chkp
+*.dbg
 
 # AI steering files for specific users
 .kiro/*
 /CLAUDE.md
 .continue/
 .cursor/
+.claude/
+.aider*
+.windsurf/
+AGENTS.md
+GEMINI.md
 
 # credential files
 *credentials*.json
