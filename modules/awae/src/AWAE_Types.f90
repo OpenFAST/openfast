@@ -189,6 +189,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
     INTEGER(IntKi) , DIMENSION(:,:,:), ALLOCATABLE  :: planeDomainExit      !< Per-dimension flag (0: still in domain, -1: crossed lower bound, +1: crossed upper bound) for each plane [dim,plane,turbine] [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: planeExitWarned      !< Whether the wake-plane domain-exit warning has been issued for each turbine [turbine] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeVTK_StartN      !< Time step when wake plane starts - counted by N_dtLow. Indices [wakenum,turbnum] [-]
   END TYPE AWAE_MiscVarType
 ! =======================
@@ -1722,6 +1723,18 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%planeDomainExit = SrcMiscData%planeDomainExit
    end if
+   if (allocated(SrcMiscData%planeExitWarned)) then
+      LB(1:1) = lbound(SrcMiscData%planeExitWarned)
+      UB(1:1) = ubound(SrcMiscData%planeExitWarned)
+      if (.not. allocated(DstMiscData%planeExitWarned)) then
+         allocate(DstMiscData%planeExitWarned(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%planeExitWarned.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%planeExitWarned = SrcMiscData%planeExitWarned
+   end if
    if (allocated(SrcMiscData%WakeVTK_StartN)) then
       LB(1:2) = lbound(SrcMiscData%WakeVTK_StartN)
       UB(1:2) = ubound(SrcMiscData%WakeVTK_StartN)
@@ -1852,6 +1865,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%planeDomainExit)) then
       deallocate(MiscData%planeDomainExit)
    end if
+   if (allocated(MiscData%planeExitWarned)) then
+      deallocate(MiscData%planeExitWarned)
+   end if
    if (allocated(MiscData%WakeVTK_StartN)) then
       deallocate(MiscData%WakeVTK_StartN)
    end if
@@ -1921,6 +1937,7 @@ subroutine AWAE_PackMisc(RF, Indata)
    end if
    call RegPackAlloc(RF, InData%V_amb_low_disk)
    call RegPackAlloc(RF, InData%planeDomainExit)
+   call RegPackAlloc(RF, InData%planeExitWarned)
    call RegPackAlloc(RF, InData%WakeVTK_StartN)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -2003,6 +2020,7 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    end if
    call RegUnpackAlloc(RF, OutData%V_amb_low_disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%planeDomainExit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%planeExitWarned); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WakeVTK_StartN); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

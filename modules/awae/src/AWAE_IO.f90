@@ -26,7 +26,7 @@ MODULE AWAE_IO
    use NWTC_Library
    use VTK
    use AWAE_Types
-   use iso_c_binding, only: c_char, c_int, c_double, c_float, c_null_char
+   use iso_c_binding, only: c_char, c_int, c_double, c_float, c_null_char, c_int32_t, c_int64_t
    use amrex_utils
    
    implicit none
@@ -38,7 +38,11 @@ MODULE AWAE_IO
    public :: ReadLowResWindVTK, ReadWindAMReX
    public :: WriteVTK_PolyData
    public :: WriteVTK_StructuredGrid_2D
+   public :: WrDisVTK_SP
    public :: VTK_Series_Open, VTK_Series_Append, VTK_Series_Close
+
+   private :: SliceOutputASCII
+   private :: XMLCommentSafe
 
    interface
       subroutine ReadVTK_inflow_info(FileName, Desc, dims, origin, gridSpacing, vecLabel, values, read_values, err_stat, err_msg) BIND(C,name='ReadVTK_inflow_info')     
@@ -59,6 +63,43 @@ MODULE AWAE_IO
    
    contains
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Returns .true. when the FF_SLICE_ASCII environment variable requests the legacy ASCII slice/Dis output
+!! (variable present and not '0'/''), and .false. otherwise (binary output, the default). The result is
+!! cached on first use; semantics mirror the FF_AMREX_FULL_VERIFY check in amrex_utils.cpp.
+logical function SliceOutputASCII()
+   character(256)   :: envVal
+   integer          :: envLen, envStat
+   logical, save    :: asciiMode   = .false.
+   logical, save    :: initialized = .false.
+
+   if (.not. initialized) then
+      !$OMP critical(fileopenNWTCio_critical)
+      if (.not. initialized) then
+         call GET_ENVIRONMENT_VARIABLE('FF_SLICE_ASCII', value=envVal, length=envLen, status=envStat)
+         asciiMode   = (envStat == 0 .and. envLen > 0 .and. envVal(1:1) /= '0')
+         initialized = .true.
+      end if
+      !$OMP end critical(fileopenNWTCio_critical)
+   end if
+   SliceOutputASCII = asciiMode
+
+end function SliceOutputASCII
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Returns descr with the second character of any '--' replaced so the text stays legal inside an
+!! XML comment (slice names are user input and '--' would terminate the comment early).
+function XMLCommentSafe( descr ) result(safe)
+   character(*), intent(in) :: descr
+   character(len(descr))    :: safe
+   integer                  :: i
+   safe = descr
+   i = index(safe, '--')
+   do while (i > 0)
+      safe(i+1:i+1) = '_'
+      i = index(safe, '--')
+   end do
+end function XMLCommentSafe
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    integer(IntKi),             intent(in   ) :: n            !< Low-resolution time step increment
    integer(IntKi),             intent(in   ) :: WrDisSkp1    !< Number of low resolution time step increments per one output increment
@@ -72,8 +113,7 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    INTEGER(IntKi)                 :: ErrStat2                ! Temporary Error status
    CHARACTER(ErrMsgLen)           :: ErrMsg2                 ! Temporary Error message
    CHARACTER(1024)                :: FileName
-   INTEGER(IntKi)                 :: Un                      ! unit number of opened file
-   INTEGER(IntKi)                 :: nt, n_out 
+   INTEGER(IntKi)                 :: nt, n_out
    REAL(ReKi)                     :: t_out
    character(p%VTK_tWidth)        :: Tstr  ! string for current VTK write-out step (padded with zeros)
    
@@ -84,36 +124,100 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n_out ! TODO use n instead..
 
    FileName = trim(p%OutFileFFvtkRoot)//".Low.Dis."//trim(Tstr)//".vtk"
-   call WrVTK_SP_header( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
+   call WrDisVTK_SP( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", p%LowRes%nXYZ, p%LowRes%oXYZ, p%LowRes%dXYZ, m%Vdist_low, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   call WrVTK_SP_vectors3D( Un, "Velocity", p%LowRes%nXYZ, p%LowRes%oXYZ, p%LowRes%dXYZ, m%Vdist_low, errStat2, errMsg2 )
-      call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-    
+
    do nt= 1,p%NumTurbines
       ! We are only writing out the first of the high res data for a given low res time step
       ! NOTE: y%Vdist_high(nt)%data(:,:,:,:,1) is at T=t_low, and index 0 is at T=t_low-DT_high
-      
-      FileName = trim(p%OutFileFFvtkRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
-      call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
-         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
 
-      call WrVTK_SP_vectors3D( Un, "Velocity", p%HighRes(nt)%nXYZ, p%HighRes(nt)%oXYZ, p%HighRes(nt)%dXYZ, y%Vdist_high(nt)%data(:,:,:,:,1), errStat2, errMsg2 )
+      FileName = trim(p%OutFileFFvtkRoot)//".HighT"//trim(num2lstr(nt))//".Dis."//trim(Tstr)//".vtk"
+      call WrDisVTK_SP( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", p%HighRes(nt)%nXYZ, p%HighRes(nt)%oXYZ, p%HighRes(nt)%dXYZ, y%Vdist_high(nt)%data(:,:,:,:,1), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-       
+
    end do
 
 
 end subroutine WriteDisWindFiles
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Write a legacy VTK structured-points file of 3-component "Velocity" vector data (the "Dis" disturbed-wind
+!! volumes and planar slices). ASCII mode (FF_SLICE_ASCII set and not '0') delegates to the
+!! WrVTK_SP_header/WrVTK_SP_vectors3D library pair so the output is unchanged from the legacy files;
+!! binary mode (the default) writes the same metadata followed by the vector data as big-endian Float32,
+!! as required by the legacy VTK binary format.
+subroutine WrDisVTK_SP( FileName, descr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg )
+   character(*),  intent(in   ) :: FileName           !< name of output file
+   character(*),  intent(in   ) :: descr              !< line describing the contents of the file
+   integer(IntKi),intent(in   ) :: dims(3)            !< dimension of the 3D grid (nX,nY,nZ)
+   real(ReKi),    intent(in   ) :: origin(3)          !< the lower-left corner of the 3D grid (X0,Y0,Z0)
+   real(ReKi),    intent(in   ) :: gridSpacing(3)     !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
+   real(SiKi),    intent(in   ) :: gridVals(:,:,:,:)  !< vector data, size (3,nX,nY,nZ)
+   integer(IntKi),intent(  out) :: ErrStat            !< error status
+   character(*),  intent(  out) :: ErrMsg             !< error message
+
+   integer(IntKi)               :: Un, ErrStat2, ios
+   character(ErrMsgLen)         :: ErrMsg2
+   character(64)                :: line
+   character(*), parameter      :: RoutineName = 'WrDisVTK_SP'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! ASCII mode: the legacy library pair (vectors3D closes the unit itself)
+   if (SliceOutputASCII()) then
+      call WrVTK_SP_header( FileName, descr, Un, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      call WrVTK_SP_vectors3D( Un, "Velocity", dims, origin, gridSpacing, gridVals, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Binary mode: legacy VTK binary data is big-endian; CONVERT does not affect the character header lines.
+   ! STATUS='replace' is required so leftover tail bytes of an older, longer file are not kept.
+   !$OMP critical(fileopenNWTCio_critical)
+   call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+   open( unit=Un, file=trim(FileName), status='replace', access='stream', form='unformatted', action='write', convert='big_endian', iostat=ios )
+   !$OMP end critical(fileopenNWTCio_critical)
+   if (ios /= 0) then
+      call SetErrStat(ErrID_Fatal, 'Cannot open file "'//trim(FileName)//'" for binary VTK output.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Header lines use the same numeric formats as the ASCII variant so the metadata matches
+   write(Un) '# vtk DataFile Version 3.0'//achar(10)
+   write(Un) trim(descr)//achar(10)
+   write(Un) 'BINARY'//achar(10)
+   write(Un) 'DATASET STRUCTURED_POINTS'//achar(10)
+   write(line,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
+   write(Un) trim(line)//achar(10)
+   write(line,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
+   write(Un) trim(line)//achar(10)
+   write(line,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
+   write(Un) trim(line)//achar(10)
+   write(line,'(A,i15)')         'POINT_DATA ',  int(dims(1),c_int64_t)*int(dims(2),c_int64_t)*int(dims(3),c_int64_t)
+   write(Un) trim(line)//achar(10)
+   write(Un) 'VECTORS Velocity float'//achar(10)
+
+   ! Vector data in natural memory order (x-fastest, component-interleaved), as legacy VECTORS expects
+   write(Un) gridVals
+   write(Un) achar(10)
+
+   !$OMP critical(fileopenNWTCio_critical)
+   close(Un)
+   !$OMP end critical(fileopenNWTCio_critical)
+
+end subroutine WrDisVTK_SP
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Write a single-piece VTK XML `PolyData` (.vtp) file containing an unstructured
 !! point cloud with one vertex cell per point plus a 3-component `Vec` field on
-!! the points. NaN values in `Vec` are written as the literal text "nan" (VTK
-!! ASCII readers accept this and ParaView masks it automatically).
+!! the points. By default the file is written with appended raw (binary) data;
+!! setting the FF_SLICE_ASCII environment variable selects the legacy ASCII
+!! format instead. NaN values in `Vec` pass through as binary NaN (or the
+!! literal text "nan" in ASCII mode); ParaView masks them automatically.
 !!
 !! Used by `NumTerrainSlices` (Feature 1, terrain-following point cloud).
 subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrMsg )
@@ -125,7 +229,10 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
    integer(IntKi),intent(  out) :: ErrStat     !< error status
    character(*),  intent(  out) :: ErrMsg      !< error message
 
-   integer(IntKi)               :: Un, ErrStat2, i, N
+   integer(IntKi)               :: Un, ErrStat2, i, N, ios
+   integer(c_int64_t)           :: off1, off2, off3, N64   ! byte offsets of the connectivity/offsets/vector blocks within the appended data (64-bit: 32-bit arithmetic wraps silently past ~76M points)
+   real(SiKi), allocatable      :: ptsS(:,:)               ! single-precision copy of the points (heap; a cast inside the write statement would build a 12N-byte stack temporary)
+   character(20)                :: off1Str, off2Str, off3Str
    character(ErrMsgLen)         :: ErrMsg2
    character(*), parameter      :: RoutineName = 'WriteVTK_PolyData'
 
@@ -139,6 +246,82 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
       return
    end if
 
+   ! Binary mode (the default): XML with appended raw little-endian data, each block prefixed by its
+   ! UInt32 byte count. STATUS='replace' is required so leftover tail bytes of an older, longer file
+   ! are not kept.
+   if (.not. SliceOutputASCII()) then
+      ! The UInt32 byte-count prefixes cap a block at huge(int32) bytes; fail loudly rather than wrap silently
+      N64 = int(N, c_int64_t)
+      if (12_c_int64_t*N64 > int(huge(0_c_int32_t), c_int64_t)) then
+         call SetErrStat(ErrID_Fatal, 'Too many points ('//trim(Num2LStr(N))//') for UInt32-appended binary VTK output.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      allocate(ptsS(3,N), stat=ios)
+      if (ios /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Cannot allocate single-precision point buffer.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      do i = 1, N
+         ptsS(:,i) = real(Pts(:,i),SiKi)
+      end do
+
+      !$OMP critical(fileopenNWTCio_critical)
+      call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+      open( unit=Un, file=trim(FileName), status='replace', access='stream', form='unformatted', action='write', iostat=ios )
+      !$OMP end critical(fileopenNWTCio_critical)
+      if (ios /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Cannot open file "'//trim(FileName)//'" for binary VTK output.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      ! Block offsets relative to the first byte after the '_' marker: points (4+12N bytes), then
+      ! connectivity (4+8N), offsets (4+8N), and the vector field (4+12N)
+      off1 = 4_c_int64_t + 12_c_int64_t*N64
+      off2 = off1 + 4_c_int64_t + 8_c_int64_t*N64
+      off3 = off2 + 4_c_int64_t + 8_c_int64_t*N64
+      write(off1Str,'(I0)') off1
+      write(off2Str,'(I0)') off2
+      write(off3Str,'(I0)') off3
+
+      write(Un) '<?xml version="1.0"?>'//achar(10)
+      write(Un) '<!-- '//trim(XMLCommentSafe(descr))//' -->'//achar(10)
+      write(Un) '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian" header_type="UInt32">'//achar(10)
+      write(Un) '  <PolyData>'//achar(10)
+      write(Un) '    <Piece NumberOfPoints="'//trim(Num2LStr(N))//'" NumberOfVerts="'//trim(Num2LStr(N))//'" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">'//achar(10)
+      write(Un) '      <Points>'//achar(10)
+      write(Un) '        <DataArray type="Float32" NumberOfComponents="3" format="appended" offset="0"/>'//achar(10)
+      write(Un) '      </Points>'//achar(10)
+      write(Un) '      <Verts>'//achar(10)
+      write(Un) '        <DataArray type="Int64" Name="connectivity" format="appended" offset="'//trim(off1Str)//'"/>'//achar(10)
+      write(Un) '        <DataArray type="Int64" Name="offsets" format="appended" offset="'//trim(off2Str)//'"/>'//achar(10)
+      write(Un) '      </Verts>'//achar(10)
+      write(Un) '      <PointData Vectors="'//trim(vecLabel)//'">'//achar(10)
+      write(Un) '        <DataArray type="Float32" Name="'//trim(vecLabel)//'" NumberOfComponents="3" format="appended" offset="'//trim(off3Str)//'"/>'//achar(10)
+      write(Un) '      </PointData>'//achar(10)
+      write(Un) '    </Piece>'//achar(10)
+      write(Un) '  </PolyData>'//achar(10)
+      write(Un) '  <AppendedData encoding="raw">'//achar(10)
+      write(Un) '   _'
+
+      write(Un) int(12_c_int64_t*N64, c_int32_t)
+      write(Un) ptsS
+      write(Un) int(8_c_int64_t*N64, c_int32_t)
+      write(Un) (int(i-1, c_int64_t), i=1,N)
+      write(Un) int(8_c_int64_t*N64, c_int32_t)
+      write(Un) (int(i, c_int64_t), i=1,N)
+      write(Un) int(12_c_int64_t*N64, c_int32_t)
+      write(Un) Vec(:,1:N)
+
+      write(Un) achar(10)//'  </AppendedData>'//achar(10)//'</VTKFile>'//achar(10)
+
+      !$OMP critical(fileopenNWTCio_critical)
+      close(Un)
+      !$OMP end critical(fileopenNWTCio_critical)
+      return
+   end if
+
+   ! ASCII mode (FF_SLICE_ASCII set and not '0'): legacy format, unchanged
    !$OMP critical(fileopenNWTCio_critical)
    call GetNewUnit( Un, ErrStat2, ErrMsg2 )
    call OpenFOutFile( Un, trim(FileName), ErrStat2, ErrMsg2 )
@@ -147,7 +330,7 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
    if (ErrStat >= AbortErrLev) return
 
    write(Un,'(A)') '<?xml version="1.0"?>'
-   write(Un,'(A)') '<!-- '//trim(descr)//' -->'
+   write(Un,'(A)') '<!-- '//trim(XMLCommentSafe(descr))//' -->'
    write(Un,'(A)') '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'
    write(Un,'(A)') '  <PolyData>'
    write(Un,'(A,I0,A,I0,A)') '    <Piece NumberOfPoints="', N, '" NumberOfVerts="', N, '" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0">'
@@ -188,8 +371,11 @@ subroutine WriteVTK_PolyData( FileName, descr, Pts, Vec, vecLabel, ErrStat, ErrM
 end subroutine WriteVTK_PolyData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Write a 2-D `StructuredGrid` (.vts) VTK XML file: an n1 x n2 x 1 mesh with
-!! explicit point coordinates plus a 3-component `Vec` field. NaN values are
-!! written as the literal text "nan"; ParaView masks these automatically.
+!! explicit point coordinates plus a 3-component `Vec` field. By default the
+!! file is written with appended raw (binary) data; setting the FF_SLICE_ASCII
+!! environment variable selects the legacy ASCII format instead. NaN values
+!! pass through as binary NaN (or the literal text "nan" in ASCII mode);
+!! ParaView masks these automatically.
 !! Node ordering is (i-fastest, then j) matching VTK's Fortran-friendly linear
 !! layout.
 !!
@@ -205,7 +391,10 @@ subroutine WriteVTK_StructuredGrid_2D( FileName, descr, n1, n2, Pts, Vec, vecLab
    integer(IntKi),intent(  out) :: ErrStat
    character(*),  intent(  out) :: ErrMsg
 
-   integer(IntKi)               :: Un, ErrStat2, i, j
+   integer(IntKi)               :: Un, ErrStat2, i, j, ios
+   integer(c_int64_t)           :: off1, nPts64       ! byte offset of the vector block within the appended data (64-bit: 32-bit arithmetic wraps silently past ~178M points)
+   real(SiKi), allocatable      :: ptsS(:,:,:)        ! single-precision copy of the points (heap; a cast inside the write statement would build a large stack temporary)
+   character(20)                :: off1Str
    character(ErrMsgLen)         :: ErrMsg2
    character(*), parameter      :: RoutineName = 'WriteVTK_StructuredGrid_2D'
    character(64)                :: extentStr
@@ -215,6 +404,74 @@ subroutine WriteVTK_StructuredGrid_2D( FileName, descr, n1, n2, Pts, Vec, vecLab
 
    if (n1 < 1 .or. n2 < 1) return
 
+   ! Binary mode (the default): XML with appended raw little-endian data, each block prefixed by its
+   ! UInt32 byte count. STATUS='replace' is required so leftover tail bytes of an older, longer file
+   ! are not kept.
+   if (.not. SliceOutputASCII()) then
+      ! The UInt32 byte-count prefixes cap a block at huge(int32) bytes; fail loudly rather than wrap silently
+      nPts64 = int(n1, c_int64_t)*int(n2, c_int64_t)
+      if (12_c_int64_t*nPts64 > int(huge(0_c_int32_t), c_int64_t)) then
+         call SetErrStat(ErrID_Fatal, 'Too many points ('//trim(Num2LStr(n1))//' x '//trim(Num2LStr(n2))//') for UInt32-appended binary VTK output.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      allocate(ptsS(3,n1,n2), stat=ios)
+      if (ios /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Cannot allocate single-precision point buffer.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      do j = 1, n2
+         do i = 1, n1
+            ptsS(:,i,j) = real(Pts(:,i,j),SiKi)
+         end do
+      end do
+
+      !$OMP critical(fileopenNWTCio_critical)
+      call GetNewUnit( Un, ErrStat2, ErrMsg2 )
+      open( unit=Un, file=trim(FileName), status='replace', access='stream', form='unformatted', action='write', iostat=ios )
+      !$OMP end critical(fileopenNWTCio_critical)
+      if (ios /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Cannot open file "'//trim(FileName)//'" for binary VTK output.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      write(extentStr,'(A,I0,A,I0,A)') '0 ', n1-1, ' 0 ', n2-1, ' 0 0'
+
+      ! Vector block offset relative to the first byte after the '_' marker: points (4+12*n1*n2 bytes) come first
+      off1 = 4_c_int64_t + 12_c_int64_t*nPts64
+      write(off1Str,'(I0)') off1
+
+      write(Un) '<?xml version="1.0"?>'//achar(10)
+      write(Un) '<!-- '//trim(XMLCommentSafe(descr))//' -->'//achar(10)
+      write(Un) '<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32">'//achar(10)
+      write(Un) '  <StructuredGrid WholeExtent="'//trim(adjustl(extentStr))//'">'//achar(10)
+      write(Un) '    <Piece Extent="'//trim(adjustl(extentStr))//'">'//achar(10)
+      write(Un) '      <Points>'//achar(10)
+      write(Un) '        <DataArray type="Float32" NumberOfComponents="3" format="appended" offset="0"/>'//achar(10)
+      write(Un) '      </Points>'//achar(10)
+      write(Un) '      <PointData Vectors="'//trim(vecLabel)//'">'//achar(10)
+      write(Un) '        <DataArray type="Float32" Name="'//trim(vecLabel)//'" NumberOfComponents="3" format="appended" offset="'//trim(off1Str)//'"/>'//achar(10)
+      write(Un) '      </PointData>'//achar(10)
+      write(Un) '    </Piece>'//achar(10)
+      write(Un) '  </StructuredGrid>'//achar(10)
+      write(Un) '  <AppendedData encoding="raw">'//achar(10)
+      write(Un) '   _'
+
+      ! Both arrays in the (3,n1,n2) natural memory order, which is i-fastest then j (identical to the ASCII loops)
+      write(Un) int(12_c_int64_t*nPts64, c_int32_t)
+      write(Un) ptsS
+      write(Un) int(12_c_int64_t*nPts64, c_int32_t)
+      write(Un) Vec(:,1:n1,1:n2)
+
+      write(Un) achar(10)//'  </AppendedData>'//achar(10)//'</VTKFile>'//achar(10)
+
+      !$OMP critical(fileopenNWTCio_critical)
+      close(Un)
+      !$OMP end critical(fileopenNWTCio_critical)
+      return
+   end if
+
+   ! ASCII mode (FF_SLICE_ASCII set and not '0'): legacy format, unchanged
    !$OMP critical(fileopenNWTCio_critical)
    call GetNewUnit( Un, ErrStat2, ErrMsg2 )
    call OpenFOutFile( Un, trim(FileName), ErrStat2, ErrMsg2 )
@@ -225,7 +482,7 @@ subroutine WriteVTK_StructuredGrid_2D( FileName, descr, n1, n2, Pts, Vec, vecLab
    write(extentStr,'(A,I0,A,I0,A)') '0 ', n1-1, ' 0 ', n2-1, ' 0 0'
 
    write(Un,'(A)') '<?xml version="1.0"?>'
-   write(Un,'(A)') '<!-- '//trim(descr)//' -->'
+   write(Un,'(A)') '<!-- '//trim(XMLCommentSafe(descr))//' -->'
    write(Un,'(A)') '<VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian">'
    write(Un,'(A)') '  <StructuredGrid WholeExtent="'//trim(adjustl(extentStr))//'">'
    write(Un,'(A)') '    <Piece Extent="'//trim(adjustl(extentStr))//'">'
@@ -780,7 +1037,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          ! has a single DT_High for the whole farm, so a sub-volume on a different set of times
          ! would silently supply the wrong instant to its turbine. Keep sub-volume 1's table and
          ! verify the rest match it element by element -- comparing only the stride, as was done
-         ! previously, accepts a sequence uniformly offset from the others.
+         ! previously, accepts a sequence uniformly offset from the others. (When the reader
+         ! fast-verifies a sub-volume by directory name it returns sub-volume 1's table, making
+         ! this compare a formality; it is meaningful whenever a full header scan ran.)
          if (nt == 1) then
             call move_alloc(DirIndexTmp, p%DirIndexHigh)
          else

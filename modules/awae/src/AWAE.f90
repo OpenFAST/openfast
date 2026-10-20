@@ -1701,7 +1701,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
 
 
             ! -  no messages if inside bounds, so put error handling inside if
-            call PlaneOutOfDomain(p%y(p%NumRadii-1)+p%y(1),u%p_plane(:,np,nt),y%V_plane(:,np,nt),m%planeDomainExit(:,np,nt),ErrStat2,ErrMsg2)
+            call PlaneOutOfDomain(p%y(p%NumRadii-1)+p%y(1),u%p_plane(:,np,nt),y%V_plane(:,np,nt),m%planeDomainExit(:,np,nt),m%planeExitWarned(nt),ErrStat2,ErrMsg2)
             if (any(m%planeDomainExit(:,np,nt) /= 0_IntKi)) then
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                cycle
@@ -1759,61 +1759,64 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function Failed
    
-   !> Check if the center of this wwake plane has left the domain.
-   !! If a plane exits the domain, or previously exited the domain:
-   !!    -  Set warning about first time this plane leaves.
-   !!    -  For each dimension independently, set velocity component to kick it outside the domain
-   !!       -  Target distance outside boundary = D.  Use a quadratic asymptotic distance per step to approach target distance.
-   !!    -  Add background flow to keep the plane drifting
-   !! NOTE: using m%planeDomainExit(3) to track which boundary a plane crossed in each dimension.
-   !!       planeDomainExit(i): 0 = still in domain, -1 = crossed lower bound, +1 = crossed upper bound
-   !! To understand intent, consider 2 cases for mean velocity in +X direction:
-   !!    plane exits +Y boundary:
-   !!       1. plane will get a kick towards one wake diameter outside +Y boundary
-   !!       2. overall farm velocity added to keep plane drifting in +X following the target Y location (some jitter due to farm level Y velocity term)
-   !!    plane exits +X boundary (travels beyond domain end in direction of overall flow)
-   !!       1. plane will get a kick outside the end of the domain towards +X boundary plus wake diameter
-   !!       2. farm velocity added will keep trying to push this plane further downstream, but step 1. will try to force it back.
-   !!       --> effectively 1. and 2. will constantly be working against each other to hold the plane somewhere near the target location beyond +X boundary,
-   !!           but this shouldn't really matter as the plane will get dropped at some point.  Even if multiple planes end up there, it shouldn't affect
-   !!           any planes still in bounds -- so we really don't care if it jitters around at all
-   subroutine PlaneOutOfDomain(PlaneHalfWidth,p_plane,V_plane,planeDomainExit,ErrStat3,ErrMsg3)
+   !> Check if the center of this wake plane is outside the low-resolution domain.
+   !! If a plane is outside the domain:
+   !!    -  Warn the first time any plane of this turbine leaves.
+   !!    -  Set the plane velocity to the farm-level background flow so it keeps drifting.
+   !!    -  For each dimension in which it is outside, set the velocity component to reach a target one plane half-width beyond the
+   !!       boundary in one time step, so the plane is kept just outside the domain until WakeDynamics merges or drops it.
+   !! NOTE: m%planeDomainExit(:,np,nt) is indexed by plane SLOT, and WakeDynamics moves every plane up one slot per time step (and
+   !!       shifts slots when planes are removed or merged). The exit status is therefore re-evaluated from the CURRENT plane position
+   !!       on every call and never latched: a latched per-slot flag applied to whichever plane occupied the slot later, kicked planes
+   !!       that were still inside the domain to the boundary, and truncated the wake permanently at the slot of the first excursion
+   !!       (RT 2026-09-03).
+   !!       planeDomainExit(i): 0 = inside in this dimension, -1 = beyond the lower bound, +1 = beyond the upper bound
+   subroutine PlaneOutOfDomain(PlaneHalfWidth,p_plane,V_plane,planeDomainExit,exitWarned,ErrStat3,ErrMsg3)
       real(ReKi),                intent(in   )  :: PlaneHalfWidth    !< half-width of wake plane + dr
       real(ReKi),                intent(in   )  :: p_plane(3)        !< u%p_plane(:,np,nt)
       real(ReKi),                intent(inout)  :: V_plane(3)        !< y%V_plane(:,np,nt)
-      integer(IntKi),            intent(inout)  :: planeDomainExit(3) !< m%planeDomainExit(:,np,nt) per-dimension flag
+      integer(IntKi),            intent(inout)  :: planeDomainExit(3) !< m%planeDomainExit(:,np,nt) per-dimension status of this plane
+      logical,                   intent(inout)  :: exitWarned        !< m%planeExitWarned(nt): the exit warning was already issued for this turbine
       integer(IntKi),            intent(  out)  :: ErrStat3          !< Error status of the operation
       character(ErrMsgLen),      intent(  out)  :: ErrMsg3           !< Error message if errStat /= ErrID_None
-      character(12)                             :: tmpStr12          !< for constructing error message
+      character(64)                             :: sideStr           !< for constructing the warning message
       real(ReKi)                                :: D_tgt             !< target distance outside bounds
       integer(IntKi)                            :: iDim              !< loop counter over dimensions
       character(1), parameter                   :: dimLabels(3) = (/'X','Y','Z'/)
 
-      ! Step 1: did a plane that was in the low res domain just cross out in any dimension?
-      !        If plane crossed boundary, set message and tracking of it (check each dimension independently)
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ''
+
+      ! Step 1: exit status of this plane from its current position (re-evaluated every call, see NOTE above)
+      sideStr = ''
       do iDim = 1, 3
-         if (planeDomainExit(iDim) == 0_IntKi) then
-            if (p_plane(iDim) < p%LowRes%oXYZ(iDim)) then
-               ErrStat3  = ErrID_Warn
-               tmpStr12 = 'lower-most '//dimLabels(iDim)
-               planeDomainExit(iDim) = -1_IntKi
-            elseif (p_plane(iDim) > p%LowRes%oXYZ(iDim) + p%LowRes%Size(iDim)) then
-               ErrStat3  = ErrID_Warn
-               tmpStr12 = 'upper-most '//dimLabels(iDim)
-               planeDomainExit(iDim) =  1_IntKi
-            endif
+         if (p_plane(iDim) < p%LowRes%oXYZ(iDim)) then
+            planeDomainExit(iDim) = -1_IntKi
+            if (len_trim(sideStr) > 0) sideStr = trim(sideStr)//' and'
+            sideStr = trim(sideStr)//' lower-most '//dimLabels(iDim)
+         elseif (p_plane(iDim) > p%LowRes%oXYZ(iDim) + p%LowRes%Size(iDim)) then
+            planeDomainExit(iDim) =  1_IntKi
+            if (len_trim(sideStr) > 0) sideStr = trim(sideStr)//' and'
+            sideStr = trim(sideStr)//' upper-most '//dimLabels(iDim)
+         else
+            planeDomainExit(iDim) =  0_IntKi
          endif
       end do
-      if (errStat3 == ErrID_Warn) then
-         ErrMsg3 = 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the ' &
-             //tmpStr12//' boundary of the low-resolution domain. Further warnings are suppressed.'
-      endif
 
-      ! If still fully in domain, nothing to do
+      ! If fully in domain, nothing to do
       if (all(planeDomainExit == 0_IntKi)) return
 
-      ! Step 2: add background XYZ flow to keep plane drifting
-      V_plane(1:3) = V_plane(1:3) + xd%Ufarm(1:3)
+      ! Warn once per turbine
+      if (.not. exitWarned) then
+         exitWarned = .true.
+         ErrStat3   = ErrID_Warn
+         ErrMsg3    = 'The center of wake plane #'//trim(num2lstr(np))//' for turbine #'//trim(num2lstr(nt))//' has passed the'//trim(sideStr)// &
+                      ' boundary of the low-resolution domain. Further domain exits of wake planes of this turbine are not reported.'
+      endif
+
+      ! Step 2: background farm-level flow keeps the plane drifting (assigned, not accumulated: V_plane still holds the value computed
+      !         for whichever plane occupied this slot at the previous step)
+      V_plane(1:3) = xd%Ufarm(1:3)
 
       ! Step 3: for each dimension where the plane is outside the boundary, set velocity component to reach target in one timestep.
       !          example: V at -Y boundary:
@@ -2482,6 +2485,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Per-dimension flag: 0 = still in domain, -1 = crossed lower bound, +1 = crossed upper bound
    allocate(m%planeDomainExit(3,0:p%MaxPlanes-1,1:p%NumTurbines), STAT=ErrStat2);   if (Failed0('m%planeDomainExit.')) return;
    m%planeDomainExit = 0_IntKi
+   allocate(m%planeExitWarned(1:p%NumTurbines), STAT=ErrStat2);   if (Failed0('m%planeExitWarned.')) return;
+   m%planeExitWarned = .false.
 
    ! Read-in the ambient wind data for the initial calculate output
    call AWAE_UpdateStates(0, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 ); if(Failed()) return;
@@ -2915,19 +2920,21 @@ subroutine AWAE_UpdateStates(n, u, p, x, xd, z, OtherState, m, errStat, errMsg)
    ! Propagate WAT tracer
    !----------------------------------------------------------------------------
 
+   ! Find mean velocity of all turbine disks. Always computed (not only for WAT): it is also the drift velocity given to wake planes
+   ! that have left the low-resolution domain (PlaneOutOfDomain in LowResGridCalcOutput); with it gated on WAT those planes were
+   ! frozen outside the domain when WAT was off (RT 2026-09-03).
+   xd%Ufarm = 0.0_ReKi
+   do nt=1,p%NumTurbines
+      xd%Ufarm = xd%Ufarm + m%V_amb_low_disk(:,nt)
+   enddo
+   xd%Ufarm(1:3) = xd%Ufarm(1:3) / real(p%NumTurbines,ReKi)
+
    if (p%WAT_Enabled) then
 
 #ifdef FF_TIMING_PRINTS
       call cpu_time(tmSer0)
       tmPar0 = AWAE_WallTime()
 #endif
-
-      ! Find mean velocity of all turbine disks
-      xd%Ufarm = 0.0_ReKi
-      do nt=1,p%NumTurbines
-         xd%Ufarm = xd%Ufarm + m%V_amb_low_disk(:,nt)
-      enddo
-      xd%Ufarm(1:3) = xd%Ufarm(1:3) / real(p%NumTurbines,ReKi)
 
       ! add mean velocity * dt to the tracer for the position of the WAT box
       xd%WAT_B_Box = xd%WAT_B_Box + xd%Ufarm*real(p%dt_low,ReKi)
@@ -2978,7 +2985,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    integer(intKi)                                 :: n, n_high
    character(3)                                   :: PlaneNumStr ! 2 digit number of the output plane
    CHARACTER(1024)                                :: FileName
-   INTEGER(IntKi)                                 :: Un          ! unit number of opened file
    logical                                        :: WriteWindVTK
 #ifdef FF_TIMING_PRINTS
    real(DbKi)                                     :: tmSer0, tmPar0
@@ -3062,11 +3068,10 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileFFvtkRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
-         call WrVTK_SP_vectors3D(Un, "Velocity", &
-                                 [p%LowRes%nXYZ(1), p%LowRes%nXYZ(2), 1_IntKi], &
-                                 [p%LowRes%oXYZ(1), p%LowRes%oXYZ(2), p%OutDisWindZ(k)], &
-                                 p%LowRes%dXYZ, m%outVizXYPlane, ErrStat2, ErrMsg2)
+         call WrDisVTK_SP(FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", &
+                          [p%LowRes%nXYZ(1), p%LowRes%nXYZ(2), 1_IntKi], &
+                          [p%LowRes%oXYZ(1), p%LowRes%oXYZ(2), p%OutDisWindZ(k)], &
+                          p%LowRes%dXYZ, m%outVizXYPlane, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -3079,11 +3084,10 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileFFvtkRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
-         call WrVTK_SP_vectors3D(Un, "Velocity", &
-                                 [1, p%LowRes%nXYZ(2), p%LowRes%nXYZ(3)], &
-                                 [p%OutDisWindX(k),p%LowRes%oXYZ(2),p%LowRes%oXYZ(3)], &
-                                 p%LowRes%dXYZ, m%outVizYZPlane, ErrStat2, ErrMsg2)
+         call WrDisVTK_SP(FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", &
+                          [1, p%LowRes%nXYZ(2), p%LowRes%nXYZ(3)], &
+                          [p%OutDisWindX(k),p%LowRes%oXYZ(2),p%LowRes%oXYZ(3)], &
+                          p%LowRes%dXYZ, m%outVizYZPlane, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -3096,11 +3100,10 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileFFvtkRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header(FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2);   if (Failed()) return;
-         call WrVTK_SP_vectors3D(Un, "Velocity", &
-                                 [p%LowRes%nXYZ(1), 1, p%LowRes%nXYZ(3)], &
-                                 [p%LowRes%oXYZ(1), p%OutDisWindY(k), p%LowRes%oXYZ(3)], &
-                                 p%LowRes%dXYZ, m%outVizXZPlane, ErrStat2, ErrMsg2)
+         call WrDisVTK_SP(FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", &
+                          [p%LowRes%nXYZ(1), 1, p%LowRes%nXYZ(3)], &
+                          [p%LowRes%oXYZ(1), p%OutDisWindY(k), p%LowRes%oXYZ(3)], &
+                          p%LowRes%dXYZ, m%outVizXZPlane, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -3126,14 +3129,28 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
    ! Feature 2: axis-aligned planar sampling (extent-controlled, own sampling rate)
    if ( p%NumPlaneSlices > 0 .and. mod(n, p%WrPlaneSkp) == 0 ) then
+#ifdef FF_TIMING_PRINTS
+      call cpu_time(tmSer0)
+      tmPar0 = AWAE_WallTime()
+#endif
       call EmitPlaneSlices( t, n, p, m, ErrStat2, ErrMsg2 )
       if (Failed()) return
+#ifdef FF_TIMING_PRINTS
+      call AWAE_AddStageTiming('WritePlaneSlices', tmSer0, tmPar0)
+#endif
    end if
 
    ! Feature 3: terrain-following point-cloud sampling (own sampling rate)
    if ( p%NumTerrainSlices > 0 .and. mod(n, p%WrTerrainSkp) == 0 ) then
+#ifdef FF_TIMING_PRINTS
+      call cpu_time(tmSer0)
+      tmPar0 = AWAE_WallTime()
+#endif
       call EmitTerrainSlices( t, n, p, m, ErrStat2, ErrMsg2 )
       if (Failed()) return
+#ifdef FF_TIMING_PRINTS
+      call AWAE_AddStageTiming('WriteTerrainSlices', tmSer0, tmPar0)
+#endif
    end if
 
 contains

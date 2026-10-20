@@ -1033,10 +1033,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       if ( xd%x_plane(i) > p%x_Buff ) then
          call ShiftWakePlanesDown(i)
          xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )
-         ! Don't decrement i: the plane that shifted into position i needs checking too
-      else
-         i = i - 1
       endif
+      ! Always move on to the next-lower plane. Every plane above i has already been checked and kept, so whatever shifted into
+      ! slot i is known to be inside the buffer; and when the removed plane was the LAST one nothing shifted into slot i at all
+      ! (ShiftWakePlanesDown runs an empty loop), so re-testing its stale x_plane (> x_Buff) removed every remaining plane and
+      ! wiped the whole wake to 2 planes in a single step.
+      i = i - 1
    end do
 
    call Cleanup()

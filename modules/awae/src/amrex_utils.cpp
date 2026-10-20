@@ -8,6 +8,13 @@
 #include <optional>
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
+#include <cstring>
+#include <map>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include <AMReX_PlotFileUtil.H>
 
@@ -103,6 +110,170 @@ bool parse_dir_index(const std::string &path, long long &index)
     return true;
 }
 
+namespace
+{
+
+// ---------------------------------------------------------------------------------------------
+// Directory listing cache for the sub-volume search.
+//
+// One FAST.Farm initialization calls amrex_find_subvols_c once per sub-volume (one low-res plus
+// one high-res per turbine), and every call used to list the same parent directory from scratch.
+// On a production farm that directory holds one entry per sub-volume per time step -- millions
+// of entries -- and on Lustre each listing pass costs minutes even before any Header is opened,
+// so tens of passes dominated initialization. The listing is therefore taken ONCE per
+// (parent, prefix) and bucketed by sub-volume number.
+//
+// Entries are classified by NAME ONLY ("<prefix>_<subvol>_<index>"); no stat() is issued per
+// entry. The previous per-entry is_directory() check has been dropped deliberately: with
+// millions of entries it costs one metadata RPC each, and anything that matches the name
+// pattern but is not a readable plotfile directory still fails later, at Header open, with a
+// clear message naming it.
+//
+// The snapshot is taken at the first call and reused for the rest of the initialization; all
+// calls happen back to back inside AWAE_Init, so one consistent snapshot is preferable to
+// re-listing a directory that a still-running precursor may be appending to.
+struct SubvolDirEntry
+{
+    long long index{0};     // numeric value of the trailing directory index
+    unsigned char width{0}; // digit count of the index as written on disk, for name rebuilding
+};
+
+using SubvolListing = std::map<int, std::vector<SubvolDirEntry>>; // sub-volume -> ascending entries
+
+std::map<std::string, SubvolListing> &listing_cache()
+{
+    static std::map<std::string, SubvolListing> cache;
+    return cache;
+}
+
+// Rebuild the on-disk directory name of one entry: "<base>_<subvol>_<zero-padded index>".
+std::string subvol_entry_name(const std::string &base, int subvol, const SubvolDirEntry &e)
+{
+    auto digits = std::to_string(e.index);
+    if (digits.size() < e.width)
+    {
+        digits.insert(0, e.width - digits.size(), '0');
+    }
+    return base + "_" + std::to_string(subvol) + "_" + digits;
+}
+
+const SubvolListing &get_subvol_listing(const std::string &parent, const std::string &base, bool use_cache)
+{
+    const auto key = parent + "|" + base;
+    auto &cache = listing_cache();
+    if (use_cache)
+    {
+        const auto found = cache.find(key);
+        if (found != cache.end())
+        {
+            return found->second;
+        }
+    }
+
+    SubvolListing listing;
+    const std::string base_us = base + "_";
+    for (auto const &dir_entry : std::filesystem::directory_iterator{parent})
+    {
+        const auto name = dir_entry.path().filename().string();
+        if (name.rfind(base_us, 0) != 0)
+        {
+            continue;
+        }
+
+        // The remainder must be exactly "<subvol digits>_<index digits>"
+        const auto rest = name.substr(base_us.size());
+        const auto sep = rest.find('_');
+        if (sep == std::string::npos || sep == 0 || sep + 1 >= rest.size())
+        {
+            continue;
+        }
+        const auto sv_str = rest.substr(0, sep);
+        const auto ix_str = rest.substr(sep + 1);
+        if (sv_str.find_first_not_of("0123456789") != std::string::npos ||
+            ix_str.find_first_not_of("0123456789") != std::string::npos ||
+            ix_str.size() > 255)
+        {
+            continue;
+        }
+        // A zero-padded sub-volume component ("<base>_01_...") can never be the one requested --
+        // the search always builds plain integer components -- so skip it, as the old anchored
+        // prefix match effectively did.
+        if (sv_str.size() > 1 && sv_str[0] == '0')
+        {
+            continue;
+        }
+
+        int sv{0};
+        long long ix{0};
+        try
+        {
+            sv = std::stoi(sv_str);
+            ix = std::stoll(ix_str);
+        }
+        catch (...)
+        {
+            continue;
+        }
+
+        listing[sv].push_back({ix, static_cast<unsigned char>(ix_str.size())});
+    }
+
+    for (auto &bucket : listing)
+    {
+        std::sort(bucket.second.begin(), bucket.second.end(),
+                  [](const SubvolDirEntry &a, const SubvolDirEntry &b) { return a.index < b.index; });
+    }
+
+    if (use_cache)
+    {
+        return cache.emplace(key, std::move(listing)).first->second;
+    }
+
+    // Uncached mode (FF_AMREX_FULL_VERIFY): hold the fresh listing in a single static slot so the
+    // returned reference stays valid until the next call; calls are serial by contract.
+    static SubvolListing uncached;
+    uncached = std::move(listing);
+    return uncached;
+}
+
+// Reference index table from the last successful full (header-time) scan of a high-resolution
+// sub-volume, used to fast-verify the remaining sub-volumes. All high-resolution sub-volumes of
+// one run are written by the same solver at the same steps, so once one of them has been matched
+// to time steps, the others only need to be shown to HAVE a directory for every index in the
+// table; re-reading tens of thousands of Headers per turbine to re-derive the identical table
+// costs hours on a parallel file system for no additional information. The one thing name-only
+// verification cannot see is a sub-volume whose same-named directories carry different times;
+// its start directory is still read authoritatively and must match the reference start time,
+// and every directory is bounds- and tiling-checked when its data is actually read -- which is
+// also where a name that exists but is not a readable plotfile directory would surface, rather
+// than at initialization. Set FF_AMREX_FULL_VERIFY=1 in the environment to disable fast
+// verification (and the listing cache) and scan every sub-volume's headers as before.
+struct RefTable
+{
+    bool valid{false};
+    std::string key; // parent|base|dt-bits|num_steps|first_index
+    double start_time{0.0};
+    std::vector<int> table;
+};
+
+RefTable &ref_table()
+{
+    static RefTable ref;
+    return ref;
+}
+
+std::string make_ref_key(const std::string &parent, const std::string &base, double dt, int num_steps, long long first_index)
+{
+    // dt is folded in through its exact bit pattern: the caller passes the same binary value for
+    // every sub-volume of one run, and formatting it as text could merge distinct values.
+    static_assert(sizeof(unsigned long long) == sizeof(double), "bit copy of dt needs an 8-byte unsigned long long");
+    unsigned long long dt_bits{0};
+    std::memcpy(&dt_bits, &dt, sizeof(dt_bits));
+    return parent + "|" + base + "|" + std::to_string(dt_bits) + "|" + std::to_string(num_steps) + "|" + std::to_string(first_index);
+}
+
+} // namespace
+
 // Grid metadata for one plotfile, as needed by the sub-volume search.
 struct HeaderInfo
 {
@@ -139,25 +310,33 @@ struct HeaderInfo
 // instead of guessing. Touches no AMReX global state.
 bool parse_header_text(const std::string &dir, HeaderInfo &info, long long expect_index = -1)
 {
-    std::ifstream f(dir + "/Header");
-    if (!f)
-    {
-        return false;
-    }
-
-    std::vector<std::string> line;
-    std::string s;
-    while (std::getline(f, s))
-    {
-        line.push_back(s);
-        if (line.size() > 64)   // everything of interest is near the top
-        {
-            break;
-        }
-    }
-
+    // The entire body must be nothrow: this parser runs inside an OpenMP loop, where an escaping
+    // exception (e.g. bad_alloc while buffering a line of a corrupt, name-matched entry) would be
+    // std::terminate rather than a recoverable failure. Any throw becomes a plain 'false', which
+    // sends the caller to the authoritative reader for a proper report.
     try
     {
+        std::ifstream f(dir + "/Header");
+        if (!f)
+        {
+            return false;
+        }
+
+        std::vector<std::string> line;
+        std::string s;
+        while (std::getline(f, s))
+        {
+            if (s.size() > 4096)    // no line of a real plotfile Header is remotely this long
+            {
+                return false;
+            }
+            line.push_back(s);
+            if (line.size() > 64)   // everything of interest is near the top
+            {
+                break;
+            }
+        }
+
         if (line.size() < 2 || line[0].rfind("HyperCLaw", 0) != 0)
         {
             return false;
@@ -597,6 +776,78 @@ extern "C"
         }
 
         //----------------------------------------------------------------------
+        // Cached listing of the parent directory, bucketed by sub-volume
+        //----------------------------------------------------------------------
+
+        // If path prefix has parent directory use it, otherwise assume current directory. The
+        // directory is scanned by name, so keep the final component of the prefix separately: an
+        // iterator over "." yields "./name", which does not begin with a prefix that has no
+        // directory of its own.
+        const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : std::filesystem::path{"."};
+        const auto parent_str = parent_path.lexically_normal().string();
+
+        // Base name of the prefix without the "_<subvol>_" tail, e.g. "ffboxes". Entries of every
+        // sub-volume share it, so one listing of the parent directory serves all of them.
+        const auto base_name = std::filesystem::path{std::string{dir_prefix}}.filename().string();
+
+        // FF_AMREX_FULL_VERIFY=1 restores the previous behavior end to end: the directory is
+        // re-listed on every call and every sub-volume's headers are fully scanned.
+        const char *full_verify_env = std::getenv("FF_AMREX_FULL_VERIFY");
+        const bool full_verify_forced = (full_verify_env != nullptr && full_verify_env[0] != '\0' && full_verify_env[0] != '0');
+
+        const auto &listing = get_subvol_listing(parent_str, base_name, !full_verify_forced);
+        static const std::vector<SubvolDirEntry> no_entries;
+        const auto bucket_it = listing.find(subvol);
+        const auto &bucket = (bucket_it != listing.end()) ? bucket_it->second : no_entries;
+
+        //----------------------------------------------------------------------
+        // Fast verification against the reference table
+        //----------------------------------------------------------------------
+
+        // The first high-resolution sub-volume fully scanned establishes the reference table for
+        // its (directory, prefix, dt, step count, start index); every later sub-volume with the
+        // same key is verified against it by directory NAME via the cached listing -- no per-step
+        // header reads. The start directory of this sub-volume was read with the authoritative
+        // reader above, so its grid is known good, and its time must equal the reference start
+        // time; beyond that, every referenced index must be present for this sub-volume. See the
+        // RefTable comment for what name-only verification deliberately does not check.
+        auto &ref = ref_table();
+        const auto ref_key = make_ref_key(parent_str, base_name, dt, num_steps, first_index_num);
+        if (subvol >= 2 && !full_verify_forced && ref.valid && ref.key == ref_key)
+        {
+            if (std::abs(start_time - ref.start_time) > step_tol(start_time))
+            {
+                set_err(ErrID_Fatal, first_path + ": header time " + std::to_string(start_time) +
+                                         " s does not match the " + std::to_string(ref.start_time) +
+                                         " s of the reference sub-volume's start directory. All sub-volumes must be "
+                                         "written at the same simulation times.",
+                        routine, err_stat, err_msg, err_msg_len);
+                return;
+            }
+
+            for (int s = 1; s < num_steps; ++s)
+            {
+                const long long want = ref.table[s];
+                const auto pos = std::lower_bound(bucket.begin(), bucket.end(), want,
+                                                  [](const SubvolDirEntry &e, long long v) { return e.index < v; });
+                if (pos == bucket.end() || pos->index != want)
+                {
+                    set_err(ErrID_Fatal, path_prefix.string() + ": no directory with index " + std::to_string(want) +
+                                             " exists for time step " + std::to_string(s) + " of " + std::to_string(num_steps) +
+                                             ", but the reference sub-volume has one. All sub-volumes must be written at "
+                                             "the same steps. (This sub-volume was verified by directory name against the "
+                                             "reference table; set FF_AMREX_FULL_VERIFY=1 to re-derive its table from the "
+                                             "header times instead.)",
+                            routine, err_stat, err_msg, err_msg_len);
+                    return;
+                }
+            }
+
+            std::copy(ref.table.begin(), ref.table.end(), dir_indices);
+            return;
+        }
+
+        //----------------------------------------------------------------------
         // Assign each directory to the time step its header time corresponds to
         //----------------------------------------------------------------------
 
@@ -624,87 +875,99 @@ extern "C"
         path_of_step[0] = first_path;
         time_of_step[0] = start_time;
 
-        // If path prefix has parent directory use it, otherwise assume current directory. The
-        // directory is scanned by name, so keep the final component of the prefix separately: an
-        // iterator over "." yields "./name", which does not begin with a prefix that has no
-        // directory of its own.
-        const auto parent_path = path_prefix.has_parent_path() ? path_prefix.parent_path() : std::filesystem::path{"."};
-        const auto prefix_name = path_prefix.filename().string();
-
-        // Collect the candidate directories in one pass, then walk them in ascending index order.
-        // Ordering matters for cost, not correctness: within one run simulation time rises with the
-        // step counter, so once every step is claimed and a directory lands past the window, the
-        // remaining directories cannot add anything and the walk stops. Without that the search
-        // reads a header for every directory the LES ever wrote, however short the FAST.Farm run.
-        // The stop is conditional on the table being complete: leftovers from an earlier run with
-        // a different time step can put a later time on a lower index, and stopping on one of
-        // those would skip valid data that sorts after it.
+        // Candidate directories of this sub-volume, in ascending index order, taken from the
+        // cached listing. Ordering matters for cost, not correctness: within one run simulation
+        // time rises with the step counter, so once every step is claimed and a directory lands
+        // past the window, the remaining directories cannot add anything and the walk stops.
+        // Without that the search reads a header for every directory the LES ever wrote, however
+        // short the FAST.Farm run. The stop is conditional on the table being complete: leftovers
+        // from an earlier run with a different time step can put a later time on a lower index,
+        // and stopping on one of those would skip valid data that sorts after it.
+        //
+        // Indices at or below the start are skipped; this comparison must be numeric: a
+        // lexicographic compare drops every index wider than the starting index (e.g. "100030"
+        // sorts before "27150"), silently discarding data that is present.
         std::vector<std::pair<long long, std::string>> candidates;
-        for (auto const &dir_entry : std::filesystem::directory_iterator{parent_path})
+        candidates.reserve(bucket.size());
+        for (auto const &entry : bucket)
         {
-            // If entry is not a directory, continue
-            if (!dir_entry.is_directory())
+            if (entry.index <= first_index_num)
             {
                 continue;
             }
-
-            // Convert entry to path string
-            const auto dir_path{dir_entry.path().string()};
-
-            // If the name doesn't start with the prefix, continue. Anchored at position 0 so that
-            // an unrelated directory merely containing the prefix is not picked up. Compared on the
-            // final component only: when the prefix carries no directory of its own the iterator
-            // still yields entries as "./name", which no anchored compare against a bare prefix
-            // would ever match.
-            if (dir_entry.path().filename().string().rfind(prefix_name, 0) != 0)
-            {
-                continue;
-            }
-
-            // Get the index, skipping entries whose suffix is not a plain integer
-            long long index{0};
-            if (!parse_dir_index(dir_path, index))
-            {
-                continue;
-            }
-
-            // If index is not greater than the starting index, continue. This comparison must be
-            // numeric: a lexicographic compare drops every index wider than the starting index
-            // (e.g. "100030" sorts before "27150"), silently discarding data that is present.
-            if (index <= first_index_num)
-            {
-                continue;
-            }
-
-            candidates.emplace_back(index, dir_path);
+            candidates.emplace_back(entry.index, (parent_path / subvol_entry_name(base_name, subvol, entry)).string());
         }
-
-        std::sort(candidates.begin(), candidates.end());
 
         // Step 0 is already claimed by the start directory
         int n_claimed = 1;
 
-        std::size_t visited = 0;
-        for (auto const &cand : candidates)
+        // Candidates are processed in blocks: the Header text of a block is parsed in parallel
+        // (the parse is a pure function of the file, touching no shared state), then the block is
+        // folded into the step table serially and in ascending index order, so every check and
+        // error message behaves exactly as in a serial walk. The walk still stops early once the
+        // table is complete and a directory lands past the window; up to one block of extra
+        // parses past that point is the price of the parallelism and is harmless. When the text
+        // parser is not trusted for this dataset (use_fast_header false), the parallel phase is
+        // skipped and every header is read serially by the authoritative reader in the fold, as
+        // before -- PlotFileData is not thread-safe.
+        struct CandHeader
         {
-            ++visited;
-            const auto index = cand.first;
-            const auto &dir_path = cand.second;
+            HeaderInfo hdr;
+            bool fast_ok{false};
+        };
 
-            // Read the header
+        bool done = false;
+        std::size_t visited = 0;
+        const std::size_t block_size = 4096;
+        std::vector<CandHeader> parsed;
+        for (std::size_t block_lo = 0; block_lo < candidates.size() && !done; block_lo += block_size)
+        {
+            const std::size_t block_hi = std::min(block_lo + block_size, candidates.size());
+            parsed.assign(block_hi - block_lo, CandHeader{});
+
+            if (use_fast_header)
+            {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic, 16)
+#endif
+                for (long long pi = 0; pi < static_cast<long long>(block_hi - block_lo); ++pi)
+                {
+                    auto &pre = parsed[pi];
+                    const auto &cand = candidates[block_lo + pi];
+                    pre.fast_ok = parse_header_text(cand.second, pre.hdr, cand.first);
+                }
+            }
+
+            for (std::size_t ci = block_lo; ci < block_hi && !done; ++ci)
+            {
+            ++visited;
+            const auto index = candidates[ci].first;
+            const auto &dir_path = candidates[ci].second;
+            const auto &pre = parsed[ci - block_lo];
+
+            // Header of this candidate: from the parallel text parse when it succeeded, otherwise
+            // from the authoritative reader (which also reports unreadable directories properly)
             double time{0.};
             std::array<int, 3> dims;
             std::array<double, 3> dx, origin;
-            HeaderInfo hdr;
-            if (use_fast_header && parse_header_text(dir_path, hdr, index))
+            if (pre.fast_ok)
             {
-                time = hdr.time;
-                dims = hdr.dims;
-                dx = hdr.dx;
-                origin = hdr.origin;
+                time = pre.hdr.time;
+                dims = pre.hdr.dims;
+                dx = pre.hdr.dx;
+                origin = pre.hdr.origin;
             }
             else
             {
+                // The listing admits entries by name alone; anything that is not actually a
+                // directory is skipped here, exactly as the old per-entry is_directory() filter
+                // did -- the authoritative reader would otherwise abort inside AMReX on it. The
+                // stat costs nothing in the common case, where the text parse has succeeded.
+                std::error_code is_dir_ec;
+                if (!std::filesystem::is_directory(dir_path, is_dir_ec))
+                {
+                    continue;
+                }
                 amrex_read_header_c(dir_path.c_str(), time, dims.data(),
                                     dx.data(), origin.data(), err_stat, err_msg, err_msg_len);
                 if (err_stat != ErrID_None)
@@ -739,7 +1002,8 @@ extern "C"
                     // Table complete and this directory is past the window: nothing after it in
                     // ascending index order can be needed. Count the rest as skipped and stop.
                     n_beyond_window += static_cast<int>(candidates.size() - visited);
-                    break;
+                    done = true;
+                    continue;
                 }
                 // Something is still missing, so do not trust index order to imply time order;
                 // keep walking and let a genuinely missing step be reported after the full scan.
@@ -802,6 +1066,7 @@ extern "C"
             path_of_step[step] = dir_path;
             time_of_step[step] = time;
             ++n_claimed;
+            }
         }
 
         //----------------------------------------------------------------------
@@ -854,6 +1119,17 @@ extern "C"
 
             set_err(ErrID_Fatal, msg, routine, err_stat, err_msg, err_msg_len);
             return;
+        }
+
+        // A completed high-resolution table becomes the reference for fast verification of the
+        // remaining sub-volumes (see above). Sub-volume 0 is the low-resolution grid with its own
+        // step count and time step, so it never shares a key with the high-resolution ones.
+        if (subvol >= 1)
+        {
+            ref.valid = true;
+            ref.key = ref_key;
+            ref.start_time = start_time;
+            ref.table.assign(dir_indices, dir_indices + num_steps);
         }
     }
 }

@@ -32,6 +32,8 @@ contains
                   new_unittest("AMReX_test_header_text_agrees_on_tiled", AMReX_test_header_text_agrees_on_tiled), &
                   new_unittest("AMReX_test_header_text_disagrees_on_subset", AMReX_test_header_text_disagrees_on_subset), &
                   new_unittest("AMReX_test_find_subvols_prefix_form", AMReX_test_find_subvols_prefix_form), &
+                  new_unittest("AMReX_test_find_subvols_fast_verify", AMReX_test_find_subvols_fast_verify), &
+                  new_unittest("AMReX_test_find_subvols_fast_verify_missing", AMReX_test_find_subvols_fast_verify_missing), &
                   new_unittest("AMReX_test_read_data_wrong_dims", AMReX_test_read_data_wrong_dims) &
                   ]
    end subroutine
@@ -685,6 +687,72 @@ contains
       call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
       call check(error, index(ErrMsg, "do not match") > 0, .true., &
                  more="message should report the dimension mismatch: "//trim(ErrMsg)); if (allocated(error)) return
+
+   end subroutine
+
+   ! Fast verification: once one high-resolution sub-volume has been fully scanned, later
+   ! sub-volumes with the same (directory, dt, step count, start index) are verified by directory
+   ! NAME against its table, without reading their per-step headers. Sub-volume 2's middle
+   ! directory deliberately carries a bogus header time (9999 s): a full header scan would reject
+   ! it, so this test passing proves the fast name-only path handled the sub-volume -- which is
+   ! the documented trade-off of fast verification. Its start directory IS still read: a wrong
+   ! start time is caught. Set FF_AMREX_FULL_VERIFY=1 at run time to force full scans instead.
+   ! NOTE: the suite must run WITHOUT FF_AMREX_FULL_VERIFY in the environment -- that variable
+   ! forces full scans, and this test (and the next) then fails by design.
+   subroutine AMReX_test_find_subvols_fast_verify(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolmultiple"
+      real(DbKi), parameter      :: DT = 0.8_DbKi
+      integer(IntKi), parameter  :: NumSteps = 3
+      character(*), parameter    :: StartIndex = "00016"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi), parameter  :: Expected(0:NumSteps-1) = [16, 24, 32]
+      integer(IntKi)             :: ErrStat, i
+      character(ErrMsgLen)       :: ErrMsg
+
+      ! Establish the reference table with a full scan of sub-volume 1
+      call amrex_find_subvols(DirPath, 1_IntKi, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="reference scan: "//trim(ErrMsg)); if (allocated(error)) return
+
+      ! Sub-volume 2 is fast-verified against it and returns the identical table
+      call amrex_find_subvols(DirPath, 2_IntKi, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="fast verify: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call check(error, lbound(DirIndices,1), 0, more="lbound"); if (allocated(error)) return
+      do i = 0, NumSteps-1
+         call check(error, DirIndices(i), Expected(i), more="step "//trim(Num2LStr(i))); if (allocated(error)) return
+      end do
+
+   end subroutine
+
+   ! Fast verification must still fail loudly when a later sub-volume has no directory for an
+   ! index the reference table requires (sub-volume 3 is missing index 24)
+   subroutine AMReX_test_find_subvols_fast_verify_missing(error)
+      type(error_type), allocatable, intent(out) :: error
+      character(*), parameter    :: DirPath = "data/subvolmultiple"
+      real(DbKi), parameter      :: DT = 0.8_DbKi
+      integer(IntKi), parameter  :: NumSteps = 3
+      character(*), parameter    :: StartIndex = "00016"
+
+      integer(IntKi), allocatable :: DirIndices(:)
+      integer(IntKi)             :: ErrStat
+      character(ErrMsgLen)       :: ErrMsg
+
+      ! Establish the reference table with a full scan of sub-volume 1
+      call amrex_find_subvols(DirPath, 1_IntKi, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_None, more="reference scan: "//trim(ErrMsg)); if (allocated(error)) return
+
+      call amrex_find_subvols(DirPath, 3_IntKi, DT, NumSteps, StartIndex, &
+                              DirIndices, ErrStat, ErrMsg)
+      call check(error, ErrStat, ErrID_Fatal, more="expected a fatal error"); if (allocated(error)) return
+      call check(error, index(ErrMsg, "index 24") > 0, .true., &
+                 more="message should name the missing index: "//trim(ErrMsg)); if (allocated(error)) return
+      call check(error, index(ErrMsg, "time step 1") > 0, .true., &
+                 more="message should name the missing step: "//trim(ErrMsg)); if (allocated(error)) return
 
    end subroutine
 
