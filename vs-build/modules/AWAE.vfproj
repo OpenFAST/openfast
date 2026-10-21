@@ -95,6 +95,7 @@
 			<File RelativePath="..\..\modules\awae\src\AWAE_IO.f90"/>
 			<File RelativePath="..\..\modules\awae\src\AWAE_timings.f90"/>
 			<File RelativePath="..\..\modules\awae\src\AWAE_Types.f90"/>
+			<File RelativePath="..\..\modules\awae\src\AWAE_vtk.f90"/>
 			<File RelativePath="..\..\modules\awae\src\amrex_utils.F90"/>
 		</Filter>
 	</Files>
