@@ -2603,14 +2603,14 @@ SUBROUTINE ElemM(ep, Me)
    else if (ep%eType==idMemberCable) then
       Eps0 = ep%T0/(ep%YoungE*ep%Area)
       L0   = ep%Length/(1+Eps0)  ! "rest length" for which pretension would be 0
-      CALL ElemM_Cable(ep%Area, L0, ep%rho, ep%DirCos, Me)
+      CALL ElemM_Rod(ep%Area, L0, ep%rho, ep%DirCos, Me)
 
    else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
          Me=0.0_FEKi
       else
-         CALL ElemM_Cable(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
-         !CALL ElemM_(A, L, rho, DirCos, Me)
+         ! Straight 2-node bar/rod consistent mass (thin-rod rigid-body inertia); shared with cables
+         CALL ElemM_Rod(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
       endif
    
    else if (ep%eType==idMemberSpring) then

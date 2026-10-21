@@ -1242,8 +1242,13 @@ SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
 
 END SUBROUTINE ElemM_Beam
 !------------------------------------------------------------------------------------------------------
-!> Element stiffness matrix for pretension cable
-SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
+!> Consistent mass for a straight 2-node bar/rod, used for both cables and rigid links.
+!! Displacement is linearly interpolated in all three directions (a single, non-subdivided,
+!! straight element has no bending shape), giving the linear consistent mass t/3 on the
+!! translational diagonals and t/6 on the node-to-node coupling. This reproduces a uniform
+!! thin rod's rigid-body inertia exactly (m*L^2/3 about an end, m*L^2/12 about the center).
+!! Rotational DOF carry no inertia: a thin rod has no polar or section rotary inertia.
+SUBROUTINE ElemM_Rod(A, L, rho, DirCos, M)
    REAL(ReKi), INTENT( IN) :: A,rho
    REAL(FEKi), INTENT( IN) :: L
    REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
@@ -1256,20 +1261,20 @@ SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
 
    M(1:12,1:12) = 0.0_FEKi
 
-   M( 1,  1) = 13._FEKi/35._FEKi * t
-   M( 2,  2) = 13._FEKi/35._FEKi * t
+   M( 1,  1) = t/3.0_FEKi
+   M( 2,  2) = t/3.0_FEKi
    M( 3,  3) = t/3.0_FEKi
 
-   M( 7,  7) = 13._FEKi/35._FEKi * t
-   M( 8,  8) = 13._FEKi/35._FEKi * t
+   M( 7,  7) = t/3.0_FEKi
+   M( 8,  8) = t/3.0_FEKi
    M( 9,  9) = t/3.0_FEKi
 
-   M( 1,  7) =  9._FEKi/70._FEKi * t
-   M( 2,  8) =  9._FEKi/70._FEKi * t
+   M( 1,  7) = t/6.0_FEKi
+   M( 2,  8) = t/6.0_FEKi
    M( 3,  9) = t/6.0_FEKi
 
-   M( 7,  1) =  9._FEKi/70._FEKi * t 
-   M( 8,  2) =  9._FEKi/70._FEKi * t
+   M( 7,  1) = t/6.0_FEKi
+   M( 8,  2) = t/6.0_FEKi
    M( 9,  3) = t/6.0_FEKi
    
    DC = 0.0_FEKi
@@ -1279,7 +1284,7 @@ SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
    DC(10:12, 10:12) = DirCos
    
    M = MATMUL( MATMUL(DC, M), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
-END SUBROUTINE ElemM_Cable
+END SUBROUTINE ElemM_Rod
 !------------------------------------------------------------------------------------------------------
 !> calculates the lumped forces and moments due to gravity on a given element:
 !! the element has two nodes, with the loads for both elements stored in array F. Indexing of F is:
