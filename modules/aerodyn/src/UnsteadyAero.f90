@@ -63,7 +63,8 @@ private
    real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
    real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
    real(ReKi), parameter         :: MaxTuOmega = 1.5_ReKi          ! adding a little safety factor for UA models
-
+   real(ReKi), parameter         :: UA_u_Blend_min = UA_u_min      ! m/s; used to provide the minimum value where UA is fully turned off (must be >= UA_u_min)
+   real(ReKi), parameter         :: UA_u_Blend_max = 1.0_ReKi      ! m/s used to provide the max value where UA begins to be turned off
    contains
    
 ! **************************************************
@@ -2426,9 +2427,9 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
 
       x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
       
-          ! let's make sure the states aren't getting out of control when we are supposed to be turning off UA anyway.
-      call UA_BlendSteadyStates( i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call UA_Blend_weight( u_interp, AFInfo, m%weight(i,j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
 
          ! these are angles that should not get too large, so I am fixing them here (should turn off UA if this exceeds reasonable numbers)
       if (abs(x%element(i,j)%x(1)) > 3*TwoPi_R8 .or. abs(x%element(i,j)%x(2)) > 3*TwoPi_R8) then
@@ -2812,6 +2813,10 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       return
    end if
    
+   ! As relative velocity -> 0, slow (and at zero velocity weight, freeze) the x1:x4 memory states
+   ! so they are neigher reset nor driven by ill-conditioned inputs. Weight is 1 for |U| >= UA_u_Blend_max
+   dxdt%x(1:4) = real( UA_BlendWeightU(u%U), R8Ki ) * dxdt%x(1:4)
+   
 END SUBROUTINE UA_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
@@ -2825,6 +2830,9 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    REAL(R8Ki),                          INTENT(  OUT)  :: Tu
    REAL(ReKi), optional,                INTENT(  OUT)  :: alpha_34
    REAL(ReKi), optional,                INTENT(  OUT)  :: alphaE
+   
+   REAL(ReKi)                                          :: alpha_x1   ! alpha_34 on the 2*pi branch nearest x1/A1
+   REAL(ReKi)                                          :: alpha_x2   ! alpha_34 on the 2*pi branch nearest x2/A2
 
    ! Variables derived from inputs
    !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
@@ -2838,10 +2846,16 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
          if (p%UAMod == UA_OYE .or. .not. p%ShedEffect) then
             alphaE  = alpha_34
          else
-            !call AddOrSub2Pi( real(x%x(1) + x%x(2),ReKi), alpha_34 ) ! Ensure that alpha_34 is well behaved during +/-180 deg wrap
-            call MPi2Pi(alpha_34) ! let's not make alphaE too large?
+            call MPi2Pi(alpha_34)
+            alpha_x1 = alpha_34
+            alpha_x2 = alpha_34
+            if (.NOT. EqualRealNos(BL_p%A1,0.0_ReKi)) call AddOrSub2Pi(real(x%x(1)/BL_p%A1,ReKi), alpha_x1)
+            if (.NOT. EqualRealNos(BL_p%A2,0.0_ReKi)) call AddOrSub2Pi(real(x%x(2)/BL_p%A2,ReKi), alpha_x2)
             
-            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+            ! Eq. 12 written as alpha_34 minus the lag deficits of x1 and x2, each evaluted on the 2*pi branch
+            ! nearest that state (same convention as dxdt%x(1:2)), so alphaE does not depend on the branch of x1, x2
+            alphaE  = alpha_34 - (BL_p%A1*alpha_x1 - real(x%x(1), ReKi)) &
+                               - (BL_p%A2*alpha_x2 - real(x%x(2), ReKi))    ! Eq. 12
          endif
          
       end if
@@ -4171,10 +4185,8 @@ subroutine UA_BlendSteady(u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat, Er
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    type(AFI_OutputType)                         :: AFI_steady
-   REAL(ReKi)                                   :: W1,W2         ! Weights for turning off UA temporarily
    REAL(ReKi)                                   :: AFI_steady_Cn ! Cn from steady coefficients
    REAL(ReKi)                                   :: AFI_steady_Cc ! Cc from steady coefficients
-   TYPE(AFI_UA_BL_Type)                         :: UA_BL         ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2
    CHARACTER(*), PARAMETER                      :: RoutineName = 'UA_BlendSteady'
@@ -4182,17 +4194,8 @@ subroutine UA_BlendSteady(u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat, Er
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   weight = 1.0_ReKi ! default in case of error
-   
-      ! Determine what the cutout angle of attack is
-   call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, UA_BL, ErrMsg, ErrStat )
-   if (ErrStat >= AbortErrLev) return ! would only have error if there is a memory problem
-      
-      ! put alpha in [-pi,pi] before checking its value
-   
-   W1 = 1.0_ReKi - BlendCosine( abs(u%alpha), UA_BL%UACutout_blend, UA_BL%UACutout ) ! shut off when AoA reaches UACutout, but blend it off 5 degrees before (5 degrees is set in AFI to avoid that math each time)
-   W2 =            BlendCosine( abs(u%U),                 UA_u_min, 1.0_ReKi       ) ! turn off UA when inflow velocity is 0 m/s, but start blend it off 1 m/s before (make sure it is greater than u_min)
-   weight = W1*W2
+   call UA_Blend_Weight( u, AFInfo, weight, ErrStat2, ErrMsg2)
+     call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    if (weight < 1.0_ReKi) then
    
@@ -4220,26 +4223,17 @@ subroutine UA_BlendSteady(u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat, Er
 
 end subroutine UA_BlendSteady
 !==============================================================================   
-!>This subroutine blends the steady outputs with the unsteady-states so that
-!! UA can turn back on if the angle of attack goes back into a reasonable range.
-subroutine UA_BlendSteadyStates(i, j, u, p, AFInfo, x, FirstWarn_UA_off, weight, ErrStat, ErrMsg)
-   integer(IntKi),               intent(in   )  :: i           ! node index within a blade
-   integer(IntKi),               intent(in   )  :: j           ! blade index 
+subroutine UA_Blend_Weight( u, AFInfo, weight, ErrStat, ErrMsg )
    type(UA_InputType),           intent(in   )  :: u           ! "Fixed" Inputs at Time
-   type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
-   TYPE(UA_ElementContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
-   LOGICAL,                      intent(inout)  :: FirstWarn_UA_off      ! flag to determine if warning message should be displayed
-   REAL(ReKi),                   intent(inout)  :: weight      ! scaling weight for UA vs steady outputs
+   real(ReKi),                   intent(  out)  :: weight      ! scaling weight for UA vs steady outputs
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-   type(UA_ElementContinuousStateType)          :: x_steady
-   REAL(ReKi)                                   :: W1,W2         ! Weights for turning off UA temporarily
-   TYPE(AFI_UA_BL_Type)                         :: UA_BL         ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
-   INTEGER(IntKi)                               :: ErrStat2
-   CHARACTER(ErrMsgLen)                         :: ErrMsg2
-   CHARACTER(*), PARAMETER                      :: RoutineName = 'UA_BlendSteadyStates'
+   
+   real(ReKi)                                   :: W1,W2         ! Weights for turning off UA temporarily
+   type(AFI_UA_BL_Type)                         :: UA_BL         ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
+   
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'UA_Blend_Weight'
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -4248,30 +4242,23 @@ subroutine UA_BlendSteadyStates(i, j, u, p, AFInfo, x, FirstWarn_UA_off, weight,
    
       ! Determine what the cutout angle of attack is
    call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, UA_BL, ErrMsg, ErrStat )
-   if (ErrStat >= AbortErrLev) return ! would only have error if there is a memory problem
+      if (ErrStat >= AbortErrLev) return ! would only have error if there is a memory problem
       
-      ! put alpha in [-pi,pi] before checking its value
-
+      ! note: u%alpha is already in [-pi,pi] and |u%U| >= UA_u_min because inputs were processed by UA_fixInputs
+   
    W1 = 1.0_ReKi - BlendCosine( abs(u%alpha), UA_BL%UACutout_blend, UA_BL%UACutout ) ! shut off when AoA reaches UACutout, but blend it off 5 degrees before (5 degrees is set in AFI to avoid that math each time)
-   W2 =            BlendCosine( abs(u%U),                 UA_u_min, 1.0_ReKi       ) ! turn off UA when inflow velocity is 0 m/s, but start blend it off 1 m/s before (make sure it is greater than u_min)
+   W2 = UA_BlendWeightU( u%U ) ! turn off UA when inflow velocity is 0 m/s, but start blend it off 1 m/s before (make sure it is greater than u_min)
    weight = W1*W2
 
-   if (weight < 1.0_ReKi) then
-   
-      if (FirstWarn_UA_off) then
-         CALL SetErrStat(ErrID_Warn,"Temporarily turning off UA due to high angle of attack or low relative velocity. This warning will not be repeated though the condition may persist.", ErrStat, ErrMsg, RoutineName)
-         FirstWarn_UA_off = .false.
-      end if
+end subroutine UA_Blend_Weight
+!==============================================================================   
+pure function UA_BlendWeightU( U) result(W)
+   real(ReKi), intent(in) :: U  !< relative velocity magnitude at the AC, processed by UA_fixInputs (m/s)
+   real(ReKi)             :: W  !< velocity weight (-)
 
-      ! calculate the states when at steady state
-      call HGM_Steady( i, j, u, p, x_steady, AFInfo, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         
-      x%x = weight * x%x + (1.0_ReKi - weight) * x_steady%x
-   end if
+   W = BlendCosine( abs(U), UA_u_Blend_min, UA_u_Blend_max )
 
-
-end subroutine UA_BlendSteadyStates
+end function UA_BlendWeightU
 !==============================================================================   
 !> This subroutine checks that the Mach number is valid. If M > 0.3, the theory 
 !! is invalid. If M > 1, numerical issues result in the code.
