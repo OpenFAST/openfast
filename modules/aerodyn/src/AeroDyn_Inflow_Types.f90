@@ -212,17 +212,19 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeRootMotion  =  15 ! ADI%AD%rotors(DL%i1)%BladeRootMotion(DL%i2)
    integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeMotion      =  16 ! ADI%AD%rotors(DL%i1)%BladeMotion(DL%i2)
    integer(IntKi), public, parameter :: ADI_u_AD_rotors_TFinMotion       =  17 ! ADI%AD%rotors(DL%i1)%TFinMotion
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_UserProp         =  18 ! ADI%AD%rotors(DL%i1)%UserProp
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_NacelleLoad      =  19 ! ADI%AD%rotors(DL%i1)%NacelleLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_HubLoad          =  20 ! ADI%AD%rotors(DL%i1)%HubLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TowerLoad        =  21 ! ADI%AD%rotors(DL%i1)%TowerLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_BladeLoad        =  22 ! ADI%AD%rotors(DL%i1)%BladeLoad(DL%i2)
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TFinLoad         =  23 ! ADI%AD%rotors(DL%i1)%TFinLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_WriteOutput      =  24 ! ADI%AD%rotors(DL%i1)%WriteOutput
-   integer(IntKi), public, parameter :: ADI_y_HHVel                      =  25 ! ADI%HHVel
-   integer(IntKi), public, parameter :: ADI_y_PLExp                      =  26 ! ADI%PLExp
-   integer(IntKi), public, parameter :: ADI_y_IW_WriteOutput             =  27 ! ADI%IW_WriteOutput
-   integer(IntKi), public, parameter :: ADI_y_WriteOutput                =  28 ! ADI%WriteOutput
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_GSMotion         =  18 ! ADI%AD%rotors(DL%i1)%GSMotion
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_UserProp         =  19 ! ADI%AD%rotors(DL%i1)%UserProp
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_NacelleLoad      =  20 ! ADI%AD%rotors(DL%i1)%NacelleLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_HubLoad          =  21 ! ADI%AD%rotors(DL%i1)%HubLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TowerLoad        =  22 ! ADI%AD%rotors(DL%i1)%TowerLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_BladeLoad        =  23 ! ADI%AD%rotors(DL%i1)%BladeLoad(DL%i2)
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TFinLoad         =  24 ! ADI%AD%rotors(DL%i1)%TFinLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_GSLoad           =  25 ! ADI%AD%rotors(DL%i1)%GSLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_WriteOutput      =  26 ! ADI%AD%rotors(DL%i1)%WriteOutput
+   integer(IntKi), public, parameter :: ADI_y_HHVel                      =  27 ! ADI%HHVel
+   integer(IntKi), public, parameter :: ADI_y_PLExp                      =  28 ! ADI%PLExp
+   integer(IntKi), public, parameter :: ADI_y_IW_WriteOutput             =  29 ! ADI%IW_WriteOutput
+   integer(IntKi), public, parameter :: ADI_y_WriteOutput                =  30 ! ADI%WriteOutput
 
 contains
 
@@ -1980,6 +1982,8 @@ function ADI_InputMeshPointer(u, DL) result(Mesh)
        Mesh => u%AD%rotors(DL%i1)%BladeMotion(DL%i2)
    case (ADI_u_AD_rotors_TFinMotion)
        Mesh => u%AD%rotors(DL%i1)%TFinMotion
+   case (ADI_u_AD_rotors_GSMotion)
+       Mesh => u%AD%rotors(DL%i1)%GSMotion
    end select
 end function
 
@@ -1999,6 +2003,8 @@ function ADI_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%AD%rotors(DL%i1)%BladeLoad(DL%i2)
    case (ADI_y_AD_rotors_TFinLoad)
        Mesh => y%AD%rotors(DL%i1)%TFinLoad
+   case (ADI_y_AD_rotors_GSLoad)
+       Mesh => y%AD%rotors(DL%i1)%GSLoad
    end select
 end function
 
@@ -2191,6 +2197,8 @@ subroutine ADI_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%AD%rotors(DL%i1)%BladeMotion(DL%i2), ValAry)   ! Mesh
       case (ADI_u_AD_rotors_TFinMotion)
          call MV_PackMesh(V, u%AD%rotors(DL%i1)%TFinMotion, ValAry)           ! Mesh
+      case (ADI_u_AD_rotors_GSMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%GSMotion, ValAry)             ! Mesh
       case (ADI_u_AD_rotors_UserProp)
          VarVals = u%AD%rotors(DL%i1)%UserProp(V%iLB:V%iUB,V%j)               ! Rank 2 Array
       case default
@@ -2227,6 +2235,8 @@ subroutine ADI_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%BladeMotion(DL%i2)) ! Mesh
       case (ADI_u_AD_rotors_TFinMotion)
          call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%TFinMotion)         ! Mesh
+      case (ADI_u_AD_rotors_GSMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%GSMotion)           ! Mesh
       case (ADI_u_AD_rotors_UserProp)
          u%AD%rotors(DL%i1)%UserProp(V%iLB:V%iUB, V%j) = VarVals              ! Rank 2 Array
       end select
@@ -2249,6 +2259,8 @@ function ADI_InputFieldName(DL) result(Name)
        Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeMotion("//trim(Num2LStr(DL%i2))//")"
    case (ADI_u_AD_rotors_TFinMotion)
        Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinMotion"
+   case (ADI_u_AD_rotors_GSMotion)
+       Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%GSMotion"
    case (ADI_u_AD_rotors_UserProp)
        Name = "u%AD%rotors("//trim(Num2LStr(DL%i1))//")%UserProp"
    case default
@@ -2282,6 +2294,8 @@ subroutine ADI_VarPackOutput(V, y, ValAry)
          call MV_PackMesh(V, y%AD%rotors(DL%i1)%BladeLoad(DL%i2), ValAry)     ! Mesh
       case (ADI_y_AD_rotors_TFinLoad)
          call MV_PackMesh(V, y%AD%rotors(DL%i1)%TFinLoad, ValAry)             ! Mesh
+      case (ADI_y_AD_rotors_GSLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%GSLoad, ValAry)               ! Mesh
       case (ADI_y_AD_rotors_WriteOutput)
          VarVals = y%AD%rotors(DL%i1)%WriteOutput(V%iLB:V%iUB)                ! Rank 1 Array
       case (ADI_y_HHVel)
@@ -2324,6 +2338,8 @@ subroutine ADI_VarUnpackOutput(V, ValAry, y)
          call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%BladeLoad(DL%i2))   ! Mesh
       case (ADI_y_AD_rotors_TFinLoad)
          call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%TFinLoad)           ! Mesh
+      case (ADI_y_AD_rotors_GSLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%GSLoad)             ! Mesh
       case (ADI_y_AD_rotors_WriteOutput)
          y%AD%rotors(DL%i1)%WriteOutput(V%iLB:V%iUB) = VarVals                ! Rank 1 Array
       case (ADI_y_HHVel)
@@ -2352,6 +2368,8 @@ function ADI_OutputFieldName(DL) result(Name)
        Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%BladeLoad("//trim(Num2LStr(DL%i2))//")"
    case (ADI_y_AD_rotors_TFinLoad)
        Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%TFinLoad"
+   case (ADI_y_AD_rotors_GSLoad)
+       Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%GSLoad"
    case (ADI_y_AD_rotors_WriteOutput)
        Name = "y%AD%rotors("//trim(Num2LStr(DL%i1))//")%WriteOutput"
    case (ADI_y_HHVel)

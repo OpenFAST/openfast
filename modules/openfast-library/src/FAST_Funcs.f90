@@ -870,7 +870,7 @@ end subroutine
 
 subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
                       u_op, y_op, x_op, dx_op, z_op, u_glue, y_glue, x_glue, dx_glue, z_glue)
-   use AeroDyn, only: AD_CalcWind_Rotor
+   use AeroDyn, only: AD_CalcWind_Rotor, AD_CalcWind_GS
    type(ModDataType), intent(in)                      :: ModData     !< Module information
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: iInput      !< Input index
@@ -1086,8 +1086,14 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
                                 T%AD%m, T%AD%m%Inflow(iInput)%RotInflow(ModData%Ins), &
                                 i, ErrStat2, ErrMsg2)
          if (Failed()) return
+         call AD_CalcWind_GS(ThisTime, T%AD%Input(iInput)%rotors(ModData%Ins), &
+                             T%AD%p%FlowField, T%AD%p%GS, T%AD%p, &
+                             T%AD%m, T%AD%m%Inflow(iInput)%GSInflow, &
+                             i, ErrStat2, ErrMsg2)
+         if (Failed()) return
          call RotCalcContStateDeriv(ThisTime, T%AD%Input(iInput)%rotors(ModData%Ins), &
                                     T%AD%m%Inflow(iInput)%RotInflow(ModData%Ins), &
+                                    T%AD%m%Inflow(iInput)%GSInflow, &
                                     T%AD%p%rotors(ModData%Ins), T%AD%p, &
                                     T%AD%x(iState)%rotors(ModData%Ins), &
                                     T%AD%xd(iState)%rotors(ModData%Ins), &

@@ -116,6 +116,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             CoreSpreadEddyVisc -  - -   "Eddy viscosity used in the core spreading method" 
 typedef     ^                   ^               IntKi                            RegDeterMethod   -  -  -  "Regularization determinatino method (manual, automatic)"          -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            RegFunctionPart -  -  -  "Type of particle regularization function (None, Exp, Compact; see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam -  - -   "Initial value of the regularization parameter" 
 typedef     ^                   ^               ReKi                             WingRegParam -  - -   "Regularization parameter of the wing" 
@@ -334,6 +335,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             CoreSpreadEddyVisc -  - -   "Eddy viscosity used in the core spreading method" 
 typedef     ^                   ^               IntKi                            RegDeterMethod   -  -  -  "Regularization determinatino method (manual, automatic)"          -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            RegFunctionPart -  -  -  "Type of particle regularization function (None, Exp, Compact; see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegParam  -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               ReKi                             WingRegParam  -  - -   "Factor used in the regularization " 

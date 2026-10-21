@@ -52,6 +52,14 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrAero_none                     = 0      ! no tower aero [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrAero_noVIV                    = 1      ! Tower aero model without VIV [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrAero_VIV                      = 2      ! Tower aero model with VIV [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSPotent_none                    = 0      ! no general support potential flow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSPotent_baseline                = 1      ! baseline general support potential flow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSPotent_Bak                     = 2      ! general support potential flow with Bak correction [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSShadow_none                    = 0      ! no general support shadow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSShadow_Powles                  = 1      ! Powles general support shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSShadow_Eames                   = 2      ! Eames general support shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSAero_none                      = 0      ! no general support aero [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: GSAero_noVIV                     = 1      ! General support aero model without VIV [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SA_Wgt_Uniform                   = 1      ! Sector average weighting - Uniform [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_none                    = 0      ! no tail fin aero [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TFinAero_polar                   = 1      ! polar-based tail fin aerodynamics [-]
@@ -105,6 +113,38 @@ IMPLICIT NONE
     TYPE(AD_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: TowerRad      !< radius of each ED tower node [m]
   END TYPE AD_VTK_RotSurfaceType
+! =======================
+! =========  GSJointType  =======
+  TYPE, PUBLIC :: GSJointType
+    INTEGER(IntKi)  :: JointID = 0_IntKi      !< User-specified joint ID for the general support structure [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: Position = 0.0_ReKi      !< Undisplaced position of the joint [m]
+  END TYPE GSJointType
+! =======================
+! =========  GSInpMemberType  =======
+  TYPE, PUBLIC :: GSInpMemberType
+    INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-specified member ID for the general support structure [-]
+    INTEGER(IntKi)  :: MJointID1 = 0_IntKi      !< Starting joint ID of the member [-]
+    INTEGER(IntKi)  :: MJointID2 = 0_IntKi      !< Ending joint ID of the member [-]
+    REAL(ReKi)  :: MDiam1 = 0.0_ReKi      !< Starting diameter of the member [m]
+    REAL(ReKi)  :: MDiam2 = 0.0_ReKi      !< Ending diameter of the member [m]
+    REAL(ReKi)  :: MCd1 = 0.0_ReKi      !< Starting drag coefficient of the member [-]
+    REAL(ReKi)  :: MCd2 = 0.0_ReKi      !< Ending drag coefficient of the member [-]
+    REAL(ReKi)  :: MTI1 = 0.0_ReKi      !< Starting turbulence intensity of the member for the Eames tower shadow model [-]
+    REAL(ReKi)  :: MTI2 = 0.0_ReKi      !< Ending turbulence intensity of the member for the Eames tower shadow model [-]
+    REAL(ReKi)  :: MDivSize = 0.0_ReKi      !< Maximum member discretized element length [m]
+  END TYPE GSInpMemberType
+! =======================
+! =========  GSMemberType  =======
+  TYPE, PUBLIC :: GSMemberType
+    INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-supplied integer ID for this member [-]
+    INTEGER(IntKi)  :: NElements = 0_IntKi      !< Number of elements in this member [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeIndx      !< Index of each of the member's nodes in the global node list [-]
+    REAL(ReKi)  :: RefLength = 0.0_ReKi      !< The reference total length for this member [m]
+    REAL(ReKi)  :: dl = 0.0_ReKi      !< The reference element length of this member [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: R      !< Outer member radius at each node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cd      !< Drag coefficient at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TI      !< Turbulence intensity at each node for the Eames tower shadow model [-]
+  END TYPE GSMemberType
 ! =======================
 ! =========  RotInitInputType  =======
   TYPE, PUBLIC :: RotInitInputType
@@ -210,6 +250,17 @@ IMPLICIT NONE
     TYPE(TFinInputFileType)  :: TFin      !< Input file data for tail fin [-]
   END TYPE RotInputFile
 ! =======================
+! =========  GSInputFile  =======
+  TYPE, PUBLIC :: GSInputFile
+    INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
+    TYPE(GSJointType) , DIMENSION(:), ALLOCATABLE  :: InpJoints      !< Array of user-specified joints [-]
+    INTEGER(IntKi)  :: NMembers = 0_IntKi      !< Number of user-specified members [-]
+    TYPE(GSInpMemberType) , DIMENSION(:), ALLOCATABLE  :: InpMembers      !< Array of user-specified members [-]
+    INTEGER(IntKi)  :: GSPotent = 0_IntKi      !< Type of general support influence based on potential flow around the member {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: GSShadow = 0_IntKi      !< Type of general support downstream shadow effect {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: GSAero = 0_IntKi      !< Calculate multi-member generalized tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV} [-]
+  END TYPE GSInputFile
+! =======================
 ! =========  AD_InputFile  =======
   TYPE, PUBLIC :: AD_InputFile
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
@@ -273,6 +324,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: UAStartRad = 0.0_ReKi      !< Starting [radius]
     REAL(ReKi)  :: UAEndRad = 0.0_ReKi      !< Ending [radius]
     TYPE(RotInputFile) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Rotor (blades and tower) input file data [-]
+    TYPE(GSInputFile)  :: GS      !< General support input file data [-]
   END TYPE AD_InputFile
 ! =======================
 ! =========  RotContinuousStateType  =======
@@ -331,7 +383,7 @@ IMPLICIT NONE
 ! =========  RotInflowType  =======
   TYPE, PUBLIC :: RotInflowType
     TYPE(ElemInflowType) , DIMENSION(:), ALLOCATABLE  :: Blade      !< Blade wind inputs [-]
-    TYPE(ElemInflowType)  :: Tower      !< Blade wind inputs [-]
+    TYPE(ElemInflowType)  :: Tower      !< Tower wind inputs [-]
     REAL(ReKi) , DIMENSION(1:3,1:1)  :: InflowOnHub = 0.0_ReKi      !< U,V,W at hub [m/s]
     REAL(ReKi) , DIMENSION(1:3,1:1)  :: InflowOnNacelle = 0.0_ReKi      !< U,V,W at nacelle [m/s]
     REAL(ReKi) , DIMENSION(1:3,1:1)  :: InflowOnTailFin = 0.0_ReKi      !< U,V,W at tailfin [m/s]
@@ -342,6 +394,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InflowType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InflowWakeVel      !< U,V,W at wake points [m/s]
     TYPE(RotInflowType) , DIMENSION(:), ALLOCATABLE  :: RotInflow      !< Inflow on rotor [-]
+    TYPE(ElemInflowType)  :: GSInflow      !< Inflow on general support structure [-]
   END TYPE AD_InflowType
 ! =======================
 ! =========  RotParameterType  =======
@@ -422,7 +475,27 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BldNd_NumNodesOut = 0_IntKi      !< The blades to output (AD_AllBldNdOuts) [-]
     LOGICAL  :: TFinAero = .FALSE.      !< Calculate tail fin aerodynamics model (flag) [flag]
     TYPE(TFinParameterType)  :: TFin      !< Parameters for tail fin of current rotor [-]
+    LOGICAL  :: hasGSMod = .FALSE.      !< Has general support structure model (flag) [flag]
+    INTEGER(IntKi)  :: GSPotent = 0_IntKi      !< Type of general support influence based on potential flow around the member {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: GSShadow = 0_IntKi      !< Type of general support downstream shadow effect {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: GSAero = 0_IntKi      !< Type of flow-induced loads on the general support {0=none, 1=Drag} [-]
   END TYPE RotParameterType
+! =======================
+! =========  GSParameterType  =======
+  TYPE, PUBLIC :: GSParameterType
+    LOGICAL  :: hasGSMod = .FALSE.      !< Has general support structure model (flag) [flag]
+    INTEGER(IntKi)  :: GSPotent = 0_IntKi      !< Type of general support influence based on potential flow around the member {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: GSShadow = 0_IntKi      !< Type of general support downstream shadow effect {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: GSAero = 0_IntKi      !< Type of flow-induced loads on the general support {0=none, 1=Drag} [-]
+    INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Total number of user-specified joints for the general support structure [-]
+    INTEGER(IntKi)  :: NNodes = 0_IntKi      !< Total number of general support structure nodes (joints+interior nodes) [-]
+    INTEGER(IntKi)  :: NMembers = 0_IntKi      !< Total number of general support structure members [-]
+    TYPE(GSMemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< General support structure members [-]
+    TYPE(GSJointType) , DIMENSION(:), ALLOCATABLE  :: Joints      !< General support structure joints [-]
+    REAL(ReKi)  :: Density = 0.0_ReKi      !< Fluid density [kg/m^3]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+  END TYPE GSParameterType
 ! =======================
 ! =========  AD_ParameterType  =======
   TYPE, PUBLIC :: AD_ParameterType
@@ -443,6 +516,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: SA_PsiFwd = 0.0_ReKi      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 0_IntKi      !< Sector Average - Number of points per sector (>1) [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field data type [-]
+    TYPE(GSParameterType)  :: GS      !< General support structure parameters [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -453,6 +527,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< motion on each blade root [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeMotion      !< motion on each blade [-]
     TYPE(MeshType)  :: TFinMotion      !< motion of tail fin (at tail fin ref point) [-]
+    TYPE(MeshType)  :: GSMotion      !< motion of the general support structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: UserProp      !< Optional user property for interpolating airfoils (per element per blade) [-]
   END TYPE RotInputType
 ! =======================
@@ -468,6 +543,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: TowerLoad      !< loads on the tower [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLoad      !< loads on each blade [-]
     TYPE(MeshType)  :: TFinLoad      !< loads on tail fin (at tail fin ref point) [-]
+    TYPE(MeshType)  :: GSLoad      !< loads on the general support structure [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE RotOutputType
 ! =======================
@@ -504,6 +580,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cant      !< curvature angle, saved for possible output to file [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Toe      !< Toe angle, saved for possible output to file [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrClrnc      !< Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GSClrnc      !< Distance between nearest GS member (including member radius) and blade node (not including blade width), saved for possible output to file [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: X      !< normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Z      !< axial force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
@@ -585,13 +662,15 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =   8 ! AD%BladeRootMotion(DL%i1)
    integer(IntKi), public, parameter :: AD_u_BladeMotion                 =   9 ! AD%BladeMotion(DL%i1)
    integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  10 ! AD%TFinMotion
-   integer(IntKi), public, parameter :: AD_u_UserProp                    =  11 ! AD%UserProp
-   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  12 ! AD%NacelleLoad
-   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  13 ! AD%HubLoad
-   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  14 ! AD%TowerLoad
-   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  15 ! AD%BladeLoad(DL%i1)
-   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  16 ! AD%TFinLoad
-   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  17 ! AD%WriteOutput
+   integer(IntKi), public, parameter :: AD_u_GSMotion                    =  11 ! AD%GSMotion
+   integer(IntKi), public, parameter :: AD_u_UserProp                    =  12 ! AD%UserProp
+   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  13 ! AD%NacelleLoad
+   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  14 ! AD%HubLoad
+   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  15 ! AD%TowerLoad
+   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  16 ! AD%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  17 ! AD%TFinLoad
+   integer(IntKi), public, parameter :: AD_y_GSLoad                      =  18 ! AD%GSLoad
+   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  19 ! AD%WriteOutput
 
 contains
 
@@ -899,6 +978,232 @@ subroutine AD_UnPackVTK_RotSurfaceType(RF, OutData)
       end do
    end if
    call RegUnpackAlloc(RF, OutData%TowerRad); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyGSJointType(SrcGSJointTypeData, DstGSJointTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(GSJointType), intent(in) :: SrcGSJointTypeData
+   type(GSJointType), intent(inout) :: DstGSJointTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_CopyGSJointType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstGSJointTypeData%JointID = SrcGSJointTypeData%JointID
+   DstGSJointTypeData%Position = SrcGSJointTypeData%Position
+end subroutine
+
+subroutine AD_DestroyGSJointType(GSJointTypeData, ErrStat, ErrMsg)
+   type(GSJointType), intent(inout) :: GSJointTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_DestroyGSJointType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine AD_PackGSJointType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(GSJointType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackGSJointType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%JointID)
+   call RegPack(RF, InData%Position)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackGSJointType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(GSJointType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackGSJointType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%JointID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Position); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyGSInpMemberType(SrcGSInpMemberTypeData, DstGSInpMemberTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(GSInpMemberType), intent(in) :: SrcGSInpMemberTypeData
+   type(GSInpMemberType), intent(inout) :: DstGSInpMemberTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_CopyGSInpMemberType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstGSInpMemberTypeData%MemberID = SrcGSInpMemberTypeData%MemberID
+   DstGSInpMemberTypeData%MJointID1 = SrcGSInpMemberTypeData%MJointID1
+   DstGSInpMemberTypeData%MJointID2 = SrcGSInpMemberTypeData%MJointID2
+   DstGSInpMemberTypeData%MDiam1 = SrcGSInpMemberTypeData%MDiam1
+   DstGSInpMemberTypeData%MDiam2 = SrcGSInpMemberTypeData%MDiam2
+   DstGSInpMemberTypeData%MCd1 = SrcGSInpMemberTypeData%MCd1
+   DstGSInpMemberTypeData%MCd2 = SrcGSInpMemberTypeData%MCd2
+   DstGSInpMemberTypeData%MTI1 = SrcGSInpMemberTypeData%MTI1
+   DstGSInpMemberTypeData%MTI2 = SrcGSInpMemberTypeData%MTI2
+   DstGSInpMemberTypeData%MDivSize = SrcGSInpMemberTypeData%MDivSize
+end subroutine
+
+subroutine AD_DestroyGSInpMemberType(GSInpMemberTypeData, ErrStat, ErrMsg)
+   type(GSInpMemberType), intent(inout) :: GSInpMemberTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_DestroyGSInpMemberType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine AD_PackGSInpMemberType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(GSInpMemberType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackGSInpMemberType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%MemberID)
+   call RegPack(RF, InData%MJointID1)
+   call RegPack(RF, InData%MJointID2)
+   call RegPack(RF, InData%MDiam1)
+   call RegPack(RF, InData%MDiam2)
+   call RegPack(RF, InData%MCd1)
+   call RegPack(RF, InData%MCd2)
+   call RegPack(RF, InData%MTI1)
+   call RegPack(RF, InData%MTI2)
+   call RegPack(RF, InData%MDivSize)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackGSInpMemberType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(GSInpMemberType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackGSInpMemberType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MJointID1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MJointID2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MDiam1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MDiam2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MCd1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MCd2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MTI1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MTI2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MDivSize); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyGSMemberType(SrcGSMemberTypeData, DstGSMemberTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(GSMemberType), intent(in) :: SrcGSMemberTypeData
+   type(GSMemberType), intent(inout) :: DstGSMemberTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'AD_CopyGSMemberType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstGSMemberTypeData%MemberID = SrcGSMemberTypeData%MemberID
+   DstGSMemberTypeData%NElements = SrcGSMemberTypeData%NElements
+   if (allocated(SrcGSMemberTypeData%NodeIndx)) then
+      LB(1:1) = lbound(SrcGSMemberTypeData%NodeIndx)
+      UB(1:1) = ubound(SrcGSMemberTypeData%NodeIndx)
+      if (.not. allocated(DstGSMemberTypeData%NodeIndx)) then
+         allocate(DstGSMemberTypeData%NodeIndx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSMemberTypeData%NodeIndx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGSMemberTypeData%NodeIndx = SrcGSMemberTypeData%NodeIndx
+   end if
+   DstGSMemberTypeData%RefLength = SrcGSMemberTypeData%RefLength
+   DstGSMemberTypeData%dl = SrcGSMemberTypeData%dl
+   if (allocated(SrcGSMemberTypeData%R)) then
+      LB(1:1) = lbound(SrcGSMemberTypeData%R)
+      UB(1:1) = ubound(SrcGSMemberTypeData%R)
+      if (.not. allocated(DstGSMemberTypeData%R)) then
+         allocate(DstGSMemberTypeData%R(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSMemberTypeData%R.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGSMemberTypeData%R = SrcGSMemberTypeData%R
+   end if
+   if (allocated(SrcGSMemberTypeData%Cd)) then
+      LB(1:1) = lbound(SrcGSMemberTypeData%Cd)
+      UB(1:1) = ubound(SrcGSMemberTypeData%Cd)
+      if (.not. allocated(DstGSMemberTypeData%Cd)) then
+         allocate(DstGSMemberTypeData%Cd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSMemberTypeData%Cd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGSMemberTypeData%Cd = SrcGSMemberTypeData%Cd
+   end if
+   if (allocated(SrcGSMemberTypeData%TI)) then
+      LB(1:1) = lbound(SrcGSMemberTypeData%TI)
+      UB(1:1) = ubound(SrcGSMemberTypeData%TI)
+      if (.not. allocated(DstGSMemberTypeData%TI)) then
+         allocate(DstGSMemberTypeData%TI(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSMemberTypeData%TI.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGSMemberTypeData%TI = SrcGSMemberTypeData%TI
+   end if
+end subroutine
+
+subroutine AD_DestroyGSMemberType(GSMemberTypeData, ErrStat, ErrMsg)
+   type(GSMemberType), intent(inout) :: GSMemberTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_DestroyGSMemberType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(GSMemberTypeData%NodeIndx)) then
+      deallocate(GSMemberTypeData%NodeIndx)
+   end if
+   if (allocated(GSMemberTypeData%R)) then
+      deallocate(GSMemberTypeData%R)
+   end if
+   if (allocated(GSMemberTypeData%Cd)) then
+      deallocate(GSMemberTypeData%Cd)
+   end if
+   if (allocated(GSMemberTypeData%TI)) then
+      deallocate(GSMemberTypeData%TI)
+   end if
+end subroutine
+
+subroutine AD_PackGSMemberType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(GSMemberType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackGSMemberType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%MemberID)
+   call RegPack(RF, InData%NElements)
+   call RegPackAlloc(RF, InData%NodeIndx)
+   call RegPack(RF, InData%RefLength)
+   call RegPack(RF, InData%dl)
+   call RegPackAlloc(RF, InData%R)
+   call RegPackAlloc(RF, InData%Cd)
+   call RegPackAlloc(RF, InData%TI)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackGSMemberType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(GSMemberType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackGSMemberType'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NElements); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NodeIndx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dl); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%R); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -2128,6 +2433,164 @@ subroutine AD_UnPackRotInputFile(RF, OutData)
    call AD_UnpackTFinInputFileType(RF, OutData%TFin) ! TFin 
 end subroutine
 
+subroutine AD_CopyGSInputFile(SrcGSInputFileData, DstGSInputFileData, CtrlCode, ErrStat, ErrMsg)
+   type(GSInputFile), intent(in) :: SrcGSInputFileData
+   type(GSInputFile), intent(inout) :: DstGSInputFileData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_CopyGSInputFile'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstGSInputFileData%NJoints = SrcGSInputFileData%NJoints
+   if (allocated(SrcGSInputFileData%InpJoints)) then
+      LB(1:1) = lbound(SrcGSInputFileData%InpJoints)
+      UB(1:1) = ubound(SrcGSInputFileData%InpJoints)
+      if (.not. allocated(DstGSInputFileData%InpJoints)) then
+         allocate(DstGSInputFileData%InpJoints(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSInputFileData%InpJoints.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyGSJointType(SrcGSInputFileData%InpJoints(i1), DstGSInputFileData%InpJoints(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstGSInputFileData%NMembers = SrcGSInputFileData%NMembers
+   if (allocated(SrcGSInputFileData%InpMembers)) then
+      LB(1:1) = lbound(SrcGSInputFileData%InpMembers)
+      UB(1:1) = ubound(SrcGSInputFileData%InpMembers)
+      if (.not. allocated(DstGSInputFileData%InpMembers)) then
+         allocate(DstGSInputFileData%InpMembers(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSInputFileData%InpMembers.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyGSInpMemberType(SrcGSInputFileData%InpMembers(i1), DstGSInputFileData%InpMembers(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstGSInputFileData%GSPotent = SrcGSInputFileData%GSPotent
+   DstGSInputFileData%GSShadow = SrcGSInputFileData%GSShadow
+   DstGSInputFileData%GSAero = SrcGSInputFileData%GSAero
+end subroutine
+
+subroutine AD_DestroyGSInputFile(GSInputFileData, ErrStat, ErrMsg)
+   type(GSInputFile), intent(inout) :: GSInputFileData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_DestroyGSInputFile'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(GSInputFileData%InpJoints)) then
+      LB(1:1) = lbound(GSInputFileData%InpJoints)
+      UB(1:1) = ubound(GSInputFileData%InpJoints)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyGSJointType(GSInputFileData%InpJoints(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(GSInputFileData%InpJoints)
+   end if
+   if (allocated(GSInputFileData%InpMembers)) then
+      LB(1:1) = lbound(GSInputFileData%InpMembers)
+      UB(1:1) = ubound(GSInputFileData%InpMembers)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyGSInpMemberType(GSInputFileData%InpMembers(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(GSInputFileData%InpMembers)
+   end if
+end subroutine
+
+subroutine AD_PackGSInputFile(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(GSInputFile), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackGSInputFile'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NJoints)
+   call RegPack(RF, allocated(InData%InpJoints))
+   if (allocated(InData%InpJoints)) then
+      call RegPackBounds(RF, 1, lbound(InData%InpJoints), ubound(InData%InpJoints))
+      LB(1:1) = lbound(InData%InpJoints)
+      UB(1:1) = ubound(InData%InpJoints)
+      do i1 = LB(1), UB(1)
+         call AD_PackGSJointType(RF, InData%InpJoints(i1)) 
+      end do
+   end if
+   call RegPack(RF, InData%NMembers)
+   call RegPack(RF, allocated(InData%InpMembers))
+   if (allocated(InData%InpMembers)) then
+      call RegPackBounds(RF, 1, lbound(InData%InpMembers), ubound(InData%InpMembers))
+      LB(1:1) = lbound(InData%InpMembers)
+      UB(1:1) = ubound(InData%InpMembers)
+      do i1 = LB(1), UB(1)
+         call AD_PackGSInpMemberType(RF, InData%InpMembers(i1)) 
+      end do
+   end if
+   call RegPack(RF, InData%GSPotent)
+   call RegPack(RF, InData%GSShadow)
+   call RegPack(RF, InData%GSAero)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackGSInputFile(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(GSInputFile), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackGSInputFile'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%InpJoints)) deallocate(OutData%InpJoints)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%InpJoints(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%InpJoints.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackGSJointType(RF, OutData%InpJoints(i1)) ! InpJoints 
+      end do
+   end if
+   call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%InpMembers)) deallocate(OutData%InpMembers)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%InpMembers(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%InpMembers.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackGSInpMemberType(RF, OutData%InpMembers(i1)) ! InpMembers 
+      end do
+   end if
+   call RegUnpack(RF, OutData%GSPotent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSShadow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSAero); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(AD_InputFile), intent(in) :: SrcInputFileData
    type(AD_InputFile), intent(inout) :: DstInputFileData
@@ -2263,6 +2726,9 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   call AD_CopyGSInputFile(SrcInputFileData%GS, DstInputFileData%GS, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -2299,6 +2765,8 @@ subroutine AD_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
       end do
       deallocate(InputFileData%rotors)
    end if
+   call AD_DestroyGSInputFile(InputFileData%GS, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackInputFile(RF, Indata)
@@ -2377,6 +2845,7 @@ subroutine AD_PackInputFile(RF, Indata)
          call AD_PackRotInputFile(RF, InData%rotors(i1)) 
       end do
    end if
+   call AD_PackGSInputFile(RF, InData%GS) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2462,6 +2931,7 @@ subroutine AD_UnPackInputFile(RF, OutData)
          call AD_UnpackRotInputFile(RF, OutData%rotors(i1)) ! rotors 
       end do
    end if
+   call AD_UnpackGSInputFile(RF, OutData%GS) ! GS 
 end subroutine
 
 subroutine AD_CopyRotContinuousStateType(SrcRotContinuousStateTypeData, DstRotContinuousStateTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -3321,6 +3791,9 @@ subroutine AD_CopyInflowType(SrcInflowTypeData, DstInflowTypeData, CtrlCode, Err
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   call AD_CopyElemInflowType(SrcInflowTypeData%GSInflow, DstInflowTypeData%GSInflow, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyInflowType(InflowTypeData, ErrStat, ErrMsg)
@@ -3346,6 +3819,8 @@ subroutine AD_DestroyInflowType(InflowTypeData, ErrStat, ErrMsg)
       end do
       deallocate(InflowTypeData%RotInflow)
    end if
+   call AD_DestroyElemInflowType(InflowTypeData%GSInflow, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackInflowType(RF, Indata)
@@ -3365,6 +3840,7 @@ subroutine AD_PackInflowType(RF, Indata)
          call AD_PackRotInflowType(RF, InData%RotInflow(i1)) 
       end do
    end if
+   call AD_PackElemInflowType(RF, InData%GSInflow) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3391,6 +3867,7 @@ subroutine AD_UnPackInflowType(RF, OutData)
          call AD_UnpackRotInflowType(RF, OutData%RotInflow(i1)) ! RotInflow 
       end do
    end if
+   call AD_UnpackElemInflowType(RF, OutData%GSInflow) ! GSInflow 
 end subroutine
 
 subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -3815,6 +4292,10 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    call AD_CopyTFinParameterType(SrcRotParameterTypeData%TFin, DstRotParameterTypeData%TFin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstRotParameterTypeData%hasGSMod = SrcRotParameterTypeData%hasGSMod
+   DstRotParameterTypeData%GSPotent = SrcRotParameterTypeData%GSPotent
+   DstRotParameterTypeData%GSShadow = SrcRotParameterTypeData%GSShadow
+   DstRotParameterTypeData%GSAero = SrcRotParameterTypeData%GSAero
 end subroutine
 
 subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
@@ -4034,6 +4515,10 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPack(RF, InData%BldNd_NumNodesOut)
    call RegPack(RF, InData%TFinAero)
    call AD_PackTFinParameterType(RF, InData%TFin) 
+   call RegPack(RF, InData%hasGSMod)
+   call RegPack(RF, InData%GSPotent)
+   call RegPack(RF, InData%GSShadow)
+   call RegPack(RF, InData%GSAero)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4146,6 +4631,183 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpack(RF, OutData%BldNd_NumNodesOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TFinAero); if (RegCheckErr(RF, RoutineName)) return
    call AD_UnpackTFinParameterType(RF, OutData%TFin) ! TFin 
+   call RegUnpack(RF, OutData%hasGSMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSPotent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSShadow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSAero); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_CopyGSParameterType(SrcGSParameterTypeData, DstGSParameterTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(GSParameterType), intent(in) :: SrcGSParameterTypeData
+   type(GSParameterType), intent(inout) :: DstGSParameterTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_CopyGSParameterType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstGSParameterTypeData%hasGSMod = SrcGSParameterTypeData%hasGSMod
+   DstGSParameterTypeData%GSPotent = SrcGSParameterTypeData%GSPotent
+   DstGSParameterTypeData%GSShadow = SrcGSParameterTypeData%GSShadow
+   DstGSParameterTypeData%GSAero = SrcGSParameterTypeData%GSAero
+   DstGSParameterTypeData%NJoints = SrcGSParameterTypeData%NJoints
+   DstGSParameterTypeData%NNodes = SrcGSParameterTypeData%NNodes
+   DstGSParameterTypeData%NMembers = SrcGSParameterTypeData%NMembers
+   if (allocated(SrcGSParameterTypeData%Members)) then
+      LB(1:1) = lbound(SrcGSParameterTypeData%Members)
+      UB(1:1) = ubound(SrcGSParameterTypeData%Members)
+      if (.not. allocated(DstGSParameterTypeData%Members)) then
+         allocate(DstGSParameterTypeData%Members(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSParameterTypeData%Members.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyGSMemberType(SrcGSParameterTypeData%Members(i1), DstGSParameterTypeData%Members(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcGSParameterTypeData%Joints)) then
+      LB(1:1) = lbound(SrcGSParameterTypeData%Joints)
+      UB(1:1) = ubound(SrcGSParameterTypeData%Joints)
+      if (.not. allocated(DstGSParameterTypeData%Joints)) then
+         allocate(DstGSParameterTypeData%Joints(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGSParameterTypeData%Joints.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_CopyGSJointType(SrcGSParameterTypeData%Joints(i1), DstGSParameterTypeData%Joints(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstGSParameterTypeData%Density = SrcGSParameterTypeData%Density
+   DstGSParameterTypeData%MHK = SrcGSParameterTypeData%MHK
+   DstGSParameterTypeData%WtrDpth = SrcGSParameterTypeData%WtrDpth
+end subroutine
+
+subroutine AD_DestroyGSParameterType(GSParameterTypeData, ErrStat, ErrMsg)
+   type(GSParameterType), intent(inout) :: GSParameterTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_DestroyGSParameterType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(GSParameterTypeData%Members)) then
+      LB(1:1) = lbound(GSParameterTypeData%Members)
+      UB(1:1) = ubound(GSParameterTypeData%Members)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyGSMemberType(GSParameterTypeData%Members(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(GSParameterTypeData%Members)
+   end if
+   if (allocated(GSParameterTypeData%Joints)) then
+      LB(1:1) = lbound(GSParameterTypeData%Joints)
+      UB(1:1) = ubound(GSParameterTypeData%Joints)
+      do i1 = LB(1), UB(1)
+         call AD_DestroyGSJointType(GSParameterTypeData%Joints(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(GSParameterTypeData%Joints)
+   end if
+end subroutine
+
+subroutine AD_PackGSParameterType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(GSParameterType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'AD_PackGSParameterType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%hasGSMod)
+   call RegPack(RF, InData%GSPotent)
+   call RegPack(RF, InData%GSShadow)
+   call RegPack(RF, InData%GSAero)
+   call RegPack(RF, InData%NJoints)
+   call RegPack(RF, InData%NNodes)
+   call RegPack(RF, InData%NMembers)
+   call RegPack(RF, allocated(InData%Members))
+   if (allocated(InData%Members)) then
+      call RegPackBounds(RF, 1, lbound(InData%Members), ubound(InData%Members))
+      LB(1:1) = lbound(InData%Members)
+      UB(1:1) = ubound(InData%Members)
+      do i1 = LB(1), UB(1)
+         call AD_PackGSMemberType(RF, InData%Members(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%Joints))
+   if (allocated(InData%Joints)) then
+      call RegPackBounds(RF, 1, lbound(InData%Joints), ubound(InData%Joints))
+      LB(1:1) = lbound(InData%Joints)
+      UB(1:1) = ubound(InData%Joints)
+      do i1 = LB(1), UB(1)
+         call AD_PackGSJointType(RF, InData%Joints(i1)) 
+      end do
+   end if
+   call RegPack(RF, InData%Density)
+   call RegPack(RF, InData%MHK)
+   call RegPack(RF, InData%WtrDpth)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine AD_UnPackGSParameterType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(GSParameterType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'AD_UnPackGSParameterType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%hasGSMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSPotent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSShadow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GSAero); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%Members)) deallocate(OutData%Members)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Members(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Members.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackGSMemberType(RF, OutData%Members(i1)) ! Members 
+      end do
+   end if
+   if (allocated(OutData%Joints)) deallocate(OutData%Joints)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Joints(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Joints.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_UnpackGSJointType(RF, OutData%Joints(i1)) ! Joints 
+      end do
+   end if
+   call RegUnpack(RF, OutData%Density); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -4210,6 +4872,9 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%SA_PsiFwd = SrcParamData%SA_PsiFwd
    DstParamData%SA_nPerSec = SrcParamData%SA_nPerSec
    DstParamData%WaveField => SrcParamData%WaveField
+   call AD_CopyGSParameterType(SrcParamData%GS, DstParamData%GS, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4245,6 +4910,8 @@ subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%FlowField)
    nullify(ParamData%WaveField)
+   call AD_DestroyGSParameterType(ParamData%GS, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackParam(RF, Indata)
@@ -4300,6 +4967,7 @@ subroutine AD_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call AD_PackGSParameterType(RF, InData%GS) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4389,6 +5057,7 @@ subroutine AD_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call AD_UnpackGSParameterType(RF, OutData%GS) ! GS 
 end subroutine
 
 subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -4448,6 +5117,9 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
    call MeshCopy(SrcRotInputTypeData%TFinMotion, DstRotInputTypeData%TFinMotion, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcRotInputTypeData%GSMotion, DstRotInputTypeData%GSMotion, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcRotInputTypeData%UserProp)) then
       LB(1:2) = lbound(SrcRotInputTypeData%UserProp)
       UB(1:2) = ubound(SrcRotInputTypeData%UserProp)
@@ -4499,6 +5171,8 @@ subroutine AD_DestroyRotInputType(RotInputTypeData, ErrStat, ErrMsg)
    end if
    call MeshDestroy( RotInputTypeData%TFinMotion, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotInputTypeData%GSMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotInputTypeData%UserProp)) then
       deallocate(RotInputTypeData%UserProp)
    end if
@@ -4533,6 +5207,7 @@ subroutine AD_PackRotInputType(RF, Indata)
       end do
    end if
    call MeshPack(RF, InData%TFinMotion) 
+   call MeshPack(RF, InData%GSMotion) 
    call RegPackAlloc(RF, InData%UserProp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -4576,6 +5251,7 @@ subroutine AD_UnPackRotInputType(RF, OutData)
       end do
    end if
    call MeshUnpack(RF, OutData%TFinMotion) ! TFinMotion 
+   call MeshUnpack(RF, OutData%GSMotion) ! GSMotion 
    call RegUnpackAlloc(RF, OutData%UserProp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4716,6 +5392,9 @@ subroutine AD_CopyRotOutputType(SrcRotOutputTypeData, DstRotOutputTypeData, Ctrl
    call MeshCopy(SrcRotOutputTypeData%TFinLoad, DstRotOutputTypeData%TFinLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcRotOutputTypeData%GSLoad, DstRotOutputTypeData%GSLoad, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcRotOutputTypeData%WriteOutput)) then
       LB(1:1) = lbound(SrcRotOutputTypeData%WriteOutput)
       UB(1:1) = ubound(SrcRotOutputTypeData%WriteOutput)
@@ -4758,6 +5437,8 @@ subroutine AD_DestroyRotOutputType(RotOutputTypeData, ErrStat, ErrMsg)
    end if
    call MeshDestroy( RotOutputTypeData%TFinLoad, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotOutputTypeData%GSLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotOutputTypeData%WriteOutput)) then
       deallocate(RotOutputTypeData%WriteOutput)
    end if
@@ -4783,6 +5464,7 @@ subroutine AD_PackRotOutputType(RF, Indata)
       end do
    end if
    call MeshPack(RF, InData%TFinLoad) 
+   call MeshPack(RF, InData%GSLoad) 
    call RegPackAlloc(RF, InData%WriteOutput)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -4813,6 +5495,7 @@ subroutine AD_UnPackRotOutputType(RF, OutData)
       end do
    end if
    call MeshUnpack(RF, OutData%TFinLoad) ! TFinLoad 
+   call MeshUnpack(RF, OutData%GSLoad) ! GSLoad 
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5105,6 +5788,18 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%TwrClrnc = SrcRotMiscVarTypeData%TwrClrnc
+   end if
+   if (allocated(SrcRotMiscVarTypeData%GSClrnc)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%GSClrnc)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%GSClrnc)
+      if (.not. allocated(DstRotMiscVarTypeData%GSClrnc)) then
+         allocate(DstRotMiscVarTypeData%GSClrnc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%GSClrnc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%GSClrnc = SrcRotMiscVarTypeData%GSClrnc
    end if
    if (allocated(SrcRotMiscVarTypeData%X)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%X)
@@ -5637,6 +6332,9 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%TwrClrnc)) then
       deallocate(RotMiscVarTypeData%TwrClrnc)
    end if
+   if (allocated(RotMiscVarTypeData%GSClrnc)) then
+      deallocate(RotMiscVarTypeData%GSClrnc)
+   end if
    if (allocated(RotMiscVarTypeData%X)) then
       deallocate(RotMiscVarTypeData%X)
    end if
@@ -5821,6 +6519,7 @@ subroutine AD_PackRotMiscVarType(RF, Indata)
    call RegPackAlloc(RF, InData%Cant)
    call RegPackAlloc(RF, InData%Toe)
    call RegPackAlloc(RF, InData%TwrClrnc)
+   call RegPackAlloc(RF, InData%GSClrnc)
    call RegPackAlloc(RF, InData%X)
    call RegPackAlloc(RF, InData%Y)
    call RegPackAlloc(RF, InData%Z)
@@ -5965,6 +6664,7 @@ subroutine AD_UnPackRotMiscVarType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Cant); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Toe); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrClrnc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%GSClrnc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%X); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Z); if (RegCheckErr(RF, RoutineName)) return
@@ -6502,6 +7202,10 @@ SUBROUTINE AD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
       do i01 = lbound(u_out%rotors,1),ubound(u_out%rotors,1)
+         CALL MeshExtrapInterp1(u1%rotors(i01)%GSMotion, u2%rotors(i01)%GSMotion, tin, u_out%rotors(i01)%GSMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      do i01 = lbound(u_out%rotors,1),ubound(u_out%rotors,1)
          IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
             u_out%rotors(i01)%UserProp = a1*u1%rotors(i01)%UserProp + a2*u2%rotors(i01)%UserProp
          END IF ! check if allocated
@@ -6597,6 +7301,10 @@ SUBROUTINE AD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrM
       END DO
       do i01 = lbound(u_out%rotors,1),ubound(u_out%rotors,1)
          CALL MeshExtrapInterp2(u1%rotors(i01)%TFinMotion, u2%rotors(i01)%TFinMotion, u3%rotors(i01)%TFinMotion, tin, u_out%rotors(i01)%TFinMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      do i01 = lbound(u_out%rotors,1),ubound(u_out%rotors,1)
+         CALL MeshExtrapInterp2(u1%rotors(i01)%GSMotion, u2%rotors(i01)%GSMotion, u3%rotors(i01)%GSMotion, tin, u_out%rotors(i01)%GSMotion, tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
       do i01 = lbound(u_out%rotors,1),ubound(u_out%rotors,1)
@@ -6730,6 +7438,10 @@ SUBROUTINE AD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
       do i01 = lbound(y_out%rotors,1),ubound(y_out%rotors,1)
+         CALL MeshExtrapInterp1(y1%rotors(i01)%GSLoad, y2%rotors(i01)%GSLoad, tin, y_out%rotors(i01)%GSLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      do i01 = lbound(y_out%rotors,1),ubound(y_out%rotors,1)
          IF (ALLOCATED(y_out%rotors(i01)%WriteOutput) .AND. ALLOCATED(y1%rotors(i01)%WriteOutput)) THEN
             y_out%rotors(i01)%WriteOutput = a1*y1%rotors(i01)%WriteOutput + a2*y2%rotors(i01)%WriteOutput
          END IF ! check if allocated
@@ -6815,6 +7527,10 @@ SUBROUTINE AD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       END DO
       do i01 = lbound(y_out%rotors,1),ubound(y_out%rotors,1)
          CALL MeshExtrapInterp2(y1%rotors(i01)%TFinLoad, y2%rotors(i01)%TFinLoad, y3%rotors(i01)%TFinLoad, tin, y_out%rotors(i01)%TFinLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      do i01 = lbound(y_out%rotors,1),ubound(y_out%rotors,1)
+         CALL MeshExtrapInterp2(y1%rotors(i01)%GSLoad, y2%rotors(i01)%GSLoad, y3%rotors(i01)%GSLoad, tin, y_out%rotors(i01)%GSLoad, tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
       do i01 = lbound(y_out%rotors,1),ubound(y_out%rotors,1)
@@ -6965,6 +7681,12 @@ SUBROUTINE AD_InflowType_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Err
          u_out%RotInflow(i01)%AvgDiskVel = a1*u1%RotInflow(i01)%AvgDiskVel + a2*u2%RotInflow(i01)%AvgDiskVel
       END DO
    END IF ! check if allocated
+   IF (ALLOCATED(u_out%GSInflow%InflowVel) .AND. ALLOCATED(u1%GSInflow%InflowVel)) THEN
+      u_out%GSInflow%InflowVel = a1*u1%GSInflow%InflowVel + a2*u2%GSInflow%InflowVel
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%GSInflow%InflowAcc) .AND. ALLOCATED(u1%GSInflow%InflowAcc)) THEN
+      u_out%GSInflow%InflowAcc = a1*u1%GSInflow%InflowAcc + a2*u2%GSInflow%InflowAcc
+   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE AD_InflowType_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -7065,6 +7787,12 @@ SUBROUTINE AD_InflowType_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
          u_out%RotInflow(i01)%AvgDiskVel = a1*u1%RotInflow(i01)%AvgDiskVel + a2*u2%RotInflow(i01)%AvgDiskVel + a3*u3%RotInflow(i01)%AvgDiskVel
       END DO
    END IF ! check if allocated
+   IF (ALLOCATED(u_out%GSInflow%InflowVel) .AND. ALLOCATED(u1%GSInflow%InflowVel)) THEN
+      u_out%GSInflow%InflowVel = a1*u1%GSInflow%InflowVel + a2*u2%GSInflow%InflowVel + a3*u3%GSInflow%InflowVel
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%GSInflow%InflowAcc) .AND. ALLOCATED(u1%GSInflow%InflowAcc)) THEN
+      u_out%GSInflow%InflowAcc = a1*u1%GSInflow%InflowAcc + a2*u2%GSInflow%InflowAcc + a3*u3%GSInflow%InflowAcc
+   END IF ! check if allocated
 END SUBROUTINE
 
 function AD_InputMeshPointer(u, DL) result(Mesh)
@@ -7085,6 +7813,8 @@ function AD_InputMeshPointer(u, DL) result(Mesh)
        Mesh => u%BladeMotion(DL%i1)
    case (AD_u_TFinMotion)
        Mesh => u%TFinMotion
+   case (AD_u_GSMotion)
+       Mesh => u%GSMotion
    end select
 end function
 
@@ -7104,6 +7834,8 @@ function AD_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%BladeLoad(DL%i1)
    case (AD_y_TFinLoad)
        Mesh => y%TFinLoad
+   case (AD_y_GSLoad)
+       Mesh => y%GSLoad
    end select
 end function
 
@@ -7240,6 +7972,8 @@ subroutine AD_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%BladeMotion(DL%i1), ValAry)                    ! Mesh
       case (AD_u_TFinMotion)
          call MV_PackMesh(V, u%TFinMotion, ValAry)                            ! Mesh
+      case (AD_u_GSMotion)
+         call MV_PackMesh(V, u%GSMotion, ValAry)                              ! Mesh
       case (AD_u_UserProp)
          VarVals = u%UserProp(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
       case default
@@ -7276,6 +8010,8 @@ subroutine AD_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%BladeMotion(DL%i1))                  ! Mesh
       case (AD_u_TFinMotion)
          call MV_UnpackMesh(V, ValAry, u%TFinMotion)                          ! Mesh
+      case (AD_u_GSMotion)
+         call MV_UnpackMesh(V, ValAry, u%GSMotion)                            ! Mesh
       case (AD_u_UserProp)
          u%UserProp(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
       end select
@@ -7298,6 +8034,8 @@ function AD_InputFieldName(DL) result(Name)
        Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
    case (AD_u_TFinMotion)
        Name = "u%TFinMotion"
+   case (AD_u_GSMotion)
+       Name = "u%GSMotion"
    case (AD_u_UserProp)
        Name = "u%UserProp"
    case default
@@ -7331,6 +8069,8 @@ subroutine AD_VarPackOutput(V, y, ValAry)
          call MV_PackMesh(V, y%BladeLoad(DL%i1), ValAry)                      ! Mesh
       case (AD_y_TFinLoad)
          call MV_PackMesh(V, y%TFinLoad, ValAry)                              ! Mesh
+      case (AD_y_GSLoad)
+         call MV_PackMesh(V, y%GSLoad, ValAry)                                ! Mesh
       case (AD_y_WriteOutput)
          VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
       case default
@@ -7365,6 +8105,8 @@ subroutine AD_VarUnpackOutput(V, ValAry, y)
          call MV_UnpackMesh(V, ValAry, y%BladeLoad(DL%i1))                    ! Mesh
       case (AD_y_TFinLoad)
          call MV_UnpackMesh(V, ValAry, y%TFinLoad)                            ! Mesh
+      case (AD_y_GSLoad)
+         call MV_UnpackMesh(V, ValAry, y%GSLoad)                              ! Mesh
       case (AD_y_WriteOutput)
          y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
       end select
@@ -7385,6 +8127,8 @@ function AD_OutputFieldName(DL) result(Name)
        Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
    case (AD_y_TFinLoad)
        Name = "y%TFinLoad"
+   case (AD_y_GSLoad)
+       Name = "y%GSLoad"
    case (AD_y_WriteOutput)
        Name = "y%WriteOutput"
    case default

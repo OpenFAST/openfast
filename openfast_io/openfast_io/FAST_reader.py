@@ -1070,6 +1070,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrPotent']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrShadow']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrAero']       = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSPotent']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSShadow']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['GSAero']        = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CavitCheck']    = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['NacelleDrag']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CompAA']        = bool_read(f.readline().split()[0])
@@ -1200,6 +1203,50 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn']['TwrCb'][i]   = data[4]
             self.fst_vt['AeroDyn']['TwrCp'][i]   = data[5]
             self.fst_vt['AeroDyn']['TwrCa'][i]   = data[6]
+
+        # Generalized support structure joints
+        f.readline()
+        self.fst_vt['AeroDyn']['NumGSJoints']    = int(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        self.fst_vt['AeroDyn']['GSJointID'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointXi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointYi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        self.fst_vt['AeroDyn']['GSJointZi'] = [None]*self.fst_vt['AeroDyn']['NumGSJoints']
+        for i in range(self.fst_vt['AeroDyn']['NumGSJoints']):
+            data = [float(val) for val in f.readline().split()]
+            self.fst_vt['AeroDyn']['GSJointID'][i] = int(data[0])
+            self.fst_vt['AeroDyn']['GSJointXi'][i] = data[1]
+            self.fst_vt['AeroDyn']['GSJointYi'][i] = data[2]
+            self.fst_vt['AeroDyn']['GSJointZi'][i] = data[3]
+
+        # Generalized support structure members
+        f.readline()
+        self.fst_vt['AeroDyn']['NumGSMembers']   = int(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        self.fst_vt['AeroDyn']['GSMemberID']  = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMJointID1'] = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMJointID2'] = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDia1']     = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDia2']     = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMCd1']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMCd2']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMTI1']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMTI2']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        self.fst_vt['AeroDyn']['GSMDiv']      = [None]*self.fst_vt['AeroDyn']['NumGSMembers']
+        for i in range(self.fst_vt['AeroDyn']['NumGSMembers']):
+            data = [float(val) for val in f.readline().split()]
+            self.fst_vt['AeroDyn']['GSMemberID'][i]  = int(data[0])
+            self.fst_vt['AeroDyn']['GSMJointID1'][i] = int(data[1])
+            self.fst_vt['AeroDyn']['GSMJointID2'][i] = int(data[2])
+            self.fst_vt['AeroDyn']['GSMDia1'][i]     = data[3]
+            self.fst_vt['AeroDyn']['GSMDia2'][i]     = data[4]
+            self.fst_vt['AeroDyn']['GSMCd1'][i]      = data[5]
+            self.fst_vt['AeroDyn']['GSMCd2'][i]      = data[6]
+            self.fst_vt['AeroDyn']['GSMTI1'][i]      = data[7]
+            self.fst_vt['AeroDyn']['GSMTI2'][i]      = data[8]
+            self.fst_vt['AeroDyn']['GSMDiv'][i]      = data[9]
 
         # Outputs
         f.readline()
@@ -1470,6 +1517,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['OLAF']['DiffusionMethod'] = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['RegDeterMethod']  = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['RegFunction']     = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['RegFunctionPart'] = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WakeRegMethod']   = int_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WakeRegFactor']   = float(f.readline().split()[0])
         self.fst_vt['AeroDyn']['OLAF']['WingRegFactor']   = float(f.readline().split()[0])

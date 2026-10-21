@@ -60,6 +60,8 @@ your use, but is not used by the software.
 
 
 
+.. _ad_general_options:
+
 General Options
 ~~~~~~~~~~~~~~~
 
@@ -114,6 +116,20 @@ enabled, the two influences will be superimposed.
 
 Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
+
+``GSPotent``, ``GSShadow``, and ``GSAero`` are the counterparts of
+``TwrPotent``, ``TwrShadow``, and ``TwrAero`` for the generalized support
+structure (see :numref:`ad_gen_support`). Set ``GSPotent`` to 0 to disable the
+potential-flow influence of the support members on the flow local to the blade,
+1 to enable the standard potential-flow model, or 2 to include the Bak
+correction. Set ``GSShadow`` to 0 to disable the downstream shadow model, 1 to
+enable the Powles model, or 2 to use the Eames model. When both potential flow
+and shadow are enabled, the two influences are superimposed, and the combined
+support-structure influence is superimposed on the tower influence. Set the
+``GSAero`` flag to TRUE to calculate fluid drag loads on the support members or
+FALSE to disable them. The joint and member geometry used by these models is
+defined in the GENERAL SUPPORT STRUCTURE sections described in
+:numref:`ad_gen_support`.
 
 During linearization analyses
 with AeroDyn coupled OpenFAST and BEM enabled (``Wake_Mod = 1``), set the
@@ -270,8 +286,10 @@ The velocity is averaged within this sector by attributing different weighting a
 
 **SectAvgPsiFwd** Forward azimuth (in degrees) relative to the blade azimuth where the sector ends. Must be positive. [used only when SectAvg=True]. Default is 60 deg.
 
-
-
+.. note::
+   The tower influence (potential flow and shadow) is included in the sector-averaged
+   inflow velocity. The generalized support structure influence is currently not accounted
+   for in the sector average.
 
 
 Dynamic Wake / Dynamic inflow model
@@ -520,6 +538,100 @@ tower, set ``TwrCb`` to 0. To neglect added mass loads on the
 tower, set ``TwrCa`` to 0. To neglect fluid inertia loads on the 
 tower, set ``TwrCp`` to 0. See :numref:`ad_tower_geom`.
 
+.. _ad_gen_support:
+
+Generalized Support Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The generalized support structure (GS) extends the tower-influence, tower-shadow,
+and tower-drag models to an arbitrary assembly of slender cylindrical members
+(for example a jacket, tripod, or truss). Each member disturbs the flow reaching
+the blades in the same way the tower does, and, when ``GSAero = TRUE``, the members
+also experience fluid drag loads. The GS model is entirely independent of the
+single tower defined in the TOWER INFLUENCE AND AERODYNAMICS section: a model may
+use the tower, the generalized support structure, both, or neither. In a coupled
+OpenFAST simulation that includes SubDyn, the AeroDyn generalized support structure
+is coupled to the SubDyn structural model. In contrast, the AeroDyn tower is coupled
+to the vertical tower modeled in ElastoDyn or the Simplified ElastoDyn module. With
+multirotor systems, AeroDyn can include multiple vertical towers with each tower
+linked to a separate ElastoDyn instance; however, there can only be one shared
+generalized support structure interfaced with the SubDyn model of the shared substructure.
+If the coupled OpenFAST simulation does not include SubDyn, the generalized support
+structure is simply attached to the ElastoDyn platform point. Note that in this case,
+the generalized support structure is effectively rigid, and it is not possible to have
+multiple rotors, which always require SubDyn.
+
+The two GS tables in the AeroDyn primary input file are always read, but their
+contents are only used when at least one of ``GSPotent`` > 0, ``GSShadow`` > 0,
+or ``GSAero = TRUE`` (see :numref:`ad_general_options`). When the feature is not
+used, set ``NumGSJoints`` and ``NumGSMembers`` to 0. All rotors will share the same
+generalized support structure definition. Therefore, the generalized support structure
+input tables described below should appear exactly once in the AeroDyn input file.
+They should not be duplicated for each rotor.
+
+.. note::
+    In a coupled OpenFAST simulation, the motion of the generalized support structure
+    is provided by SubDyn (through its ``Y3Mesh``). The GS joints and members defined
+    here therefore represent members that are also modeled structurally in SubDyn, and
+    their geometry should ideally coincide with the corresponding SubDyn nodes so that
+    the motion and load transfer are meaningful. In the standalone AeroDyn driver, there
+    is no SubDyn coupling; the generalized support structure is held fixed at the joint
+    positions entered below, so the driver effectively supports a rigid (non-moving)
+    support structure. A flexible or moving support structure requires a coupled OpenFAST
+    simulation with SubDyn.
+
+**Coordinate convention.** GS joint coordinates are given in the AeroDyn global inertial
+frame (z pointing up). For wind turbines, enter z-coordinates measured from the ground
+(land-based) or the mean sea level (offshore). The convention for MHK turbines depends on
+whether the turbine is fixed-bottom or floating. For floating MHK turbines (``MHK = 2``),
+enter z-coordinates measured from the mean sea level (MSL). For fixed-bottom MHK turbines
+(``MHK = 1``), enter z-coordinates measured from the seabed (``z = 0`` at the seabed);
+AeroDyn internally shifts these by the water depth so that all internal calculations use
+MSL as the datum. Therefore, for wind and floating MHK turbines, the GS joint coordinates
+are the same as the SubDyn node coordinates, while for fixed-bottom MHK turbines, the GS
+joint coordinates are the SubDyn node coordinates summed with the (positive) water depth.
+
+Generalized support structure joints
+------------------------------------
+
+``NumGSJoints`` is the number of joints that define the endpoints of the support
+members and must be greater than or equal to two (or 0 to disable the feature).
+It determines the number of rows in the joint table that follows (after two header
+lines). For each joint, ``GSJointID`` is a unique user-specified integer identifier,
+and ``GSJointXi``, ``GSJointYi``, and ``GSJointZi`` are the x-, y-, and z-coordinates
+of the joint in the global inertial frame, following the coordinate convention above.
+Every joint listed here must be referenced by at least one member; otherwise AeroDyn
+aborts with an error.
+
+Generalized support structure members
+-------------------------------------
+
+``NumGSMembers`` is the number of members and determines the number of rows in the
+member table that follows (after two header lines). Each member is a straight,
+tapered cylinder connecting two joints, with properties that vary linearly between
+its two ends:
+
+- ``GSMemberID`` — unique user-specified integer identifier for the member.
+- ``GSMJointID1`` and ``GSMJointID2`` — the ``GSJointID`` values of the member's two
+  end joints.
+- ``GSMDia1`` and ``GSMDia2`` — member diameter (m) at joint 1 and joint 2. Used by
+  the potential-flow and shadow models.
+- ``GSMCd1`` and ``GSMCd2`` — drag coefficient (-) at joint 1 and joint 2. Used by the
+  shadow models (``GSShadow`` > 0), by the Bak potential-flow correction
+  (``GSPotent = 2``), and by the drag calculation (``GSAero = TRUE``).
+- ``GSMTI1`` and ``GSMTI2`` — turbulence intensity (-) at joint 1 and joint 2, entered
+  as a fraction (not a percentage). Used only by the Eames shadow model
+  (``GSShadow = 2``).
+- ``GSMDiv`` — target element (division) length (m) along the member. AeroDyn divides
+  the member into ``ceiling(memberLength / GSMDiv)`` equal elements and inserts the
+  corresponding interior analysis nodes. Smaller values give finer resolution and
+  higher computational cost. It is functionally consistent with ``MDivSize`` in SubDyn
+  and HydroDyn.
+
+Diameter, drag coefficient, and turbulence intensity are linearly interpolated from
+the joint-1 value to the joint-2 value along each member, and the analysis nodes are
+placed at the joints and at the interior division points.
+
 .. _AD-Outputs:
 
 Outputs
@@ -535,6 +647,13 @@ called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
 used in the airfoil tables. This allows the user to check what values
 are being used in case the code has computed the parameters
 without user input.
+
+When the generalized support structure is active, AeroDyn also writes a
+``<OutFileRoot>.GS.sum`` file listing the selected influence models and the
+generated node table (joints and interior member nodes with their interpolated
+radius, drag coefficient, and turbulence intensity). The blade-node clearance
+outputs (``B#N#Clrnc``) report the minimum distance from each blade node to the
+nearest tower or generalized-support member, whichever is closer.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
 nodes specified along the tower and up to nine nodes along each blade.

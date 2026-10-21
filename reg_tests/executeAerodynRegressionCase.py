@@ -95,6 +95,18 @@ src = os.path.join(moduleDirectory, "BAR_Baseline")
 if not os.path.isdir(dst):
     rtl.copyTree(src, dst)
 
+# Special case, stage the shared 5MW_Baseline files (airfoils/blade referenced by ad_5MW_* cases)
+dst = os.path.join(buildDirectory, os.pardir, os.pardir, "glue-codes", "openfast", "5MW_Baseline")
+src = os.path.join(rtest, "glue-codes", "openfast", "5MW_Baseline")
+if os.path.isdir(src) and not os.path.isdir(dst):
+    rtl.copyTree(src, dst)
+
+# Special case, stage the shared AWT27 files (airfoils/blade referenced by ad_AWT_* cases)
+dst = os.path.join(buildDirectory, os.pardir, os.pardir, "glue-codes", "openfast", "AWT27")
+src = os.path.join(rtest, "glue-codes", "openfast", "AWT27")
+if os.path.isdir(src) and not os.path.isdir(dst):
+    rtl.copyTree(src, dst)
+
 # create the local output directory and initialize it with input files 
 if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})

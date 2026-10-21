@@ -6006,6 +6006,33 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, SD
                end do
             end if
          end do
+
+         ! General support structure (GS): a single shared structure across all rotors, so
+         ! write at most one copy (no rotor suffix) to avoid duplicates in multirotor cases.
+         ! Prefer the rotor with a committed GSLoad (GSAero on => drag vectors), else fall
+         ! back to a committed GSMotion (influence-only, points).
+         j = 0
+         do iRot = 1, p_FAST%NRotors
+            if (AD%y%rotors(iRot)%GSLoad%Committed) then
+               j = iRot
+               exit
+            end if
+         end do
+         if (j>0) then
+            call MeshWrVTK(p_FAST%TurbinePos, AD%y%rotors(j)%GSLoad, &
+                           trim(p_FAST%VTK_OutFileRoot)//'.AD_GS', &
+                           y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, &
+                           AD%Input(INPUT_CURR)%rotors(j)%GSMotion )
+         else
+            do iRot = 1, p_FAST%NRotors
+               if (AD%Input(INPUT_CURR)%rotors(iRot)%GSMotion%Committed) then
+                  call MeshWrVTK(p_FAST%TurbinePos, AD%Input(INPUT_CURR)%rotors(iRot)%GSMotion, &
+                                 trim(p_FAST%VTK_OutFileRoot)//'.AD_GS', &
+                                 y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+                  exit
+               end if
+            end do
+         end if
       end if
 
       ! FVW submodule of AD15

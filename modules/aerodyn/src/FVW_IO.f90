@@ -19,7 +19,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
    character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line
-   integer(IntKi)       :: UnIn, i
+   integer(IntKi)       :: UnIn, i, iVel
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -60,6 +60,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterConstant, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunctionPart    ,'RegFunctionPart'   ,'',idRegExp        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegAge        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
@@ -184,16 +185,25 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
+   if (len_trim(Inp%SrcPnlFile)>0 .and. PathIsRelative(Inp%SrcPnlFile)) Inp%SrcPnlFile = TRIM(PriPath)//TRIM(Inp%SrcPnlFile)
 
    if (Check(.not.(ANY(idCircVALID ==Inp%CircSolvMethod)), 'Circulation method (CircSolvMethod) not implemented: '//trim(Num2LStr(Inp%CircSolvMethod)))) return
    if (Check(.not.(ANY(idIntMethodVALID==Inp%IntMethod    )) , 'Time integration method (IntMethod) not yet implemented. Use Euler 1st order method for now.')) return
    if (Check(.not.(ANY(idDiffusionVALID==Inp%DiffusionMethod)) , 'Diffusion method (DiffusionMethod) not implemented: '//trim(Num2LStr(Inp%DiffusionMethod)))) return
    if (Check(.not.(ANY(idRegDeterVALID ==Inp%RegDeterMethod))  , 'Regularization determination method (RegDeterMethod) not yet implemented: '//trim(Num2LStr(Inp%RegDeterMethod)))) return
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented: '//trim(Num2LStr(Inp%RegFunction)))) return
+   if (Check(.not.(ANY(idRegPartVALID  ==Inp%RegFunctionPart)), 'Particle regularization function (RegFunctionPart) not implemented: '//trim(Num2LStr(Inp%RegFunctionPart)))) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented: '//trim(Num2LStr(Inp%WakeRegMethod)))) return
    if (Check(.not.(ANY(idShearVALID    ==Inp%ShearModel   )), 'Shear model (ShearModel) not valid: '//trim(Num2LStr(Inp%ShearModel)))) return
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(1))), 'Velocity method (VelocityMethod(1)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(1))))) return
    if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(2))), 'Velocity method (VelocityMethod(2)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(2))))) return
+
+   ! Necessary condition for multipole convergence: BranchFactor<1 puts targets inside the source radius (series diverges). Default 1.5 adds geometric margin.
+   do iVel = 1,2
+      if (Inp%VelocityMethod(iVel)==idVelocityTreePart .or. Inp%VelocityMethod(iVel)==idVelocityTreeSeg) then
+         if (Check( Inp%TreeBranchFactor(iVel)<1.0_ReKi , 'Tree branch factor (TreeBranchFactor('//trim(Num2LStr(iVel))//')) must be >=1.')) return
+      endif
+   enddo
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
    if (Inp%CircSolvMethod == idCircPolarData) then

@@ -31,9 +31,9 @@ def _runCase(executable, inputFile, logFile, stdout, restart=False, ExtraFlags="
     if logFile is None:
         command = f"{executable} {inputFile} {ExtraFlags}"
     elif restart:
-        command = f"{executable} -restart {os.path.splitext(inputFile)[0]} > {logFile}"
+        command = f"{executable} -restart {os.path.splitext(inputFile)[0]} > {logFile} 2>&1"
     else:
-        command = f"{executable} {inputFile} {ExtraFlags} > {logFile}"
+        command = f"{executable} {inputFile} {ExtraFlags} > {logFile} 2>&1"
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     

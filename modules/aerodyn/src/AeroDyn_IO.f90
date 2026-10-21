@@ -296,17 +296,32 @@ CONTAINS
          end do ! blades
       end if
       
-      ! blade node tower clearance (requires tower influence calculation):
-      if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
+      ! blade node clearance to tower and/or generalized support (requires influence calculation):
+      ! each clearance array is allocated only when its model is active; report the smallest.
+      if (allocated(m%TwrClrnc)) then
          do k=1,min(p%numBlades,AD_MaxBl_Out)
             do beta=1,p%NBlOuts
                j=p%BlOutNd(beta)
                m%AllOuts( BNClrnc( beta,k) ) = m%TwrClrnc(j,k)
             end do
          end do
+         ! reduce with the GS clearance when it is also active
+         if (allocated(m%GSClrnc)) then
+            do k=1,min(p%numBlades,AD_MaxBl_Out)
+               do beta=1,p%NBlOuts
+                  j=p%BlOutNd(beta)
+                  m%AllOuts( BNClrnc( beta,k) ) = min( m%AllOuts( BNClrnc( beta,k) ), m%GSClrnc(j,k) )
+               end do
+            end do
+         end if
+      else if (allocated(m%GSClrnc)) then
+         do k=1,min(p%numBlades,AD_MaxBl_Out)
+            do beta=1,p%NBlOuts
+               j=p%BlOutNd(beta)
+               m%AllOuts( BNClrnc( beta,k) ) = m%GSClrnc(j,k)
+            end do
+         end do
       end if
-
-   
    
 
       m%AllOuts( RtSpeed ) = omega*RPS2RPM
@@ -702,8 +717,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                                      :: TmpRe7(7)         !< temporary 8 number array for reading values in
+   real(ReKi)                                      :: TmpRe10(10)       !< temporary 10 number array for reading values in
    logical                                         :: TwrAeroLogical    !< convert TwrAero from logical (input file) to integer (new)
+   logical                                         :: GSAeroLogical     !< convert GSAero from logical (input file) to integer (new)
    character(1024)                                 :: sDummy            !< temporary string
    character(1024)                                 :: tmpOutStr         !< temporary string for writing to screen
    logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, UAModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
@@ -798,7 +814,22 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       else
          InputFileData%TwrAero = TwrAero_None
       end if
-      
+
+      ! GSPotent - Type of general support influence on wind based on potential flow around the member (switch)
+   call ParseVar( FileInfo_In, CurLine, "GSPotent", InputFileData%GS%GSPotent, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! GSShadow - Type of general support influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}
+   call ParseVar( FileInfo_In, CurLine, "GSShadow", InputFileData%GS%GSShadow, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! GSAero - Calculate multi-member generalized tower aerodynamic loads? (flag)
+   call ParseVar( FileInfo_In, CurLine, "GSAero", GSAeroLogical, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      if (GSAeroLogical) then
+         InputFileData%GS%GSAero = GSAero_NoVIV
+      else
+         InputFileData%GS%GSAero = GSAero_None
+      end if
    ! FrozenWake - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
    call ParseVar( FileInfo_In, CurLine, "FrozenWake", FrozenWake_Old, ErrStat2, ErrMsg2, UnEc )
    frozenWakeProvided = legacyInputPresent('FrozenWake', Curline, ErrStat2, ErrMsg2, 'DBEMTMod=-1 (FrozenWake=True) or DBEMTMod>-1 (FrozenWake=False)')
@@ -1111,17 +1142,83 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       CALL AllocAry( InputFileData%rotors(iR)%TwrCa, InputFileData%rotors(iR)%NumTwrNds, 'TwrCa', ErrStat2, ErrMsg2)
          if (Failed()) return 
       do I=1,InputFileData%rotors(iR)%NumTwrNds
-         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe7, 7, ErrStat2, ErrMsg2, UnEc )
+         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe10, 7, ErrStat2, ErrMsg2, UnEc )
             if (Failed()) return;
-         InputFileData%rotors(iR)%TwrElev(I) = TmpRe7( 1)
-         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe7( 2)
-         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe7( 3)
-         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe7( 4)
-         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe7( 5)
-         InputFileData%rotors(iR)%TwrCp(I)   = TmpRe7( 6)
-         InputFileData%rotors(iR)%TwrCa(I)   = TmpRe7( 7)
+         InputFileData%rotors(iR)%TwrElev(I) = TmpRe10( 1)
+         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe10( 2)
+         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe10( 3)
+         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe10( 4)
+         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe10( 5)
+         InputFileData%rotors(iR)%TwrCp(I)   = TmpRe10( 6)
+         InputFileData%rotors(iR)%TwrCa(I)   = TmpRe10( 7)
       end do
    enddo
+
+   !======  General support structure joints ============================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! NumGSJoints - Number of general support joints used in the analysis  (-)
+   call ParseVar( FileInfo_In, CurLine, "NumGSJoints", InputFileData%GS%NJoints, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      !GSJointID     GSJointXi       GSJointYi       GSJointZi
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'GS Joint Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      !(-)            (m)            (m)            (m)
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'GS Joint Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! Allocate space for general support joint table
+   allocate( InputFileData%GS%InpJoints(InputFileData%GS%NJoints), STAT =  ErrStat2)
+      if ( ErrStat2 /= 0 ) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for GSInpJoints array.'
+         if (Failed())  return;
+      end if
+
+   do I=1,InputFileData%GS%NJoints
+      call ParseAry ( FileInfo_In, CurLine, 'General support joint '//trim( Int2LStr( I ) )//'.', TmpRe10, 4, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return;
+      InputFileData%GS%InpJoints(I)%JointID = NINT(TmpRe10(1))
+      InputFileData%GS%InpJoints(I)%position(1) =  TmpRe10(2)
+      InputFileData%GS%InpJoints(I)%position(2) =  TmpRe10(3)
+      InputFileData%GS%InpJoints(I)%position(3) =  TmpRe10(4)
+   end do
+
+   !======  General support structure members ============================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! NumGSMembers - Number of general support members used in the analysis  (-)
+   call ParseVar( FileInfo_In, CurLine, "NumGSMembers", InputFileData%GS%NMembers, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      !GSMemberID     GSMJointID1     GSMJointID2       GSMDia1       GSMDia2       GSMCd1       GSMCd2        GSMTI1       GSMTI2        GSMDiv
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'GS Member Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      !(-)            (-)             (-)               (m)           (m)           (-)           (-)          (-)          (-)           (-)
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'GS Member Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! Allocate space for general support joint table
+   allocate( InputFileData%GS%InpMembers(InputFileData%GS%NMembers), STAT =  ErrStat2)
+      if ( ErrStat2 /= 0 ) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for GSInpMembers array.'
+         if (Failed())  return;
+      end if
+
+   do I=1,InputFileData%GS%NMembers
+      call ParseAry ( FileInfo_In, CurLine, 'General support member '//trim( Int2LStr( I ) )//'.', TmpRe10, 10, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return;
+      InputFileData%GS%InpMembers(I)%MemberID  = NINT(TmpRe10( 1))
+      InputFileData%GS%InpMembers(I)%MJointID1 = NINT(TmpRe10( 2))
+      InputFileData%GS%InpMembers(I)%MJointID2 = NINT(TmpRe10( 3))
+      InputFileData%GS%InpMembers(I)%MDiam1    =      TmpRe10( 4)
+      InputFileData%GS%InpMembers(I)%MDiam2    =      TmpRe10( 5)
+      InputFileData%GS%InpMembers(I)%MCd1      =      TmpRe10( 6)
+      InputFileData%GS%InpMembers(I)%MCd2      =      TmpRe10( 7)
+      InputFileData%GS%InpMembers(I)%MTI1      =      TmpRe10( 8)
+      InputFileData%GS%InpMembers(I)%MTI2      =      TmpRe10( 9)
+      InputFileData%GS%InpMembers(I)%MDivSize  =      TmpRe10(10)
+   end do
 
    !======  Outputs  ====================================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
@@ -2101,6 +2198,108 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
 
 RETURN
 END SUBROUTINE AD_PrintSum
+!----------------------------------------------------------------------------------------------------------------------------------
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE AD_PrintSum_GS( p, p_AD, u, ErrStat, ErrMsg )
+! This routine generates the summary file, which contains a summary of input file options.
+      ! passed variables
+   TYPE(GSParameterType),     INTENT(IN)  :: p                                    ! Parameters
+   TYPE(AD_ParameterType),    INTENT(IN)  :: p_AD                                 ! Parameters
+   TYPE(RotInputType),        INTENT(IN)  :: u                                    ! inputs
+
+   INTEGER(IntKi),            INTENT(OUT) :: ErrStat
+   CHARACTER(*),              INTENT(OUT) :: ErrMsg
+
+      ! Local variables.
+
+   INTEGER(IntKi)               :: I, J                                            ! Generic loop counter
+   INTEGER(IntKi)               :: JointID, NodeIndx
+   INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
+   CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if (p%NMembers<=0_IntKi) return
+
+   ! Open the summary file and give it a heading.
+
+   !$OMP critical(fileopen_critical)
+   CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UnSu, TRIM( p_AD%RootName )//'.GS.sum', ErrStat, ErrMsg )
+   !$OMP end critical(fileopen_critical)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+      ! Heading:
+   WRITE (UnSu,'(/,A)')  'This summary information was generated by '//TRIM( GetNVD(AD_Ver) )// &
+                         ' on '//CurDate()//' at '//CurTime()//'.'
+
+   WRITE (UnSu,'(/,/,A)') '======  General support structure  =================================================================='
+
+   select case (p%GSPotent)
+      case (GSPotent_none)
+         Msg = 'none'
+      case (GSPotent_baseline)
+         Msg = 'baseline model'
+      case (GSPotent_bak)
+         Msg = "Bak correction"
+      case default
+         Msg = 'unknown'
+   end select
+   WRITE (UnSu,'(/,A)')  'Potential-flow influence model:  '//trim(num2lstr(p%GSPotent))//' ('//trim(Msg)//')'
+
+   select case (p%GSShadow)
+      case (GSShadow_none)
+         Msg = 'none'
+      case (GSShadow_Powles)
+         Msg = 'Powles model'
+      case (GSShadow_Eames)
+         Msg = "Eames model"
+      case default
+         Msg = 'unknown'
+   end select
+   WRITE (UnSu,'(A)')    'Downstream shadow/wake model:    '//trim(num2lstr(p%GSShadow))//' ('//trim(Msg)//')'
+
+   select case (p%GSAero)
+      case (GSAero_none)
+         Msg = 'none'
+      case (GSAero_NoVIV)
+         Msg = 'drag only'
+      case default
+         Msg = 'unknown'
+   end select
+   WRITE (UnSu,'(A)')    'Flow-induced load model:         '//trim(num2lstr(p%GSAero))//' ('//trim(Msg)//')'
+
+   WRITE (UnSu,'(/,A)')  'Number of joints:  '//trim(num2lstr(p%NJoints))
+   WRITE (UnSu,'(A)')    'Number of members: '//trim(num2lstr(p%NMembers))
+   WRITE (UnSu,'(A)')    'Number of nodes:   '//trim(num2lstr(u%GSMotion%Nnodes))//' (joints + member interior nodes)'
+
+   WRITE (UnSu,'(/,A)')    'In the table below, a member interior node will have joint ID -1.'
+
+   ! MemberID, JointID, NodeIndx, NodeX, NodeY, NodeZ, R, Cd, TI
+   WRITE (UnSu,'(/,9(1x,A14))') 'MemberID', 'JointID', 'NodeIndx', 'Node_xi', 'Node_yi', 'Node_zi', 'Node_R', 'Node_Cd', 'Node_TI'
+   WRITE (UnSu,'(9(1x,A14))')   '     (-)', '    (-)', '     (-)', '    (m)', '    (m)', '    (m)', '   (m)', '    (-)', '    (-)'
+   DO I=1,p%NMembers
+      associate(mem=>p%Members(I))
+      DO J=1,p%Members(I)%NElements+1
+         NodeIndx = mem%NodeIndx(J)
+         IF (NodeIndx<=p%NJoints) THEN
+            JointID = p%Joints(NodeIndx)%JointID
+         ELSE
+            JointID = -1
+         END IF
+         WRITE(UnSu,'(3(I15),6(F15.6))') &
+            mem%MemberID, JointID, NodeIndx, &
+            u%GSMotion%position(1,NodeIndx), u%GSMotion%position(2,NodeIndx), u%GSMotion%position(3,NodeIndx), &
+            mem%R(J),mem%Cd(J),mem%TI(J)
+      END DO
+      end associate
+   END DO
+   CLOSE(UnSu)
+RETURN
+END SUBROUTINE AD_PrintSum_GS
 !----------------------------------------------------------------------------------------------------------------------------------
 
 

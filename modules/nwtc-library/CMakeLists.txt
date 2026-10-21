@@ -99,6 +99,7 @@ set(NWTCLIBS_SOURCES
   
   # NetLib sources
   src/NetLib/fftpack/fftpack5.1.f
+  src/NetLib/fftpack/fftpack_kind.f
   src/NetLib/scalapack/dlasrt2.f
   src/NetLib/scalapack/slasrt2.f
   src/NetLib/fftpack/NWTC_FFTPACK.f90
@@ -126,11 +127,49 @@ get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
 # FFTPACK 5.1 uses legacy Fortran 77 type punning (COMPLEX<->REAL) and must
 # NOT be promoted to double precision (its callers pass explicit SiKi/R4Ki arrays).
-# -Wno-pedantic is required because -pedantic (added for Debug builds) promotes the
-# argument mismatches back to errors, overriding -fallow-argument-mismatch.
+#
+# fftpack5.1.f declares all of its arrays as bare REAL/COMPLEX, but NWTC_FFTPACK.f90
+# hands it explicitly kinded REAL(SiKi)/COMPLEX(SiKi) buffers and passes their element
+# counts as LENSAV/LENWRK.  If DOUBLE_PRECISION promotes the default REAL to 8 bytes in
+# these files, FFTPACK writes twice as many bytes as those buffers hold, silently
+# corrupting the heap and stack (observed as SIGBUS/SIGSEGV far from the FFT call).
+# fftpack_kind.f reports the kind actually used so NWTC_FFTPACK can verify it at run
+# time; it must therefore be compiled with exactly the same flags as fftpack5.1.f.
+#
+# The Visual Studio build does the same thing via RealKIND="realKIND4" on both files
+# in vs-build/modules/NWTC-Library.vfproj.
+set(FFTPACK_SOURCES
+   src/NetLib/fftpack/fftpack5.1.f
+   src/NetLib/fftpack/fftpack_kind.f
+)
 if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-   set_source_files_properties(src/NetLib/fftpack/fftpack5.1.f PROPERTIES COMPILE_FLAGS
+   # -Wno-pedantic is required because -pedantic (added for Debug builds) promotes the
+   # argument mismatches back to errors, overriding -fallow-argument-mismatch.
+   set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS
       "-fallow-argument-mismatch -Wno-pedantic -fno-default-real-8 -fno-default-double-8")
+elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
+   # Intel's -real-size 64 promotes REAL->REAL(8) *and* COMPLEX->COMPLEX(8), so it must be
+   # undone here.  -double-size 64 restores the Intel default so the genuine DOUBLE
+   # PRECISION accumulators in fftpack5.1.f (DSUM, TPI, ARGH, ...) stay 8 bytes, matching
+   # gfortran's -fno-default-double-8.  Intel needs no -fallow-argument-mismatch analogue:
+   # these are F77 externals with no explicit interfaces, so it never diagnoses them.
+   if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      if (WIN32)
+         set(FFTPACK_REAL4_FLAGS "/real-size:32 /double-size:64")
+      else()
+         set(FFTPACK_REAL4_FLAGS "-real-size 32 -double-size 64")
+      endif()
+   else()   # the hyphenated spelling above is only supported from version 19 onwards
+      if (WIN32)
+         set(FFTPACK_REAL4_FLAGS "/real_size:32 /double_size:64")
+      else()
+         set(FFTPACK_REAL4_FLAGS "-real_size 32 -double_size 64")
+      endif()
+   endif()
+   set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS "${FFTPACK_REAL4_FLAGS}")
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
+   set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS
+      "-fno-default-real-8")
 endif()
 
 # Recursive use of routine in qk61/dqk61 will trigger errors in debug

@@ -1077,7 +1077,7 @@ CONTAINS
 !!  0          &  \lambda_3 & -\lambda_2 \\
 !!  -\lambda_3 &  0         &  \lambda_1 \\
 !!   \lambda_2 & -\lambda_1 &  0          
-!! 	\end{bmatrix}
+!!  \end{bmatrix}
 !! \f}   
 !! The angle of rotation for \f$\lambda\f$ is 
 !! \f{equation}{ \theta = \sqrt{{\lambda_1}^2+{\lambda_2}^2+{\lambda_3}^2} \f}
