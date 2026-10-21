@@ -399,7 +399,7 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
             ! bjj: guard against the search failing; without this, iLE (and the indices derived from it) would be
             !      used uninitialized, which produces garbage airfoil thicknesses (and thus garbage inflow noise)
             !      that changes from run to run.
-            IF ( iLE < 3 .OR. iLE >= size(AFInfo(k)%X_Coord) ) THEN
+            IF ( iLE < 3 .OR. iLE > size(AFInfo(k)%X_Coord) ) THEN
                call SetErrStat( ErrID_Fatal, 'Unable to locate the leading edge in the coordinates of airfoil '// &
                     trim(num2lstr(k))//'. The Full Guidati inflow-noise model (InflowMod=2) requires airfoil coordinates '// &
                     'that start at the trailing edge, wrap around the leading edge, and return to the trailing edge.', &
