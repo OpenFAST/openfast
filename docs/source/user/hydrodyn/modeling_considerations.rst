@@ -284,6 +284,116 @@ the inertia coefficient. For the
 distributed loads along members, there are separate set of hydrodynamic
 coefficients both with and without marine growth (**MG**).
 
+.. _hd-shallow-angle-members:
+
+Strip-Theory Members at a Shallow Angle to the Free Surface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The standard strip-theory formulation treats each member section as either
+fully submerged or dry depending on whether its centerline is below or above
+the free surface (or SWL without wave stretching), and it implicitly assumes
+the waterplane is perpendicular to the member axis. This is adequate for
+surface-piercing members that are steep relative to the free surface, but not
+for nearly horizontal members, such as pontoons and braces, that are close to
+or cross the free surface. For these members, HydroDyn uses a modified
+hydrodynamic load model that accounts for partial submergence of each circular
+section. No additional inputs are required. The model is selected
+automatically, and the user-specified hydrodynamic coefficients are used in
+the same way as in the standard model. Details of the formulation are given
+in the implementation plan,
+:download:`Hydrodynamic Loads on Strip-Theory Members at a Shallow Angle Relative to the Free Surface <../../../OtherSupporting/HydroDyn/HydroDyn_HorizontalMembers_Plan_Rev3.pdf>`.
+
+**Applicability and blending.** The modified model applies to the distributed
+loads on members with circular cross sections (**MSecGeom** = 1). Members
+with rectangular cross sections always use the standard model. The choice is
+made node by node based on the angle between the member axis and the local
+free surface plane, which includes the local wave slope when wave stretching is
+enabled. When the member axis is within 25 deg of the free surface, only the
+modified model is used. When it is steeper than 35 deg, only the standard
+model is used. In between, the loads from the two models are blended smoothly.
+For members with **PropPot** = TRUE, only the drag load is computed, as in
+the standard model.
+
+**Section submergence.** The submergence of each section is described by the
+depth of the section center below the free surface, measured in the section
+plane, normalized by the section radius. The wave kinematics and dynamic
+pressure are evaluated at the section center if it is submerged and on the
+free surface directly below it otherwise. Because the submergence is based
+on the node positions used for the wave kinematics, **WaveDisp** = 1 is
+strongly recommended so that the submergence follows the instantaneous motion
+of the structure. The hydrostatic loads are not part of this model.
+**MHstLMod** = 2 is recommended for these members for a consistent treatment
+of the hydrostatic loads. Using **WaveDisp** = 1, **MHstLMod** = 2,
+**Cp** = 1, **AxCp** = 1, and **Cb** = 1 ensures a consistent treatment of
+both the dynamic Froude-Krylov force and hydrostatic loads. This setup is
+strongly recommended for nearly horizontal strip-theory members floating on
+the free surface.
+
+**Distributed loads.** The following load components are modified for
+sections with partial or shallow submergence if the section normal is close to
+parallel to the free surface. All of them reduce to the standard strip-theory
+loads once the section is fully submerged and sufficiently deep.
+
+*  Added mass and scattering: the transverse added mass depends on the
+   submergence and differs between the in-plane horizontal (sway) and
+   vertical (heave) directions. The heave added mass follows the
+   infinite-frequency potential-flow solution for a circular section near the
+   free surface (:cite:`Taylor:1930`, :cite:`GreenhowAhn:1988`). The
+   sway added mass follows the zero-frequency (rigid free surface) solution,
+   which is more representative of slow horizontal motion. Both are scaled by
+   **Ca** and reach the deeply submerged value when the section center is five
+   radii below the free surface.
+
+*  Water entry and exit: as the added mass changes with submergence, an
+   additional force proportional to the rate of change of the added mass is
+   applied to conserve fluid momentum, following :cite:`vonKarman:1929`.
+   This force is based on the infinite-frequency added mass in both
+   directions. It is smoothed near the first contact between the section and
+   the free surface and is not intended to predict peak slamming loads.
+
+*  Froude-Krylov: the dynamic pressure is integrated over the wetted part of
+   the section perimeter and scaled by **Cp**.
+
+*  Drag: the transverse drag uses the wetted width of the section, i.e., the
+   chord at the waterline when the section center is above the free surface
+   and the full diameter otherwise.
+
+*  Axial loads on tapered members: the axial added-mass, Froude-Krylov, and
+   drag loads are scaled by the wetted fraction of the section perimeter.
+   A water-entry/exit force in the axial direction is also included. This
+   force is based on the rate of change of the axial added mass and is
+   smoothed near both points of tangent contact between the section and the
+   free surface.
+
+**Joint loads.** The lumped loads at joints (member end plates) use a single
+formulation for all orientations, so no blending is needed. The added-mass,
+scattering, Froude-Krylov, and drag loads are scaled by the wetted fraction of
+the end plate area, :math:`r`: the added-mass and scattering loads scale with
+:math:`r^{3/2}`, and the Froude-Krylov and drag loads scale with :math:`r`. A
+water-entry/exit force accounts for the change of the end-plate added mass
+with submergence. End plates within 5 deg of being parallel to the free surface
+are treated as either fully wet or fully dry with water-entry/exit force
+dropped. When the end plate is fully submerged, the standard joint loads are
+recovered.
+
+**Limitations.** The model has no memory: radiation damping and other
+free-surface memory effects are not included, so damping of motions near the
+free surface relies on drag only. The water-entry/exit forces conserve momentum
+in each direction separately and are symmetric between entry and exit, i.e.,
+the energy removed on entry is returned on exit. A suitable drag coefficient
+is required to account for the energy lost to viscous effects and/or water spray
+if important. If accurate hydrodynamic loads are required for large, nearly
+horizontal members that do not experience significant nonlinear submergence
+effects, a potential-flow model can be considered instead. Conversely, for
+slender members where these effects are significant, the strip-theory approach
+may be more appropriate and convenient. Note that potential-flow models can
+be used in conjunction with the nonlinear, mesh-based Froude-Krylov and
+hydrostatic pressure integration over the instantaneous wetted surface
+(**FKMod** = 1). This captures the nonlinear wetting effects on the
+Froude-Krylov and hydrostatic loads and retains radiation damping. However,
+the added mass, radiation, and scattering loads remain linear about the mean
+wetted surface, so their dependence on the instantaneous submergence and the
+resulting water-entry/exit forces are not captured.
+
 Impact of Substructure Motions on Loads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In general, HydroDyn assumes that structural motions of the substructure
