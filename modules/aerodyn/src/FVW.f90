@@ -289,7 +289,9 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
-   type(FVW_ConstraintStateType),   intent(  out)  :: z              !< Constraints
+   ! Preserve the source-panel strengths allocated during srcPnl_init.
+   ! INTENT(OUT) would deallocate allocatable components of z.
+   type(FVW_ConstraintStateType),   intent(inout)  :: z              !< Constraints
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -507,6 +509,10 @@ subroutine FVW_FinalWrite(u, p, x, z, OtherState, m, ErrStat, ErrMsg)
    ! Place any last minute operations or calculations here:
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP .and. OtherState%Initialized) then
       call WrScr('OLAF: writing final VTK outputs')
+      ! Refresh derived panel fields before final VTK output.
+      if (p%SrcPnl%n>0 .and. allocated(z%SrcPnl%Sigma)) then
+         call srcPnl_calcOutput(p%SrcPnl, m%SrcPnl, z%SrcPnl, p%AirDens)
+      endif
       t=-1.0_ReKi
       if (p%WrVTK==1) then
          if (m%VTKstep<m%iStep+1) then
@@ -1410,7 +1416,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
          z_out%SrcPnl%Sigma = 0.0_ReKi
          call srcPnl_solve(p%SrcPnl, m%SrcPnl, z_out%SrcPnl, errStat2, errMsg2); if(Failed()) return
       else
-         z_out%SrcPnl%Sigma = m%SrcPnl%RHS ! Use previous intensities
+         z_out%SrcPnl%Sigma = m%SrcPnl%RHS(1:p%SrcPnl%n)
       endif
    endif
 
