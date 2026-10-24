@@ -441,6 +441,9 @@ MODULE SysSubs
  
  #ifdef USE_DLL_INTERFACE           
  
+    ErrStat = ErrID_None
+    ErrMsg = ''
+
     ! Close the library:
  
     IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN

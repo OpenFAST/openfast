@@ -7365,7 +7365,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
                      Flags=VF_Linearize + VF_RotFrame, &
                      Num=p%NumBlNds, &
                      Perturb=Perturb, &
-                     LinNames=[('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', -', i = 1, p%NumBlNds)])
+                     LinNames=[(MV_LinName('User property on blade '//trim(Num2LStr(j))//', node '//trim(Num2LStr(i))//', -'), i = 1, p%NumBlNds)])
    end do
 
    ! Extended inputs
