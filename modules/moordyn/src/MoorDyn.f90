@@ -28,6 +28,7 @@ MODULE MoorDyn
    USE MoorDyn_Rod
    USE MoorDyn_Body
    USE MoorDyn_Misc
+   USE MoorDyn_SlipSupport
    
 
    IMPLICIT NONE
@@ -443,6 +444,18 @@ CONTAINS
                   Line = NextLine(i)
                END DO
                
+            else if (INDEX(Line, "SLIP SUPPORT") > 0) then ! if slip support header
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nSlips = p%nSlips + 1
+                  Line = NextLine(i)
+               END DO
+               
                
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
 
@@ -646,6 +659,7 @@ CONTAINS
       ALLOCATE(m%LineList(    p%nLines    ), STAT = ErrStat2 ); if(AllocateFailed("LineList"    )) return
       ALLOCATE(m%ExtLdList(    p%nExtLds  ), STAT = ErrStat2 ); if(AllocateFailed("ExtLdList"   )) return
       ALLOCATE(m%FailList(    p%nFails    ), STAT = ErrStat2 ); if(AllocateFailed("FailList"    )) return
+      ALLOCATE(m%SlipList(    p%nSlips    ), STAT = ErrStat2 ); if(AllocateFailed("SlipList"    )) return
     
       
       ! Allocate associated index arrays (note: some are allocated larger than will be used, for simplicity)
@@ -2290,6 +2304,83 @@ CONTAINS
                   endif
                enddo 
 
+            !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "SLIP SUPPORT") > 0) then ! if slip support header
+
+               IF (wordy > 0) CALL WrScr("   Reading slip supports")
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               DO l = 1,p%nSlips
+
+                  Line = NextLine(i)
+
+                  ! ID  Point  Line  Shape  K  Zeta  MuS  MuK  VTol  VS
+                  READ(Line,*,IOSTAT=ErrStat2) m%SlipList(l)%IdNum, m%SlipList(l)%PointID, m%SlipList(l)%LineID, TempString1, &
+                                               m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, m%SlipList(l)%muK, &
+                                               m%SlipList(l)%vTol, m%SlipList(l)%vS
+                  IF (ErrStat2 /= 0) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Shape K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  CALL Conv2UC(TempString1)
+                  IF (TRIM(TempString1) == 'LINEAR') THEN
+                     m%SlipList(l)%shape = 1
+                  ELSE IF (TRIM(TempString1) == 'CUBIC') THEN
+                     m%SlipList(l)%shape = 2
+                  ELSE
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Shape must be LINEAR or CUBIC.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ( m%SlipList(l)%IdNum .NE. l ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Slip support ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ((m%SlipList(l)%PointID < 1) .OR. (m%SlipList(l)%PointID > p%nPoints)) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Point number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ((m%SlipList(l)%LineID < 1) .OR. (m%SlipList(l)%LineID > p%nLines)) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Line number out of bounds.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF (.NOT. ALLOCATED(m%LineList(m%SlipList(l)%LineID)%r)) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' The SLIP SUPPORTS section must come after the LINES section.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ((m%SlipList(l)%zeta < 0.0_DbKi) .OR. (m%SlipList(l)%muK < 0.0_DbKi) .OR. &
+                      (m%SlipList(l)%muS < m%SlipList(l)%muK) .OR. &
+                      ((m%SlipList(l)%muS > 0.0_DbKi) .AND. (m%SlipList(l)%vTol <= 0.0_DbKi)) .OR. &
+                      ((m%SlipList(l)%muS > m%SlipList(l)%muK) .AND. (m%SlipList(l)%vS <= 0.0_DbKi))) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': require Zeta >= 0, 0 <= MuK <= MuS, VTol > 0 when MuS > 0, and VS > 0 when MuS > MuK.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  CALL SlipSupport_Setup(m%SlipList(l), m%LineList(m%SlipList(l)%LineID), p)
+
+                  if (p%writeLog > 0) then
+                     write(p%UnLog,'(A)') '   Slip support '//trim(Num2LStr(l))//': Point '//trim(Num2LStr(m%SlipList(l)%PointID))// &
+                        ', Line '//trim(Num2LStr(m%SlipList(l)%LineID))//', K = '//trim(Num2LStr(m%SlipList(l)%kPerp))// &
+                        ' N/m, IC slip damping = '//trim(Num2LStr(m%SlipList(l)%cIC))//' N-s/m'
+                  end if
+
+               END DO
+
                
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
@@ -2814,6 +2905,8 @@ CONTAINS
          CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
+
+         IF (p%nSlips > 0) CALL SlipSupport_InitLineShape(m, p, l)
 
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
@@ -3618,10 +3711,14 @@ CONTAINS
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
+         IF (p%nSlips > 0) CALL SlipSupport_ArmRelease(m, p)
+
          Call MD_Step(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2) 
          IF ( ErrStat2 /= ErrID_None ) THEN
             CALL CheckError(ErrStat2, ErrMsg2)
          END IF
+
+         IF (p%nSlips > 0) CALL SlipSupport_CommitRelease(m, p, t2)
          
          ! check for NaNs - is this a good place/way to do it?
          DO J = 1, m%Nx
@@ -4287,6 +4384,8 @@ CONTAINS
       DO l = 1,p%nLines
          CALL Line_SetState(m%LineList(l), x%states(m%LineStateIs1(l):m%LineStateIsN(l)), t, m)
       END DO
+
+      IF (p%nSlips > 0) CALL SlipSupport_CalcForces(m, p)
 
       ! calculate dynamics of free objects (will also calculate forces (doRHS()) from any child/dependent objects)...
          
