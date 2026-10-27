@@ -981,7 +981,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! UAMod (Legacy)
    call ParseVar( FileInfo_In, CurLine, "UAMod", UAMod_Old, ErrStat2, ErrMsg2, UnEc )
    UAModProvided = legacyInputPresent('UAMod', CurLine, ErrStat2, ErrMsg2, 'UA_Mod=0 (AFAeroMod=1), UA_Mod>1 (AFAeroMod=2 and UA_Mod=UAMod')
-   ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
+   ! UA_Mod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm), 4=HGM, 5=HGM+vortex, 6=Oye, 7=Boeing-Vertol, 9=IAG}
    call ParseVar( FileInfo_In, CurLine, "UA_Mod", InputFileData%UA_Init%UAMod, ErrStat2, ErrMsg2, UnEc )
    if (newInputMissing('UA_Mod', CurLine, errStat2, errMsg2)) then
       ! We'll deal with it when we deal with AFAeroMod
@@ -2089,6 +2089,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
          Msg = 'Stieg Oye dynamic stall model'
       case (UA_BV)
          Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
+      case (UA_IAG)
+         Msg = 'IAG dynamic stall model (first-order, state-space)'
       case default
          Msg = 'unknown'
    end select

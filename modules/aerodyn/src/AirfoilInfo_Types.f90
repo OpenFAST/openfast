@@ -45,6 +45,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye                           = 6      ! Stieg Oye dynamic stall model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV                            = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV360                       = 8      ! continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_IAG                           = 9      ! IAG dynamic stall model (first-order, state-space) [-]
 ! =========  AFI_UA_BL_Type  =======
   TYPE, PUBLIC :: AFI_UA_BL_Type
     REAL(ReKi)  :: alpha0 = 0.0_ReKi      !< Angle of attack for zero lift (also used in HGM) [input in degrees; stored as radians]
@@ -91,6 +92,11 @@ IMPLICIT NONE
     REAL(ReKi)  :: CnBreakUpper = 0.0_ReKi      !< (calculated) CnAttached value at alphaBreakUpper where normal and reverse flow CnAttached intersect; will be positive [-]
     REAL(ReKi)  :: alphaBreakLower = 0.0_ReKi      !< (calculated) Angle of attack where normal and reverse flow CnAttached intersect; between -pi and 0; will be near -pi/2 deg in most cases [rad]
     REAL(ReKi)  :: CnBreakLower = 0.0_ReKi      !< (calculated) CnAttached value at alphaBreakLower where normal and reverse flow CnAttached intersect; will be negative [-]
+    REAL(ReKi)  :: Ka = 0.0_ReKi      !< IAG model: impulsive (non-circulatory) normal-force gain [default=0.75] [-]
+    REAL(ReKi)  :: Kv = 0.0_ReKi      !< IAG model: center-of-pressure amplitude for vortex moment [default=0.2] [-]
+    REAL(ReKi)  :: dCNdA = 0.0_ReKi      !< IAG model: static normal-force curve slope from linear-fit approach [1/rad]
+    REAL(ReKi)  :: CnMax = 0.0_ReKi      !< IAG model: (calculated) maximum static Cn, used as positive CN_CRIT [-]
+    REAL(ReKi)  :: CnMin = 0.0_ReKi      !< IAG model: (calculated) minimum static Cn, used as negative CN_CRIT [-]
   END TYPE AFI_UA_BL_Type
 ! =======================
 ! =========  AFI_UA_BL_Default_Type  =======
@@ -131,6 +137,9 @@ IMPLICIT NONE
     LOGICAL  :: filtCutOff = .true.      !< Calculate value for this input? [-]
     LOGICAL  :: alphaUpper = .true.      !< Calculate value for this input? [-]
     LOGICAL  :: alphaLower = .true.      !< Calculate value for this input? [-]
+    LOGICAL  :: Ka = .true.      !< Calculate value for this input? [-]
+    LOGICAL  :: Kv = .true.      !< Calculate value for this input? [-]
+    LOGICAL  :: dCNdA = .true.      !< Calculate value for this input? [-]
   END TYPE AFI_UA_BL_Default_Type
 ! =======================
 ! =========  AFI_Table_Type  =======
@@ -272,6 +281,11 @@ subroutine AFI_CopyUA_BL_Type(SrcUA_BL_TypeData, DstUA_BL_TypeData, CtrlCode, Er
    DstUA_BL_TypeData%CnBreakUpper = SrcUA_BL_TypeData%CnBreakUpper
    DstUA_BL_TypeData%alphaBreakLower = SrcUA_BL_TypeData%alphaBreakLower
    DstUA_BL_TypeData%CnBreakLower = SrcUA_BL_TypeData%CnBreakLower
+   DstUA_BL_TypeData%Ka = SrcUA_BL_TypeData%Ka
+   DstUA_BL_TypeData%Kv = SrcUA_BL_TypeData%Kv
+   DstUA_BL_TypeData%dCNdA = SrcUA_BL_TypeData%dCNdA
+   DstUA_BL_TypeData%CnMax = SrcUA_BL_TypeData%CnMax
+   DstUA_BL_TypeData%CnMin = SrcUA_BL_TypeData%CnMin
 end subroutine
 
 subroutine AFI_DestroyUA_BL_Type(UA_BL_TypeData, ErrStat, ErrMsg)
@@ -332,6 +346,11 @@ subroutine AFI_PackUA_BL_Type(RF, Indata)
    call RegPack(RF, InData%CnBreakUpper)
    call RegPack(RF, InData%alphaBreakLower)
    call RegPack(RF, InData%CnBreakLower)
+   call RegPack(RF, InData%Ka)
+   call RegPack(RF, InData%Kv)
+   call RegPack(RF, InData%dCNdA)
+   call RegPack(RF, InData%CnMax)
+   call RegPack(RF, InData%CnMin)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -384,6 +403,11 @@ subroutine AFI_UnPackUA_BL_Type(RF, OutData)
    call RegUnpack(RF, OutData%CnBreakUpper); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%alphaBreakLower); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CnBreakLower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Ka); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Kv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dCNdA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CnMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CnMin); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AFI_CopyUA_BL_Default_Type(SrcUA_BL_Default_TypeData, DstUA_BL_Default_TypeData, CtrlCode, ErrStat, ErrMsg)
@@ -431,6 +455,9 @@ subroutine AFI_CopyUA_BL_Default_Type(SrcUA_BL_Default_TypeData, DstUA_BL_Defaul
    DstUA_BL_Default_TypeData%filtCutOff = SrcUA_BL_Default_TypeData%filtCutOff
    DstUA_BL_Default_TypeData%alphaUpper = SrcUA_BL_Default_TypeData%alphaUpper
    DstUA_BL_Default_TypeData%alphaLower = SrcUA_BL_Default_TypeData%alphaLower
+   DstUA_BL_Default_TypeData%Ka = SrcUA_BL_Default_TypeData%Ka
+   DstUA_BL_Default_TypeData%Kv = SrcUA_BL_Default_TypeData%Kv
+   DstUA_BL_Default_TypeData%dCNdA = SrcUA_BL_Default_TypeData%dCNdA
 end subroutine
 
 subroutine AFI_DestroyUA_BL_Default_Type(UA_BL_Default_TypeData, ErrStat, ErrMsg)
@@ -483,6 +510,9 @@ subroutine AFI_PackUA_BL_Default_Type(RF, Indata)
    call RegPack(RF, InData%filtCutOff)
    call RegPack(RF, InData%alphaUpper)
    call RegPack(RF, InData%alphaLower)
+   call RegPack(RF, InData%Ka)
+   call RegPack(RF, InData%Kv)
+   call RegPack(RF, InData%dCNdA)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -527,6 +557,9 @@ subroutine AFI_UnPackUA_BL_Default_Type(RF, OutData)
    call RegUnpack(RF, OutData%filtCutOff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%alphaUpper); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%alphaLower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Ka); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Kv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dCNdA); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1351,6 +1384,11 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Er
    u_out%CnBreakUpper = a1*u1%CnBreakUpper + a2*u2%CnBreakUpper
    CALL Angles_ExtrapInterp( u1%alphaBreakLower, u2%alphaBreakLower, tin, u_out%alphaBreakLower, tin_out )
    u_out%CnBreakLower = a1*u1%CnBreakLower + a2*u2%CnBreakLower
+   u_out%Ka = a1*u1%Ka + a2*u2%Ka
+   u_out%Kv = a1*u1%Kv + a2*u2%Kv
+   u_out%dCNdA = a1*u1%dCNdA + a2*u2%dCNdA
+   u_out%CnMax = a1*u1%CnMax + a2*u2%CnMax
+   u_out%CnMin = a1*u1%CnMin + a2*u2%CnMin
 END SUBROUTINE
 
 SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1450,6 +1488,11 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat
    u_out%CnBreakUpper = a1*u1%CnBreakUpper + a2*u2%CnBreakUpper + a3*u3%CnBreakUpper
    CALL Angles_ExtrapInterp( u1%alphaBreakLower, u2%alphaBreakLower, u3%alphaBreakLower, tin, u_out%alphaBreakLower, tin_out )
    u_out%CnBreakLower = a1*u1%CnBreakLower + a2*u2%CnBreakLower + a3*u3%CnBreakLower
+   u_out%Ka = a1*u1%Ka + a2*u2%Ka + a3*u3%Ka
+   u_out%Kv = a1*u1%Kv + a2*u2%Kv + a3*u3%Kv
+   u_out%dCNdA = a1*u1%dCNdA + a2*u2%dCNdA + a3*u3%dCNdA
+   u_out%CnMax = a1*u1%CnMax + a2*u2%CnMax + a3*u3%CnMax
+   u_out%CnMin = a1*u1%CnMin + a2*u2%CnMin + a3*u3%CnMin
 END SUBROUTINE
 
 function AFI_InputMeshPointer(u, DL) result(Mesh)
