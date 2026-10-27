@@ -376,6 +376,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: muK = 0.0_R8Ki      !< kinetic friction coefficient [[-]]
     REAL(DbKi)  :: vTol = 0.0_R8Ki      !< friction regularization velocity [[m/s]]
     REAL(DbKi)  :: vS = 0.0_R8Ki      !< Stribeck velocity for static-to-kinetic transition [[m/s]]
+    REAL(DbKi)  :: stickDisp = 0.0_R8Ki      !< LuGre pre-sliding displacement at breakaway; 0 = regularized Coulomb [[m]]
+    INTEGER(IntKi)  :: stateIs = 0      !< index of the LuGre bristle state in x%states (0 if none) [-]
+    REAL(DbKi)  :: z = 0.0_R8Ki      !< LuGre bristle deflection [[m]]
+    REAL(DbKi)  :: zdot = 0.0_R8Ki      !< LuGre bristle deflection rate [[m/s]]
+    INTEGER(IntKi)  :: capWarned = 0      !< 1 once the bristle stiffness cap warning has been issued [-]
     REAL(DbKi)  :: mNode = 0.0_R8Ki      !< representative line node mass including added mass [[kg]]
     REAL(DbKi)  :: cIC = 0.0_R8Ki      !< viscous slip damping used during IC generation [[N-s/m]]
     INTEGER(IntKi)  :: status = 0_IntKi      !< 1 active, 0 released [-]
@@ -2754,6 +2759,11 @@ subroutine MD_CopySlipSupport(SrcSlipSupportData, DstSlipSupportData, CtrlCode, 
    DstSlipSupportData%muK = SrcSlipSupportData%muK
    DstSlipSupportData%vTol = SrcSlipSupportData%vTol
    DstSlipSupportData%vS = SrcSlipSupportData%vS
+   DstSlipSupportData%stickDisp = SrcSlipSupportData%stickDisp
+   DstSlipSupportData%stateIs = SrcSlipSupportData%stateIs
+   DstSlipSupportData%z = SrcSlipSupportData%z
+   DstSlipSupportData%zdot = SrcSlipSupportData%zdot
+   DstSlipSupportData%capWarned = SrcSlipSupportData%capWarned
    DstSlipSupportData%mNode = SrcSlipSupportData%mNode
    DstSlipSupportData%cIC = SrcSlipSupportData%cIC
    DstSlipSupportData%status = SrcSlipSupportData%status
@@ -2791,6 +2801,11 @@ subroutine MD_PackSlipSupport(RF, Indata)
    call RegPack(RF, InData%muK)
    call RegPack(RF, InData%vTol)
    call RegPack(RF, InData%vS)
+   call RegPack(RF, InData%stickDisp)
+   call RegPack(RF, InData%stateIs)
+   call RegPack(RF, InData%z)
+   call RegPack(RF, InData%zdot)
+   call RegPack(RF, InData%capWarned)
    call RegPack(RF, InData%mNode)
    call RegPack(RF, InData%cIC)
    call RegPack(RF, InData%status)
@@ -2820,6 +2835,11 @@ subroutine MD_UnPackSlipSupport(RF, OutData)
    call RegUnpack(RF, OutData%muK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%vTol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%vS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stickDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stateIs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%zdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%capWarned); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%mNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%cIC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%status); if (RegCheckErr(RF, RoutineName)) return

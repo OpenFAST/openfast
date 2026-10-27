@@ -58,6 +58,9 @@ CONTAINS
 
       Slip%status = 1
       Slip%releasePending = 0
+      Slip%z         = 0.0_DbKi
+      Slip%zdot      = 0.0_DbKi
+      Slip%capWarned = 0
       Slip%kSeg   = 0
       Slip%xi     = 0.0_DbKi
       Slip%s      = 0.0_DbKi
@@ -151,6 +154,9 @@ CONTAINS
       REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest
       REAL(DbKi)     :: tC(3), tCmag, rStar(3), vStar(3), delta(3), vRel(3), vRelPerp(3)
       REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
+      REAL(DbKi)     :: sig0, kCap, kappa, sig1Fn
+      LOGICAL        :: rateCapped
+      CHARACTER(200) :: Msg
       INTEGER(IntKi), ALLOCATABLE :: idx(:)
       REAL(DbKi),     ALLOCATABLE :: w(:), dw(:), sNode(:), qN(:,:), Fnode(:,:)
 
@@ -160,6 +166,7 @@ CONTAINS
 
       DO is = 1, p%nSlips
 
+         m%SlipList(is)%zdot = 0.0_DbKi
          IF (m%SlipList(is)%status /= 1) CYCLE
 
          iL = m%SlipList(is)%LineID
@@ -254,14 +261,53 @@ CONTAINS
          IF (m%IC_gen) THEN
             m%SlipList(is)%Ff = -m%SlipList(is)%cIC*m%SlipList(is)%vSlip
          ELSE IF (m%SlipList(is)%muS > 0.0_DbKi) THEN
-            ! floor vTol so the peak friction slope muS*Fn/vTol stays within explicit stability
-            vTolEff = MAX(m%SlipList(is)%vTol, m%SlipList(is)%muS*m%SlipList(is)%Fn*p%dtM0/mC)
             IF (m%SlipList(is)%muS > m%SlipList(is)%muK) THEN
                muEff = m%SlipList(is)%muK + (m%SlipList(is)%muS - m%SlipList(is)%muK)*EXP(-(m%SlipList(is)%vSlip/m%SlipList(is)%vS)**2)
             ELSE
                muEff = m%SlipList(is)%muK
             END IF
-            m%SlipList(is)%Ff = -muEff*m%SlipList(is)%Fn*TANH(m%SlipList(is)%vSlip/vTolEff)
+
+            IF (m%SlipList(is)%stateIs > 0) THEN
+               ! LuGre with friction normalized by Fn; bristle stiffness capped for explicit stability
+               sig0 = m%SlipList(is)%muS/m%SlipList(is)%stickDisp
+               IF (m%SlipList(is)%Fn > 0.0_DbKi) THEN
+                  kCap = mC*(0.5_DbKi/p%dtM0)**2/m%SlipList(is)%Fn
+                  IF (sig0 > kCap) THEN
+                     sig0 = kCap
+                     IF (m%SlipList(is)%capWarned == 0) THEN
+                        m%SlipList(is)%capWarned = 1
+                        Msg = 'Slip support '//TRIM(Num2LStr(m%SlipList(is)%IdNum))//': StickDisp too small for dtM; '// &
+                              'bristle stiffness capped, so sticking is softer than specified.'
+                        CALL WrScr('   '//TRIM(Msg))
+                        IF (p%writeLog > 0) WRITE(p%UnLog,'(A)') TRIM(Msg)
+                     END IF
+                  END IF
+               END IF
+
+               ! relaxation rate |v|/z_ss with z_ss = muEff/sig0, capped at 0.5/dtM
+               kappa = 0.5_DbKi/p%dtM0
+               rateCapped = .TRUE.
+               IF (ABS(m%SlipList(is)%vSlip)*sig0 < kappa*muEff) THEN
+                  kappa = ABS(m%SlipList(is)%vSlip)*sig0/muEff
+                  rateCapped = .FALSE.
+               END IF
+               m%SlipList(is)%zdot = m%SlipList(is)%vSlip - kappa*m%SlipList(is)%z
+
+               ! critically damped bristles, faded out once sliding to keep LuGre dissipative
+               sig1Fn = 2.0_DbKi*SQRT(sig0*m%SlipList(is)%Fn*mC)*EXP(-(m%SlipList(is)%vSlip/m%SlipList(is)%vS)**2)
+
+               m%SlipList(is)%Ff = -(m%SlipList(is)%Fn*sig0*m%SlipList(is)%z + sig1Fn*m%SlipList(is)%zdot)
+               ! muS bound keeps LuGre's frictional lag; muEff bound only where the capped rate lets z overshoot z_ss
+               IF (rateCapped) THEN
+                  m%SlipList(is)%Ff = SIGN(MIN(ABS(m%SlipList(is)%Ff), muEff*m%SlipList(is)%Fn), m%SlipList(is)%Ff)
+               ELSE
+                  m%SlipList(is)%Ff = SIGN(MIN(ABS(m%SlipList(is)%Ff), m%SlipList(is)%muS*m%SlipList(is)%Fn), m%SlipList(is)%Ff)
+               END IF
+            ELSE
+               ! floor vTol so the peak friction slope muS*Fn/vTol stays within explicit stability
+               vTolEff = MAX(m%SlipList(is)%vTol, m%SlipList(is)%muS*m%SlipList(is)%Fn*p%dtM0/mC)
+               m%SlipList(is)%Ff = -muEff*m%SlipList(is)%Fn*TANH(m%SlipList(is)%vSlip/vTolEff)
+            END IF
          ELSE
             m%SlipList(is)%Ff = 0.0_DbKi
          END IF

@@ -81,6 +81,7 @@ MODULE MoorDyn_IO
   INTEGER, PARAMETER             :: SlipV     =   30
   INTEGER, PARAMETER             :: SlipFN    =   31
   INTEGER, PARAMETER             :: SlipFF    =   32
+  INTEGER, PARAMETER             :: SlipZ     =   33
  
 
   ! List of units corresponding to the quantities parameters for QTypes
@@ -748,6 +749,9 @@ CONTAINS
         ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'FF')) THEN
           p%OutParam(I)%QType = SlipFF
           p%OutParam(I)%Units = UnitList(Ten)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'Z')) THEN
+          p%OutParam(I)%QType = SlipZ
+          p%OutParam(I)%Units = UnitList(PosX)
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
           CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Quantity type not recognized.')
@@ -1674,6 +1678,8 @@ CONTAINS
                      y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fn
                   CASE (SlipFF)
                      y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Ff
+                  CASE (SlipZ)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%z
                   CASE (FX)
                      y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fhoop(1)
                   CASE (FY)

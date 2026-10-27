@@ -2318,12 +2318,12 @@ CONTAINS
 
                   Line = NextLine(i)
 
-                  ! ID  Point  Line  Width  K  Zeta  MuS  MuK  VTol  VS   (Width as a multiple of segment length)
+                  ! ID  Point  Line  Width  K  Zeta  MuS  MuK  VTol  VS  StickDisp   (Width as a multiple of segment length)
                   READ(Line,*,IOSTAT=ErrStat2) m%SlipList(l)%IdNum, m%SlipList(l)%PointID, m%SlipList(l)%LineID, m%SlipList(l)%width, &
                                                m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, &
-                                               m%SlipList(l)%muK, m%SlipList(l)%vTol, m%SlipList(l)%vS
+                                               m%SlipList(l)%muK, m%SlipList(l)%vTol, m%SlipList(l)%vS, m%SlipList(l)%stickDisp
                   IF (ErrStat2 /= 0) THEN
-                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Width K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Width K Zeta MuS MuK VTol VS StickDisp.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -2361,12 +2361,20 @@ CONTAINS
                   END IF
 
                   IF ((m%SlipList(l)%zeta < 0.0_DbKi) .OR. (m%SlipList(l)%muK < 0.0_DbKi) .OR. &
-                      (m%SlipList(l)%muS < m%SlipList(l)%muK) .OR. &
-                      ((m%SlipList(l)%muS > 0.0_DbKi) .AND. (m%SlipList(l)%vTol <= 0.0_DbKi)) .OR. &
-                      ((m%SlipList(l)%muS > m%SlipList(l)%muK) .AND. (m%SlipList(l)%vS <= 0.0_DbKi))) THEN
-                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': require Zeta >= 0, 0 <= MuK <= MuS, VTol > 0 when MuS > 0, and VS > 0 when MuS > MuK.', ErrStat, ErrMsg, RoutineName )
+                      (m%SlipList(l)%muS < m%SlipList(l)%muK) .OR. (m%SlipList(l)%stickDisp < 0.0_DbKi) .OR. &
+                      ((m%SlipList(l)%muS > 0.0_DbKi) .AND. (m%SlipList(l)%stickDisp <= 0.0_DbKi) .AND. (m%SlipList(l)%vTol <= 0.0_DbKi)) .OR. &
+                      ((m%SlipList(l)%muS > m%SlipList(l)%muK) .AND. (m%SlipList(l)%vS <= 0.0_DbKi)) .OR. &
+                      ((m%SlipList(l)%stickDisp > 0.0_DbKi) .AND. ((m%SlipList(l)%muS <= 0.0_DbKi) .OR. (m%SlipList(l)%vS <= 0.0_DbKi)))) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': require Zeta >= 0, 0 <= MuK <= MuS, StickDisp >= 0, VTol > 0 when MuS > 0 and StickDisp = 0, '// &
+                        'VS > 0 when MuS > MuK, and MuS > 0 and VS > 0 when StickDisp > 0.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
+                  END IF
+
+                  ! LuGre bristle states are appended after all line states
+                  IF (m%SlipList(l)%stickDisp > 0.0_DbKi) THEN
+                     Nx = Nx + 1
+                     m%SlipList(l)%stateIs = Nx
                   END IF
 
                   CALL SlipSupport_Setup(m%SlipList(l), m%LineList(m%SlipList(l)%LineID), p)
@@ -2949,6 +2957,10 @@ CONTAINS
 
       END DO    !l = 1, p%NLines
 
+      DO l = 1, p%nSlips
+         IF (m%SlipList(l)%stateIs > 0) x%states(m%SlipList(l)%stateIs) = 0.0_DbKi
+      END DO
+
 
 
       ! --------------------------------------------------------------------
@@ -3181,6 +3193,9 @@ CONTAINS
 
          ! Unboost drag coefficient of each line type   <<<
          m%IC_gen = .False. ! turn off IC_gen flag
+         DO I = 1, p%nSlips
+            IF (m%SlipList(I)%stateIs > 0) x%states(m%SlipList(I)%stateIs) = 0.0_DbKi
+         END DO
          DO I = 1, p%nLines
             m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
@@ -3559,6 +3574,22 @@ CONTAINS
                            Perturb=0.1_R8Ki, &
                            LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
          end do         
+      end do
+
+      !-----------------
+      ! first-order states
+      !-----------------
+
+      ! LuGre bristle deflection of slip supports; perturbation scaled to the pre-sliding range
+      do l = 1, p%nSlips
+         if (m%SlipList(l)%stateIs > 0) then
+            LinStr = 'Slip '//trim(Num2LStr(l))
+            call MV_AddVar(Vars%x, LinStr, FieldScalar, DatLoc(MD_x_states), &
+                           iAry=m%SlipList(l)%stateIs, &
+                           Num=1, Flags=VF_DerivOrder1, &
+                           Perturb=0.01_R8Ki*m%SlipList(l)%stickDisp, &
+                           LinNames=[trim(LinStr)//' bristle z, m'])
+         end if
       end do
 
       !-------------------------------------------------------------------------
@@ -4402,7 +4433,15 @@ CONTAINS
          CALL Line_SetState(m%LineList(l), x%states(m%LineStateIs1(l):m%LineStateIsN(l)), t, m)
       END DO
 
-      IF (p%nSlips > 0) CALL SlipSupport_CalcForces(m, p)
+      IF (p%nSlips > 0) THEN
+         DO l = 1, p%nSlips
+            IF (m%SlipList(l)%stateIs > 0) m%SlipList(l)%z = x%states(m%SlipList(l)%stateIs)
+         END DO
+         CALL SlipSupport_CalcForces(m, p)
+         DO l = 1, p%nSlips
+            IF (m%SlipList(l)%stateIs > 0) dxdt%states(m%SlipList(l)%stateIs) = m%SlipList(l)%zdot
+         END DO
+      END IF
 
       ! calculate dynamics of free objects (will also calculate forces (doRHS()) from any child/dependent objects)...
          
