@@ -369,8 +369,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this slip support [-]
     INTEGER(IntKi)  :: PointID = 0_IntKi      !< index of the hoop Point in PointList [-]
     INTEGER(IntKi)  :: LineID = 0_IntKi      !< index of the threaded Line in LineList [-]
-    INTEGER(IntKi)  :: shape = 0_IntKi      !< contact load spreading: 1 linear (2 nodes), 2 cubic B-spline (4 nodes) [-]
-    REAL(DbKi)  :: width = 0.0_R8Ki      !< kernel scale in unstretched arc length; 0 = one segment (node-based weights) [[m]]
+    REAL(DbKi)  :: width = 0.0_R8Ki      !< cubic B-spline contact kernel scale in unstretched arc length (input as a multiple of segment length) [[m]]
     REAL(DbKi)  :: kPerp = 0.0_R8Ki      !< transverse penalty stiffness [[N/m]]
     REAL(DbKi)  :: zeta = 0.0_R8Ki      !< transverse damping ratio [[-]]
     REAL(DbKi)  :: muS = 0.0_R8Ki      !< static friction coefficient [[-]]
@@ -2748,7 +2747,6 @@ subroutine MD_CopySlipSupport(SrcSlipSupportData, DstSlipSupportData, CtrlCode, 
    DstSlipSupportData%IdNum = SrcSlipSupportData%IdNum
    DstSlipSupportData%PointID = SrcSlipSupportData%PointID
    DstSlipSupportData%LineID = SrcSlipSupportData%LineID
-   DstSlipSupportData%shape = SrcSlipSupportData%shape
    DstSlipSupportData%width = SrcSlipSupportData%width
    DstSlipSupportData%kPerp = SrcSlipSupportData%kPerp
    DstSlipSupportData%zeta = SrcSlipSupportData%zeta
@@ -2786,7 +2784,6 @@ subroutine MD_PackSlipSupport(RF, Indata)
    call RegPack(RF, InData%IdNum)
    call RegPack(RF, InData%PointID)
    call RegPack(RF, InData%LineID)
-   call RegPack(RF, InData%shape)
    call RegPack(RF, InData%width)
    call RegPack(RF, InData%kPerp)
    call RegPack(RF, InData%zeta)
@@ -2816,7 +2813,6 @@ subroutine MD_UnPackSlipSupport(RF, OutData)
    call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PointID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LineID); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shape); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%width); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%kPerp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return

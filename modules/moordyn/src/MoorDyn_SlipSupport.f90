@@ -18,7 +18,7 @@
 !
 !**********************************************************************************************************************************
 ! Slip supports: a line threaded through a hoop on a Point. The hoop acts on a virtual contact point on the
-! line; contact forces are spread to nearby nodes with linear (2-node) or cubic B-spline (4-node) weights.
+! line; contact forces are spread to nearby nodes with a cubic B-spline kernel of fixed width in arc length.
 MODULE MoorDyn_SlipSupport
 
    USE MoorDyn_Types
@@ -189,7 +189,7 @@ CONTAINS
          kBest  = kLo
          uBest  = 0.0_DbKi
          DO k = kLo, kHi
-            CALL ProjectOnSegment(m%LineList(iL), m%SlipList(is)%shape, m%SlipList(is)%width, sNode, k, xh, u, d2, idx, w, dw)
+            CALL ProjectOnSegment(m%LineList(iL), m%SlipList(is)%width, sNode, k, xh, u, d2, idx, w, dw)
             IF (d2 < d2Best) THEN
                d2Best = d2
                kBest  = k
@@ -202,24 +202,17 @@ CONTAINS
          m%SlipList(is)%kSeg = k
          m%SlipList(is)%xi   = u
 
-         CALL GetWeights(m%LineList(iL), m%SlipList(is)%shape, m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw)
+         CALL KernelWeights(m%LineList(iL), m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw)
 
          rStar = 0.0_DbKi
          vStar = 0.0_DbKi
+         tC    = 0.0_DbKi
          DO j = 1, nW
-            rStar = rStar + w(j)*m%LineList(iL)%r( :,idx(j))
-            vStar = vStar + w(j)*m%LineList(iL)%rd(:,idx(j))
+            rStar = rStar + w(j) *m%LineList(iL)%r( :,idx(j))
+            vStar = vStar + w(j) *m%LineList(iL)%rd(:,idx(j))
+            tC    = tC    + dw(j)*m%LineList(iL)%r( :,idx(j))
          END DO
 
-         IF ((m%SlipList(is)%shape == 2) .OR. (m%SlipList(is)%width > 0.0_DbKi)) THEN
-            tC = 0.0_DbKi
-            DO j = 1, nW
-               tC = tC + dw(j)*m%LineList(iL)%r(:,idx(j))
-            END DO
-         ELSE
-            ! blend bisector tangents of the bounding nodes so the normal bisects kinks
-            tC = (1.0_DbKi - u)*NodeTangent(m%LineList(iL), k-1) + u*NodeTangent(m%LineList(iL), k)
-         END IF
          tCmag = SQRT(DOT_PRODUCT(tC, tC))
          IF (tCmag > 1.0E-6_DbKi) THEN
             tC = tC/tCmag
@@ -291,10 +284,9 @@ CONTAINS
 
    !--------------------------------------------------------------
    ! Closest contact parameter u in [0,1] on segment k of the contact curve, and squared distance to xh.
-   SUBROUTINE ProjectOnSegment(Line, shape, width, sNode, k, xh, u, d2, idx, w, dw)
+   SUBROUTINE ProjectOnSegment(Line, width, sNode, k, xh, u, d2, idx, w, dw)
 
       TYPE(MD_Line),  INTENT(IN   ) :: Line
-      INTEGER(IntKi), INTENT(IN   ) :: shape
       REAL(DbKi),     INTENT(IN   ) :: width
       REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
       INTEGER(IntKi), INTENT(IN   ) :: k
@@ -317,14 +309,9 @@ CONTAINS
          u = 0.0_DbKi
       END IF
 
-      IF ((shape /= 2) .AND. (width <= 0.0_DbKi)) THEN
-         d2 = SUM((a + u*lvec - xh)**2)
-         RETURN
-      END IF
-
       ! Gauss-Newton on the smoothed contact curve, started from the chord projection
       DO it = 1, 10
-         CALL GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+         CALL KernelWeights(Line, width, sNode, k, u, nW, idx, w, dw)
          C  = 0.0_DbKi
          Cp = 0.0_DbKi
          DO j = 1, nW
@@ -341,7 +328,7 @@ CONTAINS
          u = uNew
       END DO
 
-      CALL GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+      CALL KernelWeights(Line, width, sNode, k, u, nW, idx, w, dw)
       C = 0.0_DbKi
       DO j = 1, nW
          C = C + w(j)*Line%r(:,idx(j))
@@ -353,37 +340,12 @@ CONTAINS
 
 
    !--------------------------------------------------------------
-   SUBROUTINE GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+   ! Weights from a cubic B-spline kernel of fixed scale 'width' in unstretched arc length, normalized to
+   ! sum to one. Nodes are mirrored about each line end (r -> 2*r_end - r) and folded back, so the contact
+   ! curve passes through the end nodes. dw is d/du on segment k.
+   SUBROUTINE KernelWeights(Line, width, sNode, k, u, nW, idx, w, dw)
 
       TYPE(MD_Line),  INTENT(IN   ) :: Line
-      INTEGER(IntKi), INTENT(IN   ) :: shape
-      REAL(DbKi),     INTENT(IN   ) :: width
-      REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
-      INTEGER(IntKi), INTENT(IN   ) :: k
-      REAL(DbKi),     INTENT(IN   ) :: u
-      INTEGER(IntKi), INTENT(  OUT) :: nW
-      INTEGER(IntKi), INTENT(  OUT) :: idx(:)
-      REAL(DbKi),     INTENT(  OUT) :: w(:)
-      REAL(DbKi),     INTENT(  OUT) :: dw(:)
-
-      IF (width > 0.0_DbKi) THEN
-         CALL KernelWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
-      ELSE
-         CALL ContactWeights(shape, Line%N, k, u, nW, idx, w, dw)
-      END IF
-
-   END SUBROUTINE GetWeights
-   !--------------------------------------------------------------
-
-
-   !--------------------------------------------------------------
-   ! Weights from a B-spline kernel (shape 1: hat, shape 2: cubic) of fixed scale 'width' in unstretched arc
-   ! length, normalized to sum to one. Nodes are mirrored about each line end (r -> 2*r_end - r) and folded
-   ! back, so the contact curve passes through the end nodes. dw is d/du on segment k.
-   SUBROUTINE KernelWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
-
-      TYPE(MD_Line),  INTENT(IN   ) :: Line
-      INTEGER(IntKi), INTENT(IN   ) :: shape
       REAL(DbKi),     INTENT(IN   ) :: width
       REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
       INTEGER(IntKi), INTENT(IN   ) :: k
@@ -399,11 +361,7 @@ CONTAINS
       N    = Line%N
       Ltot = sNode(N)
       s    = sNode(k-1) + u*Line%l(k)
-      IF (shape == 2) THEN
-         R = 2.0_DbKi*width
-      ELSE
-         R = width
-      END IF
+      R    = 2.0_DbKi*width
 
       jLo = k-1
       DO WHILE (jLo > 0)
@@ -462,25 +420,15 @@ CONTAINS
 
          t = (sj - s)/width
          x = ABS(t)
-         IF (shape == 2) THEN
-            IF (x < 1.0_DbKi) THEN
-               Kx  = (4.0_DbKi - 6.0_DbKi*x**2 + 3.0_DbKi*x**3)/6.0_DbKi
-               dKx = (-12.0_DbKi*x + 9.0_DbKi*x**2)/6.0_DbKi
-            ELSE IF (x < 2.0_DbKi) THEN
-               Kx  = (2.0_DbKi - x)**3/6.0_DbKi
-               dKx = -(2.0_DbKi - x)**2/2.0_DbKi
-            ELSE
-               Kx  = 0.0_DbKi
-               dKx = 0.0_DbKi
-            END IF
+         IF (x < 1.0_DbKi) THEN
+            Kx  = (4.0_DbKi - 6.0_DbKi*x**2 + 3.0_DbKi*x**3)/6.0_DbKi
+            dKx = (-12.0_DbKi*x + 9.0_DbKi*x**2)/6.0_DbKi
+         ELSE IF (x < 2.0_DbKi) THEN
+            Kx  = (2.0_DbKi - x)**3/6.0_DbKi
+            dKx = -(2.0_DbKi - x)**2/2.0_DbKi
          ELSE
-            IF (x < 1.0_DbKi) THEN
-               Kx  = 1.0_DbKi - x
-               dKx = -1.0_DbKi
-            ELSE
-               Kx  = 0.0_DbKi
-               dKx = 0.0_DbKi
-            END IF
+            Kx  = 0.0_DbKi
+            dKx = 0.0_DbKi
          END IF
 
          ! tributary length; end nodes count as interior because of mirroring
@@ -506,74 +454,6 @@ CONTAINS
       END SUBROUTINE Add
 
    END SUBROUTINE KernelWeights
-   !--------------------------------------------------------------
-
-
-   !--------------------------------------------------------------
-   ! Node indices and shape-function weights (and d/du) for contact parameter u on segment k.
-   ! shape 1: linear on nodes k-1,k.  shape 2: uniform cubic B-spline on nodes k-2..k+1, with
-   ! mirrored phantom nodes at the line ends folded back so the curve passes through end nodes.
-   SUBROUTINE ContactWeights(shape, N, k, u, nW, idx, w, dw)
-
-      INTEGER(IntKi), INTENT(IN   ) :: shape
-      INTEGER(IntKi), INTENT(IN   ) :: N
-      INTEGER(IntKi), INTENT(IN   ) :: k
-      REAL(DbKi),     INTENT(IN   ) :: u
-      INTEGER(IntKi), INTENT(  OUT) :: nW
-      INTEGER(IntKi), INTENT(  OUT) :: idx(:)
-      REAL(DbKi),     INTENT(  OUT) :: w(:)
-      REAL(DbKi),     INTENT(  OUT) :: dw(:)
-
-      INTEGER(IntKi) :: j, jr
-      REAL(DbKi)     :: bs(4), dbs(4)
-
-      nW  = 0
-      idx = 0
-      w   = 0.0_DbKi
-      dw  = 0.0_DbKi
-
-      IF (shape == 2) THEN
-         bs  = (/ (1.0_DbKi - u)**3, 3.0_DbKi*u**3 - 6.0_DbKi*u**2 + 4.0_DbKi, &
-                  -3.0_DbKi*u**3 + 3.0_DbKi*u**2 + 3.0_DbKi*u + 1.0_DbKi, u**3 /) / 6.0_DbKi
-         dbs = (/ -(1.0_DbKi - u)**2, 3.0_DbKi*u**2 - 4.0_DbKi*u, &
-                  -3.0_DbKi*u**2 + 2.0_DbKi*u + 1.0_DbKi, u**2 /) / 2.0_DbKi
-         DO j = 1, 4
-            jr = k - 3 + j
-            IF (jr < 0) THEN
-               CALL AddWeight(0,    2.0_DbKi*bs(j),  2.0_DbKi*dbs(j))
-               CALL AddWeight(1,   -bs(j),          -dbs(j))
-            ELSE IF (jr > N) THEN
-               CALL AddWeight(N,    2.0_DbKi*bs(j),  2.0_DbKi*dbs(j))
-               CALL AddWeight(N-1, -bs(j),          -dbs(j))
-            ELSE
-               CALL AddWeight(jr,   bs(j),           dbs(j))
-            END IF
-         END DO
-      ELSE
-         CALL AddWeight(k-1, 1.0_DbKi - u, -1.0_DbKi)
-         CALL AddWeight(k,   u,             1.0_DbKi)
-      END IF
-
-   CONTAINS
-
-      SUBROUTINE AddWeight(iNode, wi, dwi)
-         INTEGER(IntKi), INTENT(IN) :: iNode
-         REAL(DbKi),     INTENT(IN) :: wi, dwi
-         INTEGER(IntKi)             :: jj
-         DO jj = 1, nW
-            IF (idx(jj) == iNode) THEN
-               w(jj)  = w(jj)  + wi
-               dw(jj) = dw(jj) + dwi
-               RETURN
-            END IF
-         END DO
-         nW      = nW + 1
-         idx(nW) = iNode
-         w(nW)   = wi
-         dw(nW)  = dwi
-      END SUBROUTINE AddWeight
-
-   END SUBROUTINE ContactWeights
    !--------------------------------------------------------------
 
 

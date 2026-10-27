@@ -79,6 +79,7 @@ CONTAINS
       INTEGER(IntKi)                               :: il              ! index
       INTEGER(IntKi)                               :: iil              ! index
       INTEGER(IntKi)                               :: Success        ! flag for checking whether line is attached to failure point
+      REAL(DbKi)                                   :: hSeg           ! segment length used to size slip support kernels
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
@@ -2317,25 +2318,22 @@ CONTAINS
 
                   Line = NextLine(i)
 
-                  ! ID  Point  Line  Shape  Width  K  Zeta  MuS  MuK  VTol  VS
-                  READ(Line,*,IOSTAT=ErrStat2) m%SlipList(l)%IdNum, m%SlipList(l)%PointID, m%SlipList(l)%LineID, TempString1, &
-                                               m%SlipList(l)%width, m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, &
+                  ! ID  Point  Line  Width  K  Zeta  MuS  MuK  VTol  VS   (Width as a multiple of segment length)
+                  READ(Line,*,IOSTAT=ErrStat2) m%SlipList(l)%IdNum, m%SlipList(l)%PointID, m%SlipList(l)%LineID, m%SlipList(l)%width, &
+                                               m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, &
                                                m%SlipList(l)%muK, m%SlipList(l)%vTol, m%SlipList(l)%vS
                   IF (ErrStat2 /= 0) THEN
-                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Shape Width K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Width K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
 
-                  CALL Conv2UC(TempString1)
-                  IF (TRIM(TempString1) == 'LINEAR') THEN
-                     m%SlipList(l)%shape = 1
-                  ELSE IF (TRIM(TempString1) == 'CUBIC') THEN
-                     m%SlipList(l)%shape = 2
-                  ELSE
-                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Shape must be LINEAR or CUBIC.', ErrStat, ErrMsg, RoutineName )
+                  IF (m%SlipList(l)%width < 1.0_DbKi) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Width must be at least 1 segment length (2 recommended).', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
+                  ELSE IF (m%SlipList(l)%width < 2.0_DbKi) THEN
+                     CALL SetErrStat( ErrID_Warn, ' Slip support '//trim(Num2LStr(l))//': Width is less than 2 segment lengths; contact forces may ripple as the line slides.', ErrStat, ErrMsg, RoutineName )
                   END IF
 
                   IF ( m%SlipList(l)%IdNum .NE. l ) THEN
@@ -2371,23 +2369,33 @@ CONTAINS
                      RETURN
                   END IF
 
-                  ! kernel must reach a node from anywhere on the line and stay within one mirror reflection at the ends
-                  IF ((m%SlipList(l)%width < 0.0_DbKi) .OR. ((m%SlipList(l)%width > 0.0_DbKi) .AND. &
-                      ((m%SlipList(l)%width < MAXVAL(m%LineList(m%SlipList(l)%LineID)%l)) .OR. &
-                       (4.0_DbKi*m%SlipList(l)%width >= m%LineList(m%SlipList(l)%LineID)%UnstrLen)))) THEN
-                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Width must be 0, or between the longest segment length and a quarter of the line length.', ErrStat, ErrMsg, RoutineName )
+                  CALL SlipSupport_Setup(m%SlipList(l), m%LineList(m%SlipList(l)%LineID), p)
+
+               END DO
+
+               ! Width (read as a ratio) is scaled by the longest segment among all lines through the same hoop point
+               DO l = 1,p%nSlips
+                  hSeg = 0.0_DbKi
+                  DO il = 1,p%nSlips
+                     IF (m%SlipList(il)%PointID == m%SlipList(l)%PointID) hSeg = MAX(hSeg, MAXVAL(m%LineList(m%SlipList(il)%LineID)%l))
+                  END DO
+                  m%SlipList(l)%width = m%SlipList(l)%width*hSeg
+               END DO
+
+               DO l = 1,p%nSlips
+                  ! kernel spans +-2*Width; mirroring at the line ends assumes it reaches less than half the line
+                  IF (4.0_DbKi*m%SlipList(l)%width >= m%LineList(m%SlipList(l)%LineID)%UnstrLen) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Width ('//trim(Num2LStr(m%SlipList(l)%width))// &
+                        ' m) must be less than a quarter of the length of Line '//trim(Num2LStr(m%SlipList(l)%LineID))//'. Use more segments or a smaller Width.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
 
-                  CALL SlipSupport_Setup(m%SlipList(l), m%LineList(m%SlipList(l)%LineID), p)
-
                   if (p%writeLog > 0) then
                      write(p%UnLog,'(A)') '   Slip support '//trim(Num2LStr(l))//': Point '//trim(Num2LStr(m%SlipList(l)%PointID))// &
-                        ', Line '//trim(Num2LStr(m%SlipList(l)%LineID))//', K = '//trim(Num2LStr(m%SlipList(l)%kPerp))// &
-                        ' N/m, IC slip damping = '//trim(Num2LStr(m%SlipList(l)%cIC))//' N-s/m'
+                        ', Line '//trim(Num2LStr(m%SlipList(l)%LineID))//', Width = '//trim(Num2LStr(m%SlipList(l)%width))// &
+                        ' m, K = '//trim(Num2LStr(m%SlipList(l)%kPerp))//' N/m, IC slip damping = '//trim(Num2LStr(m%SlipList(l)%cIC))//' N-s/m'
                   end if
-
                END DO
 
                
