@@ -147,10 +147,12 @@ CONTAINS
       TYPE(MD_MiscVarType),   INTENT(INOUT) :: m
       TYPE(MD_ParameterType), INTENT(IN   ) :: p
 
-      INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, nW, idx(6)
-      REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest, w(6), dw(6)
+      INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, nW
+      REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest
       REAL(DbKi)     :: tC(3), tCmag, rStar(3), vStar(3), delta(3), vRel(3), vRelPerp(3)
-      REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), qN(3,6), Fnode(3,6), mC, cPerp, vTolEff, muEff, overshoot
+      REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
+      INTEGER(IntKi), ALLOCATABLE :: idx(:)
+      REAL(DbKi),     ALLOCATABLE :: w(:), dw(:), sNode(:), qN(:,:), Fnode(:,:)
 
       DO is = 1, p%nSlips
          m%LineList(m%SlipList(is)%LineID)%Fslip = 0.0_DbKi
@@ -165,6 +167,15 @@ CONTAINS
          xh = m%PointList(m%SlipList(is)%PointID)%r
          vh = m%PointList(m%SlipList(is)%PointID)%rd
 
+         IF (ALLOCATED(sNode)) THEN
+            IF (SIZE(sNode) /= N+1) DEALLOCATE(idx, w, dw, sNode, qN, Fnode)
+         END IF
+         IF (.NOT. ALLOCATED(sNode)) ALLOCATE(idx(N+1), w(N+1), dw(N+1), sNode(0:N), qN(3,N+1), Fnode(3,N+1))
+         sNode(0) = 0.0_DbKi
+         DO j = 1, N
+            sNode(j) = sNode(j-1) + m%LineList(iL)%l(j)
+         END DO
+
          ! search neighbors of the cached segment; full search when not yet located
          IF (m%SlipList(is)%kSeg < 1) THEN
             kLo = 1
@@ -178,7 +189,7 @@ CONTAINS
          kBest  = kLo
          uBest  = 0.0_DbKi
          DO k = kLo, kHi
-            CALL ProjectOnSegment(m%LineList(iL), m%SlipList(is)%shape, k, xh, u, d2)
+            CALL ProjectOnSegment(m%LineList(iL), m%SlipList(is)%shape, m%SlipList(is)%width, sNode, k, xh, u, d2, idx, w, dw)
             IF (d2 < d2Best) THEN
                d2Best = d2
                kBest  = k
@@ -191,7 +202,7 @@ CONTAINS
          m%SlipList(is)%kSeg = k
          m%SlipList(is)%xi   = u
 
-         CALL ContactWeights(m%SlipList(is)%shape, N, k, u, nW, idx, w, dw)
+         CALL GetWeights(m%LineList(iL), m%SlipList(is)%shape, m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw)
 
          rStar = 0.0_DbKi
          vStar = 0.0_DbKi
@@ -200,7 +211,7 @@ CONTAINS
             vStar = vStar + w(j)*m%LineList(iL)%rd(:,idx(j))
          END DO
 
-         IF (m%SlipList(is)%shape == 2) THEN
+         IF ((m%SlipList(is)%shape == 2) .OR. (m%SlipList(is)%width > 0.0_DbKi)) THEN
             tC = 0.0_DbKi
             DO j = 1, nW
                tC = tC + dw(j)*m%LineList(iL)%r(:,idx(j))
@@ -270,7 +281,7 @@ CONTAINS
          END DO
          m%SlipList(is)%Fhoop = -Fsum
 
-         m%SlipList(is)%s = SUM(m%LineList(iL)%l(1:k-1)) + u*m%LineList(iL)%l(k)
+         m%SlipList(is)%s = sNode(k-1) + u*m%LineList(iL)%l(k)
 
       END DO
 
@@ -280,17 +291,22 @@ CONTAINS
 
    !--------------------------------------------------------------
    ! Closest contact parameter u in [0,1] on segment k of the contact curve, and squared distance to xh.
-   SUBROUTINE ProjectOnSegment(Line, shape, k, xh, u, d2)
+   SUBROUTINE ProjectOnSegment(Line, shape, width, sNode, k, xh, u, d2, idx, w, dw)
 
       TYPE(MD_Line),  INTENT(IN   ) :: Line
       INTEGER(IntKi), INTENT(IN   ) :: shape
+      REAL(DbKi),     INTENT(IN   ) :: width
+      REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
       INTEGER(IntKi), INTENT(IN   ) :: k
       REAL(DbKi),     INTENT(IN   ) :: xh(3)
       REAL(DbKi),     INTENT(  OUT) :: u
       REAL(DbKi),     INTENT(  OUT) :: d2
+      INTEGER(IntKi), INTENT(INOUT) :: idx(:)
+      REAL(DbKi),     INTENT(INOUT) :: w(:)
+      REAL(DbKi),     INTENT(INOUT) :: dw(:)
 
-      INTEGER(IntKi) :: it, j, nW, idx(6)
-      REAL(DbKi)     :: a(3), lvec(3), L2, w(6), dw(6), C(3), Cp(3), h, uNew
+      INTEGER(IntKi) :: it, j, nW
+      REAL(DbKi)     :: a(3), lvec(3), L2, C(3), Cp(3), h, uNew
 
       a    = Line%r(:,k-1)
       lvec = Line%r(:,k) - a
@@ -301,14 +317,14 @@ CONTAINS
          u = 0.0_DbKi
       END IF
 
-      IF (shape /= 2) THEN
+      IF ((shape /= 2) .AND. (width <= 0.0_DbKi)) THEN
          d2 = SUM((a + u*lvec - xh)**2)
          RETURN
       END IF
 
-      ! Gauss-Newton on the B-spline segment, started from the chord projection
+      ! Gauss-Newton on the smoothed contact curve, started from the chord projection
       DO it = 1, 10
-         CALL ContactWeights(shape, Line%N, k, u, nW, idx, w, dw)
+         CALL GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
          C  = 0.0_DbKi
          Cp = 0.0_DbKi
          DO j = 1, nW
@@ -325,7 +341,7 @@ CONTAINS
          u = uNew
       END DO
 
-      CALL ContactWeights(shape, Line%N, k, u, nW, idx, w, dw)
+      CALL GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
       C = 0.0_DbKi
       DO j = 1, nW
          C = C + w(j)*Line%r(:,idx(j))
@@ -333,6 +349,163 @@ CONTAINS
       d2 = SUM((C - xh)**2)
 
    END SUBROUTINE ProjectOnSegment
+   !--------------------------------------------------------------
+
+
+   !--------------------------------------------------------------
+   SUBROUTINE GetWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+
+      TYPE(MD_Line),  INTENT(IN   ) :: Line
+      INTEGER(IntKi), INTENT(IN   ) :: shape
+      REAL(DbKi),     INTENT(IN   ) :: width
+      REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
+      INTEGER(IntKi), INTENT(IN   ) :: k
+      REAL(DbKi),     INTENT(IN   ) :: u
+      INTEGER(IntKi), INTENT(  OUT) :: nW
+      INTEGER(IntKi), INTENT(  OUT) :: idx(:)
+      REAL(DbKi),     INTENT(  OUT) :: w(:)
+      REAL(DbKi),     INTENT(  OUT) :: dw(:)
+
+      IF (width > 0.0_DbKi) THEN
+         CALL KernelWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+      ELSE
+         CALL ContactWeights(shape, Line%N, k, u, nW, idx, w, dw)
+      END IF
+
+   END SUBROUTINE GetWeights
+   !--------------------------------------------------------------
+
+
+   !--------------------------------------------------------------
+   ! Weights from a B-spline kernel (shape 1: hat, shape 2: cubic) of fixed scale 'width' in unstretched arc
+   ! length, normalized to sum to one. Nodes are mirrored about each line end (r -> 2*r_end - r) and folded
+   ! back, so the contact curve passes through the end nodes. dw is d/du on segment k.
+   SUBROUTINE KernelWeights(Line, shape, width, sNode, k, u, nW, idx, w, dw)
+
+      TYPE(MD_Line),  INTENT(IN   ) :: Line
+      INTEGER(IntKi), INTENT(IN   ) :: shape
+      REAL(DbKi),     INTENT(IN   ) :: width
+      REAL(DbKi),     INTENT(IN   ) :: sNode(0:)
+      INTEGER(IntKi), INTENT(IN   ) :: k
+      REAL(DbKi),     INTENT(IN   ) :: u
+      INTEGER(IntKi), INTENT(  OUT) :: nW
+      INTEGER(IntKi), INTENT(  OUT) :: idx(:)
+      REAL(DbKi),     INTENT(  OUT) :: w(:)
+      REAL(DbKi),     INTENT(  OUT) :: dw(:)
+
+      INTEGER(IntKi) :: N, j, jLo, jHi
+      REAL(DbKi)     :: s, R, Ltot, Asum, dAsum, aK, daK
+
+      N    = Line%N
+      Ltot = sNode(N)
+      s    = sNode(k-1) + u*Line%l(k)
+      IF (shape == 2) THEN
+         R = 2.0_DbKi*width
+      ELSE
+         R = width
+      END IF
+
+      jLo = k-1
+      DO WHILE (jLo > 0)
+         IF (sNode(jLo-1) <= s - R) EXIT
+         jLo = jLo - 1
+      END DO
+      jHi = k
+      DO WHILE (jHi < N)
+         IF (sNode(jHi+1) >= s + R) EXIT
+         jHi = jHi + 1
+      END DO
+
+      nW = jHi - jLo + 1
+      DO j = jLo, jHi
+         idx(j-jLo+1) = j
+      END DO
+      w(1:nW)  = 0.0_DbKi
+      dw(1:nW) = 0.0_DbKi
+      Asum  = 0.0_DbKi
+      dAsum = 0.0_DbKi
+
+      DO j = jLo, jHi
+         CALL Sample(sNode(j), j)
+         CALL Add(j, aK, daK)
+      END DO
+
+      IF (s - R < 0.0_DbKi) THEN
+         DO j = 1, N
+            IF (-sNode(j) <= s - R) EXIT
+            CALL Sample(-sNode(j), j)
+            CALL Add(0,  2.0_DbKi*aK,  2.0_DbKi*daK)
+            CALL Add(j, -aK, -daK)
+         END DO
+      END IF
+
+      IF (s + R > Ltot) THEN
+         DO j = 1, N
+            IF (2.0_DbKi*Ltot - sNode(N-j) >= s + R) EXIT
+            CALL Sample(2.0_DbKi*Ltot - sNode(N-j), N-j)
+            CALL Add(N,    2.0_DbKi*aK,  2.0_DbKi*daK)
+            CALL Add(N-j, -aK, -daK)
+         END DO
+      END IF
+
+      ! normalize; Width >= longest segment guarantees Asum > 0
+      w(1:nW)  = w(1:nW)/Asum
+      dw(1:nW) = (dw(1:nW) - w(1:nW)*dAsum)/Asum * Line%l(k)
+
+   CONTAINS
+
+      ! raw kernel value (a) and its d/ds (da) for a node at arc position sj with tributary length of node jt
+      SUBROUTINE Sample(sj, jt)
+         REAL(DbKi),     INTENT(IN) :: sj
+         INTEGER(IntKi), INTENT(IN) :: jt
+         REAL(DbKi)                 :: t, x, Kx, dKx, ds
+
+         t = (sj - s)/width
+         x = ABS(t)
+         IF (shape == 2) THEN
+            IF (x < 1.0_DbKi) THEN
+               Kx  = (4.0_DbKi - 6.0_DbKi*x**2 + 3.0_DbKi*x**3)/6.0_DbKi
+               dKx = (-12.0_DbKi*x + 9.0_DbKi*x**2)/6.0_DbKi
+            ELSE IF (x < 2.0_DbKi) THEN
+               Kx  = (2.0_DbKi - x)**3/6.0_DbKi
+               dKx = -(2.0_DbKi - x)**2/2.0_DbKi
+            ELSE
+               Kx  = 0.0_DbKi
+               dKx = 0.0_DbKi
+            END IF
+         ELSE
+            IF (x < 1.0_DbKi) THEN
+               Kx  = 1.0_DbKi - x
+               dKx = -1.0_DbKi
+            ELSE
+               Kx  = 0.0_DbKi
+               dKx = 0.0_DbKi
+            END IF
+         END IF
+
+         ! tributary length; end nodes count as interior because of mirroring
+         IF (jt == 0) THEN
+            ds = Line%l(1)
+         ELSE IF (jt == N) THEN
+            ds = Line%l(N)
+         ELSE
+            ds = 0.5_DbKi*(Line%l(jt) + Line%l(jt+1))
+         END IF
+
+         aK  = Kx*ds
+         daK = -SIGN(1.0_DbKi, t)*dKx*ds/width
+      END SUBROUTINE Sample
+
+      SUBROUTINE Add(jn, ai, dai)
+         INTEGER(IntKi), INTENT(IN) :: jn
+         REAL(DbKi),     INTENT(IN) :: ai, dai
+         w( jn-jLo+1) = w( jn-jLo+1) + ai
+         dw(jn-jLo+1) = dw(jn-jLo+1) + dai
+         Asum  = Asum  + ai
+         dAsum = dAsum + dai
+      END SUBROUTINE Add
+
+   END SUBROUTINE KernelWeights
    !--------------------------------------------------------------
 
 
@@ -347,9 +520,9 @@ CONTAINS
       INTEGER(IntKi), INTENT(IN   ) :: k
       REAL(DbKi),     INTENT(IN   ) :: u
       INTEGER(IntKi), INTENT(  OUT) :: nW
-      INTEGER(IntKi), INTENT(  OUT) :: idx(6)
-      REAL(DbKi),     INTENT(  OUT) :: w(6)
-      REAL(DbKi),     INTENT(  OUT) :: dw(6)
+      INTEGER(IntKi), INTENT(  OUT) :: idx(:)
+      REAL(DbKi),     INTENT(  OUT) :: w(:)
+      REAL(DbKi),     INTENT(  OUT) :: dw(:)
 
       INTEGER(IntKi) :: j, jr
       REAL(DbKi)     :: bs(4), dbs(4)

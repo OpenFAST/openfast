@@ -2317,12 +2317,12 @@ CONTAINS
 
                   Line = NextLine(i)
 
-                  ! ID  Point  Line  Shape  K  Zeta  MuS  MuK  VTol  VS
+                  ! ID  Point  Line  Shape  Width  K  Zeta  MuS  MuK  VTol  VS
                   READ(Line,*,IOSTAT=ErrStat2) m%SlipList(l)%IdNum, m%SlipList(l)%PointID, m%SlipList(l)%LineID, TempString1, &
-                                               m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, m%SlipList(l)%muK, &
-                                               m%SlipList(l)%vTol, m%SlipList(l)%vS
+                                               m%SlipList(l)%width, m%SlipList(l)%kPerp, m%SlipList(l)%zeta, m%SlipList(l)%muS, &
+                                               m%SlipList(l)%muK, m%SlipList(l)%vTol, m%SlipList(l)%vS
                   IF (ErrStat2 /= 0) THEN
-                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Shape K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse slip support '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Expecting: ID Point Line Shape Width K Zeta MuS MuK VTol VS.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -2367,6 +2367,15 @@ CONTAINS
                       ((m%SlipList(l)%muS > 0.0_DbKi) .AND. (m%SlipList(l)%vTol <= 0.0_DbKi)) .OR. &
                       ((m%SlipList(l)%muS > m%SlipList(l)%muK) .AND. (m%SlipList(l)%vS <= 0.0_DbKi))) THEN
                      CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': require Zeta >= 0, 0 <= MuK <= MuS, VTol > 0 when MuS > 0, and VS > 0 when MuS > MuK.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! kernel must reach a node from anywhere on the line and stay within one mirror reflection at the ends
+                  IF ((m%SlipList(l)%width < 0.0_DbKi) .OR. ((m%SlipList(l)%width > 0.0_DbKi) .AND. &
+                      ((m%SlipList(l)%width < MAXVAL(m%LineList(m%SlipList(l)%LineID)%l)) .OR. &
+                       (4.0_DbKi*m%SlipList(l)%width >= m%LineList(m%SlipList(l)%LineID)%UnstrLen)))) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Width must be 0, or between the longest segment length and a quarter of the line length.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF

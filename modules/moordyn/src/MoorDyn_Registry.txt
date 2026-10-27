@@ -345,6 +345,7 @@ typedef  ^            MD_SlipSupport   IntKi              IdNum           -     
 typedef  ^            ^                IntKi              PointID         -        -  -   "index of the hoop Point in PointList" "-"
 typedef  ^            ^                IntKi              LineID          -        -  -   "index of the threaded Line in LineList" "-"
 typedef  ^            ^                IntKi              shape           -        -  -   "contact load spreading: 1 linear (2 nodes), 2 cubic B-spline (4 nodes)" "-"
+typedef  ^            ^                DbKi               width           -        -  -   "kernel scale in unstretched arc length; 0 = one segment (node-based weights)" "[m]"
 typedef  ^            ^                DbKi               kPerp           -        -  -   "transverse penalty stiffness" "[N/m]"
 typedef  ^            ^                DbKi               zeta            -        -  -   "transverse damping ratio" "[-]"
 typedef  ^            ^                DbKi               muS             -        -  -   "static friction coefficient" "[-]"
