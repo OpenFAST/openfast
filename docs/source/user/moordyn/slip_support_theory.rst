@@ -12,23 +12,23 @@ Notation
 
 A line has nodes :math:`j = 0,\dots,N` with positions :math:`\mathbf{r}_j` and velocities
 :math:`\dot{\mathbf{r}}_j`. Segment :math:`k = 1,\dots,N` connects nodes :math:`k-1` and :math:`k` and has
-unstretched length :math:`l_k`. The unstretched arc-length coordinate of node :math:`j` is
+*unstretched* length :math:`l_k`. The unstretched arc-length coordinate of node :math:`j` is
 
 .. math::
 
    s_0 = 0, \qquad s_j = s_{j-1} + l_j, \qquad L = s_N .
 
-The hoop is located at the position :math:`\mathbf{x}_h` of its Point and moves with velocity
-:math:`\dot{\mathbf{x}}_h`. The contact location on the line is the unstretched arc length :math:`s_c`
-measured from end A. All directions along the line are oriented from end A toward end B. :math:`\Delta t`
-denotes the requested mooring time step ``dtM``.
+The hoop (slip support) is located at the position :math:`\mathbf{x}_h` of its Point and moves with velocity
+:math:`\dot{\mathbf{x}}_h`. The contact location on the line is given by the *unstretched* arc length
+:math:`s_c` measured from end A. All directions along the line are oriented from end A toward end B.
+:math:`\Delta t` denotes the requested mooring time step ``dtM``.
 
 
 Contact Kernel
 --------------
 
 The hoop acts on a virtual contact point that is a weighted average of nearby line nodes. The weights come
-from a cubic B-spline kernel of fixed width in unstretched arc length,
+from a cubic B-spline kernel of fixed width in *unstretched* arc length,
 
 .. math::
 
@@ -47,14 +47,21 @@ all lines through the same hoop Point. The unnormalized weight of node :math:`j`
    a_j(s_c) = B\!\left(\frac{s_j - s_c}{W}\right)\Delta s_j ,
 
 where :math:`\Delta s_j = (l_j + l_{j+1})/2` is the line length represented by node :math:`j`, with
-:math:`\Delta s_0 = l_1` and :math:`\Delta s_N = l_N`.
+:math:`\Delta s_0 = l_1` and :math:`\Delta s_N = l_N`. The end nodes use full element lengths instead of
+half element lengths due to the mirroring algorithm explained below.
 
-Near the line ends the kernel extends beyond the line. There, virtual nodes are created by point
-reflection about the end node: a virtual node at arc length :math:`-s_j` with position
-:math:`2\mathbf{r}_0 - \mathbf{r}_j` near end A, and a virtual node at :math:`2L - s_{N-j}` with position
-:math:`2\mathbf{r}_N - \mathbf{r}_{N-j}` near end B. The weight :math:`a` of a virtual node is folded back
-onto the real nodes, as :math:`+2a` on the end node and :math:`-a` on the reflected node. The normalized
-weights are
+Near the line ends, the kernel support :math:`[s_c - 2W,\ s_c + 2W]` extends beyond the line. The line is
+then extended by point reflection about the end node: every real node :math:`j` whose mirror image falls
+inside the support contributes a virtual node, at arc length :math:`-s_j` with position
+:math:`2\mathbf{r}_0 - \mathbf{r}_j` beyond end A, or at :math:`2L - s_{N-j}` with position
+:math:`2\mathbf{r}_N - \mathbf{r}_{N-j}` beyond end B. Depending on :math:`W/h` and :math:`s_c`, several
+virtual nodes may be involved (up to about :math:`2W/h` when the contact is at the end). Because a virtual
+position is a linear combination of two real nodes, the weight :math:`a` of a virtual node is folded back
+onto the real nodes, as :math:`+2a` on the end node and :math:`-a` on the mirrored node, which leaves the
+weight sum unchanged. Because the end node becomes an interior node of the extended line, it represents a
+full segment length. The reflection keeps a straight line straight across the end and makes the contact
+curve pass exactly through the end node when :math:`s_c` is at the end, instead of being pulled inward as a
+truncated kernel would be. The normalized weights are
 
 .. math::
 
@@ -72,8 +79,8 @@ the unit tangent are
 
 with :math:`\mathrm{d}w_j/\mathrm{d}s_c = (\tilde a_j' - w_j A')/A`.
 
-For fixed node positions, :math:`\mathbf{C}(s)` is a smooth curve through the line nodes parameterized by
-the unstretched arc length :math:`s`, and :math:`\mathbf{C}'` is its derivative with respect to :math:`s`
+For fixed node positions, :math:`\mathbf{C}(s)` is a smooth curve following the line nodes parameterized by
+the *unstretched* arc length :math:`s`, and :math:`\mathbf{C}'` is its derivative with respect to :math:`s`
 at the current node positions. Only the weights depend on :math:`s`; the node positions are held fixed.
 :math:`\hat{\mathbf{t}}` is therefore the tangent of the smoothed curve at the contact point rather than
 the direction of any single segment, and it varies continuously as the contact moves past nodes. The
@@ -84,17 +91,16 @@ weight derivatives follow from the kernel,
 
 Properties of the kernel:
 
-- The weights sum to one, so a rigid translation of the line moves the contact point by the same amount,
-  and the reaction on the hoop balances the forces applied to the line.
 - With the reflected virtual nodes, :math:`\mathbf{C}(0) = \mathbf{r}_0` and :math:`\mathbf{C}(L) = \mathbf{r}_N`.
 - The kernel has an RMS spread of :math:`W/\sqrt{3}` along the line.
-- :math:`\mathbf{C}` is a smoothed version of the line. At a bend with curvature :math:`\kappa`, it lies
-  inside the line by approximately :math:`W^2\kappa/6`, so the line passes slightly outside the hoop.
+- :math:`\mathbf{C}` is a smoothed version of the line, so the line passes slightly outside the contact point
+  at :math:`\mathbf{C}(s_c)` at a moderate bend, with increased offset for a sharper bend and larger kernel width.
+  This is one reason why solution accuracy degrades for sharply bent lines.
 - On a line with uniform segments away from the ends, the unnormalized weight sum :math:`A` and the mean and
   variance of the weight distribution do not depend on the contact position when :math:`W/h` is an integer.
-  The node-passing ripple of the contact force is governed mainly by the variation of :math:`\sum_j w_j^2`
-  as the kernel shifts along the evenly spaced nodes. This variation repeats every segment, and its relative
-  range over one segment decreases rapidly with :math:`W/h`:
+  For moderate bends, the node-passing ripple of the contact force is governed mainly by the variation of
+  :math:`\sum_j w_j^2` as the kernel shifts along the evenly spaced nodes. This variation repeats every segment,
+  and its relative range over one segment decreases rapidly with :math:`W/h`:
 
   .. list-table::
      :header-rows: 1
@@ -116,7 +122,8 @@ Properties of the kernel:
 Contact Location
 ----------------
 
-The contact location minimizes the distance between the hoop and the contact curve,
+The contact location is defined as the closest point on the curve :math:`\mathbf{C}(s)` to the hoop position
+:math:`\mathbf{x}_h`:
 
 .. math::
 
@@ -136,11 +143,15 @@ The candidate segments are the segment found in the previous evaluation and two 
 of it (all segments on the first evaluation). The candidate with the smallest distance is used. The contact
 location is not a state; it is recomputed from the line and hoop positions in every evaluation.
 
+Searching only neighboring segments keeps the update efficient without checking every segment of the line.
+It also prevents the contact location from jumping between evaluations to a distant part of the line that
+happens to pass near the hoop, such as the other leg of a sharp bend.
+
 If the contact moves by more than two segments between evaluations, the search stops at the edge of the
 window, so the contact lags behind the hoop and the contact force is applied at the wrong location. The
 window follows the contact by up to two segments per evaluation, so the lag clears after a few evaluations.
-This is unlikely in practice: with an explicit time step limited by the axial wave speed :math:`c` of the
-line (:math:`\Delta t \lesssim h/c`), it would require slip speeds comparable to :math:`c`.
+This is unlikely to be an issue in practice: with an explicit time step limited by the axial wave speed
+:math:`c` of the line (:math:`\Delta t \lesssim h/c`), it would require slip speeds comparable to :math:`c`.
 
 
 Normal Contact Force
@@ -150,11 +161,11 @@ The contact offset and relative velocity perpendicular to the line are
 
 .. math::
 
-   \boldsymbol{\delta} = (\mathbf{C} - \mathbf{x}_h) - \left[(\mathbf{C} - \mathbf{x}_h)\cdot\hat{\mathbf{t}}\right]\hat{\mathbf{t}},
+   \boldsymbol{\delta} = (\mathbf{C}(s_c) - \mathbf{x}_h) - \left[(\mathbf{C}(s_c) - \mathbf{x}_h)\cdot\hat{\mathbf{t}}(s_c)\right]\hat{\mathbf{t}}(s_c),
    \qquad
-   \mathbf{v}_{rel} = \mathbf{V} - \dot{\mathbf{x}}_h,
+   \mathbf{v}_{rel} = \mathbf{V}(s_c) - \dot{\mathbf{x}}_h,
    \qquad
-   \mathbf{v}_\perp = \mathbf{v}_{rel} - (\mathbf{v}_{rel}\cdot\hat{\mathbf{t}})\,\hat{\mathbf{t}} .
+   \mathbf{v}_\perp = \mathbf{v}_{rel} - (\mathbf{v}_{rel}\cdot\hat{\mathbf{t}}(s_c))\,\hat{\mathbf{t}}(s_c) .
 
 The transverse penalty force acting on the contact point is
 
@@ -177,7 +188,9 @@ of the contact. A force :math:`\mathbf{F}` at the contact point is applied to no
 :math:`w_j\mathbf{F}`, which accelerates the node by :math:`w_j\mathbf{F}/m_{node}`. The contact point moves
 with the weighted node motion, so its acceleration is
 :math:`\sum_j w_j\,(w_j\mathbf{F}/m_{node}) = \mathbf{F}\sum_j w_j^2/m_{node}`, which gives the effective mass
-:math:`m_C`. Because the weights are nonnegative and sum to one, :math:`\sum_j w_j^2 \le 1`, and therefore
+:math:`m_C`. Here, we assumed :math:`m_{node}` is constant along each line, including at the ends, when
+estimating :math:`m_C`. Because the weights are nonnegative and sum to one, :math:`\sum_j w_j^2 \le 1`, and
+therefore
 
 .. math::
 
@@ -186,18 +199,20 @@ with the weighted node motion, so its acceleration is
 Equality holds when the whole weight sits on a single node, such as at a line end. Spreading the force over
 more nodes makes the contact point heavier; for a uniform line,
 :math:`\sum_j w_j^2 \approx 0.48\,h/W`, so :math:`m_C \approx 4\,m_{node}` for :math:`W/h = 2`. Near the line
-ends, the negative folded weights can make :math:`\sum_j w_j^2` slightly exceed one, so :math:`m_C` can be
-slightly smaller than :math:`m_{node}` there.
+ends, the folded contribution :math:`-a` partly cancels the weight of the mirrored node, but the net weight
+remains nonnegative because the virtual node is always farther from the contact than its real counterpart.
+The bound :math:`m_C \ge m_{node}` therefore also holds near the line ends.
 
 :math:`m_C` is recomputed from the current weights in every evaluation, so the damping coefficient :math:`c`
 and the friction regularization and bounds that depend on :math:`m_C` (see below) follow the contact as it
-slides. :math:`K`, in contrast, is fixed at initialization. When ``K`` = 0 is input,
+slides. :math:`K`, in contrast, is fixed at initialization. When ``K`` = 0 is input, the following default
+is used:
 
 .. math::
 
    K = m_{node}\left(\frac{0.3}{\Delta t}\right)^2 ,
 
-which keeps the contact frequency :math:`\sqrt{K/m_C}` at or below about :math:`0.3/\Delta t`, including at
+which keeps the contact frequency :math:`\sqrt{K/m_C}` at or below :math:`0.3/\Delta t`, including at
 the line ends where the weight concentrates on the end node.
 
 
@@ -239,6 +254,14 @@ line along its length, and the hoop could hold tension without friction. The spl
 non-conservative (it is not the gradient of a contact potential), but the contact damping likely far
 outweighs the resulting energy change.
 
+The friction force is not projected: each node receives its full share :math:`w_j F_f` along its own tangent.
+Because the weights sum to one, the tension changes by exactly :math:`F_f` across the support, and the
+friction dissipates the full power :math:`F_f v` during sliding. The projection of the normal component, in
+contrast, discards part of each node's share at a bend, so the effective contact stiffness and damping drop
+below :math:`K` and :math:`c` at sharp bends. The delivered normal force :math:`F_N` is unaffected at
+equilibrium, because the penalty offset grows until the line tension is balanced. This loss of stiffness is
+the price for avoiding spurious tangential forces.
+
 
 Slip Velocity and Friction Coefficient
 --------------------------------------
@@ -250,8 +273,13 @@ The slip velocity of the line relative to the hoop is
    v = \mathbf{v}_{rel}\cdot\hat{\mathbf{t}} ,
 
 positive when the line material moves toward end B. Because :math:`s_c` is a material coordinate,
-:math:`\dot s_c \approx -v/(1+\varepsilon)` with :math:`\varepsilon` the local line strain. The friction
-coefficient transitions from static to kinetic friction with the Stribeck velocity :math:`v_S`,
+:math:`\dot s_c \approx -v/(1+\varepsilon)` with :math:`\varepsilon` the local line strain.
+
+Friction uses the static friction coefficient :math:`\mu_s` (input ``MuS``), which sets the maximum force
+before the line starts sliding, and the kinetic friction coefficient :math:`\mu_k` (input ``MuK``), which
+applies during steady sliding. The effective coefficient :math:`\mu(v)` transitions smoothly from
+:math:`\mu_s` at zero slip to :math:`\mu_k` at high slip speed over the Stribeck velocity :math:`v_S`
+(input ``VS``),
 
 .. math::
 
@@ -272,9 +300,13 @@ When ``StickDisp`` = 0,
    \tilde v_{tol} = \max\!\left(v_{tol},\ \frac{\mu_s F_N \Delta t}{m_C}\right).
 
 Near zero slip, the friction acts as a viscous damper with coefficient :math:`\mu_s F_N/\tilde v_{tol}`. The
-lower bound on :math:`\tilde v_{tol}`, evaluated with the current :math:`F_N` and :math:`m_C`, keeps this
-damping within the stability limit of the explicit time
-integration, :math:`(\mu_s F_N/\tilde v_{tol})\,\Delta t/m_C \le 1`.
+lower bound on :math:`\tilde v_{tol}`, evaluated with the current :math:`F_N` and :math:`m_C`, limits this
+damping to :math:`(\mu_s F_N/\tilde v_{tol})\,\Delta t/m_C \le 1`, which is half of the explicit stability
+limit of a viscous damper, :math:`c\,\Delta t/m \le 2` for second-order Runge-Kutta integration. Here,
+:math:`m_C` is used as the nominal contact inertia. The actual inertia resisting slip differs because friction
+acts tangentially, where the added mass differs from the transverse value used in :math:`m_{node}`, and
+because of the line's axial stiffness and end conditions. Using half of the stability limit provides a margin
+for these uncertainties.
 
 
 LuGre Friction
@@ -289,14 +321,14 @@ slip support. The bristle stiffness per unit normal force is
    \sigma_0 = \frac{\mu_s}{d}, \qquad
    \tilde\sigma_0 = \min\!\left(\sigma_0,\ \frac{m_C}{F_N}\left(\frac{0.5}{\Delta t}\right)^2\right),
 
-where the cap, evaluated with the current :math:`F_N` and :math:`m_C`, keeps the bristle frequency
-:math:`\sqrt{\tilde\sigma_0 F_N/m_C}` at or below
-:math:`0.5/\Delta t`. The bristle dynamics and friction force are
+where the cap, evaluated with the current :math:`F_N` and :math:`m_C`, keeps the nominal bristle frequency
+:math:`\sqrt{\tilde\sigma_0 F_N/m_C}` at or below :math:`0.5/\Delta t`. The bristle dynamics and friction
+force are
 
 .. math::
 
    \dot z = v - \kappa z, \qquad
-   \kappa = \min\!\left(\frac{|v|\,\tilde\sigma_0}{\mu(v)},\ \frac{0.5}{\Delta t}\right),
+   \kappa = \min\!\left(\frac{|v|\,\tilde\sigma_0}{\mu(v)},\ \frac{1}{\Delta t}\right),
 
 .. math::
 
@@ -305,15 +337,27 @@ where the cap, evaluated with the current :math:`F_N` and :math:`m_C`, keeps the
 
 with no viscous term (:math:`\sigma_2 = 0`). The bristle damping :math:`\sigma_1` is critical damping of the
 bristle stiffness acting on :math:`m_C`. It is faded out as the slip speed exceeds :math:`v_S`, which keeps the
-model dissipative during sliding transients. The friction force is bounded,
+model dissipative during sliding transients.
+
+In the standard LuGre model, the relaxation rate is :math:`\kappa = |v|\,\sigma_0/\mu(v)` without an upper limit.
+It grows with the slip speed and the bristle stiffness, and :math:`\dot z = v - \kappa z` becomes a stiff
+equation during fast sliding with a small ``StickDisp``: for example, :math:`v` = 1 m/s and :math:`d` = 1 mm
+give :math:`\kappa` of order 1000 1/s. Since the explicit integration of :math:`\dot z = -\kappa z` is
+stable only for :math:`\kappa\,\Delta t \le 2`, MoorDyn caps the rate at :math:`1/\Delta t`, half of the
+stability limit. For second-order Runge-Kutta integration, this value also gives the fastest decay of
+:math:`z` per time step. The cap is not part of the standard model. It is inactive in the sticking regime and at low slip
+speeds, where the model is unchanged. When it is active, :math:`z` cannot relax fast enough to stay at the
+steady value :math:`\mu(v)/\tilde\sigma_0`; during steady sliding it instead approaches
+:math:`|v|\,\Delta t`, which is larger. The corresponding bristle force would exceed :math:`\mu(v)F_N`, so it
+is clipped by the friction bound below. The friction force is bounded,
 
 .. math::
 
    F_f = \operatorname{sign}(F_f^{*})\,\min\!\left(|F_f^{*}|,\ F_{max}\right), \qquad
    F_{max} =
    \begin{cases}
-   \mu_s F_N,    & \kappa < 0.5/\Delta t \\
-   \mu(v)\,F_N,  & \kappa = 0.5/\Delta t
+   \mu_s F_N,    & \kappa < 1/\Delta t \\
+   \mu(v)\,F_N,  & \kappa = 1/\Delta t
    \end{cases}
 
 The :math:`\mu_s F_N` bound is a safeguard that preserves the frictional lag of the LuGre model at breakaway.
@@ -336,11 +380,25 @@ Limiting behavior:
 Initial Conditions
 ------------------
 
-**Line layout.** For a line with :math:`n` slip supports, the hoop positions :math:`\mathbf{H}_1,\dots,\mathbf{H}_n`
-(in the order the supports are listed) and the line end positions define the polyline
-:math:`\mathbf{r}_0, \mathbf{H}_1, \dots, \mathbf{H}_n, \mathbf{r}_N` with cumulative chord length
-:math:`c_i`. Internal node :math:`j` is placed on this polyline at chord distance
-:math:`(s_j/L)\,c_{n+1}`, and the initial node velocities are zero.
+**Line layout.** For a line with :math:`n` slip supports, the line end positions and the hoop positions (in
+the order the supports are listed) define the polyline vertices
+
+.. math::
+
+   \mathbf{P}_0 = \mathbf{r}_0, \quad \mathbf{P}_i = \mathbf{x}_{h,i}\ (i = 1,\dots,n), \quad
+   \mathbf{P}_{n+1} = \mathbf{r}_N, \qquad
+   c_0 = 0, \quad c_i = c_{i-1} + \lVert\mathbf{P}_i - \mathbf{P}_{i-1}\rVert ,
+
+where :math:`c_i` is the distance along the polyline from end A to vertex :math:`i`. Internal node :math:`j` is
+placed on the polyline at the distance :math:`d_j = (s_j/L)\,c_{n+1}` from end A. With :math:`i` such that
+:math:`c_{i-1} \le d_j \le c_i`,
+
+.. math::
+
+   \mathbf{r}_j = \mathbf{P}_{i-1} + \frac{d_j - c_{i-1}}{c_i - c_{i-1}}\left(\mathbf{P}_i - \mathbf{P}_{i-1}\right),
+
+and the initial node velocities are zero. The first force evaluation then locates each contact by searching all
+segments of the line.
 
 **Dynamic relaxation.** During initial condition generation, the friction force is replaced by a viscous
 slip damper and the LuGre state is frozen,
@@ -354,8 +412,8 @@ where :math:`w_{wet} = |m' - \rho_w A_d|\,g` is the wet weight per unit length a
 :math:`M_L = L\,(m' + \rho_w C_{at} A_d)` is the line mass including axial added mass.
 
 The first term is an ad-hoc damping that slows sliding at the rate :math:`c_{IC}/M_L`, which is
-proportional to :math:`\sqrt{g/L}` for lines much heavier than water. The second term keeps the damper
-within the explicit stability limit, :math:`c_{IC}\,\Delta t/m_{node} \le 0.5`. The value of
+proportional to :math:`\sqrt{g/L}` for lines much heavier than water. The second term limits the damper to
+:math:`c_{IC}\,\Delta t/m_{node} \le 0.5`, well within the explicit stability limit. The value of
 :math:`c_{IC}` affects only the convergence rate of dynamic relaxation, not the equilibrium it converges to.
 :math:`z` is set to zero at the start and at the end of dynamic relaxation.
 
@@ -368,8 +426,8 @@ the hoop beyond the end is
 
 .. math::
 
-   o = -(\mathbf{x}_h - \mathbf{C})\cdot\hat{\mathbf{t}} \ \ \text{(end A)}, \qquad
-   o = (\mathbf{x}_h - \mathbf{C})\cdot\hat{\mathbf{t}} \ \ \text{(end B)} .
+   o = -(\mathbf{x}_h - \mathbf{C}(s_c))\cdot\hat{\mathbf{t}(s_c)} \ \ \text{(end A)}, \qquad
+   o = (\mathbf{x}_h - \mathbf{C}(s_c))\cdot\hat{\mathbf{t}(s_c)} \ \ \text{(end B)} .
 
 The slip support releases the line permanently if :math:`o > 0.1\,l_k` in every force evaluation within an
 accepted time step. Requiring this in every evaluation prevents releases triggered by intermediate

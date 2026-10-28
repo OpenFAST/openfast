@@ -284,8 +284,8 @@ CONTAINS
                   END IF
                END IF
 
-               ! relaxation rate |v|/z_ss with z_ss = muEff/sig0, capped at 0.5/dtM
-               kappa = 0.5_DbKi/p%dtM0
+               ! relaxation rate |v|/z_ss with z_ss = muEff/sig0, capped at 1/dtM (fastest RK2 decay, half the stability limit)
+               kappa = 1.0_DbKi/p%dtM0
                rateCapped = .TRUE.
                IF (ABS(m%SlipList(is)%vSlip)*sig0 < kappa*muEff) THEN
                   kappa = ABS(m%SlipList(is)%vSlip)*sig0/muEff
