@@ -633,9 +633,9 @@ Finite element formulation of a pretension cable
 
 The rotational degrees of freedom are omitted for conciseness since
 these degrees of freedom are not considered in this cable element. The
-linear formulation from is applied to both nodes of a finite element,
-interpreting the force at each node as the internal force that the
-element exert on the nodes. Using this convention, the pretension cable
+linear force--displacement relations derived above are applied to both
+nodes of a finite element, interpreting the force at each node as the
+internal force that the element exerts on the nodes. Using this convention, the pretension cable
 element can be represented with an element stiffness matrix
 :math:`\boldsymbol{K}_e` and an additional nodal load vector
 :math:`\boldsymbol{f}_{e,0}` such that the static equilibrium equation
@@ -691,23 +691,24 @@ equations leads to the formulation of a truss element. The linear model
 above is only valid for :math:`L_d-L_0>0`, that is
 :math:`(L_e-L_0+u_{z,2}-u_{z,1})>0`, and the implementation should abort
 if this condition is not reached at a given time. If the cable has a
-positive mass density :math:`\rho`, the mass matrix of the element is
-given by:
+positive mass density :math:`\rho` (mass per unit length), the mass
+matrix of the element is the *linear* consistent mass matrix, obtained
+from the same linear interpolation of the displacement field used above:
 
 .. math::
 
    \begin{aligned}
-   \boldsymbol{M}_e = \rho L_e
+   \boldsymbol{M}_e = \rho L_0
    \left[
    \begin{array}{*{12}c}
-   13/35 & 0       & 0   & &         & & 9/70  & 0       & 0   & &         & \\
-   0     & 13/35   & 0   & & \boldsymbol{0}_3 & & 0     & 9/70    & 0   & & \boldsymbol{0}_3 & \\
+   1/3   & 0       & 0   & &         & & 1/6   & 0       & 0   & &         & \\
+   0     & 1/3     & 0   & & \boldsymbol{0}_3 & & 0     & 1/6     & 0   & & \boldsymbol{0}_3 & \\
    0     & 0       & 1/3 & &         & & 0     & 0       & 1/6 & &         & \\
          &         &     & &         & &       &         &     & &         & \\
          & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & &       & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & \\
          &         &     & &         & &       &         &     & &         & \\
-   9/70  & 0       & 0   & &         & & 13/35 & 0       & 0   & &         & \\
-   0     & 9/70    & 0   & & \boldsymbol{0}_3 & & 0     & 13/35   & 0   & & \boldsymbol{0}_3 & \\
+   1/6   & 0       & 0   & &         & & 1/3   & 0       & 0   & &         & \\
+   0     & 1/6     & 0   & & \boldsymbol{0}_3 & & 0     & 1/3     & 0   & & \boldsymbol{0}_3 & \\
    0     & 0       & 1/6 & &         & & 0     & 0       & 1/3 & &         & \\
          &         &     & &         & &       &         &     & &         & \\
          & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & &       & \boldsymbol{0}_3 &     & & \boldsymbol{0}_3 & \\
@@ -716,8 +717,31 @@ given by:
    \right]
    \label{eq:MassMatrixPreTension}\end{aligned}
 
-with :math:`L_e` the *undisplaced* length of the element (not
-:math:`L_0`).
+with :math:`L_0` the *rest* (unstretched) length of the cable,
+:math:`L_0=L_e/(1+\epsilon_0)`.
+
+Because the displacement varies linearly along the element (the cable is
+never subdivided and carries no bending shape), the translational mass is
+isotropic: the diagonal terms are :math:`1/3` and the terms coupling the
+two nodes are :math:`1/6`, identical in the axial and transverse
+directions. No inertia is associated with the rotational degrees of
+freedom, consistent with the slender-rod idealization. A purely collinear
+assembly therefore carries no inertia about its own axis. This element mass
+reproduces the rigid-body inertia of a uniform thin rod exactly: a total
+mass :math:`m=\rho L_0`, an inertia :math:`m L_e^2/3` about an end, and
+:math:`m L_e^2/12` about its centre. The same mass matrix is also used for
+*rigid-link* members, which share this straight two-node formulation. In
+the case of rigid-link members, :math:`L_0=L_e`.
+
+For consistency with the mass matrix, the self-weight of a cable element is
+also based on the rest length: the total gravity load of the element is
+:math:`\rho L_0 g`, distributed over the element length :math:`L_e`.
+
+Since cables and rigid links carry no rotational inertia (and cables no
+bending stiffness), a joint connected only to cable and/or rigid-link
+members has rotational degrees of freedom with neither mass nor stiffness.
+In this case, a small concentrated mass with rotational inertia should be
+added at the joint to keep the system well conditioned.
 
 .. _SD_ControlCable:
 
@@ -765,6 +789,11 @@ The tension force at a given time is given by inserting :eq:`DeltaLTot` into :eq
    \begin{aligned}
        T(t)=- E A \frac{\Delta L_0 + \Delta L_c }{L_e + \Delta L_0 + \Delta L_c}
    \end{aligned}
+
+The mass and self-weight of a controlled cable are computed at
+initialization from the rest length :math:`L_0` associated with the initial
+pretension :math:`T_0`. They are not updated when the controller changes the
+rest length :math:`L_r(t)`, so that the cable mass is conserved.
 
 
 In the following we provide details on the implementation and the approximation introduced.
@@ -1216,8 +1245,10 @@ degrees of freedom, and as such, can be treated as *linear* *multipoint*
 constraints. Rigid members can be used to join dissimilar elements
 together or model a link of large stiffness between two elastic bodies
 (see Cook :cite:`cook`). Mass properties for
-rigid link may be provided in the input file, in which case the mass
-matrix of a beam element is used for this rigid link.
+rigid link may be provided in the input file, in which case the linear
+consistent mass matrix of a straight two-node rod, also used for cables, is
+used for this rigid link (see :numref:`SD_PretensionCable`), with
+:math:`L_0=L_e`.
 
 A rigid link between the nodes :math:`j` and :math:`k` is considered,
 referred to as the element :math:`j-k`. The six degrees of freedom of a

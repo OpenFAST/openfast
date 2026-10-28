@@ -1182,7 +1182,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                       ! Arbitrary set to 1
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
-         p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
+         p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Mass per unit length [kg/m] (Area=1)
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
          p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
@@ -1191,7 +1191,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
             print*,'Member',I,'is a rigid link'
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
-         p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
+         p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)      ! Mass per unit length [kg/m] (Area=1)
          p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
       else if (eType==idMemberSpring) then
@@ -2592,27 +2592,44 @@ logical function isFloating(Init, p)
    enddo
 end function isFloating
 
+!> Length over which the element mass is distributed.
+!! Cables: "rest length" L0=Le/(1+eps0) for which pretension would be 0. Other elements: element length Le.
+real(FEKi) function ElemMassLength(ep)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   REAL(FEKi) :: Eps0
+   if (ep%eType==idMemberCable) then
+      Eps0 = ep%T0/(ep%YoungE*ep%Area)
+      ElemMassLength = ep%Length/(1+Eps0)
+   else
+      ElemMassLength = ep%Length
+   endif
+end function ElemMassLength
+
+!> Density used for the element self-weight (applied over the element length Le),
+!! such that the element weight is consistent with the element mass from ElemM (rho*A*L0 for cables).
+real(ReKi) function ElemGravityRho(ep)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   if (ep%eType==idMemberCable) then
+      ElemGravityRho = real(ep%rho * ElemMassLength(ep) / ep%Length, ReKi)
+   else
+      ElemGravityRho = ep%rho
+   endif
+end function ElemGravityRho
+
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(FEKi), INTENT(OUT)        :: Me(12, 12)
-   REAL(FEKi) :: L0, Eps0
    if (ep%eType==idMemberBeamCirc .or. ep%eType==idMemberBeamRect .or. ep%eType==idMemberBeamArb) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
 
    else if (ep%eType==idMemberCable) then
-      Eps0 = ep%T0/(ep%YoungE*ep%Area)
-      L0   = ep%Length/(1+Eps0)  ! "rest length" for which pretension would be 0
-      CALL ElemM_Cable(ep%Area, L0, ep%rho, ep%DirCos, Me)
+      CALL ElemM_Rod(ep%Area, ElemMassLength(ep), ep%rho, ep%DirCos, Me) ! Mass based on rest length L0
 
    else if (ep%eType==idMemberRigid) then
-      if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
-         Me=0.0_FEKi
-      else
-         CALL ElemM_Cable(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
-         !CALL ElemM_(A, L, rho, DirCos, Me)
-      endif
-   
+      ! Straight 2-node bar/rod consistent mass (thin-rod rigid-body inertia); shared with cables. Zero if rho=0.
+      CALL ElemM_Rod(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
+
    else if (ep%eType==idMemberSpring) then
          Me=0.0_FEKi     ! Spring element has no mass associated. Consider using a lumped mass at JointID, if desired.
    endif   
@@ -2652,7 +2669,7 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    else if (ep%eType==idMemberSpring) then
       Fo(1:12)=0.0_FEKi  
    endif
-   CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
+   CALL ElemG( eP%Area, eP%Length, ElemGravityRho(eP), eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF
 
 !> Return skew symmetric matrix

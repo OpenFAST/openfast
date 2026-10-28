@@ -588,7 +588,7 @@ Cable Properties
 Members that are specified as pretension cables (**MType=2**), 
 have their properties defined in the cable properties table. 
 The table lists for each cable property: the property ID (**PropSetID**), the cable tension stiffness (**EA**), 
-the material density (**MatDens**), the pretension force (**T0**), and the control channel (**CtrlChannel**).
+the mass per unit length (**MatDens**, in kg/m), the pretension force (**T0**), and the control channel (**CtrlChannel**).
 The control channel is only used if ServoDyn provides dedicated control signal, in which case
 the cable tension (given in terms of a length change :math:`\Delta l`) 
 is dynamically changed (see :numref:`SD_ControlCable`).
@@ -611,7 +611,7 @@ Rigid link Properties
 
 Members that are specified as rigid links (**MType=3**), 
 have their properties defined in the rigid link properties table. 
-The table lists the material density (**MatDens**) for each rigid link property.
+The table lists the mass per unit length (**MatDens**, in kg/m) for each rigid link property.
 The FEM representation of rigid links is given in :numref:`SD_RigidLinks`.
 
 An example of rigid link properties table is given below
