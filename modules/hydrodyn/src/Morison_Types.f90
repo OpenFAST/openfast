@@ -183,11 +183,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-supplied integer ID for this member [-]
     INTEGER(IntKi)  :: NElements = 0_IntKi      !< number of elements in this member [-]
     REAL(ReKi)  :: RefLength = 0.0_ReKi      !< the reference total length for this member [m]
-    REAL(ReKi)  :: cosPhi_ref = 0.0_ReKi      !< the reference cosine of the inclination angle of the member [-]
     REAL(ReKi)  :: dl = 0.0_ReKi      !< the reference element length for this member (may be less than MDivSize to achieve uniform element lengths) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: k = 0.0_ReKi      !< unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn) [m]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: kkt = 0.0_ReKi      !< matrix of matmul(k_hat, transpose(k_hat) [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: Ak = 0.0_ReKi      !< matrix of I - kkt [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: CMatrix = 0.0_ReKi      !< Rotation matrix from the section local system to the global system [-]
     REAL(ReKi) , DIMENSION(1:3)  :: x_hat = 0.0_ReKi      !< unit vector of rectangular member local x-axis aligned with Side A [-]
     REAL(ReKi) , DIMENSION(1:3)  :: y_hat = 0.0_ReKi      !< unit vector of rectangular member local y-axis aligned with Side B [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: R      !< outer member radius at each node [m]
@@ -289,6 +289,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_D      !< Member-based (side-effects) Nodal viscous drag loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_I      !< Member-based (side-effects) Nodal inertial loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_A      !< Member-based (side-effects) Nodal added mass loads at time t [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_WE      !< Member-based (side-effects) Nodal water entry/exit loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_B      !< Member-based (side-effects) Nodal buoyancy loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF      !< Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_If      !< Member-based (side-effects) Nodal flooded ballast inertia loads [-]
@@ -406,8 +407,7 @@ IMPLICIT NONE
 ! =========  Morison_InitInputType  =======
   TYPE, PUBLIC :: Morison_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
-    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} [-]
     INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
     INTEGER(IntKi)  :: NNodes = 0_IntKi      !< Total number of nodes in the final software model [-]
@@ -529,11 +529,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_I_End      !< Lumped intertia loads at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_IMG_End      !< Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_A_End      !< Lumped added mass loads at time t, which may not correspond to the WaveTime array of times [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_WE_End      !< Lumped water entry/exit loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF_End      !< Joint internal ballast hydrostatic loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_tot_End      !< Joint total loads [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n      !< Normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zFillGroup      !< Instantaneous highest point of each filled group [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HM_w      !< Weight of the baseline strip-theory model at each node of the current member for blending with the shallow-angle model [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HM_nw      !< Free-surface unit normal at each node of the current member [-]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
     TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the Grid Interpolation module [-]
   END TYPE Morison_MiscVarType
@@ -542,8 +545,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [(sec)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
-    INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
+    INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} [-]
     INTEGER(IntKi)  :: HstMod = 0_IntKi      !< Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
@@ -577,6 +579,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_InputType
     TYPE(MeshType)  :: Mesh      !< Kinematics of each node input mesh [-]
     REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference platform yaw offset [(rad)]
+    REAL(ReKi) , DIMENSION(1:2)  :: PtfmRefXY = 0.0_ReKi      !< x,y drift of the HydroDyn origin (PRP), consistent with potential-flow body ExctnDisp. Used to displace the Morison members when WaveDisp=0 [(m)]
     REAL(ReKi) , DIMENSION(1:3)  :: PRP = 0.0_ReKi      !< Coordinates of the principal reference point [(m)]
   END TYPE Morison_InputType
 ! =======================
@@ -590,10 +593,11 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: Morison_x_DummyContState         =   1 ! Morison%DummyContState
    integer(IntKi), public, parameter :: Morison_u_Mesh                   =   2 ! Morison%Mesh
    integer(IntKi), public, parameter :: Morison_u_PtfmRefY               =   3 ! Morison%PtfmRefY
-   integer(IntKi), public, parameter :: Morison_u_PRP                    =   4 ! Morison%PRP
-   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   5 ! Morison%Mesh
-   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   6 ! Morison%VisMesh
-   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   7 ! Morison%WriteOutput
+   integer(IntKi), public, parameter :: Morison_u_PtfmRefXY              =   4 ! Morison%PtfmRefXY
+   integer(IntKi), public, parameter :: Morison_u_PRP                    =   5 ! Morison%PRP
+   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   6 ! Morison%Mesh
+   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   7 ! Morison%VisMesh
+   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   8 ! Morison%WriteOutput
 
 contains
 
@@ -1291,11 +1295,11 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%MemberID = SrcMemberTypeData%MemberID
    DstMemberTypeData%NElements = SrcMemberTypeData%NElements
    DstMemberTypeData%RefLength = SrcMemberTypeData%RefLength
-   DstMemberTypeData%cosPhi_ref = SrcMemberTypeData%cosPhi_ref
    DstMemberTypeData%dl = SrcMemberTypeData%dl
    DstMemberTypeData%k = SrcMemberTypeData%k
    DstMemberTypeData%kkt = SrcMemberTypeData%kkt
    DstMemberTypeData%Ak = SrcMemberTypeData%Ak
+   DstMemberTypeData%CMatrix = SrcMemberTypeData%CMatrix
    DstMemberTypeData%x_hat = SrcMemberTypeData%x_hat
    DstMemberTypeData%y_hat = SrcMemberTypeData%y_hat
    if (allocated(SrcMemberTypeData%R)) then
@@ -2281,11 +2285,11 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPack(RF, InData%MemberID)
    call RegPack(RF, InData%NElements)
    call RegPack(RF, InData%RefLength)
-   call RegPack(RF, InData%cosPhi_ref)
    call RegPack(RF, InData%dl)
    call RegPack(RF, InData%k)
    call RegPack(RF, InData%kkt)
    call RegPack(RF, InData%Ak)
+   call RegPack(RF, InData%CMatrix)
    call RegPack(RF, InData%x_hat)
    call RegPack(RF, InData%y_hat)
    call RegPackAlloc(RF, InData%R)
@@ -2395,11 +2399,11 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NElements); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%cosPhi_ref); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%dl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%k); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%kkt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ak); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CMatrix); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%x_hat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%y_hat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%R); if (RegCheckErr(RF, RoutineName)) return
@@ -2543,6 +2547,18 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       end if
       DstMemberLoadsData%F_A = SrcMemberLoadsData%F_A
    end if
+   if (allocated(SrcMemberLoadsData%F_WE)) then
+      LB(1:2) = lbound(SrcMemberLoadsData%F_WE)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_WE)
+      if (.not. allocated(DstMemberLoadsData%F_WE)) then
+         allocate(DstMemberLoadsData%F_WE(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberLoadsData%F_WE.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberLoadsData%F_WE = SrcMemberLoadsData%F_WE
+   end if
    if (allocated(SrcMemberLoadsData%F_B)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_B)
       UB(1:2) = ubound(SrcMemberLoadsData%F_B)
@@ -2670,6 +2686,9 @@ subroutine Morison_DestroyMemberLoads(MemberLoadsData, ErrStat, ErrMsg)
    if (allocated(MemberLoadsData%F_A)) then
       deallocate(MemberLoadsData%F_A)
    end if
+   if (allocated(MemberLoadsData%F_WE)) then
+      deallocate(MemberLoadsData%F_WE)
+   end if
    if (allocated(MemberLoadsData%F_B)) then
       deallocate(MemberLoadsData%F_B)
    end if
@@ -2707,6 +2726,7 @@ subroutine Morison_PackMemberLoads(RF, Indata)
    call RegPackAlloc(RF, InData%F_D)
    call RegPackAlloc(RF, InData%F_I)
    call RegPackAlloc(RF, InData%F_A)
+   call RegPackAlloc(RF, InData%F_WE)
    call RegPackAlloc(RF, InData%F_B)
    call RegPackAlloc(RF, InData%F_BF)
    call RegPackAlloc(RF, InData%F_If)
@@ -2731,6 +2751,7 @@ subroutine Morison_UnPackMemberLoads(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_I); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_A); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_WE); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_B); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_BF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_If); if (RegCheckErr(RF, RoutineName)) return
@@ -3268,7 +3289,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    ErrMsg  = ''
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
-   DstInitInputData%AMMod = SrcInitInputData%AMMod
    DstInitInputData%HstMod = SrcInitInputData%HstMod
    DstInitInputData%NJoints = SrcInitInputData%NJoints
    DstInitInputData%NNodes = SrcInitInputData%NNodes
@@ -3717,7 +3737,6 @@ subroutine Morison_PackInitInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
-   call RegPack(RF, InData%AMMod)
    call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NJoints)
    call RegPack(RF, InData%NNodes)
@@ -3924,7 +3943,6 @@ subroutine Morison_UnPackInitInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NNodes); if (RegCheckErr(RF, RoutineName)) return
@@ -4684,6 +4702,18 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_A_End = SrcMiscData%F_A_End
    end if
+   if (allocated(SrcMiscData%F_WE_End)) then
+      LB(1:2) = lbound(SrcMiscData%F_WE_End)
+      UB(1:2) = ubound(SrcMiscData%F_WE_End)
+      if (.not. allocated(DstMiscData%F_WE_End)) then
+         allocate(DstMiscData%F_WE_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_WE_End.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_WE_End = SrcMiscData%F_WE_End
+   end if
    if (allocated(SrcMiscData%F_BF_End)) then
       LB(1:2) = lbound(SrcMiscData%F_BF_End)
       UB(1:2) = ubound(SrcMiscData%F_BF_End)
@@ -4743,6 +4773,30 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%zFillGroup = SrcMiscData%zFillGroup
+   end if
+   if (allocated(SrcMiscData%HM_w)) then
+      LB(1:1) = lbound(SrcMiscData%HM_w)
+      UB(1:1) = ubound(SrcMiscData%HM_w)
+      if (.not. allocated(DstMiscData%HM_w)) then
+         allocate(DstMiscData%HM_w(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%HM_w.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%HM_w = SrcMiscData%HM_w
+   end if
+   if (allocated(SrcMiscData%HM_nw)) then
+      LB(1:2) = lbound(SrcMiscData%HM_nw)
+      UB(1:2) = ubound(SrcMiscData%HM_nw)
+      if (.not. allocated(DstMiscData%HM_nw)) then
+         allocate(DstMiscData%HM_nw(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%HM_nw.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%HM_nw = SrcMiscData%HM_nw
    end if
    call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4820,6 +4874,9 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_A_End)) then
       deallocate(MiscData%F_A_End)
    end if
+   if (allocated(MiscData%F_WE_End)) then
+      deallocate(MiscData%F_WE_End)
+   end if
    if (allocated(MiscData%F_BF_End)) then
       deallocate(MiscData%F_BF_End)
    end if
@@ -4834,6 +4891,12 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
    if (allocated(MiscData%zFillGroup)) then
       deallocate(MiscData%zFillGroup)
+   end if
+   if (allocated(MiscData%HM_w)) then
+      deallocate(MiscData%HM_w)
+   end if
+   if (allocated(MiscData%HM_nw)) then
+      deallocate(MiscData%HM_nw)
    end if
    call NWTC_Library_DestroyMeshMapType(MiscData%VisMeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4873,11 +4936,14 @@ subroutine Morison_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%F_I_End)
    call RegPackAlloc(RF, InData%F_IMG_End)
    call RegPackAlloc(RF, InData%F_A_End)
+   call RegPackAlloc(RF, InData%F_WE_End)
    call RegPackAlloc(RF, InData%F_BF_End)
    call RegPackAlloc(RF, InData%F_tot_End)
    call RegPackAlloc(RF, InData%V_rel_n)
    call RegPackAlloc(RF, InData%V_rel_n_HiPass)
    call RegPackAlloc(RF, InData%zFillGroup)
+   call RegPackAlloc(RF, InData%HM_w)
+   call RegPackAlloc(RF, InData%HM_nw)
    call NWTC_Library_PackMeshMapType(RF, InData%VisMeshMap) 
    call GridInterp_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -4921,11 +4987,14 @@ subroutine Morison_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_I_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_IMG_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_A_End); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_WE_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_BF_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_tot_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n_HiPass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%zFillGroup); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HM_w); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HM_nw); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%VisMeshMap) ! VisMeshMap 
    call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
@@ -4946,7 +5015,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%DT = SrcParamData%DT
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WaveDisp = SrcParamData%WaveDisp
-   DstParamData%AMMod = SrcParamData%AMMod
    DstParamData%HstMod = SrcParamData%HstMod
    DstParamData%NMembers = SrcParamData%NMembers
    if (allocated(SrcParamData%Members)) then
@@ -5261,7 +5329,6 @@ subroutine Morison_PackParam(RF, Indata)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WaveDisp)
-   call RegPack(RF, InData%AMMod)
    call RegPack(RF, InData%HstMod)
    call RegPack(RF, InData%NMembers)
    call RegPack(RF, allocated(InData%Members))
@@ -5352,7 +5419,6 @@ subroutine Morison_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveDisp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AMMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HstMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%Members)) deallocate(OutData%Members)
@@ -5474,6 +5540,7 @@ subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInputData%PtfmRefY = SrcInputData%PtfmRefY
+   DstInputData%PtfmRefXY = SrcInputData%PtfmRefXY
    DstInputData%PRP = SrcInputData%PRP
 end subroutine
 
@@ -5497,6 +5564,7 @@ subroutine Morison_PackInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
    call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PtfmRefXY)
    call RegPack(RF, InData%PRP)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -5508,6 +5576,7 @@ subroutine Morison_UnPackInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
    call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefXY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PRP); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5685,6 +5754,7 @@ SUBROUTINE Morison_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Err
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
+   u_out%PtfmRefXY = a1*u1%PtfmRefXY + a2*u2%PtfmRefXY
    u_out%PRP = a1*u1%PRP + a2*u2%PRP
 END SUBROUTINE
 
@@ -5746,6 +5816,7 @@ SUBROUTINE Morison_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
+   u_out%PtfmRefXY = a1*u1%PtfmRefXY + a2*u2%PtfmRefXY + a3*u3%PtfmRefXY
    u_out%PRP = a1*u1%PRP + a2*u2%PRP + a3*u3%PRP
 END SUBROUTINE
 
@@ -6044,6 +6115,8 @@ subroutine Morison_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
       case (Morison_u_PtfmRefY)
          VarVals(1) = u%PtfmRefY                                              ! Scalar
+      case (Morison_u_PtfmRefXY)
+         VarVals = u%PtfmRefXY(V%iLB:V%iUB)                                   ! Rank 1 Array
       case (Morison_u_PRP)
          VarVals = u%PRP(V%iLB:V%iUB)                                         ! Rank 1 Array
       case default
@@ -6072,6 +6145,8 @@ subroutine Morison_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
       case (Morison_u_PtfmRefY)
          u%PtfmRefY = VarVals(1)                                              ! Scalar
+      case (Morison_u_PtfmRefXY)
+         u%PtfmRefXY(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
       case (Morison_u_PRP)
          u%PRP(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
       end select
@@ -6086,6 +6161,8 @@ function Morison_InputFieldName(DL) result(Name)
        Name = "u%Mesh"
    case (Morison_u_PtfmRefY)
        Name = "u%PtfmRefY"
+   case (Morison_u_PtfmRefXY)
+       Name = "u%PtfmRefXY"
    case (Morison_u_PRP)
        Name = "u%PRP"
    case default
