@@ -2627,13 +2627,9 @@ SUBROUTINE ElemM(ep, Me)
       CALL ElemM_Rod(ep%Area, ElemMassLength(ep), ep%rho, ep%DirCos, Me) ! Mass based on rest length L0
 
    else if (ep%eType==idMemberRigid) then
-      if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
-         Me=0.0_FEKi
-      else
-         ! Straight 2-node bar/rod consistent mass (thin-rod rigid-body inertia); shared with cables
-         CALL ElemM_Rod(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
-      endif
-   
+      ! Straight 2-node bar/rod consistent mass (thin-rod rigid-body inertia); shared with cables. Zero if rho=0.
+      CALL ElemM_Rod(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
+
    else if (ep%eType==idMemberSpring) then
          Me=0.0_FEKi     ! Spring element has no mass associated. Consider using a lumped mass at JointID, if desired.
    endif   
