@@ -270,13 +270,17 @@ SUBROUTINE ProgExit ( StatCode )
 
 END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
+!> Set IEEE quiet NaN and positive infinity values in double, ReKi, and single precision.
 SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
 
    USE, INTRINSIC :: ieee_arithmetic
 
-   REAL(DbKi), INTENT(inout) :: NaN_D, Inf_D
-   REAL(ReKi), INTENT(inout) :: NaN, Inf
-   REAL(SiKi), INTENT(inout) :: NaN_S, Inf_S
+   REAL(DbKi), INTENT(inout) :: NaN_D !< IEEE quiet NaN in double precision
+   REAL(DbKi), INTENT(inout) :: Inf_D !< IEEE positive infinity in double precision
+   REAL(ReKi), INTENT(inout) :: NaN   !< IEEE quiet NaN in ReKi precision
+   REAL(ReKi), INTENT(inout) :: Inf   !< IEEE positive infinity in ReKi precision
+   REAL(SiKi), INTENT(inout) :: NaN_S !< IEEE quiet NaN in single precision
+   REAL(SiKi), INTENT(inout) :: Inf_S !< IEEE positive infinity in single precision
 
    NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
    Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)

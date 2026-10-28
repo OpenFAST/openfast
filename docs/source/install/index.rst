@@ -523,6 +523,22 @@ The commands above are equivalent to having run this command the first time:
     # Initial configuration in Debug mode with dynamic linking
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
 
+Floating-point exception trapping
+*********************************
+
+Enable floating-point exception trapping with compiler flags. For GNU Fortran,
+add the flags to ``CMAKE_Fortran_FLAGS`` or ``CMAKE_Fortran_FLAGS_DEBUG``:
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_Fortran_FLAGS="-ffpe-trap=invalid,zero,overflow"
+
+For Intel Fortran on Linux or macOS, use ``-fpe0``. For Intel Fortran on
+Windows, use ``/fpe:0``. Add the applicable flag to the same CMake variable.
+
+OpenFAST sets its NaN and infinity constants with ``ieee_value``. This avoids
+an initialization exception in builds that enable floating-point traps.
+
 CMAKE_BUILD_TYPE
 ****************
 This option allows to set the compiler optimization level and debug
