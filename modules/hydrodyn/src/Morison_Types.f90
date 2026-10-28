@@ -289,6 +289,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_D      !< Member-based (side-effects) Nodal viscous drag loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_I      !< Member-based (side-effects) Nodal inertial loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_A      !< Member-based (side-effects) Nodal added mass loads at time t [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_WE      !< Member-based (side-effects) Nodal water entry/exit loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_B      !< Member-based (side-effects) Nodal buoyancy loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF      !< Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_If      !< Member-based (side-effects) Nodal flooded ballast inertia loads [-]
@@ -528,11 +529,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_I_End      !< Lumped intertia loads at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_IMG_End      !< Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_A_End      !< Lumped added mass loads at time t, which may not correspond to the WaveTime array of times [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_WE_End      !< Lumped water entry/exit loads at time t [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF_End      !< Joint internal ballast hydrostatic loads [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_tot_End      !< Joint total loads [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n      !< Normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zFillGroup      !< Instantaneous highest point of each filled group [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HM_w      !< Weight of the baseline strip-theory model at each node of the current member for blending with the shallow-angle model [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HM_nw      !< Free-surface unit normal at each node of the current member [-]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
     TYPE(GridInterp_MiscVarType)  :: WaveField_m      !< misc var information from the Grid Interpolation module [-]
   END TYPE Morison_MiscVarType
@@ -2543,6 +2547,18 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
       end if
       DstMemberLoadsData%F_A = SrcMemberLoadsData%F_A
    end if
+   if (allocated(SrcMemberLoadsData%F_WE)) then
+      LB(1:2) = lbound(SrcMemberLoadsData%F_WE)
+      UB(1:2) = ubound(SrcMemberLoadsData%F_WE)
+      if (.not. allocated(DstMemberLoadsData%F_WE)) then
+         allocate(DstMemberLoadsData%F_WE(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberLoadsData%F_WE.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberLoadsData%F_WE = SrcMemberLoadsData%F_WE
+   end if
    if (allocated(SrcMemberLoadsData%F_B)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_B)
       UB(1:2) = ubound(SrcMemberLoadsData%F_B)
@@ -2670,6 +2686,9 @@ subroutine Morison_DestroyMemberLoads(MemberLoadsData, ErrStat, ErrMsg)
    if (allocated(MemberLoadsData%F_A)) then
       deallocate(MemberLoadsData%F_A)
    end if
+   if (allocated(MemberLoadsData%F_WE)) then
+      deallocate(MemberLoadsData%F_WE)
+   end if
    if (allocated(MemberLoadsData%F_B)) then
       deallocate(MemberLoadsData%F_B)
    end if
@@ -2707,6 +2726,7 @@ subroutine Morison_PackMemberLoads(RF, Indata)
    call RegPackAlloc(RF, InData%F_D)
    call RegPackAlloc(RF, InData%F_I)
    call RegPackAlloc(RF, InData%F_A)
+   call RegPackAlloc(RF, InData%F_WE)
    call RegPackAlloc(RF, InData%F_B)
    call RegPackAlloc(RF, InData%F_BF)
    call RegPackAlloc(RF, InData%F_If)
@@ -2731,6 +2751,7 @@ subroutine Morison_UnPackMemberLoads(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_I); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_A); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_WE); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_B); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_BF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_If); if (RegCheckErr(RF, RoutineName)) return
@@ -4681,6 +4702,18 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_A_End = SrcMiscData%F_A_End
    end if
+   if (allocated(SrcMiscData%F_WE_End)) then
+      LB(1:2) = lbound(SrcMiscData%F_WE_End)
+      UB(1:2) = ubound(SrcMiscData%F_WE_End)
+      if (.not. allocated(DstMiscData%F_WE_End)) then
+         allocate(DstMiscData%F_WE_End(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_WE_End.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_WE_End = SrcMiscData%F_WE_End
+   end if
    if (allocated(SrcMiscData%F_BF_End)) then
       LB(1:2) = lbound(SrcMiscData%F_BF_End)
       UB(1:2) = ubound(SrcMiscData%F_BF_End)
@@ -4740,6 +4773,30 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%zFillGroup = SrcMiscData%zFillGroup
+   end if
+   if (allocated(SrcMiscData%HM_w)) then
+      LB(1:1) = lbound(SrcMiscData%HM_w)
+      UB(1:1) = ubound(SrcMiscData%HM_w)
+      if (.not. allocated(DstMiscData%HM_w)) then
+         allocate(DstMiscData%HM_w(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%HM_w.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%HM_w = SrcMiscData%HM_w
+   end if
+   if (allocated(SrcMiscData%HM_nw)) then
+      LB(1:2) = lbound(SrcMiscData%HM_nw)
+      UB(1:2) = ubound(SrcMiscData%HM_nw)
+      if (.not. allocated(DstMiscData%HM_nw)) then
+         allocate(DstMiscData%HM_nw(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%HM_nw.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%HM_nw = SrcMiscData%HM_nw
    end if
    call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4817,6 +4874,9 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_A_End)) then
       deallocate(MiscData%F_A_End)
    end if
+   if (allocated(MiscData%F_WE_End)) then
+      deallocate(MiscData%F_WE_End)
+   end if
    if (allocated(MiscData%F_BF_End)) then
       deallocate(MiscData%F_BF_End)
    end if
@@ -4831,6 +4891,12 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
    if (allocated(MiscData%zFillGroup)) then
       deallocate(MiscData%zFillGroup)
+   end if
+   if (allocated(MiscData%HM_w)) then
+      deallocate(MiscData%HM_w)
+   end if
+   if (allocated(MiscData%HM_nw)) then
+      deallocate(MiscData%HM_nw)
    end if
    call NWTC_Library_DestroyMeshMapType(MiscData%VisMeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4870,11 +4936,14 @@ subroutine Morison_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%F_I_End)
    call RegPackAlloc(RF, InData%F_IMG_End)
    call RegPackAlloc(RF, InData%F_A_End)
+   call RegPackAlloc(RF, InData%F_WE_End)
    call RegPackAlloc(RF, InData%F_BF_End)
    call RegPackAlloc(RF, InData%F_tot_End)
    call RegPackAlloc(RF, InData%V_rel_n)
    call RegPackAlloc(RF, InData%V_rel_n_HiPass)
    call RegPackAlloc(RF, InData%zFillGroup)
+   call RegPackAlloc(RF, InData%HM_w)
+   call RegPackAlloc(RF, InData%HM_nw)
    call NWTC_Library_PackMeshMapType(RF, InData%VisMeshMap) 
    call GridInterp_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -4918,11 +4987,14 @@ subroutine Morison_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_I_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_IMG_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_A_End); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_WE_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_BF_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_tot_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n_HiPass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%zFillGroup); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HM_w); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%HM_nw); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%VisMeshMap) ! VisMeshMap 
    call GridInterp_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
