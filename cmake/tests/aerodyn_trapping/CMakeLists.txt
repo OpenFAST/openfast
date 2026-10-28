@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.15)
 project(aerodyn_trapping_fixture LANGUAGES NONE)
 
 foreach(_required FIXTURE_COMPILER_ID FIXTURE_EXPECT_OPTIMIZATION FIXTURE_EXPECT_MULTI_CONFIG)
