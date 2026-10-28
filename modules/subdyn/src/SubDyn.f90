@@ -4537,7 +4537,8 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
         else if (mType==idMemberCable) then
            iProp(1) = FINDLOCI(Init%PropSetsC(:,1), propIDs(1))
-           mMass= Init%PropSetsC(iProp(1),3) * mLength ! rho [kg/m] * L
+           ! rho [kg/m] * L0, with rest length L0 = L/(1+T0/EA), consistent with ElemMassLength
+           mMass= Init%PropSetsC(iProp(1),3) * mLength / (1.0_ReKi + Init%PropSetsC(iProp(1),4)/Init%PropSetsC(iProp(1),2))
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Cable'
         else if (mType==idMemberRigid) then
