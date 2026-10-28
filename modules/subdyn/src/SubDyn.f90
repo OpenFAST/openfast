@@ -3891,7 +3891,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
       Rb2g = transpose(Rg2b) ! Body (Guyan) to global
       do i = 1, size(p%ElemProps) ! Loop through all elements
          ! --- Element Fg in the earth-fixed frame
-         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, p%ElemProps(i)%Rho, matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
+         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, ElemGravityRho(p%ElemProps(i)), matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
          ! --- Element Fg in the Guyan rigid-body frame
          FGe( 1: 3) = matmul(Rg2b,FGe( 1: 3)) ! Node 1 force
          FGe( 4: 6) = matmul(Rg2b,FGe( 4: 6)) ! Node 1 moment

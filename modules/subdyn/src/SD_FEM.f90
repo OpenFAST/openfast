@@ -2592,18 +2592,39 @@ logical function isFloating(Init, p)
    enddo
 end function isFloating
 
+!> Length over which the element mass is distributed.
+!! Cables: "rest length" L0=Le/(1+eps0) for which pretension would be 0. Other elements: element length Le.
+real(FEKi) function ElemMassLength(ep)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   REAL(FEKi) :: Eps0
+   if (ep%eType==idMemberCable) then
+      Eps0 = ep%T0/(ep%YoungE*ep%Area)
+      ElemMassLength = ep%Length/(1+Eps0)
+   else
+      ElemMassLength = ep%Length
+   endif
+end function ElemMassLength
+
+!> Density used for the element self-weight (applied over the element length Le),
+!! such that the element weight is consistent with the element mass from ElemM (rho*A*L0 for cables).
+real(ReKi) function ElemGravityRho(ep)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   if (ep%eType==idMemberCable) then
+      ElemGravityRho = real(ep%rho * ElemMassLength(ep) / ep%Length, ReKi)
+   else
+      ElemGravityRho = ep%rho
+   endif
+end function ElemGravityRho
+
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(FEKi), INTENT(OUT)        :: Me(12, 12)
-   REAL(FEKi) :: L0, Eps0
    if (ep%eType==idMemberBeamCirc .or. ep%eType==idMemberBeamRect .or. ep%eType==idMemberBeamArb) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
 
    else if (ep%eType==idMemberCable) then
-      Eps0 = ep%T0/(ep%YoungE*ep%Area)
-      L0   = ep%Length/(1+Eps0)  ! "rest length" for which pretension would be 0
-      CALL ElemM_Rod(ep%Area, L0, ep%rho, ep%DirCos, Me)
+      CALL ElemM_Rod(ep%Area, ElemMassLength(ep), ep%rho, ep%DirCos, Me) ! Mass based on rest length L0
 
    else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
@@ -2652,7 +2673,7 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    else if (ep%eType==idMemberSpring) then
       Fo(1:12)=0.0_FEKi  
    endif
-   CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
+   CALL ElemG( eP%Area, eP%Length, ElemGravityRho(eP), eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF
 
 !> Return skew symmetric matrix
