@@ -1182,7 +1182,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                       ! Arbitrary set to 1
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
-         p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
+         p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Mass per unit length [kg/m] (Area=1)
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
          p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
@@ -1191,7 +1191,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
             print*,'Member',I,'is a rigid link'
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
-         p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
+         p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)      ! Mass per unit length [kg/m] (Area=1)
          p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
       else if (eType==idMemberSpring) then

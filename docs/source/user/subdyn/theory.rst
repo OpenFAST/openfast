@@ -733,6 +733,16 @@ mass :math:`m=\rho L_0`, an inertia :math:`m L_e^2/3` about an end, and
 *rigid-link* members, which share this straight two-node formulation. In
 the case of rigid-link members, :math:`L_0=L_e`.
 
+For consistency with the mass matrix, the self-weight of a cable element is
+also based on the rest length: the total gravity load of the element is
+:math:`\rho L_0 g`, distributed over the element length :math:`L_e`.
+
+Since cables and rigid links carry no rotational inertia (and cables no
+bending stiffness), a joint connected only to cable and/or rigid-link
+members has rotational degrees of freedom with neither mass nor stiffness.
+In this case, a small concentrated mass with rotational inertia should be
+added at the joint to keep the system well conditioned.
+
 .. _SD_ControlCable:
 
 Controlled pretension cable
@@ -779,6 +789,11 @@ The tension force at a given time is given by inserting :eq:`DeltaLTot` into :eq
    \begin{aligned}
        T(t)=- E A \frac{\Delta L_0 + \Delta L_c }{L_e + \Delta L_0 + \Delta L_c}
    \end{aligned}
+
+The mass and self-weight of a controlled cable are computed at
+initialization from the rest length :math:`L_0` associated with the initial
+pretension :math:`T_0`. They are not updated when the controller changes the
+rest length :math:`L_r(t)`, so that the cable mass is conserved.
 
 
 In the following we provide details on the implementation and the approximation introduced.
@@ -1230,8 +1245,10 @@ degrees of freedom, and as such, can be treated as *linear* *multipoint*
 constraints. Rigid members can be used to join dissimilar elements
 together or model a link of large stiffness between two elastic bodies
 (see Cook :cite:`cook`). Mass properties for
-rigid link may be provided in the input file, in which case the mass
-matrix of a beam element is used for this rigid link.
+rigid link may be provided in the input file, in which case the linear
+consistent mass matrix of a straight two-node rod, also used for cables, is
+used for this rigid link (see :numref:`SD_PretensionCable`), with
+:math:`L_0=L_e`.
 
 A rigid link between the nodes :math:`j` and :math:`k` is considered,
 referred to as the element :math:`j-k`. The six degrees of freedom of a
