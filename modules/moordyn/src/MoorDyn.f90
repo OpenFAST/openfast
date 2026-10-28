@@ -3220,6 +3220,9 @@ CONTAINS
       other%dummy = 0
       xd%dummy    = 0
       z%dummy     = 0      
+
+      ALLOCATE(other%slipKSeg(p%nSlips), STAT = ErrStat2); if(AllocateFailed("other%slipKSeg")) return
+      IF (p%nSlips > 0) other%slipKSeg = m%SlipList(:)%kSeg
       
       if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco))) then
          ErrStat2 = ErrID_Fatal
@@ -3755,6 +3758,8 @@ CONTAINS
       NdtM = ceiling(p%dtCoupling/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
       dtM = p%dtCoupling/REAL(NdtM,DbKi)             ! adjust desired time step to satisfy dt with an integer number of time steps
 
+      ! restart the contact search from the state at t, in case the glue code has stepped back in time
+      IF (p%nSlips > 0) m%SlipList(:)%kSeg = other%slipKSeg
 
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
@@ -3784,6 +3789,7 @@ CONTAINS
          
       END DO  ! I  time steps
 
+      IF (p%nSlips > 0) other%slipKSeg = m%SlipList(:)%kSeg
 
       ! destroy dxdt and x2, and u_interp
       !CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
@@ -4080,6 +4086,7 @@ CONTAINS
       
 
       ! call CalcContStateDeriv in order to run model and calculate dynamics with provided x and u
+      IF (p%nSlips > 0) m%SlipList(:)%kSeg = other%slipKSeg
       CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
 
     !  ! assign net force on fairlead Points to the fairlead force output mesh

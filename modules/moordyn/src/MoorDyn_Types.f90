@@ -436,6 +436,7 @@ IMPLICIT NONE
 ! =========  MD_OtherStateType  =======
   TYPE, PUBLIC :: MD_OtherStateType
     REAL(SiKi)  :: dummy = 0.0_R4Ki      !< Remove this variable if you have other states [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: slipKSeg      !< contact segment of each slip support at the end of the last state update (search-window center) [-]
   END TYPE MD_OtherStateType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -3210,10 +3211,24 @@ subroutine MD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MD_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%dummy = SrcOtherStateData%dummy
+   if (allocated(SrcOtherStateData%slipKSeg)) then
+      LB(1:1) = lbound(SrcOtherStateData%slipKSeg)
+      UB(1:1) = ubound(SrcOtherStateData%slipKSeg)
+      if (.not. allocated(DstOtherStateData%slipKSeg)) then
+         allocate(DstOtherStateData%slipKSeg(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%slipKSeg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%slipKSeg = SrcOtherStateData%slipKSeg
+   end if
 end subroutine
 
 subroutine MD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -3223,6 +3238,9 @@ subroutine MD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(OtherStateData%slipKSeg)) then
+      deallocate(OtherStateData%slipKSeg)
+   end if
 end subroutine
 
 subroutine MD_PackOtherState(RF, Indata)
@@ -3231,6 +3249,7 @@ subroutine MD_PackOtherState(RF, Indata)
    character(*), parameter         :: RoutineName = 'MD_PackOtherState'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%dummy)
+   call RegPackAlloc(RF, InData%slipKSeg)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3238,8 +3257,12 @@ subroutine MD_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MD_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackOtherState'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%dummy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%slipKSeg); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

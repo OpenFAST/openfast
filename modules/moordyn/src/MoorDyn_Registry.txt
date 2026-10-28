@@ -399,6 +399,7 @@ typedef   ^       ConstraintStateType  SiKi                dummy            -   
 
 ## ============================== Define Other states here: =====================================================================================================================================
 typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
+typedef   ^       ^                    IntKi               slipKSeg         {:} -  -   "contact segment of each slip support at the end of the last state update (search-window center)" -
 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        IntKi               nLineTypes     -     0    -   "number of line types"                       ""

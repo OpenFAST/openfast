@@ -51,7 +51,7 @@ CONTAINS
 
       IF (Slip%kPerp <= 0.0_DbKi) Slip%kPerp = Slip%mNode*(0.3_DbKi/p%dtM0)**2
 
-      ! critical damping of whole-line sliding (restoring rate ~2*wWet), capped for explicit stability
+      ! ad-hoc slip damping, rate ~sqrt(g/L) for heavy lines, capped for explicit stability
       wWet  = ABS(w - p%rhoW*area)*p%g
       mLine = Line%UnstrLen*(w + p%rhoW*Line%Cat*area)
       Slip%cIC = MIN(2.0_DbKi*SQRT(2.0_DbKi*wWet*mLine), 0.5_DbKi*Slip%mNode/p%dtM0)
