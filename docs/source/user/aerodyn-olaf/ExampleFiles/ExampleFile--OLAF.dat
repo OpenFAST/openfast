@@ -49,3 +49,14 @@ GridName  GridType  TStart  TEnd     DTGrid    XStart    XEnd   nX    YStart   Y
 ===============================================================================================
 ! Advanced options may be placed here in arbitrary order, with the regular format:
 ! Value   Key             - Comment
+""            SrcPnlFile           - Name of VTK file containing source panels {default: ""}
+1             nSrcPnlUpdate        - How often do src panel updates (in time steps of OLAF), {default: 1}
+False         SrcPnlZeroNetSource   - Enforce zero area-integrated source strength {default: False}
+True          Induction            - Compute induction, {default: True}
+True          InductionAtCP        - Compute induced velocities at nodes or CP, {default: True}
+True          WakeAtTE             - Start the wake at the trailing edge, or at the LL, {default: True}
+False         DStallOnWake         - Dynamic stall has influence on wake, {default: False}
+0.75          kFrozenNWStart       - Fraction of wake induced velocity at start of frozen wake, {default: 0.75}
+0.5           kFrozenNWEnd         - Fraction of wake induced velocity at end of frozen wake, {default: 0.5}
+0.0           zGround              - Ground height {default: 0.0}
+0.1           zGroundPush          - Ground push back {default: 0.1}
