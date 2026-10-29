@@ -37,7 +37,9 @@ contains
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
 subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-   use OMP_LIB ! wrap with #ifdef _OPENMP if this causes an issue
+#ifdef _OPENMP
+   use OMP_LIB
+#endif
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
    type(FVW_InitInputType),         intent(inout)  :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(FVW_InputType),             intent(  out)  :: u              !< An initial guess for the input; input mesh must be defined
