@@ -89,6 +89,24 @@ weight derivatives follow from the kernel,
 :math:`\lVert\mathbf{C}'\rVert` vanishes, the direction of the contact segment
 :math:`\mathbf{r}_k - \mathbf{r}_{k-1}` is used instead.
 
+The same weights :math:`w_j` are used both to interpolate the contact kinematics :math:`\mathbf{C}` and
+:math:`\mathbf{V}` from the nodes and to spread the contact force :math:`\mathbf{F}` back onto the nodes as
+:math:`w_j\mathbf{F}` (see :ref:`MD-SlipSupport-Distribution`). With this choice, the power delivered to the
+line is
+
+.. math::
+
+   \sum_j w_j\mathbf{F}\cdot\dot{\mathbf{r}}_j = \mathbf{F}\cdot\mathbf{V},
+
+so a spring and damper acting on :math:`\mathbf{C}` and :math:`\mathbf{V}` act on the line nodes as a passive
+spring and damper: the spring stores exactly its potential energy and the damper only dissipates energy. The
+same choice gives the line a single well-defined inertia :math:`m_C` at the contact point (see
+:ref:`MD-SlipSupport-Normal`), on which the stiffness, damping, and stability bounds below are based. If the
+kinematics were interpolated with weights different from those used to spread the force, the damper could
+feed energy into some node motions. The per-node tangent split described in
+:ref:`MD-SlipSupport-Distribution` relaxes this property slightly. Interpolation and spreading with the same
+kernel follow the same principle as in the immersed boundary method (Peskin, 2002).
+
 Properties of the kernel:
 
 - With the reflected virtual nodes, :math:`\mathbf{C}(0) = \mathbf{r}_0` and :math:`\mathbf{C}(L) = \mathbf{r}_N`.
@@ -154,6 +172,8 @@ This is unlikely to be an issue in practice: with an explicit time step limited 
 :math:`c` of the line (:math:`\Delta t \lesssim h/c`), it would require slip speeds comparable to :math:`c`.
 
 
+.. _MD-SlipSupport-Normal:
+
 Normal Contact Force
 --------------------
 
@@ -215,6 +235,8 @@ is used:
 which keeps the contact frequency :math:`\sqrt{K/m_C}` at or below :math:`0.3/\Delta t`, including at
 the line ends where the weight concentrates on the end node.
 
+
+.. _MD-SlipSupport-Distribution:
 
 Force Distribution to Nodes
 ---------------------------
@@ -441,3 +463,4 @@ References
   friction," *IEEE Transactions on Automatic Control*, 40(3):419-425, 1995.
 - P. Dupont, V. Hayward, B. Armstrong, and F. Altpeter, "Single state elastoplastic friction models,"
   *IEEE Transactions on Automatic Control*, 47(5):787-792, 2002.
+- C. S. Peskin, "The immersed boundary method," *Acta Numerica*, 11:479-517, 2002.
