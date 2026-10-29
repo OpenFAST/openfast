@@ -26,7 +26,6 @@ PROGRAM FAST
 ! noted compilation switches:
 !   OUTPUT_ADDEDMASS        (outputs a file called "<RootName>.AddedMass" that contains HydroDyn's added-mass matrix.
 !   OUTPUT_JACOBIAN
-!   FPE_TRAP_ENABLED        (use with gfortran when checking for floating point exceptions)
 !   DOUBLE_PRECISION        (compile in double precision)
 !.................................................................................................
 
