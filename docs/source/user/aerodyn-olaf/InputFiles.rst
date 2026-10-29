@@ -199,7 +199,7 @@ faster than the exponential option depending on the case (wake size, particle
 count, and regularization parameter).
 The compact-support kernel is also purely polynomial and avoids evaluating a
 transcendental (exponential) function, which can further reduce cost.
-The default option is *[1]*.
+The default option is *[2]*.
 
 **WakeRegMethod** [switch] specifies the method of determining viscous core
 radius (i.e., the regularization parameter). There are three options: 1)
