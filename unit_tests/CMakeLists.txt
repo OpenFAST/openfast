@@ -27,6 +27,7 @@ add_library(testdrivelib test-drive/testdrive.F90 test-drive/testdrive_version.f
 add_executable(aerodyn_utest 
   ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/aerodyn_utest.F90
   ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/test_AD_FVW.F90
+  ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/test_AD_CalcWind_GS.F90
 )
 target_link_libraries(aerodyn_utest aerodynlib versioninfolib testdrivelib)
 add_test(NAME aerodyn_utest COMMAND aerodyn_utest)

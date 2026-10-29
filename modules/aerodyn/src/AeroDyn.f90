@@ -621,7 +621,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    do iR = 1, nRotors
       call AD_InitVars(iR, u%rotors(iR), p%rotors(iR), x%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), &
-                       InputFileData%rotors(iR), InitInp%Linearize, InitInp%CompAeroMaps, ErrStat2, ErrMsg2)
+                       InputFileData%rotors(iR), InitInp%Linearize, InitInp%CompAeroMaps, associated(p%FlowField), ErrStat2, ErrMsg2)
       if (Failed()) return;
    end do
    
@@ -2304,7 +2304,7 @@ subroutine AD_CalcWind_GS(t, u, FlowField, p, p_AD, m, GSInflow, StartNode, ErrS
                                        NoAcc, ErrStat2, ErrMsg2, &
                                        BoxExceedAllow=.true.)
       if(Failed()) return
-   else
+   else if (associated(FlowField)) then
       call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
                                     real(u%GSMotion%Position + u%GSMotion%TranslationDisp, ReKi), &
                                     GSInflow%InflowVel, &
@@ -7191,7 +7191,7 @@ SUBROUTINE GSInfl_NearestPoint(p_GS, iMem, u, GSInflow, BladeNodePosition, r_GSB
 
 END SUBROUTINE GSInfl_NearestPoint
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData, Linearize, CompAeroMaps, ErrStat, ErrMsg)
+subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData, Linearize, CompAeroMaps, FlowFieldAvailable, ErrStat, ErrMsg)
    integer(IntKi),               intent(in)     :: iR         !< Rotor number
    type(RotInputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
    type(RotParameterType),       intent(inout)  :: p              !< Parameters
@@ -7204,6 +7204,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    type(RotInputFile),           intent(in)     :: InputFileData  !< Input file data
    logical,                      intent(in)     :: Linearize      !< Flag to initialize linearization variables
    logical,                      intent(in)     :: CompAeroMaps   !< Flag to compute aero maps
+   logical,                      intent(in)     :: FlowFieldAvailable !< Whether an InflowWind flow field is available
    integer(IntKi),               intent(out)    :: ErrStat        !< Error status of the operation
    character(*),                 intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -7372,17 +7373,20 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    call MV_AddVar(InitOut%Vars%u, "HWindSpeed", FieldScalar, DatLoc(AD_u_HWindSpeed), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
-                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
+                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'], &
+                  Active=FlowFieldAvailable)
 
    call MV_AddVar(InitOut%Vars%u, "PLExp", FieldScalar, DatLoc(AD_u_PLexp), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
-                  LinNames=['Extended input: vertical power-law shear exponent, -'])
+                  LinNames=['Extended input: vertical power-law shear exponent, -'], &
+                  Active=FlowFieldAvailable)
 
    call MV_AddVar(InitOut%Vars%u, "PropagationDir", FieldScalar, DatLoc(AD_u_PropagationDir), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
-                  LinNames=['Extended input: propagation direction, rad'])
+                  LinNames=['Extended input: propagation direction, rad'], &
+                  Active=FlowFieldAvailable)
 
    !----------------------------------------------------------------------------
    ! Output variables
