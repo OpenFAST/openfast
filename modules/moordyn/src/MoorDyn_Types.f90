@@ -324,6 +324,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bs      !< node force due to bending moments [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Lf      !< node crossflow viv lift force. TODO this will have to be allocated for only internal after fix [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fslip      !< node forces from slip supports [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: S      !< node inverse mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
@@ -362,6 +363,36 @@ IMPLICIT NONE
     REAL(DbKi)  :: failTen = 0.0_R8Ki      !< tension threshold of failure [N]
     INTEGER(IntKi)  :: failStatus = 0_IntKi      !< 0 not failed yet, 1 failed, 2 invalid [-]
   END TYPE MD_Fail
+! =======================
+! =========  MD_SlipSupport  =======
+  TYPE, PUBLIC :: MD_SlipSupport
+    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this slip support [-]
+    INTEGER(IntKi)  :: PointID = 0_IntKi      !< index of the hoop Point in PointList [-]
+    INTEGER(IntKi)  :: LineID = 0_IntKi      !< index of the threaded Line in LineList [-]
+    REAL(DbKi)  :: width = 0.0_R8Ki      !< cubic B-spline contact kernel scale in unstretched arc length (input as a multiple of segment length) [[m]]
+    REAL(DbKi)  :: kPerp = 0.0_R8Ki      !< transverse penalty stiffness [[N/m]]
+    REAL(DbKi)  :: zeta = 0.0_R8Ki      !< transverse damping ratio [[-]]
+    REAL(DbKi)  :: muS = 0.0_R8Ki      !< static friction coefficient [[-]]
+    REAL(DbKi)  :: muK = 0.0_R8Ki      !< kinetic friction coefficient [[-]]
+    REAL(DbKi)  :: vTol = 0.0_R8Ki      !< friction regularization velocity [[m/s]]
+    REAL(DbKi)  :: vS = 0.0_R8Ki      !< Stribeck velocity for static-to-kinetic transition [[m/s]]
+    REAL(DbKi)  :: stickDisp = 0.0_R8Ki      !< LuGre pre-sliding displacement at breakaway; 0 = regularized Coulomb [[m]]
+    INTEGER(IntKi)  :: stateIs = 0      !< index of the LuGre bristle state in x%states (0 if none) [-]
+    REAL(DbKi)  :: z = 0.0_R8Ki      !< LuGre bristle deflection [[m]]
+    REAL(DbKi)  :: zdot = 0.0_R8Ki      !< LuGre bristle deflection rate [[m/s]]
+    INTEGER(IntKi)  :: capWarned = 0      !< 1 once the bristle stiffness cap warning has been issued [-]
+    REAL(DbKi)  :: mNode = 0.0_R8Ki      !< representative line node mass including added mass [[kg]]
+    REAL(DbKi)  :: cIC = 0.0_R8Ki      !< viscous slip damping used during IC generation [[N-s/m]]
+    INTEGER(IntKi)  :: status = 0_IntKi      !< 1 active, 0 released [-]
+    INTEGER(IntKi)  :: releasePending = 0      !< 1 while every force evaluation in the current time step found the hoop past a line end [-]
+    INTEGER(IntKi)  :: kSeg = 0      !< active segment index (0 = not yet located) [-]
+    REAL(DbKi)  :: xi = 0.0_R8Ki      !< parametric contact coordinate on active segment [[-]]
+    REAL(DbKi)  :: s = 0.0_R8Ki      !< unstretched arc length from end A to contact [[m]]
+    REAL(DbKi)  :: vSlip = 0.0_R8Ki      !< slip velocity of line relative to hoop along line tangent [[m/s]]
+    REAL(DbKi)  :: Fn = 0.0_R8Ki      !< normal (transverse) contact force magnitude [[N]]
+    REAL(DbKi)  :: Ff = 0.0_R8Ki      !< tangential friction force on line along tangent [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Fhoop = 0.0_R8Ki      !< force exerted by the line on the hoop Point [[N]]
+  END TYPE MD_SlipSupport
 ! =======================
 ! =========  MD_OutParmType  =======
   TYPE, PUBLIC :: MD_OutParmType
@@ -405,6 +436,7 @@ IMPLICIT NONE
 ! =========  MD_OtherStateType  =======
   TYPE, PUBLIC :: MD_OtherStateType
     REAL(SiKi)  :: dummy = 0.0_R4Ki      !< Remove this variable if you have other states [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: slipKSeg      !< contact segment of each slip support at the end of the last state update (search-window center) [-]
   END TYPE MD_OtherStateType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -420,6 +452,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nExtLds = 0      !< number of external loads or damping []
     INTEGER(IntKi)  :: nCtrlChans = 0      !< number of distinct control channels specified for use as inputs []
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
+    INTEGER(IntKi)  :: nSlips = 0      !< number of slip supports []
     INTEGER(IntKi)  :: nFreeBodies = 0      !<  []
     INTEGER(IntKi)  :: nFreeRods = 0      !<  []
     INTEGER(IntKi)  :: nFreePoints = 0      !<  []
@@ -518,6 +551,7 @@ IMPLICIT NONE
     TYPE(MD_Line) , DIMENSION(:), ALLOCATABLE  :: LineList      !< array of line objects [-]
     TYPE(MD_ExtLd) , DIMENSION(:), ALLOCATABLE  :: ExtLdList      !< array of external load objects [-]
     TYPE(MD_Fail) , DIMENSION(:), ALLOCATABLE  :: FailList      !< array of line objects [-]
+    TYPE(MD_SlipSupport) , DIMENSION(:), ALLOCATABLE  :: SlipList      !< array of slip support objects [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreePointIs      !< array of free point indices in PointList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldPointIs      !< array of coupled/fairlead point indices in PointList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeRodIs      !< array of free rod indices in RodList vector []
@@ -2164,6 +2198,18 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstLineData%Lf = SrcLineData%Lf
    end if
+   if (allocated(SrcLineData%Fslip)) then
+      LB(1:2) = lbound(SrcLineData%Fslip)
+      UB(1:2) = ubound(SrcLineData%Fslip)
+      if (.not. allocated(DstLineData%Fslip)) then
+         allocate(DstLineData%Fslip(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Fslip.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Fslip = SrcLineData%Fslip
+   end if
    if (allocated(SrcLineData%Fnet)) then
       LB(1:2) = lbound(SrcLineData%Fnet)
       UB(1:2) = ubound(SrcLineData%Fnet)
@@ -2360,6 +2406,9 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    if (allocated(LineData%Lf)) then
       deallocate(LineData%Lf)
    end if
+   if (allocated(LineData%Fslip)) then
+      deallocate(LineData%Fslip)
+   end if
    if (allocated(LineData%Fnet)) then
       deallocate(LineData%Fnet)
    end if
@@ -2463,6 +2512,7 @@ subroutine MD_PackLine(RF, Indata)
    call RegPackAlloc(RF, InData%B)
    call RegPackAlloc(RF, InData%Bs)
    call RegPackAlloc(RF, InData%Lf)
+   call RegPackAlloc(RF, InData%Fslip)
    call RegPackAlloc(RF, InData%Fnet)
    call RegPackAlloc(RF, InData%S)
    call RegPackAlloc(RF, InData%M)
@@ -2561,6 +2611,7 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpackAlloc(RF, OutData%B); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Bs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Lf); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Fslip); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%S); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
@@ -2688,6 +2739,119 @@ subroutine MD_UnPackFail(RF, OutData)
    call RegUnpack(RF, OutData%failTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%failTen); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%failStatus); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine MD_CopySlipSupport(SrcSlipSupportData, DstSlipSupportData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_SlipSupport), intent(in) :: SrcSlipSupportData
+   type(MD_SlipSupport), intent(inout) :: DstSlipSupportData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopySlipSupport'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstSlipSupportData%IdNum = SrcSlipSupportData%IdNum
+   DstSlipSupportData%PointID = SrcSlipSupportData%PointID
+   DstSlipSupportData%LineID = SrcSlipSupportData%LineID
+   DstSlipSupportData%width = SrcSlipSupportData%width
+   DstSlipSupportData%kPerp = SrcSlipSupportData%kPerp
+   DstSlipSupportData%zeta = SrcSlipSupportData%zeta
+   DstSlipSupportData%muS = SrcSlipSupportData%muS
+   DstSlipSupportData%muK = SrcSlipSupportData%muK
+   DstSlipSupportData%vTol = SrcSlipSupportData%vTol
+   DstSlipSupportData%vS = SrcSlipSupportData%vS
+   DstSlipSupportData%stickDisp = SrcSlipSupportData%stickDisp
+   DstSlipSupportData%stateIs = SrcSlipSupportData%stateIs
+   DstSlipSupportData%z = SrcSlipSupportData%z
+   DstSlipSupportData%zdot = SrcSlipSupportData%zdot
+   DstSlipSupportData%capWarned = SrcSlipSupportData%capWarned
+   DstSlipSupportData%mNode = SrcSlipSupportData%mNode
+   DstSlipSupportData%cIC = SrcSlipSupportData%cIC
+   DstSlipSupportData%status = SrcSlipSupportData%status
+   DstSlipSupportData%releasePending = SrcSlipSupportData%releasePending
+   DstSlipSupportData%kSeg = SrcSlipSupportData%kSeg
+   DstSlipSupportData%xi = SrcSlipSupportData%xi
+   DstSlipSupportData%s = SrcSlipSupportData%s
+   DstSlipSupportData%vSlip = SrcSlipSupportData%vSlip
+   DstSlipSupportData%Fn = SrcSlipSupportData%Fn
+   DstSlipSupportData%Ff = SrcSlipSupportData%Ff
+   DstSlipSupportData%Fhoop = SrcSlipSupportData%Fhoop
+end subroutine
+
+subroutine MD_DestroySlipSupport(SlipSupportData, ErrStat, ErrMsg)
+   type(MD_SlipSupport), intent(inout) :: SlipSupportData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroySlipSupport'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine MD_PackSlipSupport(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(MD_SlipSupport), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'MD_PackSlipSupport'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%IdNum)
+   call RegPack(RF, InData%PointID)
+   call RegPack(RF, InData%LineID)
+   call RegPack(RF, InData%width)
+   call RegPack(RF, InData%kPerp)
+   call RegPack(RF, InData%zeta)
+   call RegPack(RF, InData%muS)
+   call RegPack(RF, InData%muK)
+   call RegPack(RF, InData%vTol)
+   call RegPack(RF, InData%vS)
+   call RegPack(RF, InData%stickDisp)
+   call RegPack(RF, InData%stateIs)
+   call RegPack(RF, InData%z)
+   call RegPack(RF, InData%zdot)
+   call RegPack(RF, InData%capWarned)
+   call RegPack(RF, InData%mNode)
+   call RegPack(RF, InData%cIC)
+   call RegPack(RF, InData%status)
+   call RegPack(RF, InData%releasePending)
+   call RegPack(RF, InData%kSeg)
+   call RegPack(RF, InData%xi)
+   call RegPack(RF, InData%s)
+   call RegPack(RF, InData%vSlip)
+   call RegPack(RF, InData%Fn)
+   call RegPack(RF, InData%Ff)
+   call RegPack(RF, InData%Fhoop)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine MD_UnPackSlipSupport(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(MD_SlipSupport), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'MD_UnPackSlipSupport'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PointID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LineID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%width); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%kPerp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%muS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%muK); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vTol); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stickDisp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%stateIs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%zdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%capWarned); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%mNode); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%cIC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%status); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%releasePending); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%kSeg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%xi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%s); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vSlip); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Fn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Ff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Fhoop); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyOutParmType(SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -3047,10 +3211,24 @@ subroutine MD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MD_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%dummy = SrcOtherStateData%dummy
+   if (allocated(SrcOtherStateData%slipKSeg)) then
+      LB(1:1) = lbound(SrcOtherStateData%slipKSeg)
+      UB(1:1) = ubound(SrcOtherStateData%slipKSeg)
+      if (.not. allocated(DstOtherStateData%slipKSeg)) then
+         allocate(DstOtherStateData%slipKSeg(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%slipKSeg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOtherStateData%slipKSeg = SrcOtherStateData%slipKSeg
+   end if
 end subroutine
 
 subroutine MD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -3060,6 +3238,9 @@ subroutine MD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(OtherStateData%slipKSeg)) then
+      deallocate(OtherStateData%slipKSeg)
+   end if
 end subroutine
 
 subroutine MD_PackOtherState(RF, Indata)
@@ -3068,6 +3249,7 @@ subroutine MD_PackOtherState(RF, Indata)
    character(*), parameter         :: RoutineName = 'MD_PackOtherState'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%dummy)
+   call RegPackAlloc(RF, InData%slipKSeg)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3075,8 +3257,12 @@ subroutine MD_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MD_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackOtherState'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%dummy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%slipKSeg); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -3103,6 +3289,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nExtLds = SrcParamData%nExtLds
    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
    DstParamData%nFails = SrcParamData%nFails
+   DstParamData%nSlips = SrcParamData%nSlips
    DstParamData%nFreeBodies = SrcParamData%nFreeBodies
    DstParamData%nFreeRods = SrcParamData%nFreeRods
    DstParamData%nFreePoints = SrcParamData%nFreePoints
@@ -3501,6 +3688,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%nExtLds)
    call RegPack(RF, InData%nCtrlChans)
    call RegPack(RF, InData%nFails)
+   call RegPack(RF, InData%nSlips)
    call RegPack(RF, InData%nFreeBodies)
    call RegPack(RF, InData%nFreeRods)
    call RegPack(RF, InData%nFreePoints)
@@ -3611,6 +3799,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nExtLds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCtrlChans); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFails); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nSlips); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFreeBodies); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFreeRods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFreePoints); if (RegCheckErr(RF, RoutineName)) return
@@ -4307,6 +4496,22 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcMiscData%SlipList)) then
+      LB(1:1) = lbound(SrcMiscData%SlipList)
+      UB(1:1) = ubound(SrcMiscData%SlipList)
+      if (.not. allocated(DstMiscData%SlipList)) then
+         allocate(DstMiscData%SlipList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%SlipList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopySlipSupport(SrcMiscData%SlipList(i1), DstMiscData%SlipList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcMiscData%FreePointIs)) then
       LB(1:1) = lbound(SrcMiscData%FreePointIs)
       UB(1:1) = ubound(SrcMiscData%FreePointIs)
@@ -4651,6 +4856,15 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%FailList)
    end if
+   if (allocated(MiscData%SlipList)) then
+      LB(1:1) = lbound(MiscData%SlipList)
+      UB(1:1) = ubound(MiscData%SlipList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroySlipSupport(MiscData%SlipList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%SlipList)
+   end if
    if (allocated(MiscData%FreePointIs)) then
       deallocate(MiscData%FreePointIs)
    end if
@@ -4803,6 +5017,15 @@ subroutine MD_PackMisc(RF, Indata)
          call MD_PackFail(RF, InData%FailList(i1)) 
       end do
    end if
+   call RegPack(RF, allocated(InData%SlipList))
+   if (allocated(InData%SlipList)) then
+      call RegPackBounds(RF, 1, lbound(InData%SlipList), ubound(InData%SlipList))
+      LB(1:1) = lbound(InData%SlipList)
+      UB(1:1) = ubound(InData%SlipList)
+      do i1 = LB(1), UB(1)
+         call MD_PackSlipSupport(RF, InData%SlipList(i1)) 
+      end do
+   end if
    call RegPackAlloc(RF, InData%FreePointIs)
    call RegPackAlloc(RF, InData%CpldPointIs)
    call RegPackAlloc(RF, InData%FreeRodIs)
@@ -4953,6 +5176,19 @@ subroutine MD_UnPackMisc(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call MD_UnpackFail(RF, OutData%FailList(i1)) ! FailList 
+      end do
+   end if
+   if (allocated(OutData%SlipList)) deallocate(OutData%SlipList)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%SlipList(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SlipList.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_UnpackSlipSupport(RF, OutData%SlipList(i1)) ! SlipList 
       end do
    end if
    call RegUnpackAlloc(RF, OutData%FreePointIs); if (RegCheckErr(RF, RoutineName)) return

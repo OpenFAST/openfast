@@ -15,3 +15,16 @@ and links to publications with the relevant theory.
 Examples of how to use MoorDynF and MoorDynC can be found here:
 
 `MoorDyn Example Uses <https://github.com/FloatingArrayDesign/MoorDyn/tree/dev/example>`_
+
+
+MoorDyn-F Specific Features
+---------------------------
+
+The pages below document capabilities that are currently specific to MoorDyn-F, the Fortran version of
+MoorDyn in OpenFAST, and are not yet covered by the external MoorDyn documentation.
+
+.. toctree::
+   :maxdepth: 2
+
+   moordynf_features.rst
+   slip_support_theory.rst

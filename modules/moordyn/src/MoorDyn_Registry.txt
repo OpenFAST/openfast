@@ -303,6 +303,7 @@ typedef  ^            ^                DbKi               Aq           {:}{:}   
 typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
 typedef  ^            ^                DbKi               Bs           {:}{:}    -  -   "node force due to bending moments"  "[N]"
 typedef  ^            ^                DbKi               Lf           {:}{:}    -  -   "node crossflow viv lift force. TODO this will have to be allocated for only internal after fix"  "[N]"
+typedef  ^            ^                DbKi               Fslip        {:}{:}    -  -   "node forces from slip supports"  "[N]"
 typedef  ^            ^                DbKi               Fnet         {:}{:}    -  -   "total force on node"  "[N]"
 typedef  ^            ^                DbKi               S            {:}{:}{:} -  -   "node inverse mass matrix"  "[kg]"
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
@@ -339,6 +340,34 @@ typedef  ^            ^                DbKi               failTime        -     
 typedef  ^            ^                DbKi               failTen         -        -  -   "tension threshold of failure" "N"
 typedef  ^            ^                IntKi              failStatus      -        -  -   "0 not failed yet, 1 failed, 2 invalid" "-"
 
+# this is the slip support type: a line threaded through a hoop on a Point
+typedef  ^            MD_SlipSupport   IntKi              IdNum           -        -  -   "integer identifier of this slip support" "-"
+typedef  ^            ^                IntKi              PointID         -        -  -   "index of the hoop Point in PointList" "-"
+typedef  ^            ^                IntKi              LineID          -        -  -   "index of the threaded Line in LineList" "-"
+typedef  ^            ^                DbKi               width           -        -  -   "cubic B-spline contact kernel scale in unstretched arc length (input as a multiple of segment length)" "[m]"
+typedef  ^            ^                DbKi               kPerp           -        -  -   "transverse penalty stiffness" "[N/m]"
+typedef  ^            ^                DbKi               zeta            -        -  -   "transverse damping ratio" "[-]"
+typedef  ^            ^                DbKi               muS             -        -  -   "static friction coefficient" "[-]"
+typedef  ^            ^                DbKi               muK             -        -  -   "kinetic friction coefficient" "[-]"
+typedef  ^            ^                DbKi               vTol            -        -  -   "friction regularization velocity" "[m/s]"
+typedef  ^            ^                DbKi               vS              -        -  -   "Stribeck velocity for static-to-kinetic transition" "[m/s]"
+typedef  ^            ^                DbKi               stickDisp       -        -  -   "LuGre pre-sliding displacement at breakaway; 0 = regularized Coulomb" "[m]"
+typedef  ^            ^                IntKi              stateIs         -        0  -   "index of the LuGre bristle state in x%states (0 if none)" "-"
+typedef  ^            ^                DbKi               z               -        -  -   "LuGre bristle deflection" "[m]"
+typedef  ^            ^                DbKi               zdot            -        -  -   "LuGre bristle deflection rate" "[m/s]"
+typedef  ^            ^                IntKi              capWarned       -        0  -   "1 once the bristle stiffness cap warning has been issued" "-"
+typedef  ^            ^                DbKi               mNode           -        -  -   "representative line node mass including added mass" "[kg]"
+typedef  ^            ^                DbKi               cIC             -        -  -   "viscous slip damping used during IC generation" "[N-s/m]"
+typedef  ^            ^                IntKi              status          -        -  -   "1 active, 0 released" "-"
+typedef  ^            ^                IntKi              releasePending  -        0  -   "1 while every force evaluation in the current time step found the hoop past a line end" "-"
+typedef  ^            ^                IntKi              kSeg            -        0  -   "active segment index (0 = not yet located)" "-"
+typedef  ^            ^                DbKi               xi              -        -  -   "parametric contact coordinate on active segment" "[-]"
+typedef  ^            ^                DbKi               s               -        -  -   "unstretched arc length from end A to contact" "[m]"
+typedef  ^            ^                DbKi               vSlip           -        -  -   "slip velocity of line relative to hoop along line tangent" "[m/s]"
+typedef  ^            ^                DbKi               Fn              -        -  -   "normal (transverse) contact force magnitude" "[N]"
+typedef  ^            ^                DbKi               Ff              -        -  -   "tangential friction force on line along tangent" "[N]"
+typedef  ^            ^                DbKi               Fhoop           {3}      -  -   "force exerted by the line on the hoop Point" "[N]"
+
 # this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
 typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
 typedef  ^            ^                CHARACTER(10)      Units         -        -  -   "units string"
@@ -370,6 +399,7 @@ typedef   ^       ConstraintStateType  SiKi                dummy            -   
 
 ## ============================== Define Other states here: =====================================================================================================================================
 typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
+typedef   ^       ^                    IntKi               slipKSeg         {:} -  -   "contact segment of each slip support at the end of the last state update (search-window center)" -
 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        IntKi               nLineTypes     -     0    -   "number of line types"                       ""
@@ -383,6 +413,7 @@ typedef   ^       ^                    IntKi               nSyropeLineICs -     
 typedef   ^       ^                    IntKi               nExtLds        -     0    -   "number of external loads or damping"        ""
 typedef   ^       ^                    IntKi               nCtrlChans     -     0    -   "number of distinct control channels specified for use as inputs"        ""
 typedef   ^       ^                    IntKi               nFails         -     0    -   "number of failure conditions"                     ""
+typedef   ^       ^                    IntKi               nSlips         -     0    -   "number of slip supports"                     ""
 typedef   ^       ^                    IntKi               nFreeBodies    -     0    -   ""             ""
 typedef   ^       ^                    IntKi               nFreeRods      -     0    -   ""             ""
 typedef   ^       ^                    IntKi               nFreePoints    -     0    -   ""             ""
@@ -487,6 +518,7 @@ typedef   ^       ^                    MD_Point            PointList        {:} 
 typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
 typedef   ^       ^                    MD_ExtLd            ExtLdList        {:}  -  -   "array of external load objects" - 
 typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
+typedef   ^       ^                    MD_SlipSupport      SlipList         {:}  -  -   "array of slip support objects"   -
 typedef   ^       ^                    IntKi               FreePointIs      {:}  -  -   "array of free point indices in PointList vector"         ""
 typedef   ^       ^                    IntKi               CpldPointIs   {:}{:}  -  -   "array of coupled/fairlead point indices in PointList vector"         ""
 typedef   ^       ^                    IntKi               FreeRodIs        {:}  -  -   "array of free rod indices in RodList vector"         ""

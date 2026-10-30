@@ -77,6 +77,11 @@ MODULE MoorDyn_IO
   INTEGER, PARAMETER             :: Sub       =   26
   INTEGER, PARAMETER             :: TenA      =   27 
   INTEGER, PARAMETER             :: TenB      =   28
+  INTEGER, PARAMETER             :: SlipS     =   29
+  INTEGER, PARAMETER             :: SlipV     =   30
+  INTEGER, PARAMETER             :: SlipFN    =   31
+  INTEGER, PARAMETER             :: SlipFF    =   32
+  INTEGER, PARAMETER             :: SlipZ     =   33
  
 
   ! List of units corresponding to the quantities parameters for QTypes
@@ -634,6 +639,10 @@ CONTAINS
           p%OutParam(I)%OType = 4                ! Body object type
           qVal = let2                            ! quantity type string
 
+        ELSE IF (Let1(1:1) == 'S') THEN    ! Look for S?xxx or Slip?xxx
+          p%OutParam(I)%OType = 5                ! slip support object type
+          qVal = let2
+
         ! should do fairlead option also!
 
         ! error
@@ -728,6 +737,21 @@ CONTAINS
         ELSE IF (qVal == 'SUB') THEN
           p%OutParam(I)%QType = Sub
           p%OutParam(I)%Units = UnitList(Sub)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'S')) THEN
+          p%OutParam(I)%QType = SlipS
+          p%OutParam(I)%Units = UnitList(PosX)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'VS')) THEN
+          p%OutParam(I)%QType = SlipV
+          p%OutParam(I)%Units = UnitList(VelX)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'FN')) THEN
+          p%OutParam(I)%QType = SlipFN
+          p%OutParam(I)%Units = UnitList(Ten)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'FF')) THEN
+          p%OutParam(I)%QType = SlipFF
+          p%OutParam(I)%Units = UnitList(Ten)
+        ELSE IF ((p%OutParam(I)%OType == 5) .AND. (qVal == 'Z')) THEN
+          p%OutParam(I)%QType = SlipZ
+          p%OutParam(I)%Units = UnitList(PosX)
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
           CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Quantity type not recognized.')
@@ -773,6 +797,12 @@ CONTAINS
       ELSE IF (p%OutParam(I)%OType==4) THEN         ! Body
         IF (p%OutParam(I)%ObjID > p%NBodies) THEN
           CALL WrScr('Warning: output Body index excedes number of Bodies in requested output '//trim(OutListTmp)//'.')
+          CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+        END IF
+
+      ELSE IF (p%OutParam(I)%OType==5) THEN         ! slip support
+        IF (p%OutParam(I)%ObjID > p%nSlips) THEN
+          CALL WrScr('Warning: output slip support index excedes number of slip supports in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
 
@@ -1636,6 +1666,30 @@ CONTAINS
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
                      ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Body '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+               END SELECT
+
+            ELSE IF (p%OutParam(I)%OType == 5) THEN  ! if dealing with a slip support output
+               SELECT CASE (p%OutParam(I)%QType)
+                  CASE (SlipS)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%s
+                  CASE (SlipV)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%vSlip
+                  CASE (SlipFN)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fn
+                  CASE (SlipFF)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Ff
+                  CASE (SlipZ)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%z
+                  CASE (FX)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fhoop(1)
+                  CASE (FY)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fhoop(2)
+                  CASE (FZ)
+                     y%WriteOutput(I) = m%SlipList(p%OutParam(I)%ObjID)%Fhoop(3)
+                  CASE DEFAULT
+                     y%WriteOutput(I) = 0.0_ReKi
+                     ErrStat = ErrID_Warn
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from slip support '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
 
