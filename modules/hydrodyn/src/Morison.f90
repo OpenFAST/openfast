@@ -3503,7 +3503,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: sinBeta, sinBeta1, sinBeta2
    REAL(ReKi)               :: cosBeta, cosBeta1, cosBeta2
    REAL(ReKi)               :: CMatrix(3,3), CMatrix1(3,3), CMatrix2(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
-   REAL(ReKi)               :: l, z1, z2, zMid, r1, r2, r1b, r2b, r1In, r2In, rMidIn, z_hi, zFillGroup
+   REAL(ReKi)               :: l, z1, z2, zMid, r1, r2, r1b, r2b, r1In, r2In, rMidIn, rn, z_hi, zFillGroup
    REAL(ReKi)               :: Sa1, Sa2, Sa1b, Sa2b, SaMidb, Sa1In, Sa2In, SaMidIn
    REAL(ReKi)               :: Sb1, Sb2, Sb1b, Sb2b, SbMidb, Sb1In, Sb2In, SbMidIn
    REAL(ReKi)               :: dRdl_mg,   dSadl_mg,   dSbdl_mg    ! shorthand for taper including marine growth of element i
@@ -3822,7 +3822,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                IF (p%HstMod > 0_IntKi) THEN
                   CALL GetTotalWaveElev(p, m, Time, posMid, ZetaMid, ErrStat2, ErrMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  CALL GetFreeSurfaceNormal( p, m, Time, posMid, n_hat, ErrStat2, ErrMsg2 )
+                  IF (mem%MSecGeom == MSecGeom_Cyl) THEN
+                     rn = 0.5 * (r1b + r2b)
+                  ELSE
+                     rn = 0.25 * MAX(Sa1b+Sa2b, Sb1b+Sb2b)
+                  END IF
+                  CALL GetFreeSurfaceNormal( p, m, Time, posMid, rn, n_hat, ErrStat2, ErrMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   FSPt = (/posMid(1),posMid(2),ZetaMid/) ! Reference point on the free surface
                ELSE
@@ -4623,13 +4628,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Sa2     = mem%SaMGB(N+1)
             Sb1     = mem%SbMGB(  1)
             Sb2     = mem%SbMGB(N+1)
+            r1      = 0.5 * MAX(Sa1,Sb1) ! Only used for computing the free-surface normal with finite differencing
+            r2      = 0.5 * MAX(Sa2,Sb2) ! Only used for computing the free-surface normal with finite differencing
          end if
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
             IF (p%HstMod > 0_IntKi) THEN
                CALL GetTotalWaveElev(p, m, Time, pos1, Zeta1, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos1, n_hat, ErrStat2, ErrMsg2)
+               CALL GetFreeSurfaceNormal(p, m, Time, pos1, r1, n_hat, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos1(1),pos1(2),Zeta1/) ! Reference point on the free surface
             ELSE
@@ -4657,7 +4664,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             IF (p%HstMod > 0_IntKi) THEN
                CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos2, n_hat, ErrStat2, ErrMsg2)
+               CALL GetFreeSurfaceNormal(p, m, Time, pos2, r2, n_hat, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
             ELSE
@@ -4686,7 +4693,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             IF (p%HstMod > 0_IntKi) THEN
                CALL GetTotalWaveElev(p, m, Time, pos2, Zeta2, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               CALL GetFreeSurfaceNormal(p, m, Time, pos2, n_hat, ErrStat2, ErrMsg2)
+               CALL GetFreeSurfaceNormal(p, m, Time, pos2, r2, n_hat, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
             ELSE
@@ -4835,11 +4842,12 @@ END SUBROUTINE Morison_CalcOutput
 
    END SUBROUTINE GetTotalWaveElev
 
-   SUBROUTINE GetFreeSurfaceNormal(p, m, Time, pos, n, ErrStat, ErrMsg)
+   SUBROUTINE GetFreeSurfaceNormal(p, m, Time, pos, r, n, ErrStat, ErrMsg)
       TYPE(Morison_ParameterType), INTENT( IN    ) :: p
       TYPE(Morison_MiscVarType),   INTENT( INOUT ) :: m
       REAL(DbKi),      INTENT( In    ) :: Time
       REAL(ReKi),      INTENT( In    ) :: pos(:)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT( In    ) :: r       ! Characteristic section half-width used to filter the free-surface slope
       REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
@@ -4849,7 +4857,7 @@ END SUBROUTINE Morison_CalcOutput
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%WaveField_m, Time, pos, n, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveNormal( p%WaveField, m%WaveField_m, Time, pos, n, ErrStat2, ErrMsg2, r )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetFreeSurfaceNormal
@@ -5974,7 +5982,7 @@ END SUBROUTINE Morison_CalcOutput
          rh       = r1 + h0*dRdl
          ! Estimate the free-surface normal at the free-surface intersection, n_hat
          IF (p%HstMod > 0_IntKi) THEN ! If wave stretching is enabled, compute free surface normal
-            CALL GetFreeSurfaceNormal(p, m, Time, FSInt, n_hat, ErrStat2, ErrMsg2 )
+            CALL GetFreeSurfaceNormal(p, m, Time, FSInt, rh, n_hat, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          ELSE ! Without wave stretching, use the normal of the SWL
             n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
