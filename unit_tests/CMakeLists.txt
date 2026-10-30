@@ -31,6 +31,27 @@ add_executable(aerodyn_utest
 target_link_libraries(aerodyn_utest aerodynlib versioninfolib testdrivelib)
 add_test(NAME aerodyn_utest COMMAND aerodyn_utest)
 
+get_property(_aerodyn_utest_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_aerodyn_utest_multi_config)
+  set(_aerodyn_utest_config_args "-DCMAKE_CONFIGURATION_TYPES=Debug")
+  set(_aerodyn_utest_expect_multi_config ON)
+else()
+  set(_aerodyn_utest_config_args "-DCMAKE_BUILD_TYPE=Debug")
+  set(_aerodyn_utest_expect_multi_config OFF)
+endif()
+add_test(NAME aerodyn_utest_trapping_flags
+  COMMAND ${CMAKE_COMMAND}
+    -S "${PROJECT_SOURCE_DIR}/cmake/tests/aerodyn_trapping"
+    -B "${CMAKE_CURRENT_BINARY_DIR}/aerodyn_trapping_flags"
+    -G "${CMAKE_GENERATOR}"
+    "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+    -DFIXTURE_COMPILER_ID=GNU
+    -DFIXTURE_EXPECT_OPTIMIZATION=OFF
+    -DFIXTURE_EXPECT_MULTI_CONFIG=${_aerodyn_utest_expect_multi_config}
+    ${_aerodyn_utest_config_args}
+    -DCMAKE_Fortran_FLAGS_DEBUG=-ffpe-trap=invalid,zero,overflow
+)
+
 # BeamDyn Unit Tests
 add_executable(beamdyn_utest 
   ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/beamdyn_utest.F90
@@ -65,6 +86,7 @@ add_test(NAME inflowwind_utest COMMAND inflowwind_utest)
 # NWTC Library Unit Tests
 add_executable(nwtc_library_utest 
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/nwtc_library_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_IEEE.F90
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/NWTC_Library_test_tools.F90
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_IO_FileInfo.F90
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_RandomNumber.F90

@@ -37,6 +37,7 @@ of HydroDyn.
 - :download:`Implementation Plan - 2nd-order Forces Within HydroDyn <../../../OtherSupporting/HydroDyn/HydroDyn_2ndOrderForces_Plan.pdf>`
 - :download:`Implementation Plan - 2nd-order Wave Kinematics Within HydroDyn <../../../OtherSupporting/HydroDyn/WAVE2_document.pdf>`
 - :download:`Plan for Adding Wave Stretching to HydroDyn <../../../OtherSupporting/HydroDyn/HydroDyn_WaveStretching_Plan.docx>`
+- :download:`Implementation Plan - Hydrodynamic Loads on Strip-Theory Members at a Shallow Angle Relative to the Free Surface <../../../OtherSupporting/HydroDyn/HydroDyn_HorizontalMembers_Plan_Rev3.pdf>`
 
 
 HydroDyn allows for multiple approaches for calculating the hydrodynamic

@@ -3,6 +3,7 @@ use, intrinsic :: iso_fortran_env, only: error_unit
 use testdrive, only: run_testsuite, new_testsuite, testsuite_type
 
 use test_NWTC_IO_FileInfo, only: test_NWTC_IO_FileInfo_suite
+use test_NWTC_IEEE, only: test_NWTC_IEEE_suite
 use test_NWTC_RandomNumber, only: test_NWTC_RandomNumber_suite
 use test_NWTC_C_Binding, only: test_NWTC_C_Binding_suite
 use test_NWTC_FFTPACK, only: test_NWTC_FFTPACK_suite
@@ -18,6 +19,7 @@ stat = 0
 call SetConstants()
 
 testsuites = [ &
+             new_testsuite("test_NWTC_IEEE", test_NWTC_IEEE_suite), &
              new_testsuite("test_NWTC_IO_FileInfo", test_NWTC_IO_FileInfo_suite), &
              new_testsuite("test_NWTC_RandomNumber_suite", test_NWTC_RandomNumber_suite), &
              new_testsuite("test_NWTC_C_Binding", test_NWTC_C_Binding_suite), &

@@ -16,7 +16,7 @@ Under-relaxation is introduced for the tight-coupling iterative solver to improv
 
 The generalized support-structure (GS) influence model was added to AeroDyn. This introduces three new switches (``GSPotent``, ``GSShadow``, ``GSAero``) after ``TwrAero`` in the AeroDyn primary input file, and two new sections (``General support structure joints`` and ``General support structure members``) after the ``Tower Influence and Aerodynamics`` section. The two new sections are required even when the GS model is disabled (set ``NumGSJoints`` and ``NumGSMembers`` to 0, keeping the table header lines).
 
-OLAF now selects the regularization function for the vortex particles separately from the vortex segments. The new ``RegFunctionPart`` input on line 26 of the OLAF input file controls the particle kernel, and ``RegFunction`` now applies only to the segments. Previously the particle kernel was inferred from ``RegFunction``: any regularized value gave an exponential particle kernel, while ``RegFunction=0`` gave an unregularized one. The default ``RegFunctionPart=1`` reproduces the exponential kernel, so results are unchanged for decks with ``RegFunction`` greater than 0. Decks with ``RegFunction=0`` will change: the particles are now regularized with the exponential kernel unless ``RegFunctionPart=0`` is also set. Setting ``RegFunctionPart=0`` restores an unregularized particle kernel, but with ``VelocityMethod=2`` the results will still differ from previous versions because the particle-tree far-field cutoff is no longer padded by the particle core radius when the particle kernel is unregularized.
+OLAF now selects the regularization function for the vortex particles separately from the vortex segments. The new ``RegFunctionPart`` input on line 26 of the OLAF input file controls the particle kernel, and ``RegFunction`` now applies only to the segments. Setting ``RegFunctionPart=1`` reproduces the exponential kernel previously used with ``RegFunction`` greater than 0. Setting ``RegFunctionPart=0`` restores an unregularized particle kernel previously used with ``RegFunction=0``. The newly added default compact particle regularization (``RegFunctionPart=2``) provides significant speed up compared to the exponential kernel (``RegFunctionPart=1``).
 
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Added in OpenFAST `5.1.0`
@@ -38,7 +38,43 @@ AeroDyn                                       \*                            ====
 AeroDyn                                       \*       NumGSMembers         0   NumGSMembers - Number of general support members (-)
 AeroDyn                                       \*                            GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
 AeroDyn                                       \*                            (-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
-OLAF                                          26       RegFunctionPart            2  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 1} [only if VelocityMethod=2,3] (switch)
+OLAF                                          26       RegFunctionPart      default  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 2} [only if VelocityMethod=2,3] (switch)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+
+The meaning of the HydroDyn ``WaveDisp`` input has changed, although its valid values (0 and 1) are unchanged.
+``WaveDisp`` now controls both where the wave kinematics and dynamic pressure are evaluated and the orientation
+of the strip-theory (Morison) members and joints. With ``WaveDisp=0``, the strip-theory members are placed at a
+reference configuration consistent with the potential-flow model—the reference yaw (from ``PtfmYMod``,
+``PtfmRefY``, and ``PtfmYCutOff``) plus a horizontal x-y drift of the platform reference point governed by
+``ExctnDisp`` and ``ExctnCutOff``—rather than being held at the undisplaced position rotated by a constant
+``PtfmRefY``. These five inputs are honored by strip-theory members when ``WaveDisp=0`` even if no potential-flow
+model is present (``PotMod=0``). The previous ``WaveDisp=0`` behavior is recovered by setting ``PtfmYMod=0`` and
+``ExctnDisp=0``. With ``WaveDisp=1``, the exact instantaneous displaced position and orientation are used, including
+the vertical displacement, which was previously ignored unless ``WaveStMod>0``.
+
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+Modified in OpenFAST `5.1.0`                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+HydroDyn                                      7        ExctnDisp            0     ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position} [used by potential flow when PotMod=1, ExctnMod>0, and SeaState's WaveMod>0; also used by strip theory when WaveDisp=0] (switch)
+HydroDyn                                      8        ExctnCutOff          0.01  ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0; only used when ExctnDisp=2]
+HydroDyn                                      \*       WaveDisp             0   WaveDisp       - Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} (switch)
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+
+In previous versions of OpenFAST, HydroDyn's input file included the ``AMMod`` option to control the method of computing
+distributed strip-theory added-mass force. Setting ``AMMod`` to 0 forces HydroDyn to always compute the added-mass
+force up to the still water level (SWL). This switch was added because of numerical stability issues encountered when
+evaluating the added-mass force up to the instantaneous free surface with some hydroelastic models. With the improved
+solver stability of OpenFAST `5.1.0`, the ``AMMod`` option was deemed no longer necessary based on user feedback and was
+removed.
+
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+Removed in OpenFAST `5.1.0`                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
+HydroDyn                                      \*       AMMod                0   AMMod       - Method of computing distributed strip-theory added-mass force {0: evaluate up to SWL, 1: evaluate up to instantaneous free surface if WaveStMod > 0} (switch)
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
 OpenFAST v4.2.x to OpenFAST  v5.0.0

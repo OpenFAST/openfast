@@ -468,6 +468,7 @@ ad_regression("ad_B1n2_OLAF"                "aerodyn;OLAF")
 ad_regression("ad_Sphere_OLAF"              "aerodyn;OLAF")
 py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 py_ad_regression("py_ad_B1n2_OLAF"                   "aerodyn;OLAF;python")
+py_ad_regression("py_ad_MHK_RM1_Fixed"               "aerodyn;bem;python;mhk")
 
 # UnsteadyAero
 ua_regression("ua_redfreq"                  "unsteadyaero")
@@ -508,6 +509,7 @@ hd_regression("hd_ExctnMod1_ExctnDisp2_PtfmYMod1"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod0_LargeYaw" "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod1_LargeYaw" "hydrodyn;offshore")
 hd_regression("hd_NonlinearFKHst"                           "hydrodyn;offshore")
+hd_regression("hd_HMember_SurgeHeave"                       "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")

@@ -40,7 +40,6 @@ option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" 
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
-option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(WIN_DLL_LOAD "Enable loading of Windows only DLL's (OrcaFlex, SoilDyn)" on)  # This is mostly for testing purposes
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(FASTFARM_TIMING_PRINTS "Enable FAST.Farm timing instrumentation and summary output" off)
@@ -100,10 +99,6 @@ if(CODECOVERAGE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
 endif()
-
-if (FPE_TRAP_ENABLED)
-  add_definitions(-DFPE_TRAP_ENABLED)
-endif (FPE_TRAP_ENABLED)
 
 # Set the RPATH after configuring the install prefix
 include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
