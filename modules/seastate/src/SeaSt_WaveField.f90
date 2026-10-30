@@ -43,7 +43,7 @@ FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrS
    ErrStat   = ErrID_None
 
    IF (ALLOCATED(WaveField%WaveElev1) .or. ALLOCATED(WaveField%WaveElev2)) then
-      CALL WaveField_Interp_Setup3D(Time, pos, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2)
+      CALL WaveField_Interp_Setup3D(Time+WaveField%WaveTimeShift, pos, WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
@@ -99,7 +99,7 @@ subroutine WaveField_GetMinMaxWaveElevEstimate( WaveField, MinElev, MaxElev, Err
    endif
 end subroutine WaveField_GetMinMaxWaveElevEstimate
 
-SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, n, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, n, ErrStat, ErrMsg, r )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(GridInterp_MiscVarType),       intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
@@ -107,15 +107,37 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, n, Er
    real(ReKi),                         intent(  out) :: n(3)    ! Free-surface normal vector
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+   real(ReKi), optional,               intent(in   ) :: r       ! Section half-width; if > 0, slope is central-differenced over +/- r (filters waves shorter than the section)
 
    real(SiKi)                                        :: slope(2)
+   real(SiKi)                                        :: ZetaP, ZetaM
+   real(DbKi)                                        :: TimeShifted
    character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveNormal'
    integer(IntKi)                                    :: errStat2
    character(ErrMsgLen)                              :: errMsg2
 
    ErrStat   = ErrID_None
+   ErrMsg    = ""
+   
+   if (present(r)) then
+      if (r > 0.0_ReKi) then
+         ZetaP = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, (/pos(1)+r,pos(2)/), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         ZetaM = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, (/pos(1)-r,pos(2)/), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         slope(1) = (ZetaP-ZetaM) / real(2.0_ReKi*r,SiKi)
+         ZetaP = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, (/pos(1),pos(2)+r/), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         ZetaM = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, (/pos(1),pos(2)-r/), ErrStat2, ErrMsg2 ); if (Failed()) return;
+         slope(2) = (ZetaP-ZetaM) / real(2.0_ReKi*r,SiKi)
+         n = Real( (/-slope(1),-slope(2),1.0_SiKi/), ReKi)
+         n = n / TwoNorm(n)
+         return
+      end if
+   end if
 
-   call GridInterpSetupN( (/Real(Time+WaveField%WaveTimeShift,ReKi),pos(1),pos(2)/), WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 )
+   n = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
+   if (.not. ALLOCATED(WaveField%WaveElev1)) return
+
+   TimeShifted = Time + WaveField%WaveTimeShift
+   call GridInterpSetupN( (/Real(TimeShifted,ReKi),pos(1),pos(2)/), WaveField%SrfGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
    slope = GridInterpS( WaveField%WaveElev1, WaveField%SrfGridParams, WaveField_m )
    if (ALLOCATED(WaveField%WaveElev2)) then
       slope = slope + GridInterpS( WaveField%WaveElev2, WaveField%SrfGridParams, WaveField_m )
@@ -460,7 +482,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
-               CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
 
                ! Extrapolated wave stretching
@@ -585,7 +607,7 @@ SUBROUTINE WaveField_GetNodeWaveVelAcc( WaveField, WaveField_m, Time, pos, force
             ELSE ! Node is above SWL - need wave stretching
 
                ! Vertical wave stretching
-               CALL WaveField_Interp_Setup4D( Time, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
+               CALL WaveField_Interp_Setup4D( Time+WaveField%WaveTimeShift, posXY0, WaveField%GridDepth, WaveField%VolGridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                FV(:) = GridInterp4DVec( WaveField%WaveVel,  WaveField_m )
                FA(:) = GridInterp4DVec( WaveField%WaveAcc,  WaveField_m )
 
