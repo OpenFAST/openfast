@@ -384,6 +384,7 @@ of_regression("IEA22MW_ModalDamping"                   "openfast;beamdyn;servody
 of_regression("IEA22MW_ModalDampingLoose"              "openfast;beamdyn;servodyn")
 of_regression("OC6_phaseII"                            "openfast;soildyn;subdyn;hydrodyn;offshore;stc")
 of_regression("MinimalExample"                         "openfast;elastodyn")
+of_regression("Floating_Cylinder_Guide_Ropes"          "openfast;hydrodyn;moordyn;offshore")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn")
 
@@ -582,6 +583,7 @@ py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
 md_regression("md_viscoelastic"                               "moordyn")
 md_regression("md_syrope"                                     "moordyn")
+md_regression("md_SlipSupport_LuGre"                          "moordyn")
 
 #  OpenFAST IO Library regression tests
 py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")
