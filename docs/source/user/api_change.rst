@@ -18,6 +18,8 @@ The generalized support-structure (GS) influence model was added to AeroDyn. Thi
 
 OLAF now selects the regularization function for the vortex particles separately from the vortex segments. The new ``RegFunctionPart`` input on line 26 of the OLAF input file controls the particle kernel, and ``RegFunction`` now applies only to the segments. Setting ``RegFunctionPart=1`` reproduces the exponential kernel previously used with ``RegFunction`` greater than 0. Setting ``RegFunctionPart=0`` restores an unregularized particle kernel previously used with ``RegFunction=0``. The newly added default compact particle regularization (``RegFunctionPart=2``) provides significant speed up compared to the exponential kernel (``RegFunctionPart=1``).
 
+MoorDyn now includes slip supports that only constrain motion in the line normal direction, like a hoop the line goes through, and apply only friction in the line tangent direction. Slip supports can be added in the input file under an optional new section called ``Slip Supports``. See :ref:`MD-SlipSupport` for details.
+
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Added in OpenFAST `5.1.0`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -39,6 +41,9 @@ AeroDyn                                       \*       NumGSMembers         0   
 AeroDyn                                       \*                            GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
 AeroDyn                                       \*                            (-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
 OLAF                                          26       RegFunctionPart      default  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 2} [only if VelocityMethod=2,3] (switch)
+MoorDyn                                       \*                            ---------------------- SLIP SUPPORTS ------------------------------------------------
+MoorDyn                                       \*                              ID   Point   Line   Width     K     Zeta    MuS    MuK    VTol      VS    StickDisp
+MoorDyn                                       \*                              (-)   (-)    (-)     (h)    (N/m)    (-)    (-)    (-)    (m/s)    (m/s)     (m)
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 
 The meaning of the HydroDyn ``WaveDisp`` input has changed, although its valid values (0 and 1) are unchanged.

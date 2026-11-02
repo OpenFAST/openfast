@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2026 Alliance for Sustainable Energy, LLC
+! Copyright (C) 2026 National Laboratory of the Rockies
 !
 !    This file is part of MoorDyn.
 !
