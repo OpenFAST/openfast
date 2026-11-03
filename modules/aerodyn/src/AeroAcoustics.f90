@@ -257,6 +257,15 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
             whichairfoil = p%BlAFID(j,i)
             p%TEThick(j,i) = InputFileData%BladeProps(whichairfoil)%TEThick
             p%TEAngle(j,i) = InputFileData%BladeProps(whichairfoil)%TEAngle
+
+            ! CalcAeroAcousticsOutput interpolates the stall angle on Reynolds number (AFTabMod=2), but AA's input
+            ! interface does not carry the per-node UserProp value needed to do the same for AFTabMod=3 (UserProp-based
+            ! tables), so reject that unsupported combination here rather than silently using UserProp=0.
+            if (AFInfo(whichairfoil)%NumTabs > 1 .and. AFInfo(whichairfoil)%AFTabMod == AFITable_2User) then
+                call SetErrStat(ErrID_Fatal, 'Airfoil '//trim(num2lstr(whichairfoil))//' uses multiple tables interpolated on UserProp '// &
+                    '(AFTabMod=3), which is not supported by AeroAcoustics.', ErrStat2, ErrMsg2, RoutineName )
+                if(Failed()) return
+            endif
         enddo
     enddo
 
