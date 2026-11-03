@@ -133,6 +133,7 @@ IMPLICIT NONE
     TYPE(WAMIT_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< discrete states from the wamit module [-]
     TYPE(Morison_DiscreteStateType)  :: Morison      !< discrete states from the Morison module [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefY      !< Reference yaw position of the PRP relative to the inertial frame - Current step and two previous steps [(radians)]
+    REAL(ReKi) , DIMENSION(1:2,1:3)  :: PtfmRefXY = 0.0_ReKi      !< Low-pass filtered x,y drift of the PRP/HD origin - current and two previous steps, consistent with WAMIT ExctnDisp=2 [(m)]
   END TYPE HydroDyn_DiscreteStateType
 ! =======================
 ! =========  HydroDyn_ConstraintStateType  =======
@@ -184,6 +185,8 @@ IMPLICIT NONE
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
     REAL(ReKi)  :: CYawFilt = 0.0_ReKi      !< Low-pass filter constant for reference platform yaw position PtfmRefY [-]
+    INTEGER(IntKi)  :: PtfmXYMod = 0_IntKi      !< X/Y drift mode for the PRP, from the user-specified ExctnDisp applied regardless of potential-flow bodies (0 none, 1 instantaneous, 2 filtered). Used to displace the Morison members when WaveDisp=0 [-]
+    REAL(ReKi)  :: CXYFilt = 0.0_ReKi      !< Low-pass filter constant for the PRP x,y drift position (from ExctnCutOff) [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -233,21 +236,22 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: HydroDyn_x_Morison_DummyContState =   4 ! HydroDyn%Morison%DummyContState
    integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   5 ! HydroDyn%Morison%Mesh
    integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =   6 ! HydroDyn%Morison%PtfmRefY
-   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PRP           =   7 ! HydroDyn%Morison%PRP
-   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =   8 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =   9 ! HydroDyn%PRPMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOF               =  10 ! HydroDyn%qAddDOF
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDot            =  11 ! HydroDyn%qAddDOFDot
-   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDotDot         =  12 ! HydroDyn%qAddDOFDotDot
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  13 ! HydroDyn%WAMIT(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_FAddDOF         =  14 ! HydroDyn%WAMIT(DL%i1)%FAddDOF
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  15 ! HydroDyn%WAMIT2(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  16 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  17 ! HydroDyn%Morison%VisMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  18 ! HydroDyn%Morison%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  19 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  20 ! HydroDyn%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_FAddDOF               =  21 ! HydroDyn%FAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefXY     =   7 ! HydroDyn%Morison%PtfmRefXY
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PRP           =   8 ! HydroDyn%Morison%PRP
+   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =   9 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =  10 ! HydroDyn%PRPMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOF               =  11 ! HydroDyn%qAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDot            =  12 ! HydroDyn%qAddDOFDot
+   integer(IntKi), public, parameter :: HydroDyn_u_qAddDOFDotDot         =  13 ! HydroDyn%qAddDOFDotDot
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  14 ! HydroDyn%WAMIT(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_FAddDOF         =  15 ! HydroDyn%WAMIT(DL%i1)%FAddDOF
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  16 ! HydroDyn%WAMIT2(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  17 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  18 ! HydroDyn%Morison%VisMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  19 ! HydroDyn%Morison%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  20 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  21 ! HydroDyn%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_FAddDOF               =  22 ! HydroDyn%FAddDOF
 
 contains
 
@@ -1066,8 +1070,8 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyDiscState'
@@ -1104,14 +1108,15 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
       end if
       DstDiscStateData%PtfmRefY = SrcDiscStateData%PtfmRefY
    end if
+   DstDiscStateData%PtfmRefXY = SrcDiscStateData%PtfmRefXY
 end subroutine
 
 subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    type(HydroDyn_DiscreteStateType), intent(inout) :: DiscStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyDiscState'
@@ -1137,8 +1142,8 @@ subroutine HydroDyn_PackDiscState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(HydroDyn_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackDiscState'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
@@ -1151,6 +1156,7 @@ subroutine HydroDyn_PackDiscState(RF, Indata)
    end if
    call Morison_PackDiscState(RF, InData%Morison) 
    call RegPackAlloc(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PtfmRefXY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1158,8 +1164,8 @@ subroutine HydroDyn_UnPackDiscState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(HydroDyn_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackDiscState'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1178,6 +1184,7 @@ subroutine HydroDyn_UnPackDiscState(RF, OutData)
    end if
    call Morison_UnpackDiscState(RF, OutData%Morison) ! Morison 
    call RegUnpackAlloc(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefXY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1499,6 +1506,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%WaveField => SrcParamData%WaveField
    DstParamData%PtfmYMod = SrcParamData%PtfmYMod
    DstParamData%CYawFilt = SrcParamData%CYawFilt
+   DstParamData%PtfmXYMod = SrcParamData%PtfmXYMod
+   DstParamData%CXYFilt = SrcParamData%CXYFilt
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1637,6 +1646,8 @@ subroutine HydroDyn_PackParam(RF, Indata)
    end if
    call RegPack(RF, InData%PtfmYMod)
    call RegPack(RF, InData%CYawFilt)
+   call RegPack(RF, InData%PtfmXYMod)
+   call RegPack(RF, InData%CXYFilt)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1739,6 +1750,8 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    end if
    call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CYawFilt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CXYFilt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -2888,6 +2901,8 @@ subroutine HydroDyn_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%Morison%Mesh, ValAry)                          ! Mesh
       case (HydroDyn_u_Morison_PtfmRefY)
          VarVals(1) = u%Morison%PtfmRefY                                      ! Scalar
+      case (HydroDyn_u_Morison_PtfmRefXY)
+         VarVals = u%Morison%PtfmRefXY(V%iLB:V%iUB)                           ! Rank 1 Array
       case (HydroDyn_u_Morison_PRP)
          VarVals = u%Morison%PRP(V%iLB:V%iUB)                                 ! Rank 1 Array
       case (HydroDyn_u_WAMITMesh)
@@ -2926,6 +2941,8 @@ subroutine HydroDyn_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%Morison%Mesh)                        ! Mesh
       case (HydroDyn_u_Morison_PtfmRefY)
          u%Morison%PtfmRefY = VarVals(1)                                      ! Scalar
+      case (HydroDyn_u_Morison_PtfmRefXY)
+         u%Morison%PtfmRefXY(V%iLB:V%iUB) = VarVals                           ! Rank 1 Array
       case (HydroDyn_u_Morison_PRP)
          u%Morison%PRP(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
       case (HydroDyn_u_WAMITMesh)
@@ -2950,6 +2967,8 @@ function HydroDyn_InputFieldName(DL) result(Name)
        Name = "u%Morison%Mesh"
    case (HydroDyn_u_Morison_PtfmRefY)
        Name = "u%Morison%PtfmRefY"
+   case (HydroDyn_u_Morison_PtfmRefXY)
+       Name = "u%Morison%PtfmRefXY"
    case (HydroDyn_u_Morison_PRP)
        Name = "u%Morison%PRP"
    case (HydroDyn_u_WAMITMesh)

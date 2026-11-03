@@ -398,6 +398,7 @@ of_regression("IEA22MW_ModalDamping"                   "openfast;beamdyn;servody
 of_regression("IEA22MW_ModalDampingLoose"              "openfast;beamdyn;servodyn")
 of_regression("OC6_phaseII"                            "openfast;soildyn;subdyn;hydrodyn;offshore;stc")
 of_regression("MinimalExample"                         "openfast;elastodyn")
+of_regression("Floating_Cylinder_Guide_Ropes"          "openfast;hydrodyn;moordyn;offshore")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn")
 
@@ -485,6 +486,7 @@ ad_regression("ad_B1n2_OLAF_MirrorRotor"    "aerodyn;OLAF;mirrorrotor")
 ad_regression("ad_Sphere_OLAF"              "aerodyn;OLAF")
 py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 py_ad_regression("py_ad_B1n2_OLAF"                   "aerodyn;OLAF;python")
+py_ad_regression("py_ad_MHK_RM1_Fixed"               "aerodyn;bem;python;mhk")
 
 # UnsteadyAero
 ua_regression("ua_redfreq"                  "unsteadyaero")
@@ -525,6 +527,7 @@ hd_regression("hd_ExctnMod1_ExctnDisp2_PtfmYMod1"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod0_LargeYaw" "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod1_LargeYaw" "hydrodyn;offshore")
 hd_regression("hd_NonlinearFKHst"                           "hydrodyn;offshore")
+hd_regression("hd_HMember_SurgeHeave"                       "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
@@ -597,6 +600,7 @@ py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
 md_regression("md_viscoelastic"                               "moordyn")
 md_regression("md_syrope"                                     "moordyn")
+md_regression("md_SlipSupport_LuGre"                          "moordyn")
 
 #  OpenFAST IO Library regression tests
 py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")

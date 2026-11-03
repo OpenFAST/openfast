@@ -75,9 +75,20 @@ add_library(aerodynlib STATIC
 target_link_libraries(aerodynlib basicaerolib aeroacousticslib seastlib nwtclibs)
 
 # OLAF vortex kernels: gfortran's default -ftrapping-math blocks SIMD if-conversion of the branchless
-# compact-C2 merge; Skip when FPE trapping is requested either via FPE_TRAP_ENABLED or an -ffpe-trap
-# in CMAKE_Fortran_FLAGS, so those traps stay meaningful.
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND NOT FPE_TRAP_ENABLED AND NOT CMAKE_Fortran_FLAGS MATCHES "-ffpe-trap")
+# compact-C2 merge; skip when -ffpe-trap is active in global or enabled configuration-specific flags.
+set(_aerodyn_fortran_flags "${CMAKE_Fortran_FLAGS}")
+get_property(_aerodyn_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (_aerodyn_multi_config)
+  set(_aerodyn_configurations ${CMAKE_CONFIGURATION_TYPES})
+else()
+  set(_aerodyn_configurations "${CMAKE_BUILD_TYPE}")
+endif()
+foreach(_aerodyn_config IN LISTS _aerodyn_configurations)
+  string(TOUPPER "${_aerodyn_config}" _aerodyn_config_upper)
+  set(_aerodyn_config_flags "CMAKE_Fortran_FLAGS_${_aerodyn_config_upper}")
+  string(APPEND _aerodyn_fortran_flags " ${${_aerodyn_config_flags}}")
+endforeach()
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND NOT _aerodyn_fortran_flags MATCHES "-ffpe-trap")
   set_source_files_properties(
     src/FVW_BiotSavart.f90
     src/FVW_VortexTools.f90
