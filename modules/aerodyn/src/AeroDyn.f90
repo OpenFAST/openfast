@@ -4271,6 +4271,10 @@ subroutine SetInputsForAA(p, u, RotInflow, m, errStat, errMsg)
 
          ! Set the blade element relative velocity (including induction)
          m%AA_u%Vrel(i,j) = m%BEMT_y%Vrel(i,j)
+
+         ! Use BEMT's own nodal Reynolds number so the AA stall-angle lookup is consistent with the one BEMT
+         ! used (with BEM_Mod=2, Vrel and Re are computed from different velocity projections)
+         m%AA_u%Re(i,j) = m%BEMT_y%Re(i,j)
    
          ! Set the blade element angle of attack
          m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)

@@ -214,6 +214,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: RotGtoL      !< 3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AeroCent_G      !< location in global coordinates of the blade element aerodynamic center.  1st index = vector components, 2nd index = blade node, 3rd index = blade [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vrel      !< Vrel [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Re      !< Reynolds number used to interpolate the stall angle across airfoil Re tables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AoANoise      !< Angle of attack [rad]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Inflow      !< atmospheric undisturbed flow on blade [-]
   END TYPE AA_InputType
@@ -229,12 +230,13 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AA_u_RotGtoL                     =   1 ! AA%RotGtoL
    integer(IntKi), public, parameter :: AA_u_AeroCent_G                  =   2 ! AA%AeroCent_G
    integer(IntKi), public, parameter :: AA_u_Vrel                        =   3 ! AA%Vrel
-   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   4 ! AA%AoANoise
-   integer(IntKi), public, parameter :: AA_u_Inflow                      =   5 ! AA%Inflow
-   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =   6 ! AA%WriteOutputForPE
-   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =   7 ! AA%WriteOutput
-   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =   8 ! AA%WriteOutputSep
-   integer(IntKi), public, parameter :: AA_y_WriteOutputNodes            =   9 ! AA%WriteOutputNodes
+   integer(IntKi), public, parameter :: AA_u_Re                          =   4 ! AA%Re
+   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   5 ! AA%AoANoise
+   integer(IntKi), public, parameter :: AA_u_Inflow                      =   6 ! AA%Inflow
+   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =   7 ! AA%WriteOutputForPE
+   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =   8 ! AA%WriteOutput
+   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =   9 ! AA%WriteOutputSep
+   integer(IntKi), public, parameter :: AA_y_WriteOutputNodes            =  10 ! AA%WriteOutputNodes
 
 contains
 
@@ -2048,6 +2050,18 @@ subroutine AA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstInputData%Vrel = SrcInputData%Vrel
    end if
+   if (allocated(SrcInputData%Re)) then
+      LB(1:2) = lbound(SrcInputData%Re)
+      UB(1:2) = ubound(SrcInputData%Re)
+      if (.not. allocated(DstInputData%Re)) then
+         allocate(DstInputData%Re(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Re.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%Re = SrcInputData%Re
+   end if
    if (allocated(SrcInputData%AoANoise)) then
       LB(1:2) = lbound(SrcInputData%AoANoise)
       UB(1:2) = ubound(SrcInputData%AoANoise)
@@ -2090,6 +2104,9 @@ subroutine AA_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%Vrel)) then
       deallocate(InputData%Vrel)
    end if
+   if (allocated(InputData%Re)) then
+      deallocate(InputData%Re)
+   end if
    if (allocated(InputData%AoANoise)) then
       deallocate(InputData%AoANoise)
    end if
@@ -2106,6 +2123,7 @@ subroutine AA_PackInput(RF, Indata)
    call RegPackAlloc(RF, InData%RotGtoL)
    call RegPackAlloc(RF, InData%AeroCent_G)
    call RegPackAlloc(RF, InData%Vrel)
+   call RegPackAlloc(RF, InData%Re)
    call RegPackAlloc(RF, InData%AoANoise)
    call RegPackAlloc(RF, InData%Inflow)
    if (RegCheckErr(RF, RoutineName)) return
@@ -2122,6 +2140,7 @@ subroutine AA_UnPackInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RotGtoL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AeroCent_G); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Vrel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Re); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AoANoise); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Inflow); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -2274,6 +2293,8 @@ subroutine AA_VarPackInput(V, u, ValAry)
          VarVals = u%AeroCent_G(V%iLB:V%iUB, V%j, V%k)                        ! Rank 3 Array
       case (AA_u_Vrel)
          VarVals = u%Vrel(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case (AA_u_Re)
+         VarVals = u%Re(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
       case (AA_u_AoANoise)
          VarVals = u%AoANoise(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
       case (AA_u_Inflow)
@@ -2306,6 +2327,8 @@ subroutine AA_VarUnpackInput(V, ValAry, u)
          u%AeroCent_G(V%iLB:V%iUB, V%j, V%k) = VarVals                        ! Rank 3 Array
       case (AA_u_Vrel)
          u%Vrel(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      case (AA_u_Re)
+         u%Re(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
       case (AA_u_AoANoise)
          u%AoANoise(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
       case (AA_u_Inflow)
@@ -2324,6 +2347,8 @@ function AA_InputFieldName(DL) result(Name)
        Name = "u%AeroCent_G"
    case (AA_u_Vrel)
        Name = "u%Vrel"
+   case (AA_u_Re)
+       Name = "u%Re"
    case (AA_u_AoANoise)
        Name = "u%AoANoise"
    case (AA_u_Inflow)

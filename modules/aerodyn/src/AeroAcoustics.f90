@@ -485,11 +485,13 @@ subroutine Init_u( u, p, errStat, errMsg )
 
    call AllocAry(u%AoANoise  , p%NumBlNds, p%numBlades, 'u%AoANoise', errStat2      , errMsg2); if(Failed()) return
    call AllocAry(u%Vrel      , p%NumBlNds, p%numBlades, 'u%Vrel'    , errStat2      , errMsg2); if(Failed()) return
+   call AllocAry(u%Re        , p%NumBlNds, p%numBlades, 'u%Re'      , errStat2      , errMsg2); if(Failed()) return
    call AllocAry(u%AeroCent_G, 3         , p%NumBlNds , p%numBlades , 'u%AeroCent_G', errStat2    , errMsg2); if(Failed()) return
    call AllocAry(u%Inflow    , 3_IntKi   , p%NumBlNds , p%numBlades , 'u%Inflow'    , ErrStat2    , ErrMsg2); if(Failed()) return
    call AllocAry(u%RotGtoL   , 3         , 3          , p%NumBlNds  , p%numBlades   , 'u%RotGtoL' , errStat2  , errMsg2); if(Failed()) return
    u%AoANoise   = 0.0_Reki
    u%Vrel       = 0.0_Reki
+   u%Re         = 0.0_Reki
    u%RotGtoL    = 0.0_Reki
    u%AeroCent_G = 0.0_Reki
    u%Inflow     = 0.0_Reki
@@ -1035,14 +1037,17 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,AFInfo,errStat,errMsg)
          AlphaNoise_Deg = AlphaNoise * R2D_D ! convert to degrees since that is how this code is set up.
 
          !--------Approximate stall angle, interpolated across Re tables at the node's instantaneous Reynolds number------!
-         ReNoise = abs(Unoise * p%BlChord(J,I) / p%KinVisc)
+         ! Use the caller-supplied Re (BEMT_y%Re for coupled runs, Vrel-based for the standalone driver) rather than
+         ! recomputing it from Vrel here: with BEM_Mod=2, BEMT's Vrel and Re use different velocity projections, so
+         ! reconstructing Re from Vrel could select a different table/stall angle than the one BEMT actually used.
+         ReNoise = u%Re(J,I)
          call AFI_ComputeUACoefs( AFInfo(p%BlAFID(J,I)), ReNoise, 0.0_ReKi, UA_BL, ErrMsg3, ErrStat3 )
          call SetErrStat(ErrStat3, ErrMsg3, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
          StallVal = UA_BL%alpha1 * R2D_D
 
          !--------Read in Boundary Layer Data-------------------------!
          IF (p%X_BLMethod .EQ. X_BLMethod_Tables) THEN
-            call BL_Param_Interp(p, m, Unoise, AlphaNoise_Deg, p%BlChord(J,I), p%BlAFID(J,I))
+            call BL_Param_Interp(p, m, ReNoise, AlphaNoise_Deg, p%BlAFID(J,I))
 
             m%d99Var     = m%d99Var*p%BlChord(J,I)
             m%dstarVar   = m%dstarVar*p%BlChord(J,I)
@@ -2357,12 +2362,11 @@ END SUBROUTINE TBLTE_TNO
 
 
 !====================================================================================================
-SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise_Deg,C,whichAirfoil)
+SUBROUTINE BL_Param_Interp(p,m,Re,AlphaNoise_Deg,whichAirfoil)
    TYPE(AA_ParameterType),                INTENT(IN   ) :: p              !< Parameters
    TYPE(AA_MiscVarType),                  INTENT(INOUT) :: m              !< misc/optimization data (not defined in submodules)
-   REAL(ReKi),                            INTENT(IN   ) :: U              !< METERS/SEC
+   REAL(ReKi),                            INTENT(IN   ) :: Re             !< Reynolds number                           (-)
    REAL(ReKi),                            INTENT(IN   ) :: AlphaNoise_Deg     !< Angle of Attack                           DEG
-   REAL(ReKi),                            INTENT(IN   ) :: C              !< Chord                                     METERS
    integer(intKi),                        INTENT(IN   ) :: whichAirfoil   !< whichairfoil
    
    character(*), parameter :: RoutineName = 'BL_Param_Interp'
@@ -2382,7 +2386,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise_Deg,C,whichAirfoil)
 
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
-   RC = abs(U  * C/p%KinVisc)       ! REYNOLDS NUMBER BASED ON  CHORD
+   RC = abs(Re)       ! use the caller-supplied Re so this table lookup is consistent with the AFI stall-angle lookup
 
 
       ! find the indices into the arrays representing coordinates of each dimension:

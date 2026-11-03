@@ -508,6 +508,9 @@ subroutine SetInputsForAA(DriverData)
 
          ! Set the blade element relative velocity (including induction)
          DriverData%u%Vrel(i,j) = DriverData%VRel
+
+         ! No BEMT in the standalone driver, so reconstruct Re from velocity and chord as AA itself used to
+         DriverData%u%Re(i,j) = abs(DriverData%VRel * DriverData%Chord / DriverData%KinVisc)
    
          ! Set the blade element angle of attack
          DriverData%u%AoANoise(i,j) = DriverData%AoA
