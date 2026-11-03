@@ -3551,7 +3551,7 @@ class InputReader_OpenFAST(object):
                     data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly
 
-            elif 'slip' in data_line or 'slipsupports' in data_line: 
+            elif '---' in data_line and 'slipsupport' in data_line: 
                 f.readline()
                 f.readline()
 

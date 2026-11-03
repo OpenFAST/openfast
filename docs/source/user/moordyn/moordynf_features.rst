@@ -72,7 +72,7 @@ Example (one hoop on Point 2 threading Line 1, with LuGre friction):
    * - ``Point``
      - (-)
      - ID of the Point carrying the hoop. Any Point type may be used. A free Point used as a hoop
-       should have a nonzero mass (see :ref:`MD-SlipSupport-Usage`).
+       must have a nonzero mass, added mass, or attached lines (see :ref:`MD-SlipSupport-Usage`).
    * - ``Line``
      - (-)
      - ID of the Line threaded through the hoop.
@@ -191,7 +191,7 @@ input position.
 
 **Release.** A slip support releases its line permanently once the hoop is more than 0.1 segment
 length beyond either line end throughout a whole time step. A message is written to the screen and log
-file.
+file. Supports are not released during dynamic relaxation.
 
 **Choosing Width.** Larger values give smoother contact forces when the line nodes slide past the support,
 but spread the load over a longer length and place the line slightly outside the hoop at bends.
@@ -220,10 +220,13 @@ Slip supports may be used with linearization. Each LuGre slip support adds one f
 bristle deflection) named ``Slip <n> bristle z, m``. The linearized model reflects the numerical model of
 the contact:
 
-- With Coulomb friction, near-zero slip the friction acts as a viscous damper with coefficient
-  :math:`\mu_s F_N / \tilde v_{tol}` along the line, where :math:`\tilde v_{tol} \ge` ``VTol`` is the
-  adjusted regularization velocity (see :ref:`MD-SlipSupport-Coulomb`).
+- With Coulomb friction, near-zero slip the friction acts as a viscous damper along the line. Because
+  MoorDyn perturbs velocities by 0.1 m/s, the linearized damping is a secant over that perturbation. It
+  approaches the tangent value :math:`\mu_s F_N / \tilde v_{tol}` only if the adjusted regularization velocity
+  :math:`\tilde v_{tol} \ge` ``VTol`` (see :ref:`MD-SlipSupport-Coulomb`) is well above 0.1 m/s; otherwise
+  the damping is smaller.
 - The transverse contact stiffness adds a high-frequency transverse mode. With the automatic stiffness, its
   frequency is about :math:`0.3/dt_M` rad/s.
 - With LuGre friction, the stuck contact appears as a stiff spring along the line (the bristle stiffness)
-  with an associated fast first-order mode.
+  with an associated fast first-order mode. The bristle damping is subject to the same 0.1 m/s velocity
+  perturbation and is underestimated unless ``VS`` is well above 0.1 m/s.

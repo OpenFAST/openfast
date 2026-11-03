@@ -104,7 +104,8 @@ same choice gives the line a single well-defined inertia :math:`m_C` at the cont
 :ref:`MD-SlipSupport-Normal`), on which the stiffness, damping, and stability bounds below are based. If the
 kinematics were interpolated with weights different from those used to spread the force, the damper could
 feed energy into some node motions. The per-node tangent split described in
-:ref:`MD-SlipSupport-Distribution` relaxes this property slightly. Interpolation and spreading with the same
+:ref:`MD-SlipSupport-Distribution` breaks this property for the spring; the damper and friction velocities
+are projected in the same way as the forces, so they remain dissipative. Interpolation and spreading with the same
 kernel follow the same principle as in the immersed boundary method (Peskin, 2002).
 
 Properties of the kernel:
@@ -177,15 +178,18 @@ This is unlikely to be an issue in practice: with an explicit time step limited 
 Normal Contact Force
 --------------------
 
-The contact offset and relative velocity perpendicular to the line are
+The contact offset perpendicular to the line and the transverse relative velocity are
 
 .. math::
 
    \boldsymbol{\delta} = (\mathbf{C}(s_c) - \mathbf{x}_h) - \left[(\mathbf{C}(s_c) - \mathbf{x}_h)\cdot\hat{\mathbf{t}}(s_c)\right]\hat{\mathbf{t}}(s_c),
    \qquad
-   \mathbf{v}_{rel} = \mathbf{V}(s_c) - \dot{\mathbf{x}}_h,
-   \qquad
-   \mathbf{v}_\perp = \mathbf{v}_{rel} - (\mathbf{v}_{rel}\cdot\hat{\mathbf{t}}(s_c))\,\hat{\mathbf{t}}(s_c) .
+   \mathbf{v}_\perp = \sum_j w_j\left(\mathbf{I} - \hat{\mathbf{q}}_j\hat{\mathbf{q}}_j^T\right)(\dot{\mathbf{r}}_j - \dot{\mathbf{x}}_h),
+
+where :math:`\hat{\mathbf{q}}_j` is the node tangent defined in :ref:`MD-SlipSupport-Distribution`. On a
+straight line, :math:`\mathbf{v}_\perp` is the part of :math:`\mathbf{V}(s_c) - \dot{\mathbf{x}}_h`
+perpendicular to :math:`\hat{\mathbf{t}}`; at a bend, it uses the same per-node projections as the force
+distribution.
 
 The transverse penalty force acting on the contact point is
 
@@ -272,13 +276,16 @@ passed to the attached objects as usual. :math:`\mathbf{F}_h` is added to the ne
 
 Splitting the force along each node's own tangent ensures that a frictionless hoop applies no force along the
 line at any node. Without it, the parts of the kernel acting on nodes away from a sharp bend would push the
-line along its length, and the hoop could hold tension without friction. The split makes the contact force
+line along its length, and the hoop could hold tension without friction. The split makes the spring force
 non-conservative (it is not the gradient of a contact potential), but the contact damping likely far
-outweighs the resulting energy change.
+outweighs the resulting energy change. The damper and friction are not affected: because
+:math:`\mathbf{v}_\perp` and the slip velocity :math:`v` below are measured with the same projections used to
+spread the forces, the power delivered by them to the line and hoop together is
+:math:`-c\lVert\mathbf{v}_\perp\rVert^2 \le 0` for the damper and :math:`F_f v` for friction, which is
+:math:`\le 0` for Coulomb friction.
 
 The friction force is not projected: each node receives its full share :math:`w_j F_f` along its own tangent.
-Because the weights sum to one, the tension changes by exactly :math:`F_f` across the support, and the
-friction dissipates the full power :math:`F_f v` during sliding. The projection of the normal component, in
+Because the weights sum to one, the tension changes by exactly :math:`F_f` across the support. The projection of the normal component, in
 contrast, discards part of each node's share at a bend, so the effective contact stiffness and damping drop
 below :math:`K` and :math:`c` at sharp bends. The delivered normal force :math:`F_N` is unaffected at
 equilibrium, because the penalty offset grows until the line tension is balanced. This loss of stiffness is
@@ -292,9 +299,10 @@ The slip velocity of the line relative to the hoop is
 
 .. math::
 
-   v = \mathbf{v}_{rel}\cdot\hat{\mathbf{t}} ,
+   v = \sum_j w_j\,\hat{\mathbf{q}}_j\cdot(\dot{\mathbf{r}}_j - \dot{\mathbf{x}}_h) ,
 
-positive when the line material moves toward end B. Because :math:`s_c` is a material coordinate,
+positive when the line material moves toward end B. On a straight line, this is
+:math:`(\mathbf{V}(s_c) - \dot{\mathbf{x}}_h)\cdot\hat{\mathbf{t}}`. Because :math:`s_c` is a material coordinate,
 :math:`\dot s_c \approx -v/(1+\varepsilon)` with :math:`\varepsilon` the local line strain.
 
 Friction uses the static friction coefficient :math:`\mu_s` (input ``MuS``), which sets the maximum force

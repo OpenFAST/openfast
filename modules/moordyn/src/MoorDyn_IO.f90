@@ -801,8 +801,8 @@ CONTAINS
         END IF
 
       ELSE IF (p%OutParam(I)%OType==5) THEN         ! slip support
-        IF (p%OutParam(I)%ObjID > p%nSlips) THEN
-          CALL WrScr('Warning: output slip support index excedes number of slip supports in requested output '//trim(OutListTmp)//'.')
+        IF ((p%OutParam(I)%ObjID < 1) .OR. (p%OutParam(I)%ObjID > p%nSlips)) THEN
+          CALL WrScr('Warning: output slip support index out of range in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
 

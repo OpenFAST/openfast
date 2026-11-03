@@ -2753,7 +2753,7 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Outputs'][i]))
             f.write(" ".join(ln) + '\n')
 
-        if 'SlipSupport_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['SlipSupport_ID']: # there are failure inputs
+        if 'SlipSupport_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['SlipSupport_ID']: # there are slip support inputs
             f.write('---------------------- SLIP SUPPORTS ----------------------\n')
             f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'Point', 'Line', 'Width', 'K', 'Zeta', 'MuS', 'MuK', 'VTol', 'VS', 'StickDisp']])+'\n')
             f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(h)', '(N/m)', '(-)',  '(-)', '(-)', '(m/s)', '(m/s)', '(m)']])+'\n')
@@ -2763,13 +2763,13 @@ class InputWriter_OpenFAST(object):
                 ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['SlipSupport_Point'][i]))
                 ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['SlipSupport_Line'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_Width'][i]))
-                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_K'][i]))
+                ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['SlipSupport_K'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_Zeta'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_MuS'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_MuK'][i]))
-                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_VTol'][i]))
-                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_VS'][i]))
-                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['SlipSupport_StickDisp'][i]))
+                ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['SlipSupport_VTol'][i]))
+                ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['SlipSupport_VS'][i]))
+                ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['SlipSupport_StickDisp'][i]))
                 f.write(" ".join(ln) + '\n')
 
         if 'Failure_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Failure_ID']: # there are failure inputs

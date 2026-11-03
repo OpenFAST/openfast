@@ -2348,6 +2348,17 @@ CONTAINS
                      RETURN
                   END IF
 
+                  ! the hoop reaction adds no mass, so a free hoop Point needs mass of its own or attached lines
+                  IF ((m%PointList(m%SlipList(l)%PointID)%typeNum == 0) .AND. &
+                      (m%PointList(m%SlipList(l)%PointID)%pointM <= 0.0_DbKi) .AND. &
+                      (m%PointList(m%SlipList(l)%PointID)%pointV*m%PointList(m%SlipList(l)%PointID)%pointCa <= 0.0_DbKi) .AND. &
+                      (m%PointList(m%SlipList(l)%PointID)%nAttached == 0)) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': free Point '// &
+                        trim(Num2LStr(m%SlipList(l)%PointID))//' has no mass and no attached lines.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
                   IF ((m%SlipList(l)%LineID < 1) .OR. (m%SlipList(l)%LineID > p%nLines)) THEN
                      CALL SetErrStat( ErrID_Fatal, ' Slip support '//trim(Num2LStr(l))//': Line number out of bounds.', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
@@ -3222,7 +3233,9 @@ CONTAINS
       z%dummy     = 0      
 
       ALLOCATE(other%slipKSeg(p%nSlips), STAT = ErrStat2); if(AllocateFailed("other%slipKSeg")) return
-      IF (p%nSlips > 0) other%slipKSeg = m%SlipList(:)%kSeg
+      ALLOCATE(other%slipStatus(p%nSlips), STAT = ErrStat2); if(AllocateFailed("other%slipStatus")) return
+      IF (p%nSlips > 0) other%slipKSeg   = m%SlipList(:)%kSeg
+      IF (p%nSlips > 0) other%slipStatus = m%SlipList(:)%status
       
       if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco))) then
          ErrStat2 = ErrID_Fatal
@@ -3758,8 +3771,11 @@ CONTAINS
       NdtM = ceiling(p%dtCoupling/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
       dtM = p%dtCoupling/REAL(NdtM,DbKi)             ! adjust desired time step to satisfy dt with an integer number of time steps
 
-      ! restart the contact search from the state at t, in case the glue code has stepped back in time
-      IF (p%nSlips > 0) m%SlipList(:)%kSeg = other%slipKSeg
+      ! restart the contact search and release status from the state at t, in case the glue code has stepped back in time
+      IF (p%nSlips > 0) THEN
+         m%SlipList(:)%kSeg   = other%slipKSeg
+         m%SlipList(:)%status = other%slipStatus
+      END IF
 
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
@@ -3789,7 +3805,10 @@ CONTAINS
          
       END DO  ! I  time steps
 
-      IF (p%nSlips > 0) other%slipKSeg = m%SlipList(:)%kSeg
+      IF (p%nSlips > 0) THEN
+         other%slipKSeg   = m%SlipList(:)%kSeg
+         other%slipStatus = m%SlipList(:)%status
+      END IF
 
       ! destroy dxdt and x2, and u_interp
       !CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
@@ -4086,7 +4105,10 @@ CONTAINS
       
 
       ! call CalcContStateDeriv in order to run model and calculate dynamics with provided x and u
-      IF (p%nSlips > 0) m%SlipList(:)%kSeg = other%slipKSeg
+      IF (p%nSlips > 0) THEN
+         m%SlipList(:)%kSeg   = other%slipKSeg
+         m%SlipList(:)%status = other%slipStatus
+      END IF
       CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
 
     !  ! assign net force on fairlead Points to the fairlead force output mesh

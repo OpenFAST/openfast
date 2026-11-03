@@ -133,8 +133,23 @@ CONTAINS
          IF (m%SlipList(is)%LineID == iLine) THEN
             J = J + 1
             m%SlipList(is)%s = cV(J)/cV(nV+1)*m%LineList(iLine)%UnstrLen
+            ! seed the contact search at the hoop's segment so the first search stays local
+            sNode = 0.0_DbKi
+            DO I = 1, N
+               sNode = sNode + m%LineList(iLine)%l(I)
+               IF (sNode >= m%SlipList(is)%s) EXIT
+            END DO
+            m%SlipList(is)%kSeg = MIN(I, N)
          END IF
       END DO
+
+      ! viscoelastic (non-Syrope) lines: reset the static stretch to the new geometry, as in Line_Initialize
+      IF ((m%LineList(iLine)%ElasticMod > 1) .AND. (m%LineList(iLine)%ElasticMod < 4)) THEN
+         DO I = 1, N
+            m%LineList(iLine)%dl_1(I) = SQRT(SUM((m%LineList(iLine)%r(:,I) - m%LineList(iLine)%r(:,I-1))**2)) &
+                                        - m%LineList(iLine)%l(I)
+         END DO
+      END IF
 
       DEALLOCATE(rV, cV)
 
@@ -152,7 +167,7 @@ CONTAINS
 
       INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, nW
       REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest
-      REAL(DbKi)     :: tC(3), tCmag, rStar(3), vStar(3), delta(3), vRel(3), vRelPerp(3)
+      REAL(DbKi)     :: tC(3), tCmag, rStar(3), delta(3), vRelj(3), vRelPerp(3)
       REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
       REAL(DbKi)     :: sig0, kCap, kappa, sig1Fn
       LOGICAL        :: rateCapped
@@ -212,12 +227,10 @@ CONTAINS
          CALL KernelWeights(m%LineList(iL), m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw)
 
          rStar = 0.0_DbKi
-         vStar = 0.0_DbKi
          tC    = 0.0_DbKi
          DO j = 1, nW
-            rStar = rStar + w(j) *m%LineList(iL)%r( :,idx(j))
-            vStar = vStar + w(j) *m%LineList(iL)%rd(:,idx(j))
-            tC    = tC    + dw(j)*m%LineList(iL)%r( :,idx(j))
+            rStar = rStar + w(j) *m%LineList(iL)%r(:,idx(j))
+            tC    = tC    + dw(j)*m%LineList(iL)%r(:,idx(j))
          END DO
 
          tCmag = SQRT(DOT_PRODUCT(tC, tC))
@@ -236,27 +249,33 @@ CONTAINS
 
          delta    = rStar - xh
          delta    = delta - DOT_PRODUCT(delta, tC)*tC
-         vRel     = vStar - vh
-         vRelPerp = vRel - DOT_PRODUCT(vRel, tC)*tC
+
+         ! forces are split per node along each node's own tangent, so a frictionless hoop never pushes
+         ! nodes along the line (avoids tension trapping at sharp bends); the damper and friction velocities
+         ! use the same per-node projections so that they can only dissipate energy
+         vRelPerp = 0.0_DbKi
+         m%SlipList(is)%vSlip = 0.0_DbKi
+         DO j = 1, nW
+            qN(:,j) = NodeTangent(m%LineList(iL), idx(j))
+            IF (DOT_PRODUCT(qN(:,j), qN(:,j)) <= 0.0_DbKi) qN(:,j) = tC
+            vRelj = m%LineList(iL)%rd(:,idx(j)) - vh
+            vRelPerp = vRelPerp + w(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
+            m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + w(j)*DOT_PRODUCT(vRelj, qN(:,j))
+         END DO
 
          ! inertia felt at the contact point when a force is shared among nodes of mass mNode
          mC    = m%SlipList(is)%mNode/SUM(w(1:nW)**2)
          cPerp = 2.0_DbKi*m%SlipList(is)%zeta*SQRT(m%SlipList(is)%kPerp*mC)
          Fperp = -m%SlipList(is)%kPerp*delta - cPerp*vRelPerp
 
-         ! split the normal force per node using each node's own tangent, so a frictionless hoop
-         ! never pushes nodes along the line (avoids tension trapping at sharp bends)
          Fsum = 0.0_DbKi
          DO j = 1, nW
-            qN(:,j) = NodeTangent(m%LineList(iL), idx(j))
-            IF (DOT_PRODUCT(qN(:,j), qN(:,j)) <= 0.0_DbKi) qN(:,j) = tC
             Fnode(:,j) = w(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j))
             Fsum = Fsum + Fnode(:,j)
          END DO
 
          ! normal load actually delivered to the line sets the friction capacity
-         m%SlipList(is)%Fn    = SQRT(DOT_PRODUCT(Fsum, Fsum))
-         m%SlipList(is)%vSlip = DOT_PRODUCT(vRel, tC)
+         m%SlipList(is)%Fn = SQRT(DOT_PRODUCT(Fsum, Fsum))
 
          IF (m%IC_gen) THEN
             m%SlipList(is)%Ff = -m%SlipList(is)%cIC*m%SlipList(is)%vSlip
