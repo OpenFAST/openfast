@@ -189,7 +189,10 @@ The contact offset perpendicular to the line and the transverse relative velocit
 where :math:`\hat{\mathbf{q}}_j` is the node tangent defined in :ref:`MD-SlipSupport-Distribution`. On a
 straight line, :math:`\mathbf{v}_\perp` is the part of :math:`\mathbf{V}(s_c) - \dot{\mathbf{x}}_h`
 perpendicular to :math:`\hat{\mathbf{t}}`; at a bend, it uses the same per-node projections as the force
-distribution.
+distribution. Near the line ends, the share :math:`+2a` that a virtual node folds onto the end node keeps
+the tangent of its mirrored node, because point reflection preserves the tangent; only the end node's own
+share uses :math:`\hat{\mathbf{q}}_0` or :math:`\hat{\mathbf{q}}_N`. The same split is used for the
+distributed forces.
 
 The transverse penalty force acting on the contact point is
 

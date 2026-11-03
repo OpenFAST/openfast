@@ -165,7 +165,7 @@ CONTAINS
       TYPE(MD_MiscVarType),   INTENT(INOUT) :: m
       TYPE(MD_ParameterType), INTENT(IN   ) :: p
 
-      INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, nW
+      INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, jj, nW, jEnd
       REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest
       REAL(DbKi)     :: tC(3), tCmag, rStar(3), delta(3), vRelj(3), vRelPerp(3)
       REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
@@ -173,7 +173,7 @@ CONTAINS
       LOGICAL        :: rateCapped
       CHARACTER(200) :: Msg
       INTEGER(IntKi), ALLOCATABLE :: idx(:)
-      REAL(DbKi),     ALLOCATABLE :: w(:), dw(:), sNode(:), qN(:,:), Fnode(:,:)
+      REAL(DbKi),     ALLOCATABLE :: w(:), dw(:), wg(:), wN(:), sNode(:), qN(:,:), Fnode(:,:)
 
       DO is = 1, p%nSlips
          m%LineList(m%SlipList(is)%LineID)%Fslip = 0.0_DbKi
@@ -190,9 +190,9 @@ CONTAINS
          vh = m%PointList(m%SlipList(is)%PointID)%rd
 
          IF (ALLOCATED(sNode)) THEN
-            IF (SIZE(sNode) /= N+1) DEALLOCATE(idx, w, dw, sNode, qN, Fnode)
+            IF (SIZE(sNode) /= N+1) DEALLOCATE(idx, w, dw, wg, wN, sNode, qN, Fnode)
          END IF
-         IF (.NOT. ALLOCATED(sNode)) ALLOCATE(idx(N+1), w(N+1), dw(N+1), sNode(0:N), qN(3,N+1), Fnode(3,N+1))
+         IF (.NOT. ALLOCATED(sNode)) ALLOCATE(idx(N+1), w(N+1), dw(N+1), wg(N+1), wN(N+1), sNode(0:N), qN(3,N+1), Fnode(3,N+1))
          sNode(0) = 0.0_DbKi
          DO j = 1, N
             sNode(j) = sNode(j-1) + m%LineList(iL)%l(j)
@@ -224,7 +224,7 @@ CONTAINS
          m%SlipList(is)%kSeg = k
          m%SlipList(is)%xi   = u
 
-         CALL KernelWeights(m%LineList(iL), m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw)
+         CALL KernelWeights(m%LineList(iL), m%SlipList(is)%width, sNode, k, u, nW, idx, w, dw, wg, jEnd)
 
          rStar = 0.0_DbKi
          tC    = 0.0_DbKi
@@ -252,16 +252,28 @@ CONTAINS
 
          ! forces are split per node along each node's own tangent, so a frictionless hoop never pushes
          ! nodes along the line (avoids tension trapping at sharp bends); the damper and friction velocities
-         ! use the same per-node projections so that they can only dissipate energy
+         ! use the same per-node projections so that they can only dissipate energy.
+         ! The end node's folded share wg(j) of a mirrored node carries that node's tangent (point reflection).
+         wN(1:nW) = w(1:nW)
+         IF (jEnd > 0) wN(jEnd) = w(jEnd) - SUM(wg(1:nW))
+
          vRelPerp = 0.0_DbKi
          m%SlipList(is)%vSlip = 0.0_DbKi
          DO j = 1, nW
             qN(:,j) = NodeTangent(m%LineList(iL), idx(j))
             IF (DOT_PRODUCT(qN(:,j), qN(:,j)) <= 0.0_DbKi) qN(:,j) = tC
             vRelj = m%LineList(iL)%rd(:,idx(j)) - vh
-            vRelPerp = vRelPerp + w(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
-            m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + w(j)*DOT_PRODUCT(vRelj, qN(:,j))
+            vRelPerp = vRelPerp + wN(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
+            m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + wN(j)*DOT_PRODUCT(vRelj, qN(:,j))
          END DO
+         IF (jEnd > 0) THEN
+            vRelj = m%LineList(iL)%rd(:,idx(jEnd)) - vh
+            DO j = 1, nW
+               IF (wg(j) == 0.0_DbKi) CYCLE
+               vRelPerp = vRelPerp + wg(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
+               m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + wg(j)*DOT_PRODUCT(vRelj, qN(:,j))
+            END DO
+         END IF
 
          ! inertia felt at the contact point when a force is shared among nodes of mass mNode
          mC    = m%SlipList(is)%mNode/SUM(w(1:nW)**2)
@@ -270,9 +282,17 @@ CONTAINS
 
          Fsum = 0.0_DbKi
          DO j = 1, nW
-            Fnode(:,j) = w(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j))
+            Fnode(:,j) = wN(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j))
             Fsum = Fsum + Fnode(:,j)
          END DO
+         IF (jEnd > 0) THEN
+            DO j = 1, nW
+               IF (wg(j) == 0.0_DbKi) CYCLE
+               F = wg(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j))
+               Fnode(:,jEnd) = Fnode(:,jEnd) + F
+               Fsum = Fsum + F
+            END DO
+         END IF
 
          ! normal load actually delivered to the line sets the friction capacity
          m%SlipList(is)%Fn = SQRT(DOT_PRODUCT(Fsum, Fsum))
@@ -333,7 +353,12 @@ CONTAINS
 
          Fsum = 0.0_DbKi
          DO j = 1, nW
-            F = Fnode(:,j) + w(j)*m%SlipList(is)%Ff*qN(:,j)
+            F = Fnode(:,j) + wN(j)*m%SlipList(is)%Ff*qN(:,j)
+            IF (j == jEnd) THEN
+               DO jj = 1, nW
+                  IF (wg(jj) /= 0.0_DbKi) F = F + wg(jj)*m%SlipList(is)%Ff*qN(:,jj)
+               END DO
+            END IF
             m%LineList(iL)%Fslip(:,idx(j)) = m%LineList(iL)%Fslip(:,idx(j)) + F
             Fsum = Fsum + F
          END DO
@@ -407,8 +432,9 @@ CONTAINS
    !--------------------------------------------------------------
    ! Weights from a cubic B-spline kernel of fixed scale 'width' in unstretched arc length, normalized to
    ! sum to one. Nodes are mirrored about each line end (r -> 2*r_end - r) and folded back, so the contact
-   ! curve passes through the end nodes. dw is d/du on segment k.
-   SUBROUTINE KernelWeights(Line, width, sNode, k, u, nW, idx, w, dw)
+   ! curve passes through the end nodes. dw is d/du on segment k. Optional wg(j) is the share of the folded
+   ! end node (entry jEnd, 0 if none) that comes from the mirror image of node idx(j).
+   SUBROUTINE KernelWeights(Line, width, sNode, k, u, nW, idx, w, dw, wg, jEnd)
 
       TYPE(MD_Line),  INTENT(IN   ) :: Line
       REAL(DbKi),     INTENT(IN   ) :: width
@@ -419,6 +445,8 @@ CONTAINS
       INTEGER(IntKi), INTENT(  OUT) :: idx(:)
       REAL(DbKi),     INTENT(  OUT) :: w(:)
       REAL(DbKi),     INTENT(  OUT) :: dw(:)
+      REAL(DbKi),     INTENT(  OUT), OPTIONAL :: wg(:)
+      INTEGER(IntKi), INTENT(  OUT), OPTIONAL :: jEnd
 
       INTEGER(IntKi) :: N, j, jLo, jHi
       REAL(DbKi)     :: s, R, Ltot, Asum, dAsum, aK, daK
@@ -447,33 +475,41 @@ CONTAINS
       dw(1:nW) = 0.0_DbKi
       Asum  = 0.0_DbKi
       dAsum = 0.0_DbKi
+      IF (PRESENT(wg))   wg(1:nW) = 0.0_DbKi
+      IF (PRESENT(jEnd)) jEnd = 0
 
       DO j = jLo, jHi
          CALL Sample(sNode(j), j)
          CALL Add(j, aK, daK)
       END DO
 
+      ! the kernel reaches less than half the line, so at most one end is mirrored
       IF (s - R < 0.0_DbKi) THEN
+         IF (PRESENT(jEnd)) jEnd = 1 - jLo
          DO j = 1, N
             IF (-sNode(j) <= s - R) EXIT
             CALL Sample(-sNode(j), j)
             CALL Add(0,  2.0_DbKi*aK,  2.0_DbKi*daK)
             CALL Add(j, -aK, -daK)
+            IF (PRESENT(wg)) wg(j-jLo+1) = wg(j-jLo+1) + 2.0_DbKi*aK
          END DO
       END IF
 
       IF (s + R > Ltot) THEN
+         IF (PRESENT(jEnd)) jEnd = N - jLo + 1
          DO j = 1, N
             IF (2.0_DbKi*Ltot - sNode(N-j) >= s + R) EXIT
             CALL Sample(2.0_DbKi*Ltot - sNode(N-j), N-j)
             CALL Add(N,    2.0_DbKi*aK,  2.0_DbKi*daK)
             CALL Add(N-j, -aK, -daK)
+            IF (PRESENT(wg)) wg(N-j-jLo+1) = wg(N-j-jLo+1) + 2.0_DbKi*aK
          END DO
       END IF
 
       ! normalize; Width >= longest segment guarantees Asum > 0
       w(1:nW)  = w(1:nW)/Asum
       dw(1:nW) = (dw(1:nW) - w(1:nW)*dAsum)/Asum * Line%l(k)
+      IF (PRESENT(wg)) wg(1:nW) = wg(1:nW)/Asum
 
    CONTAINS
 
