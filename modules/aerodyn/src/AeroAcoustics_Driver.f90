@@ -78,7 +78,7 @@ program AeroAcoustics_Driver
       ! update states and calculate output
       call SetInputsForAA(DriverData)
       
-      call AA_CalcOutput(t_global, DriverData%u, DriverData%p, DriverData%xd, DriverData%OtherState, DriverData%y, DriverData%m, errStat, errMsg); call CheckError()
+      call AA_CalcOutput(t_global, DriverData%u, DriverData%p, DriverData%xd, DriverData%OtherState, DriverData%y, DriverData%m, DriverData%AFInfo, errStat, errMsg); call CheckError()
       call Dvr_WriteOutputs(t_global, nt, DriverData) ! write to file at this step
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt

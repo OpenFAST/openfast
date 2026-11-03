@@ -2466,7 +2466,7 @@ subroutine RotCalcOutput( t, u, RotInflow, GSInflow, p, p_AD, x, xd, z, OtherSta
          ! Also,  SetInputs() [called above] calls SetInputsForBEMT() which in turn establishes current versions of the Global to local transformations we need as inputs to AA
          call SetInputsForAA(p, u, RotInflow, m, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         call AA_CalcOutput(t, m%AA_u, p%AA, xd%AA, OtherState%AA, m%AA_y, m%AA, errStat2, errMsg2)
+         call AA_CalcOutput(t, m%AA_u, p%AA, xd%AA, OtherState%AA, m%AA_y, m%AA, p_AD%AFI, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! 
       end if     

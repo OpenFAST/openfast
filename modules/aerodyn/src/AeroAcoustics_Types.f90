@@ -187,7 +187,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:4)  :: NumOutsAll = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: unOutFile = 0_IntKi      !< unit number for writing output file [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StallStart      !< ation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TEThick      !< ation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TEAngle      !< ation [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AerCent      !< ation [-]
@@ -1543,18 +1542,6 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumOutsAll = SrcParamData%NumOutsAll
    DstParamData%unOutFile = SrcParamData%unOutFile
    DstParamData%RootName = SrcParamData%RootName
-   if (allocated(SrcParamData%StallStart)) then
-      LB(1:2) = lbound(SrcParamData%StallStart)
-      UB(1:2) = ubound(SrcParamData%StallStart)
-      if (.not. allocated(DstParamData%StallStart)) then
-         allocate(DstParamData%StallStart(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%StallStart.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%StallStart = SrcParamData%StallStart
-   end if
    if (allocated(SrcParamData%TEThick)) then
       LB(1:2) = lbound(SrcParamData%TEThick)
       UB(1:2) = ubound(SrcParamData%TEThick)
@@ -1816,9 +1803,6 @@ subroutine AA_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Aweight)) then
       deallocate(ParamData%Aweight)
    end if
-   if (allocated(ParamData%StallStart)) then
-      deallocate(ParamData%StallStart)
-   end if
    if (allocated(ParamData%TEThick)) then
       deallocate(ParamData%TEThick)
    end if
@@ -1925,7 +1909,6 @@ subroutine AA_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOutsAll)
    call RegPack(RF, InData%unOutFile)
    call RegPack(RF, InData%RootName)
-   call RegPackAlloc(RF, InData%StallStart)
    call RegPackAlloc(RF, InData%TEThick)
    call RegPackAlloc(RF, InData%TEAngle)
    call RegPackAlloc(RF, InData%AerCent)
@@ -1996,7 +1979,6 @@ subroutine AA_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumOutsAll); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%unOutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StallStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TEThick); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TEAngle); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AerCent); if (RegCheckErr(RF, RoutineName)) return

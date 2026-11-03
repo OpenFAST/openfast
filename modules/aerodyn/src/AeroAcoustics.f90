@@ -35,6 +35,7 @@ module AeroAcoustics
    use AeroAcoustics_Types
    use AeroAcoustics_IO
    use NWTC_LAPACK
+   use AirfoilInfo, only: AFI_ComputeUACoefs ! used to interpolate the approximate stall angle across Re tables
    implicit none
 
    private
@@ -250,20 +251,12 @@ subroutine SetParameters( InitInp, InputFileData, p, AFInfo, ErrStat, ErrMsg )
     ! Blade Characteristics chord,span,trailing edge angle and thickness,airfoil ID for each segment
     call AllocAry(p%TEThick   ,p%NumBlNds,p%NumBlades,'p%TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
     call AllocAry(p%TEAngle   ,p%NumBlNds,p%NumBlades,'p%TEAngle'   ,ErrStat2,ErrMsg2); if(Failed()) return
-    call AllocAry(p%StallStart,p%NumBlNds,p%NumBlades,'p%StallStart',ErrStat2,ErrMsg2); if(Failed()) return
-    p%StallStart = 0.0_ReKi
 
      do i=1,p%NumBlades
         do j=1,p%NumBlNds
             whichairfoil = p%BlAFID(j,i)
             p%TEThick(j,i) = InputFileData%BladeProps(whichairfoil)%TEThick
             p%TEAngle(j,i) = InputFileData%BladeProps(whichairfoil)%TEAngle
-            
-            if(AFInfo(whichairfoil)%NumTabs /=1 ) then
-                call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
-                if(Failed()) return
-            endif
-            p%StallStart(j,i)  = AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
         enddo
     enddo
 
@@ -798,7 +791,7 @@ END SUBROUTINE AA_End
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine AA_CalcOutput( t, u, p, xd, OtherState, y, m, ErrStat, ErrMsg)
+subroutine AA_CalcOutput( t, u, p, xd, OtherState, y, m, AFInfo, ErrStat, ErrMsg)
     ! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
     ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
     ! placed in the y%WriteOutput(:) array.
@@ -812,6 +805,7 @@ subroutine AA_CalcOutput( t, u, p, xd, OtherState, y, m, ErrStat, ErrMsg)
     TYPE(AA_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
     TYPE(AA_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
     type(AA_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+    type(AFI_ParameterType),      INTENT(IN   )  :: AFInfo(:)   !< The airfoil parameter data, used to interpolate the stall angle across Re tables
     INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
     CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -830,7 +824,7 @@ subroutine AA_CalcOutput( t, u, p, xd, OtherState, y, m, ErrStat, ErrMsg)
             call CalcObserve(p,m,u,errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
            
-            call CalcAeroAcousticsOutput(u,p,m,xd,errStat2,errMsg2)
+            call CalcAeroAcousticsOutput(u,p,m,xd,AFInfo,errStat2,errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
 
             call Calc_WriteOutput( p, m, y,  ErrStat2, ErrMsg2 )
@@ -978,11 +972,12 @@ SUBROUTINE CalcObserve(p,m,u,errStat,errMsg)
 
 END SUBROUTINE CalcObserve
 !----------------------------------------------------------------------------------------------------------------------------------!
-SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
+SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,AFInfo,errStat,errMsg)
     TYPE(AA_InputType),                     INTENT(IN   )   :: u       !< Inputs at Time t
     TYPE(AA_ParameterType),                 INTENT(IN   )   :: p       !< Parameters
     TYPE(AA_MiscVarType),                   INTENT(INOUT)   :: m       !< misc/optimization data (not defined in submodules)
     TYPE(AA_DiscreteStateType),             INTENT(IN   )   :: xd      !< discrete state type
+    type(AFI_ParameterType),                INTENT(IN   )   :: AFInfo(:) !< The airfoil parameter data, used to interpolate the stall angle across Re tables
     integer(IntKi),                         INTENT(  OUT)   :: errStat !< Error status of the operation
     character(*),                           INTENT(  OUT)   :: errMsg  !< Error message if ErrStat /= ErrID_None
     ! Local variables.
@@ -994,6 +989,11 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
     REAL(ReKi)                    :: AlphaNoise                       
     REAL(ReKi)                    :: AlphaNoise_Deg                   ! 
     REAL(ReKi)                    :: UNoise                           ! 
+    REAL(ReKi)                    :: ReNoise                          ! chord Reynolds number, used to interpolate the stall angle across Re tables
+    REAL(ReKi)                    :: StallVal                         ! approximate stall angle of attack [deg], interpolated at ReNoise
+    type(AFI_UA_BL_Type)           :: UA_BL                           ! airfoil UA/BL constants interpolated at ReNoise
+    integer(intKi)                 :: ErrStat3
+    character(ErrMsgLen)           :: ErrMsg3
 
     real(ReKi)                    ::  Ptotal
     character(*), parameter       :: RoutineName = 'CalcAeroAcousticsOutput'
@@ -1025,6 +1025,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
          call MPi2Pi(AlphaNoise) ! make sure this is in an appropriate range [-pi,pi]
          AlphaNoise_Deg = AlphaNoise * R2D_D ! convert to degrees since that is how this code is set up.
 
+         !--------Approximate stall angle, interpolated across Re tables at the node's instantaneous Reynolds number------!
+         ReNoise = abs(Unoise * p%BlChord(J,I) / p%KinVisc)
+         call AFI_ComputeUACoefs( AFInfo(p%BlAFID(J,I)), ReNoise, 0.0_ReKi, UA_BL, ErrMsg3, ErrStat3 )
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat, ErrMsg, RoutineName); if (ErrStat >= AbortErrLev) return
+         StallVal = UA_BL%alpha1 * R2D_D
+
          !--------Read in Boundary Layer Data-------------------------!
          IF (p%X_BLMethod .EQ. X_BLMethod_Tables) THEN
             call BL_Param_Interp(p, m, Unoise, AlphaNoise_Deg, p%BlChord(J,I), p%BlAFID(J,I))
@@ -1042,7 +1048,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
             !--------Laminar Boundary Layer Vortex Shedding Noise----------------------------!
             IF ( (p%ILAM .EQ. ILAM_BPM) .AND. (p%ITRIP .EQ. ITRIP_None) )    THEN
                CALL LBLVS(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                  p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,p%StallStart(J,I))
+                  p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,StallVal)
                
                call TotalContributionFromType(m%SPLLBL,Ptotal,NoiseMech=1)
             ENDIF
@@ -1051,7 +1057,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
             IF ( p%ITURB /= ITURB_None )   THEN
                !returns  m%SPLP, m%SPLS, m%SPLALPH
                CALL TBLTE(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                      p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
+                      p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I), p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),StallVal, &
                       m%SPLP,m%SPLS,m%SPLALPH )
                     
                IF (p%ITURB .EQ. ITURB_TNO)  THEN
@@ -1073,7 +1079,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,errStat,errMsg)
             IF ( p%IBLUNT == IBLUNT_BPM )   THEN   ! calculate m%SPLBLUNT(1:nFreq)
                CALL BLUNT(AlphaNoise_Deg,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                p%BlElemSpn(J,I),m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
-               p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I) )
+               p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,StallVal )
                
                call TotalContributionFromType(m%SPLBLUNT,Ptotal,NoiseMech=5)
             ENDIF
