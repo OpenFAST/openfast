@@ -411,7 +411,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! Initialize parameters and input/output arrays associated with generalized DOF
             call AllocAry( p%NAddDOF , p%NBody, 'p%NAddDOF' , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             call AllocAry( p%BDOFStrt, p%NBody, 'p%BDOFStrt', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            p%NAddDOF   = InputFileData%WAMIT%NAddDOF
+            p%NAddDOF   = InputFileData%NAddDOF
             p%NDOF      = 0_IntKi
             do iBody = 1, p%NBody
                p%BDOFStrt(iBody) = p%NDOF + 1_IntKi
