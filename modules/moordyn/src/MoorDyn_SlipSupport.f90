@@ -168,7 +168,7 @@ CONTAINS
       INTEGER(IntKi) :: is, iL, N, k, kLo, kHi, kBest, j, jj, nW, jEnd
       REAL(DbKi)     :: xh(3), vh(3), u, d2, d2Best, uBest
       REAL(DbKi)     :: tC(3), tCmag, rStar(3), delta(3), vRelj(3), vRelPerp(3)
-      REAL(DbKi)     :: Fperp(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
+      REAL(DbKi)     :: Fperp(3), Fd(3), F(3), Fsum(3), mC, cPerp, vTolEff, muEff, overshoot
       REAL(DbKi)     :: sig0, kCap, kappa, sig1Fn
       LOGICAL        :: rateCapped
       CHARACTER(200) :: Msg
@@ -250,9 +250,9 @@ CONTAINS
          delta    = rStar - xh
          delta    = delta - DOT_PRODUCT(delta, tC)*tC
 
-         ! forces are split per node along each node's own tangent, so a frictionless hoop never pushes
-         ! nodes along the line (avoids tension trapping at sharp bends); the damper and friction velocities
-         ! use the same per-node projections so that they can only dissipate energy.
+         ! the spring force is split per node along each node's own tangent, so a frictionless hoop never
+         ! pushes nodes along the line (avoids tension trapping at sharp bends); friction uses the same
+         ! per-node tangents for its velocity and force so that it can only dissipate energy.
          ! The end node's folded share wg(j) of a mirrored node carries that node's tangent (point reflection).
          wN(1:nW) = w(1:nW)
          IF (jEnd > 0) wN(jEnd) = w(jEnd) - SUM(wg(1:nW))
@@ -263,26 +263,29 @@ CONTAINS
             qN(:,j) = NodeTangent(m%LineList(iL), idx(j))
             IF (DOT_PRODUCT(qN(:,j), qN(:,j)) <= 0.0_DbKi) qN(:,j) = tC
             vRelj = m%LineList(iL)%rd(:,idx(j)) - vh
-            vRelPerp = vRelPerp + wN(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
+            vRelPerp = vRelPerp + w(j)*vRelj
             m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + wN(j)*DOT_PRODUCT(vRelj, qN(:,j))
          END DO
          IF (jEnd > 0) THEN
             vRelj = m%LineList(iL)%rd(:,idx(jEnd)) - vh
             DO j = 1, nW
                IF (wg(j) == 0.0_DbKi) CYCLE
-               vRelPerp = vRelPerp + wg(j)*(vRelj - DOT_PRODUCT(vRelj, qN(:,j))*qN(:,j))
                m%SlipList(is)%vSlip = m%SlipList(is)%vSlip + wg(j)*DOT_PRODUCT(vRelj, qN(:,j))
             END DO
          END IF
+         vRelPerp = vRelPerp - DOT_PRODUCT(vRelPerp, tC)*tC
 
          ! inertia felt at the contact point when a force is shared among nodes of mass mNode
          mC    = m%SlipList(is)%mNode/SUM(w(1:nW)**2)
          cPerp = 2.0_DbKi*m%SlipList(is)%zeta*SQRT(m%SlipList(is)%kPerp*mC)
-         Fperp = -m%SlipList(is)%kPerp*delta - cPerp*vRelPerp
+         Fperp = -m%SlipList(is)%kPerp*delta
+         ! the damper acts on the interpolated velocity and is spread with the same weights, so it stays
+         ! dissipative without the per-node projections that weaken it at sharp bends
+         Fd    = -cPerp*vRelPerp
 
          Fsum = 0.0_DbKi
          DO j = 1, nW
-            Fnode(:,j) = wN(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j))
+            Fnode(:,j) = wN(j)*(Fperp - DOT_PRODUCT(Fperp, qN(:,j))*qN(:,j)) + w(j)*Fd
             Fsum = Fsum + Fnode(:,j)
          END DO
          IF (jEnd > 0) THEN

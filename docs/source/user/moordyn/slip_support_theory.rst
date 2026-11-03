@@ -104,8 +104,9 @@ same choice gives the line a single well-defined inertia :math:`m_C` at the cont
 :ref:`MD-SlipSupport-Normal`), on which the stiffness, damping, and stability bounds below are based. If the
 kinematics were interpolated with weights different from those used to spread the force, the damper could
 feed energy into some node motions. The per-node tangent split described in
-:ref:`MD-SlipSupport-Distribution` breaks this property for the spring; the damper and friction velocities
-are projected in the same way as the forces, so they remain dissipative. Interpolation and spreading with the same
+:ref:`MD-SlipSupport-Distribution` is applied only to the spring and breaks this property for it; the damper
+is spread with the weights :math:`w_j` without projection, and the friction velocity is measured with the same
+per-node tangents used to apply the friction force, so both remain dissipative. Interpolation and spreading with the same
 kernel follow the same principle as in the immersed boundary method (Peskin, 2002).
 
 Properties of the kernel:
@@ -184,21 +185,14 @@ The contact offset perpendicular to the line and the transverse relative velocit
 
    \boldsymbol{\delta} = (\mathbf{C}(s_c) - \mathbf{x}_h) - \left[(\mathbf{C}(s_c) - \mathbf{x}_h)\cdot\hat{\mathbf{t}}(s_c)\right]\hat{\mathbf{t}}(s_c),
    \qquad
-   \mathbf{v}_\perp = \sum_j w_j\left(\mathbf{I} - \hat{\mathbf{q}}_j\hat{\mathbf{q}}_j^T\right)(\dot{\mathbf{r}}_j - \dot{\mathbf{x}}_h),
-
-where :math:`\hat{\mathbf{q}}_j` is the node tangent defined in :ref:`MD-SlipSupport-Distribution`. On a
-straight line, :math:`\mathbf{v}_\perp` is the part of :math:`\mathbf{V}(s_c) - \dot{\mathbf{x}}_h`
-perpendicular to :math:`\hat{\mathbf{t}}`; at a bend, it uses the same per-node projections as the force
-distribution. Near the line ends, the share :math:`+2a` that a virtual node folds onto the end node keeps
-the tangent of its mirrored node, because point reflection preserves the tangent; only the end node's own
-share uses :math:`\hat{\mathbf{q}}_0` or :math:`\hat{\mathbf{q}}_N`. The same split is used for the
-distributed forces.
+   \mathbf{v}_\perp = (\mathbf{V}(s_c) - \dot{\mathbf{x}}_h) - \left[(\mathbf{V}(s_c) - \dot{\mathbf{x}}_h)\cdot\hat{\mathbf{t}}(s_c)\right]\hat{\mathbf{t}}(s_c).
 
 The transverse penalty force acting on the contact point is
 
 .. math::
 
-   \mathbf{F}_\perp = -K\boldsymbol{\delta} - c\,\mathbf{v}_\perp, \qquad c = 2\zeta\sqrt{K m_C},
+   \mathbf{F}_\perp = \mathbf{F}_K + \mathbf{F}_c, \qquad \mathbf{F}_K = -K\boldsymbol{\delta}, \qquad
+   \mathbf{F}_c = -c\,\mathbf{v}_\perp, \qquad c = 2\zeta\sqrt{K m_C},
 
 where :math:`m_C` is the inertia felt at the contact point when a force is shared among the nodes,
 
@@ -248,7 +242,8 @@ the line ends where the weight concentrates on the end node.
 Force Distribution to Nodes
 ---------------------------
 
-Each node receives its share of the contact force split along its own tangent. The node tangent
+Each node receives its share of the contact force. The spring and friction parts are split along the node's
+own tangent; the damper part is not. The node tangent
 :math:`\hat{\mathbf{q}}_j` is the unit bisector of the adjacent segment directions,
 
 .. math::
@@ -257,11 +252,15 @@ Each node receives its share of the contact force split along its own tangent. T
    \qquad \hat{\mathbf{e}}_k = \frac{\mathbf{r}_k - \mathbf{r}_{k-1}}{\lVert\mathbf{r}_k - \mathbf{r}_{k-1}\rVert},
 
 using the single adjacent segment at the end nodes (and :math:`\hat{\mathbf{t}}` if the bisector vanishes).
-The normal force applied to node :math:`j` is the part of its share perpendicular to :math:`\hat{\mathbf{q}}_j`,
+Near the line ends, the share :math:`+2a` that a virtual node folds onto the end node keeps the tangent of its
+mirrored node in these per-node splits, because point reflection preserves the tangent; only the end node's
+own share uses :math:`\hat{\mathbf{q}}_0` or :math:`\hat{\mathbf{q}}_N`.
+The normal force applied to node :math:`j` is the part of its spring share perpendicular to
+:math:`\hat{\mathbf{q}}_j` plus its full damper share,
 
 .. math::
 
-   \mathbf{f}^N_j = w_j\left[\mathbf{F}_\perp - (\mathbf{F}_\perp\cdot\hat{\mathbf{q}}_j)\,\hat{\mathbf{q}}_j\right],
+   \mathbf{f}^N_j = w_j\left[\mathbf{F}_K - (\mathbf{F}_K\cdot\hat{\mathbf{q}}_j)\,\hat{\mathbf{q}}_j\right] + w_j\mathbf{F}_c,
    \qquad
    F_N = \left\lVert \sum_j \mathbf{f}^N_j \right\rVert .
 
@@ -277,20 +276,24 @@ are
 The node forces :math:`\mathbf{f}_j` are added to the net forces of the line nodes; forces on end nodes are
 passed to the attached objects as usual. :math:`\mathbf{F}_h` is added to the net force of the hoop Point.
 
-Splitting the force along each node's own tangent ensures that a frictionless hoop applies no force along the
-line at any node. Without it, the parts of the kernel acting on nodes away from a sharp bend would push the
-line along its length, and the hoop could hold tension without friction. The split makes the spring force
-non-conservative (it is not the gradient of a contact potential), but the contact damping likely far
-outweighs the resulting energy change. The damper and friction are not affected: because
-:math:`\mathbf{v}_\perp` and the slip velocity :math:`v` below are measured with the same projections used to
-spread the forces, the power delivered by them to the line and hoop together is
-:math:`-c\lVert\mathbf{v}_\perp\rVert^2 \le 0` for the damper and :math:`F_f v` for friction, which is
-:math:`\le 0` for Coulomb friction.
+Splitting the spring force along each node's own tangent ensures that a frictionless hoop at rest applies no
+force along the line at any node. Without it, the parts of the kernel acting on nodes away from a sharp bend
+would push the line along its length, and the hoop could hold tension without friction. The split makes the
+spring force non-conservative (it is not the gradient of a contact potential), but the contact damping likely
+far outweighs the resulting energy change. The damper is spread with the same weights used to interpolate
+:math:`\mathbf{V}`, so its power delivered to the line and hoop together is
+:math:`\mathbf{F}_c\cdot\mathbf{v}_\perp = -c\lVert\mathbf{v}_\perp\rVert^2 \le 0`. Its tangential
+components at a bend vanish when the contact is at rest, so they cannot hold tension. Projecting the damper
+per node as well would keep it dissipative, but at a sharp bend the projections of both the velocity and the
+force would each reduce the damping by about :math:`\cos^2` of the angle between :math:`\hat{\mathbf{q}}_j` and
+:math:`\hat{\mathbf{t}}`, leaving the contact underdamped. Friction is dissipative because the slip velocity
+:math:`v` below is measured with the same tangents used to apply the friction force, so its power is
+:math:`F_f v`, which is :math:`\le 0` for Coulomb friction.
 
 The friction force is not projected: each node receives its full share :math:`w_j F_f` along its own tangent.
-Because the weights sum to one, the tension changes by exactly :math:`F_f` across the support. The projection of the normal component, in
-contrast, discards part of each node's share at a bend, so the effective contact stiffness and damping drop
-below :math:`K` and :math:`c` at sharp bends. The delivered normal force :math:`F_N` is unaffected at
+Because the weights sum to one, the tension changes by exactly :math:`F_f` across the support. The projection of the spring force, in
+contrast, discards part of each node's share at a bend, so the effective contact stiffness drops
+below :math:`K` at sharp bends. The delivered normal force :math:`F_N` is unaffected at
 equilibrium, because the penalty offset grows until the line tension is balanced. This loss of stiffness is
 the price for avoiding spurious tangential forces.
 
