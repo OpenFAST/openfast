@@ -1,5 +1,12 @@
 """Check that the mirrored .bts really is the y-reflection of the original.
 
+Usage:
+    python3 check_mirror_bts.py [<original.bts> <mirrored.bts>]
+
+With no arguments it checks the committed 5MW pair. It used to accept and then
+silently ignore arguments, which let it report PASS for the pair it was not
+asked about.
+
 Reads both boxes back through the same reader and requires u and w to be the
 reverse of each other along y, and v to be the reverse and sign-flipped. Reading
 the written file back matters: the format stores int16 with a per-component
@@ -12,13 +19,21 @@ import numpy as np
 
 import bts_io
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if len(sys.argv) == 3:
+    orig_path, mir_path = sys.argv[1], sys.argv[2]
+elif len(sys.argv) == 1:
+    REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    BASE = os.path.join(REPO_ROOT, "reg_tests", "r-test", "glue-codes",
+                        "openfast", "5MW_Baseline", "Wind")
+    orig_path = f"{BASE}/90m_12mps_twr.bts"
+    mir_path = f"{BASE}/90m_12mps_twr_MirrorY.bts"
+else:
+    sys.exit(__doc__)
 
-BASE = os.path.join(REPO_ROOT, "reg_tests", "r-test", "glue-codes",
-                     "openfast", "5MW_Baseline", "Wind")
-orig = bts_io.read_bts(f"{BASE}/90m_12mps_twr.bts")
-mir = bts_io.read_bts(f"{BASE}/90m_12mps_twr_MirrorY.bts")
+print(f"original: {orig_path}\nmirrored: {mir_path}")
+orig = bts_io.read_bts(orig_path)
+mir = bts_io.read_bts(mir_path)
 
 for name in ("FileID", "NYGrids", "NZGrids", "NTGrids", "NSteps",
              "dy", "dz", "dt", "MeanWS", "RefHeight", "GridBase"):

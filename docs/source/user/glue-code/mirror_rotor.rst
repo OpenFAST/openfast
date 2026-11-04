@@ -99,7 +99,7 @@ The flow of the flag through the code, and what changes where:
 
        SRV --> SRV1["Sees the clockwise convention —<br/>no controller change; yaw untouched<br/>(inertial-frame quantity)"]
 
-       X --> X1["Linearization · aero-map solver ·<br/>ExtLoads · FAST.Farm · AeroAcoustics:<br/>fatal error at Init"]
+       X --> X1["Linearization · aero-map solver ·<br/>ExtLoads · AeroAcoustics:<br/>fatal error at Init"]
 
 .. _glue-code-mirror-rotor-where:
 
@@ -161,6 +161,15 @@ Where the mirror is applied
    * - SimplifiedElastoDyn driver
      - yes
      - Flag pass-through only
+   * - FAST.Farm
+     - **no**
+     - Nothing crosses the FASTWrapper boundary in a rotor-fixed frame: every
+       quantity exchanged is an inertial-frame vector, a scalar, or an
+       inflow-versus-shaft angle, and the rotation sense reaches the farm
+       through the sign of the azimuthally averaged torque coefficient alone.
+       WakeDynamics is linear in that coefficient, so a mirrored rotor's wake
+       swirl reverses with no farm-side change — measured, per plane, by the
+       counter-rotating regression case below
 
 Within AeroDyn:
 
@@ -516,14 +525,17 @@ through.
      - ``CompAero = 3``
    * - AeroAcoustics
      - ``CompAA = True`` in the AeroDyn input file
-   * - FAST.Farm
-     - Any turbine in a farm.  The mirror is confined to its own OpenFAST
-       instance and the blade surfaces render correctly, since each turbine is a
-       separate single-rotor instance, but the wake coupling has not been
-       verified: ``FWrap_CalcOutput`` builds the skew angle from a cross product
-       of the disk-averaged wind with the disk normal, which is the pseudovector
-       pattern that carries a sign at every other module boundary here, and the
-       curled-wake model encodes a swirl direction of its own.
+
+FAST.Farm is supported: each turbine in a farm is its own single-rotor
+OpenFAST instance, and the wake coupling was verified by measurement in 2026
+— a mirrored single-turbine farm reproduces its clockwise twin under a
+reflected turbulence box (every farm channel, turbine channel and wake-plane
+field resolving to the mirror operator's class, with the swirl reversing),
+a mirrored tandem farm reproduces the waked downstream turbine's response,
+and the registered ``SteadyInflow_curl_MirrorRotor`` case holds a clockwise
+and a mirrored turbine in one farm that must map onto itself under
+reflection.  The restriction that only one rotor per OpenFAST instance is
+supported with FAST.Farm is unrelated to the mirror and remains.
 
 .. _glue-code-mirror-rotor-verification:
 
@@ -581,6 +593,12 @@ so ``ctest -R mirrorrotor`` runs the set:
    * - ``MHK_RM1_Floating_Steady_MirrorRotor``
      - A marine turbine, where the blade buoyancy and centre-of-buoyancy offset
        are mirrored too.  Paired with ``MHK_RM1_Floating_Steady_CW``
+   * - ``SteadyInflow_curl_MirrorRotor``
+     - A FAST.Farm counter-rotating farm: a clockwise and a mirrored turbine
+       side by side under steady symmetric inflow, with opposite fixed yaws so
+       the curled wake and its swirl are energised.  The farm maps onto itself
+       under reflection, and ``run_guards.sh`` asserts the turbine-to-turbine
+       pairing under the sign map
    * - ``ad_MultipleHAWT_MirrorRotor``
      - The AeroDyn driver rather than the glue code, covering the **nodal**
        output path with two rotors in a single run
@@ -612,7 +630,11 @@ the blade-numbering convention directly — under the reversed numbering the
 mirrored half reads 240° and 120°, a full blade spacing of discrimination.
 ``run_guards.sh`` proves every restriction in the table above actually
 **fires** when its combination is requested, and stays silent for a clockwise
-rotor — including the FAST.Farm refusals, which it exercises against the real
-FAST.Farm executable — alongside the visualisation-surface comparison.  A guard
-that is never reached looks exactly like a guard that stayed silent, which is
-why the firing is tested rather than assumed.
+rotor — and, against the real FAST.Farm executable, that the one-rotor-per-
+instance refusal still fires while a mirrored turbine in a farm now runs to
+a normal termination.  It also asserts the counter-rotating farm's symmetry:
+inside the ``SteadyInflow_curl_MirrorRotor`` case, every turbine-2 channel
+must be the mirror image of its turbine-1 partner under the measured sign map
+(``farm_mirror_pair.py --twin``).  A guard that is never reached looks
+exactly like a guard that stayed silent, which is why the firing is tested
+rather than assumed.

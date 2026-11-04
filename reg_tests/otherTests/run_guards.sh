@@ -174,12 +174,31 @@ awk '/^---------------------- OUTPUT/ && !ins {
     && mv "$FG/farm_multirotor/.tmp" "$FG/farm_multirotor/FFTest_WT1.fst"
 runfarm farm_multirotor "$NROTOR_MSG" yes
 
-# A mirrored turbine in a farm.  The mirror is confined to its own OpenFAST
-# instance and the blade surfaces do render correctly, but the wake coupling has
-# never been measured: FWrap_CalcOutput builds the skew angle from a cross
-# product of the disk-averaged wind with the disk normal, which is the
-# pseudovector pattern that carries a sign at every other module boundary here.
-# Until that is checked the combination is refused rather than run quietly.
+# A mirrored turbine in a farm.  The guard that refused this combination was
+# lifted on 2026-11-03: the boundary audit found everything FASTWrapper
+# exchanges is an inertial-frame quantity or a scalar, with the rotation sense
+# arriving through the sign of AzimAvg_Cq alone, and the wake coupling is
+# verified by measurement (FASTFARM_MIRROR_PLAN.md, phases A and B).  The run
+# must now complete normally and the old refusal must stay silent.
 mkfarm farm_mirror
 sed -i -E 's/^([[:space:]]*)F([[:space:]]+MirrorRotor)/\1       True\2/' "$FG/farm_mirror/FFTest_WT1.fst"
-runfarm farm_mirror "$MIRROR_MSG" yes
+runfarm farm_mirror "$MIRROR_MSG" no
+runfarm farm_mirror "FAST.Farm terminated normally." yes
+
+# The counter-rotating farm's symmetry assertion: inside the registered
+# SteadyInflow_curl_MirrorRotor case, turbine 2 must be the mirror image of
+# turbine 1 under the measured sign map (the wake-plane fields are a
+# tooling-level check with their own documented floor and are not written by
+# the registered case). Reads the ctest-staged output, like emit_sign_table;
+# run `ctest -R SteadyInflow_curl_MirrorRotor` first if it is missing.
+FFTWIN=$REPO/build-docker-double/reg_tests/glue-codes/fast-farm/SteadyInflow_curl_MirrorRotor
+if [ -f "$FFTWIN/FAST.Farm.out" ]; then
+  if python3 "$REPO/reg_tests/otherTests/farm_mirror_pair.py" --twin "$FFTWIN" --tol 2e-3 \
+       > "${TMPDIR:-/tmp}/farm_twin_check.log" 2>&1; then
+    echo "PASS  farm_twin  (T1/T2 pair under the sign map at 2e-3)"
+  else
+    echo "FAIL  farm_twin  (see ${TMPDIR:-/tmp}/farm_twin_check.log)"
+  fi
+else
+  echo "SKIP  farm_twin  (no staged SteadyInflow_curl_MirrorRotor output; run ctest -R SteadyInflow_curl_MirrorRotor first)"
+fi
