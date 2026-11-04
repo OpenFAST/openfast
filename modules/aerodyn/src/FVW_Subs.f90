@@ -1321,9 +1321,9 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, Panl,
 
    ! --- Src Panels
    if (associated(Panl%p_Src)) then
-      if (Panl%p_Src%n>0) then
-         call ui_quad_src_nn(CPs, Panl%m_Src%RHS, Panl%p_Src%xi, Panl%p_Src%eta, Panl%p_Src%Pcent, Panl%p_Src%R_g2p, Uind, nCPs, Panl%p_Src%n)
-         !call ui_quad_src_11(Panl%Pcent(:,icp), UnitIntensity, Panl%xi(1:4,ip), Panl%eta(1:4,ip), Panl%Pcent(1:3,ip), Panl%R_g2p(1:3,1:3,ip), Uind_tmp)
+      if (Panl%p_Src%n > 0) then
+      call ui_quad_src_nn(CPs, Panl%m_Src%RHS(1:Panl%p_Src%n), Panl%p_Src%xi, Panl%p_Src%eta, Panl%p_Src%Pcent, Panl%p_Src%R_g2p,Uind, nCPs, Panl%p_Src%n)
+           !call ui_quad_src_11(Panl%Pcent(:,icp), UnitIntensity, Panl%xi(1:4,ip), Panl%eta(1:4,ip), Panl%Pcent(1:3,ip), Panl%R_g2p(1:3,1:3,ip), Uind_tmp)
       endif
    endif
 end subroutine InducedVelocitiesAll_Calc
@@ -1586,7 +1586,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
       end select
       ! --- Src Panel contribution
       if (p%SrcPnl%n>0) then
-         call ui_quad_src_nn(CPs, m%SrcPnl%RHS, p%SrcPnl%xi, p%SrcPnl%eta, p%SrcPnl%Pcent, p%SrcPnl%R_g2p, Uind, nCPs, p%SrcPnl%n)
+         call ui_quad_src_nn(CPs, m%SrcPnl%RHS(1:p%SrcPnl%n), p%SrcPnl%xi, p%SrcPnl%eta, p%SrcPnl%Pcent, p%SrcPnl%R_g2p, Uind, nCPs, p%SrcPnl%n)
       endif
 
       ! --- Unpack
@@ -1828,6 +1828,7 @@ subroutine srcPnl_init(p, m, z, errStat, errMsg, filename)
    type(vtk_field), pointer :: fields
    type(vtk_field), pointer :: bodyID
    integer :: nPanels
+   integer :: nSys
    nullify(fields)
    nullify(bodyID)
    fid = 0
@@ -1882,8 +1883,17 @@ subroutine srcPnl_init(p, m, z, errStat, errMsg, filename)
    call srcPnl_geometry(p, errStat2, errMsg2); if(Failed()) return
 
    if (p%n>0) then
-      ! --- Allocations
-      call AllocAry(m%AI          , p%n, p%n, 'AI  ', errStat2, errMsg2); if(Failed())return
+      if (p%EnforceZeroNetSource) then
+         nSys = p%n + 1
+      else
+         nSys = p%n
+      endif
+
+      ! Allocate solver arrays: N normally, N+1 when zero-net-source is enabled.
+      call AllocAry(m%AI          , nSys,nSys, 'AI  ', errStat2, errMsg2); if(Failed())return
+      call AllocAry(m%RHS               ,nSys, 'RHS ', errStat2, errMsg2); if(Failed())return
+      call AllocAry(m%IPIV              ,nSys, 'IPIV', errStat2, errMsg2); if(Failed())return
+      ! Keep physical property arrays at N size
       call AllocAry(m%UUI      , 3, p%n, p%n, 'UUI ', errStat2, errMsg2); if(Failed())return
       call AllocAry(m%Uwnd     , 3     , p%n, 'Uwnd', errStat2, errMsg2); if(Failed())return
       call AllocAry(m%Uext     , 3     , p%n, 'Uext', errStat2, errMsg2); if(Failed())return
@@ -1893,9 +1903,9 @@ subroutine srcPnl_init(p, m, z, errStat, errMsg, filename)
       call AllocAry(m%FpA     ,  3      ,p%n, 'FpA ', errStat2, errMsg2); if(Failed())return
       call AllocAry(m%Cp                ,p%n, 'Cps ', errStat2, errMsg2); if(Failed())return
       call AllocAry(m%p                 ,p%n, 'ps  ', errStat2, errMsg2); if(Failed())return
-      call AllocAry(m%RHS               ,p%n, 'RHS ', errStat2, errMsg2); if(Failed())return
-      call AllocAry(m%IPIV              ,p%n, 'IPIV', errStat2, errMsg2); if(Failed())return
       call AllocAry(z%Sigma             ,p%n, 'Sigm', errStat2, errMsg2); if(Failed())return
+      ! --- END MODIFICATION ALLOCATION ---
+
       m%AI   = -999999_ReKi
       m%UUI  = -999999_ReKi
       m%Uwnd =       0_ReKi
@@ -2055,6 +2065,7 @@ subroutine srcPnl_build_mat(Panl, AI, UUI)
    real(ReKi), parameter    :: UnitIntensity=1.0_ReKi !<
    real(ReKi), dimension(3) :: Uind_tmp               !<
    integer :: icp, ip !< loop variables
+
    if (OLAF_PROFILING) call tic('SrcPanel build matrix')
    !$OMP PARALLEL DEFAULT(shared)
    !$OMP DO PRIVATE(icp, ip, Uind_tmp) schedule(runtime)
@@ -2071,6 +2082,22 @@ subroutine srcPnl_build_mat(Panl, AI, UUI)
    end do
    !$OMP END DO
    !$OMP END PARALLEL
+
+   if (Panl%EnforceZeroNetSource) then
+      ! Row N+1: Sum(Sigma * Area) = 0 Constraint
+      do ip = 1, Panl%n
+         AI(Panl%n+1, ip) = Panl%Area(ip)
+      end do
+      ! Augmented equations: A*Sigma + lambda*1 = b.
+      ! Since b = -Uext dot Normal, the collocation normal velocity is -lambda.
+      ! Lambda is an auxiliary unknown, not a physical velocity contribution.
+      do icp = 1, Panl%n
+         AI(icp, Panl%n+1) = 1.0_ReKi
+      end do
+      ! Bottom-Right corner
+      AI(Panl%n+1, Panl%n+1) = 0.0_ReKi
+   endif
+
    if (OLAF_PROFILING) call toc()
 end subroutine srcPnl_build_mat
 
@@ -2118,14 +2145,26 @@ subroutine srcPnl_solve(p, m, z, errStat, errMsg)
    integer(IntKi)      , intent(out)   :: errStat ! < Error status of the operation
    character(errMsgLen), intent(out)   :: errMsg  ! < Error message if errStat /    = ErrID_None
    integer :: icpp
+
    if (OLAF_PROFILING) call tic('SrcPanel Solve')
-   ! Compute RHS
+   ! Compute RHS for standard N physical panels
    do icpp = 1, p%n
       m%RHS(icpp) =  -dot_product(m%Uext(1:3,icpp), p%Normal(1:3,icpp))
    enddo
-   ! Solve for source intensities Sigma
+
+   if (p%EnforceZeroNetSource) then
+      ! Enforce zero area-integrated source strength: sum(Sigma*Area) = 0.
+      m%RHS(p%n + 1) = 0.0_ReKi
+   endif
+
+   ! Solve for source strengths and, when enabled, the auxiliary scalar lambda.
+   ! linalg_solve automatically uses the allocated size of m%AI
    call linalg_solve(m%AI, m%RHS, m%IPIV, errStat, errMsg)
-   z%Sigma = m%RHS
+   if (errStat >= AbortErrLev) return
+
+   ! Extract ONLY the physical source strengths (1 to N)
+   z%Sigma(1:p%n) = m%RHS(1:p%n)
+
    if (OLAF_PROFILING) call toc()
 end subroutine srcPnl_solve
 
@@ -2144,9 +2183,11 @@ subroutine srcPnl_calcOutput(p, m, z, rho) !, errStat, errMsg
    if (OLAF_PROFILING) call tic('SrcPanel CalcOutput')
 
    ! --- Compute induced and total velocity
-   m%Uind(1,:) = matmul(m%UUI(1,:,:), m%RHS)
-   m%Uind(2,:) = matmul(m%UUI(2,:,:), m%RHS)
-   m%Uind(3,:) = matmul(m%UUI(3,:,:), m%RHS)
+   m%Uind(1,:) = matmul(m%UUI(1,:,:), z%Sigma)
+   m%Uind(2,:) = matmul(m%UUI(2,:,:), z%Sigma)
+   m%Uind(3,:) = matmul(m%UUI(3,:,:), z%Sigma)
+   ! Use z%Sigma (N panels) instead of m%RHS (N+1 with LM)
+   ! to exclude the Lagrange multiplier from induced velocity calculations.
    m%Utot = m%Uind + m%Uext
 
    ! --- Compute loads

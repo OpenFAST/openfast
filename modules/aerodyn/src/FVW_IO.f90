@@ -176,6 +176,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
          elseif (index(sDummy, 'NSRCPNLUPDATE')>1) then
             read(sLine, *) p%nSrcPnlUpdate
             print*,'   >>> nSrcPnlUpdate      ',p%nSrcPnlUpdate
+         elseif (index(sDummy, 'SRCPNLZERONETSOURCE') > 1) then
+            read(sLine, *, iostat=ErrStat2) p%SrcPnl%EnforceZeroNetSource
+            if (Check(ErrStat2 /= 0,'Invalid logical value for SrcPnlZeroNetSource')) return
+            print*, '   >>> SrcPnlZeroNetSource ',p%SrcPnl%EnforceZeroNetSource
          else
             print*,'[WARN] Line ignored: '//trim(sLine)
          endif
@@ -234,6 +238,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<30, '`FWShedVorticity` should be true if `nNWPanels`<30. Alternatively, use a larger number of NWPanels  ')) return
 
    if (Check(p%kFrozenNWEnd>p%kFrozenNWStart , 'kFrozenNWEnd should be smaller than kFrozenNWStart')) return
+   if (Check(p%nSrcPnlUpdate < 1, 'nSrcPnlUpdate must be >= 1')) return
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
    !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return
@@ -702,7 +707,7 @@ subroutine WrVTK_Panels(filename, mvtk, p, m, z)
       call vtk_quad(p%IDs-1, mvtk)
       call vtk_cell_data_init(mvtk)
       if (.not. allocated(z%Sigma)) then ! First time step
-         call vtk_cell_data_scalar(m%RHS   ,'Intensities', mvtk)
+         call vtk_cell_data_scalar(m%RHS(1:p%n), 'Intensities', mvtk)
       else
          call vtk_cell_data_scalar(z%Sigma ,'Intensities', mvtk)
       endif

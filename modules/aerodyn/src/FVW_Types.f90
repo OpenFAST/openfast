@@ -98,6 +98,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: xi      !< Xi coordinate for each panel point [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: eta      !< eta coordinate for each panel point [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: R_g2p      !< Transformation matrix global to Panel [-]
+    LOGICAL :: EnforceZeroNetSource = .false.  !< Enforce zero area-integrated source strength
   END TYPE T_SrcPanlParam
 ! =======================
 ! =========  T_SrcPanlVar  =======
@@ -950,6 +951,7 @@ subroutine FVW_CopyT_SrcPanlParam(SrcT_SrcPanlParamData, DstT_SrcPanlParamData, 
       end if
       DstT_SrcPanlParamData%R_g2p = SrcT_SrcPanlParamData%R_g2p
    end if
+   DstT_SrcPanlParamData%EnforceZeroNetSource = SrcT_SrcPanlParamData%EnforceZeroNetSource
 end subroutine
 
 subroutine FVW_DestroyT_SrcPanlParam(T_SrcPanlParamData, ErrStat, ErrMsg)
@@ -1008,6 +1010,7 @@ subroutine FVW_PackT_SrcPanlParam(RF, Indata)
    call RegPackAlloc(RF, InData%xi)
    call RegPackAlloc(RF, InData%eta)
    call RegPackAlloc(RF, InData%R_g2p)
+   call RegPack(RF, InData%EnforceZeroNetSource)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1031,6 +1034,7 @@ subroutine FVW_UnPackT_SrcPanlParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%xi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%eta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%R_g2p); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EnforceZeroNetSource); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FVW_CopyT_SrcPanlVar(SrcT_SrcPanlVarData, DstT_SrcPanlVarData, CtrlCode, ErrStat, ErrMsg)

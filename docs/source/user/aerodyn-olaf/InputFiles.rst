@@ -421,20 +421,20 @@ Currently, the advanced options supported are as follows:
    ===============================================================================================
    --------------------------- ADVANCED OPTIONS --------------------------------------------------
    ===============================================================================================
-   "Panels.vtk"  SrcPnlFile     - Name of VTK file containing source panels {default: ""}
-   1             nSrcPnlUpdate  - How often do src panel updates (in time steps of OLAF), {default: 1}
-   True          Induction      - Compute induced velocities from wake to blade and wake to wake, {default: True} 
-   True          InductionAtCP  - Compute induced velocities at nodes or CP, {default: True} 
-   True          WakeAtTE       - Start the wake at the trailing edge, or at the LL, {default: True} 
-   False         DStallOnWake   - Dynamic stall has influence on wake, {default: False} 
-   0.75          kFrozenNWStart - Fraction of wake induced velocity at start of frozen wake, {default: 0.75} 
-   0.5           kFrozenNWEnd   - Fraction of wake induced velocity at end of frozen wake, {default: 0.5} 
-   0.0           zGround        - Ground height, used to enforce that no vortices go into the ground {default: 0.0}
-   0.1           zGroundPush    - Ground push back, vortices that are lower than zGround are placed back at zGroundPush {default: 0.1}
+   "Panels.vtk"  SrcPnlFile          - Name of VTK file containing source panels {default: ""}
+   1             nSrcPnlUpdate       - How often do src panel updates (in time steps of OLAF), {default: 1}
+   False         SrcPnlZeroNetSource - Enforce zero area-integrated source strength {default: False}
+   True          Induction           - Compute induced velocities from wake to blade and wake to wake, {default: True}
+   True          InductionAtCP       - Compute induced velocities at nodes or CP, {default: True}
+   True          WakeAtTE            - Start the wake at the trailing edge, or at the LL, {default: True}
+   False         DStallOnWake        - Dynamic stall has influence on wake, {default: False}
+   0.75          kFrozenNWStart      - Fraction of wake induced velocity at start of frozen wake, {default: 0.75}
+   0.5           kFrozenNWEnd        - Fraction of wake induced velocity at end of frozen wake, {default: 0.5}
+   0.0           zGround             - Ground height, used to enforce that no vortices go into the ground {default: 0.0}
+   0.1           zGroundPush         - Ground push back, vortices that are lower than zGround are placed back at zGroundPush {default: 0.1}
 
 
-
-**SrcPanlFile** [string] specifies the name of the VTK file used for the source panel method.
+**SrcPnlFile** [string] specifies the name of the VTK file used for the source panel method.
 The VTK file should be a legacy ASCII VTK file, with DATASET POLYDATA POINTS and POLYGONS.
 A sample VTK file is provided below for two panels forming a regular grid in the XY plane. 
 The connectivity of the polygons needs to be such that the normal points away from the body and
@@ -470,7 +470,40 @@ about a sphere.
    0
    0
 
+**SrcPnlZeroNetSource** [flag] enables an optional constraint on the
+area-integrated source strength. This option applies when source panels
+are specified using **SrcPnlFile**. The default is False, which retains
+the original source-panel solve.
 
+When True, the source-panel system is augmented with an auxiliary scalar
+and the following constraint:
+
+.. math::
+
+   \sum_{j=1}^{N} \sigma_j S_j = 0,
+
+where :math:`\sigma_j` is the source strength of panel :math:`j`,
+:math:`S_j` is its area, and :math:`N` is the total number of source panels.
+A single constraint is applied to all source panels together.
+
+The augmented equations take the form
+
+.. math::
+
+   \mathbf{A}\boldsymbol{\sigma} + \lambda\mathbf{1} = \mathbf{b},
+
+where :math:`\mathbf{A}` is the normal-velocity influence matrix and
+:math:`\mathbf{b}` is the negative normal component of the external
+velocity, excluding the source-panel contribution.
+The auxiliary scalar :math:`\lambda` is not added to the physical
+velocity field.
+
+Consequently, the normal-velocity residual at the panel control points
+is :math:`-\lambda` for the velocity field used in that solve, up to
+numerical precision. This option enforces zero net source strength;
+it does not by itself guarantee wall impermeability or equal volume
+flow rates through tunnel cross sections. These quantities should be
+checked separately.
 
 **nSrcPnlUpdate** [int] Define how often the source panel updates (in time steps of OLAF), the default is `1`, at each time step.
 

@@ -63,6 +63,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             xi         ::    -  -  "Xi coordinate for each panel point" - 
 typedef     ^                   ^               ReKi                             eta        ::    -  -  "eta coordinate for each panel point" - 
 typedef     ^                   ^               ReKi                             R_g2p      :::   -  -  "Transformation matrix global to Panel" - 
+typedef     ^                   ^               Logical                          EnforceZeroNetSource - .false. - "Enforce zero area-integrated source strength" -
 
 typedef  FVW/FVW           T_SrcPanlVar         ReKi                             Sigma   :   -  -  "Intensities" - 
 
