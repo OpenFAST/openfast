@@ -98,6 +98,8 @@ Wake dynamics Plane Files
 
 Setting the option **OutAllPlanes** to true in the main FAST.Farm input file
 will result in the wake planes of the Wake Dynamics module to be written.
+The same option also controls the wake-plane VTK output of the ambient wind and array
+effects module, written to the ``wakes`` subfolder of ``vtk_ff``.
 This option requires intensive writing to disk and will drastically slow down the simulation.
 The wake planes are written in VTK format, in the folder `vtk_ff_planes` at the root
 of the simulation directory.

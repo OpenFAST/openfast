@@ -76,6 +76,7 @@ typedef ^  InitInputType WD_InputFileType InputFileData  - - -   "FAST.Farm inpu
 typedef ^  InitInputType IntKi            TurbNum        - 0 -   "Turbine ID number (start with 1; end with number of turbines)"      -
 typedef ^  InitInputType CHARACTER(1024)  OutFileRoot    -  - -  "The root name derived from the primary FAST.Farm input file" -
 typedef ^  InitInputType IntKi            MaxNumPlanes   -  - -  "Maximum number of wake planes allowed"     -
+typedef ^  InitInputType ReKi             LowResBounds  {3}{2} - -  "Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper"  m
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -113,6 +114,7 @@ typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "R
 
 # Define any other states, including integer or logical states here:
 typedef   ^      OtherStateType               LOGICAL     firstPass          -      -      -      "Flag indicating whether or not the states have been initialized with proper inputs"      -
+typedef   ^      OtherStateType               LOGICAL     MaxPlanesWarned    -      -      -      "Flag indicating the MaxNumPlanes-exceeded warning has already been issued for this turbine"      -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -186,6 +188,7 @@ typedef ^ ParameterType  Logical          OutAllPlanes   - - -    "Output all pl
 typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    - - -    "The root name derived from the primary FAST.Farm input file" -
 typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent directory for all VTK files written by WD" -
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
+typedef ^ ParameterType  ReKi             LowResBounds  {3}{2} - -  "Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper"  m
 # wake added turbulence (WAT) parameters
 typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
 typedef  ^ ParameterType  ReKi            WAT_k_Def_k_c  -  - - "Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6]" -

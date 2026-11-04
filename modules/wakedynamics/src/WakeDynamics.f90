@@ -45,8 +45,8 @@ module WakeDynamics
    public :: WD_WritePlaneOutputs              ! Routine for IO Operation
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
-   public :: WD_TEST_Axi2Cart
-   public :: WD_TEST_AddVelocityCurl
+   public :: AddVelocityCurl                  ! Exposed for unit testing
+   public :: Axisymmetric2CartesianVel         ! Exposed for unit testing
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -426,6 +426,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    !............................................................................................
    p%TurbNum     = InitInp%TurbNum
    p%DT_low      = interval
+   p%LowResBounds = InitInp%LowResBounds
    ! Parameters from input file
    p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
    p%MaxNumPlanes  = InitInp%MaxNumPlanes
@@ -500,7 +501,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate( u%Ct_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Ct_azavg.')) return;
    allocate( u%Cq_azavg      (  0:p%NumRadii-1 ),stat=errStat2);  if (Failed0('u%Cq_azavg.')) return;
    if (errStat /= ErrID_None) return
-   
+   u%V_plane  = 0.0_ReKi
+   u%Ct_azavg = 0.0_ReKi
+   u%Cq_azavg = 0.0_ReKi
 
          
       
@@ -548,6 +551,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Vx_wake             = 0.0_ReKi
    xd%Vr_wake             = 0.0_ReKi
    xd%Vx_wake2            = 0.0_ReKi
+   xd%Vy_wake2            = 0.0_ReKi
+   xd%Vz_wake2            = 0.0_ReKi
    xd%V_plane_filt        = 0.0_ReKi
    xd%Vx_wind_disk_filt   = 0.0_ReKi
    xd%TI_amb_filt         = 0.0_ReKi
@@ -556,6 +561,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Ct_azavg_filt       = 0.0_ReKi
    xd%Cq_azavg_filt       = 0.0_ReKi
    OtherState%firstPass   = .true.     
+   OtherState%MaxPlanesWarned = .false.
    
       ! miscvars to avoid the allocation per timestep
       ! Cartesian eddy viscosity (allocated even for polar if plane outputs are requested)
@@ -574,12 +580,15 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       allocate (   m%vt_tot (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_tot.')) return;
       allocate (   m%vt_amb (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_amb.')) return;
       allocate (   m%vt_shr (0:p%NumRadii-1,0:p%MaxNumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_shr.')) return;
+      m%dvtdr  = 0.0_ReKi
+      m%vt_tot = 0.0_ReKi
+      m%vt_amb = 0.0_ReKi
+      m%vt_shr = 0.0_ReKi
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       allocate (   m%nu_dvx_dy(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dy.')) return;
       allocate (   m%nu_dvx_dz(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dz.')) return;
       allocate (   m%dnuvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dy.' )) return;
       allocate (   m%dnuvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dz.' )) return;
-      if (errStat /= ErrID_None) return
       m%nu_dvx_dy = 0.0_ReKi
       m%nu_dvx_dz = 0.0_ReKi
       m%dnuvx_dy  = 0.0_ReKi
@@ -595,10 +604,18 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate (    m%d(0:p%NumRadii-1 ),        STAT=ErrStat2 );  if (Failed0('m%d.')) return;
    allocate (    m%r_wake(0:p%NumRadii-1 ),   STAT=ErrStat2 );  if (Failed0('m%r_wake.'  )) return;
    allocate (    m%Vx_high(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
-   allocate (    m%Vt_wake(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vx_high.' )) return;
+   allocate (    m%Vt_wake(0:p%NumRadii-1 ),  STAT=ErrStat2 );  if (Failed0('m%Vt_wake.' )) return;
    allocate (    m%Vx_polar(0:p%NumRadii-1 ), STAT=ErrStat2 );  if (Failed0('m%Vx_polar.')) return;
+
+   m%a        = 0.0_ReKi
+   m%b        = 0.0_ReKi
+   m%c        = 0.0_ReKi
+   m%d        = 0.0_ReKi
+   m%r_wake   = 0.0_ReKi
+   m%Vx_high  = 0.0_ReKi
    m%Vx_polar = 0.0_ReKi
-   m%Vt_wake = 0.0_ReKi
+   m%Vt_wake  = 0.0_ReKi
+
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
@@ -715,6 +732,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
    real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
+   integer(IntKi)                               :: oobIdx(0:p%MaxNumPlanes)  ! One extra slot: allows all p%MaxNumPlanes planes can be simultaneously out-of-bounds (corner case)
+   integer(IntKi)                               :: nOOB, iOOB, jOOB
+   logical                                      :: merged
 
    errStat = ErrID_None
    errMsg  = ""
@@ -950,89 +970,152 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       endif
    endif
 
-   !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
+
+   ! --------------------------------------------------------------------------------
+   ! Drop planes that exit the allocated memory buffer
+   ! --------------------------------------------------------------------------------
 
    xd%NumPlanes = xd%NumPlanes + 1.0
    if ( NINT(xd%NumPlanes) > p%MaxNumPlanes ) then
       xd%NumPlanes = real(p%MaxNumPlanes,ReKi)
-      call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
-      if (errStat >= AbortErrLev) then
-         call Cleanup()
-         return
+      if (.not. OtherState%MaxPlanesWarned) then
+         call SetErrStat(ErrID_Warn, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' exceeded the allowed number ('//trim(num2lstr(p%MaxNumPlanes))//'). Excess plane(s) removed. ', errStat, errMsg, RoutineName)
+         OtherState%MaxPlanesWarned = .true.
       end if
    end if
    if ( NINT(xd%NumPlanes) < 2 ) then
       ! Check just in case following implementation plan; however, this should never happen. Consider removing in the future.
       call SetErrStat(ErrID_Fatal, ' The number of wake planes of turbine '//trim(num2lstr(p%TurbNum))//' has dropped below 2. ', errStat, errMsg, RoutineName)
+      call Cleanup()
+      return
    end if
 
+   ! --------------------------------------------------------------------------------
+   ! Merge any out-of-bounds planes within 2*dr of each other (non-sequential)
+   ! --------------------------------------------------------------------------------
    maxPln = NINT(xd%NumPlanes) - 1
 
-   do i=maxPln,0,-1
-
-      ! if a plane is beyond the buffer, simply drop it and all following planes (it should only be the last plane that gets dropped)
-      if ( xd%x_plane(i) > p%x_Buff ) then
-         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )   ! Plane indexing includes 0, hence the -1.0
-         cycle
-      endif
-
-      ! If a plane overtakes another plane, merge the planes by averaging, then shift all remaining planes forward.
-      if ( i+1 < NINT(xd%NumPlanes)) then    ! don't overstep bounds with i+1 indexing
-         if (xd%x_plane(i) >= xd%x_plane(i+1) ) then
-
-            call SetErrStat(ErrID_Warn, ' Turbine '//trim(num2lstr(p%TurbNum))//' wake plane '//trim(num2lstr(i))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i)))//') has overtaken wake plane '//trim(num2lstr(i+1))// &
-                        ' (x_plane='//trim(num2lstr(xd%x_plane(i+1)))// &
-                        '). Merging planes by averaging. Reduce f_c to prevent planes from passing each other. ', errStat, errMsg, RoutineName)
-            if (errStat >= AbortErrLev) then
-               call Cleanup()
-               return
-            end if
-
-            ! Merge the i and i+1 plane by averaging them together
-            xd%Vx_wind_disk_filt(i) = (xd%Vx_wind_disk_filt(i) + xd%Vx_wind_disk_filt(i+1)) / 2.0_ReKi
-            xd%x_plane      (    i) = (xd%x_plane      (    i) + xd%x_plane      (    i+1)) / 2.0_ReKi
-            xd%TI_amb_filt  (    i) = (xd%TI_amb_filt  (    i) + xd%TI_amb_filt  (    i+1)) / 2.0_ReKi
-            xd%D_rotor_filt (    i) = (xd%D_rotor_filt (    i) + xd%D_rotor_filt (    i+1)) / 2.0_ReKi
-            xd%YawErr_filt  (    i) = (xd%YawErr_filt  (    i) + xd%YawErr_filt  (    i+1)) / 2.0_ReKi
-            xd%p_plane      (  :,i) = (xd%p_plane      (  :,i) + xd%p_plane      (  :,i+1)) / 2.0_ReKi
-            xd%xhat_plane   (  :,i) = (xd%xhat_plane   (  :,i) + xd%xhat_plane   (  :,i+1)) / 2.0_ReKi
-            xd%xhat_plane   (  :,i) =  xd%xhat_plane   (  :,i) / TwoNorm(xd%xhat_plane(  :,i))           ! renormalize
-            xd%V_plane_filt (  :,i) = (xd%V_plane_filt (  :,i) + xd%V_plane_filt (  :,i+1)) / 2.0_ReKi
-            xd%Vx_wake      (  :,i) = (xd%Vx_wake      (  :,i) + xd%Vx_wake      (  :,i+1)) / 2.0_ReKi
-            xd%Vr_wake      (  :,i) = (xd%Vr_wake      (  :,i) + xd%Vr_wake      (  :,i+1)) / 2.0_ReKi
-            xd%Vx_wake2     (:,:,i) = (xd%Vx_wake2     (:,:,i) + xd%Vx_wake2     (:,:,i+1)) / 2.0_ReKi
-            xd%Vy_wake2     (:,:,i) = (xd%Vy_wake2     (:,:,i) + xd%Vy_wake2     (:,:,i+1)) / 2.0_ReKi
-            xd%Vz_wake2     (:,:,i) = (xd%Vz_wake2     (:,:,i) + xd%Vz_wake2     (:,:,i+1)) / 2.0_ReKi
-
-            ! Since i and i+1 planes are now merged effectively dropping a plane, shift all planes that follow forward
-            do j = i+1,NINT(xd%NumPlanes)-2        ! NumPlanes includes 0 index plane, so last valid index is NumPlanes-1.
-                xd%Vx_wind_disk_filt(j) = xd%Vx_wind_disk_filt(j+1)
-                xd%x_plane      (    j) = xd%x_plane      (    j+1)
-                xd%TI_amb_filt  (    j) = xd%TI_amb_filt  (    j+1)
-                xd%D_rotor_filt (    j) = xd%D_rotor_filt (    j+1)
-                xd%YawErr_filt  (    j) = xd%YawErr_filt  (    j+1)
-                xd%p_plane      (  :,j) = xd%p_plane      (  :,j+1)
-                xd%xhat_plane   (  :,j) = xd%xhat_plane   (  :,j+1)
-                xd%V_plane_filt (  :,j) = xd%V_plane_filt (  :,j+1)
-                xd%Vx_wake      (  :,j) = xd%Vx_wake      (  :,j+1)
-                xd%Vr_wake      (  :,j) = xd%Vr_wake      (  :,j+1)
-                xd%Vx_wake2     (:,:,j) = xd%Vx_wake2     (:,:,j+1)
-                xd%Vy_wake2     (:,:,j) = xd%Vy_wake2     (:,:,j+1)
-                xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
-            end do
-
-            ! Now that we shifted the planes up, remove the last one
-            xd%NumPlanes = xd%NumPlanes - 1.0
-
-         end if
+   ! Collect indices of all OOB planes
+   nOOB = 0
+   do i = 0, maxPln
+      if (PlaneOutOfBounds(xd%p_plane(:,i))) then
+         nOOB = nOOB + 1
+         oobIdx(nOOB) = i
       end if
+   end do
 
+   ! Check all OOB pairs for proximity; work backwards so shifts don't invalidate lower indices
+   iOOB = nOOB
+   do while (iOOB >= 2)
+      merged = .false.
+      do jOOB = iOOB - 1, 1, -1
+         if (TwoNorm(xd%p_plane(:,oobIdx(iOOB)) - xd%p_plane(:,oobIdx(jOOB))) <= 2.0_ReKi * p%dr) then
+            call MergeWakePlanes(oobIdx(jOOB), oobIdx(iOOB))
+            ! Remove entry iOOB and adjust indices above the dropped plane
+            call AdjustOobIndices(oobIdx, nOOB, iOOB)
+            ! nOOB has shrunk; clamp iOOB so it still refers to a valid, populated entry
+            iOOB = min(iOOB, nOOB)
+            merged = .true.
+            exit
+         end if
+      end do
+      if (.not. merged) iOOB = iOOB - 1
+   end do
+
+   ! --------------------------------------------------------------------------------
+   ! Drop individual planes that have gone beyond the buffer.
+   ! Each out-of-buffer plane is removed and higher-indexed planes are shifted down,
+   ! so this works even when the furthest-travelled plane is not the last index
+   ! (e.g. for drones).
+   ! --------------------------------------------------------------------------------
+   i = NINT(xd%NumPlanes) - 1
+   do while (i >= 0 .and. NINT(xd%NumPlanes) > 2)
+      if ( xd%x_plane(i) > p%x_Buff ) then
+         call ShiftWakePlanesDown(i)
+         xd%NumPlanes = max( xd%NumPlanes - 1.0, 2.0 )
+         ! Don't decrement i: the plane that shifted into position i needs checking too
+      else
+         i = i - 1
+      endif
    end do
 
    call Cleanup()
    
 contains
+
+   !> Merge two adjacent wake planes by averaging their states into iKeep,
+   !! then shift all planes above iDrop down by one and decrement NumPlanes.
+   !! iKeep is the plane that survives (receives the average), iDrop is removed.
+   !! Typically iKeep = min(iA,iB) and iDrop = max(iA,iB).
+   subroutine MergeWakePlanes(iKeep, iDrop)
+      integer(IntKi), intent(in) :: iKeep  !< Index of plane to keep (receives averaged values)
+      integer(IntKi), intent(in) :: iDrop  !< Index of plane to remove (shifted out)
+      integer(IntKi) :: j
+
+      ! Average the two planes into iKeep
+      xd%Vx_wind_disk_filt(iKeep) = (xd%Vx_wind_disk_filt(iKeep) + xd%Vx_wind_disk_filt(iDrop)) / 2.0_ReKi
+      xd%x_plane      (    iKeep) = (xd%x_plane      (    iKeep) + xd%x_plane      (    iDrop)) / 2.0_ReKi
+      xd%TI_amb_filt  (    iKeep) = (xd%TI_amb_filt  (    iKeep) + xd%TI_amb_filt  (    iDrop)) / 2.0_ReKi
+      xd%D_rotor_filt (    iKeep) = (xd%D_rotor_filt (    iKeep) + xd%D_rotor_filt (    iDrop)) / 2.0_ReKi
+      xd%YawErr_filt  (    iKeep) = (xd%YawErr_filt  (    iKeep) + xd%YawErr_filt  (    iDrop)) / 2.0_ReKi
+      xd%p_plane      (  :,iKeep) = (xd%p_plane      (  :,iKeep) + xd%p_plane      (  :,iDrop)) / 2.0_ReKi
+      xd%xhat_plane   (  :,iKeep) = (xd%xhat_plane   (  :,iKeep) + xd%xhat_plane   (  :,iDrop)) / 2.0_ReKi
+      xd%xhat_plane   (  :,iKeep) =  xd%xhat_plane   (  :,iKeep) / TwoNorm(xd%xhat_plane(:,iKeep))
+      xd%V_plane_filt (  :,iKeep) = (xd%V_plane_filt (  :,iKeep) + xd%V_plane_filt (  :,iDrop)) / 2.0_ReKi
+      xd%Vx_wake      (  :,iKeep) = (xd%Vx_wake      (  :,iKeep) + xd%Vx_wake      (  :,iDrop)) / 2.0_ReKi
+      xd%Vr_wake      (  :,iKeep) = (xd%Vr_wake      (  :,iKeep) + xd%Vr_wake      (  :,iDrop)) / 2.0_ReKi
+      xd%Vx_wake2     (:,:,iKeep) = (xd%Vx_wake2     (:,:,iKeep) + xd%Vx_wake2     (:,:,iDrop)) / 2.0_ReKi
+      xd%Vy_wake2     (:,:,iKeep) = (xd%Vy_wake2     (:,:,iKeep) + xd%Vy_wake2     (:,:,iDrop)) / 2.0_ReKi
+      xd%Vz_wake2     (:,:,iKeep) = (xd%Vz_wake2     (:,:,iKeep) + xd%Vz_wake2     (:,:,iDrop)) / 2.0_ReKi
+
+      ! Shift all planes above iDrop down by one and decrement plane count
+      call ShiftWakePlanesDown(iDrop)
+      xd%NumPlanes = xd%NumPlanes - 1.0
+   end subroutine MergeWakePlanes
+
+   !> Shift all wake-plane state arrays above index iDrop down by one.
+   !! This removes the plane at iDrop; the caller must also decrement xd%NumPlanes.
+   subroutine ShiftWakePlanesDown(iDrop)
+      integer(IntKi), intent(in) :: iDrop  !< Index of plane to remove
+      integer(IntKi) :: j
+      do j = iDrop, NINT(xd%NumPlanes)-2
+         xd%Vx_wind_disk_filt(j) = xd%Vx_wind_disk_filt(j+1)
+         xd%x_plane      (    j) = xd%x_plane      (    j+1)
+         xd%TI_amb_filt  (    j) = xd%TI_amb_filt  (    j+1)
+         xd%D_rotor_filt (    j) = xd%D_rotor_filt (    j+1)
+         xd%YawErr_filt  (    j) = xd%YawErr_filt  (    j+1)
+         xd%p_plane      (  :,j) = xd%p_plane      (  :,j+1)
+         xd%xhat_plane   (  :,j) = xd%xhat_plane   (  :,j+1)
+         xd%V_plane_filt (  :,j) = xd%V_plane_filt (  :,j+1)
+         xd%Vx_wake      (  :,j) = xd%Vx_wake      (  :,j+1)
+         xd%Vr_wake      (  :,j) = xd%Vr_wake      (  :,j+1)
+         xd%Vx_wake2     (:,:,j) = xd%Vx_wake2     (:,:,j+1)
+         xd%Vy_wake2     (:,:,j) = xd%Vy_wake2     (:,:,j+1)
+         xd%Vz_wake2     (:,:,j) = xd%Vz_wake2     (:,:,j+1)
+      end do
+   end subroutine ShiftWakePlanesDown
+
+   !> Check whether a wake plane center is outside the low-resolution domain bounds.
+   pure function PlaneOutOfBounds(p_pos) result(outOfBounds)
+      real(ReKi), intent(in) :: p_pos(3) !< Plane center position (XYZ)
+      logical                :: outOfBounds
+      outOfBounds = any(p_pos < p%LowResBounds(:,1)) .or. any(p_pos > p%LowResBounds(:,2))
+   end function PlaneOutOfBounds
+
+   !> Remove entry iRemoved from oobIdx and decrement stored indices above the dropped plane.
+   subroutine AdjustOobIndices(oobIdx, nOOB, iRemoved)
+      integer(IntKi), intent(inout) :: oobIdx(0:), nOOB
+      integer(IntKi), intent(in)    :: iRemoved
+      integer(IntKi) :: droppedPlane, k
+      droppedPlane = oobIdx(iRemoved)
+      do k = iRemoved, nOOB - 1
+         oobIdx(k) = oobIdx(k+1)
+      end do
+      nOOB = nOOB - 1
+      do k = 1, nOOB
+         if (oobIdx(k) > droppedPlane) oobIdx(k) = oobIdx(k) - 1
+      end do
+   end subroutine AdjustOobIndices
 
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j
@@ -1123,8 +1206,8 @@ contains
          call gradient_z(m%nu_dvx_dz, p%dr, m%dnuvx_dz )
 
          ! Loop through all the points on the plane (y, z)
-         do iz = -p%NumRadii+2, p%NumRadii-2
-            do iy = -p%NumRadii+2, p%NumRadii-2
+         do iz = -p%NumRadii+1, p%NumRadii-1
+            do iy = -p%NumRadii+1, p%NumRadii-1
 
                ! Eddy viscosity term
                divTau = m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
@@ -1308,28 +1391,6 @@ subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
    
 end subroutine AddSwirl
 
-!> Test the curled wake velocity curl function
-subroutine WD_TEST_AddVelocityCurl()
-  
-   real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
-   real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
-   real(ReKi) :: y(2)=(/ 0., 2./)
-   real(ReKi) :: z(2)=(/-1.,1./)
-   real(ReKi) :: Gamma0
-
-   call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
-      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
-
-   if (abs(Vy_curl(1,1)+0.217109)>1e-4) then
-      print*,'Test fail for vy'
-      !STOP
-   endif
-   if (abs(Vz_curl(2,2)+4.459746e-2)>1e-4) then
-      print*,'>>> Test fail for vz'
-      !STOP
-   endif
-end subroutine
-
 
 
 !> Weighted average of two angles
@@ -1505,40 +1566,6 @@ function exp_safe(x)
    endif
 end function exp_safe
 
-subroutine WD_TEST_Axi2Cart()
-   real(ReKi) :: r(4)=(/0.,1.,2.,3./)
-!    real(ReKi) :: y(4)=(/-1.,0.,1.5,2./)
-!    real(ReKi) :: z(5)=(/-2.5,-1.5,0.,1.5,2./)
-   real(ReKi) :: y(4)=(/0.,1. ,1.5, 2./)
-   real(ReKi) :: z(5)=(/0.,0.5,1. ,1.5,2./)
-   real(ReKi) :: Vr_axi(4)
-   real(ReKi) :: Vx_axi(4)
-   real(ReKi) :: Vx(4,5)=0.0_ReKi
-   real(ReKi) :: Vy(4,5)=0.0_ReKi
-   real(ReKi) :: Vz(4,5)=0.0_ReKi
-   integer :: i,j 
-   real(ReKi) :: Vr, r_tmp
-   Vr_axi=4._ReKi*r
-   Vx_axi=3._ReKi*r
-   call Axisymmetric2CartesianVel(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
-
-   do i = 1,size(y)
-      do j = 1,size(z)
-         r_tmp = sqrt(y(i)**2+z(j)**2)
-         Vr    = sqrt(Vy(i,j)**2 + Vz(i,j)**2)
-         if (abs(Vr-4*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vr',Vr,4*r_tmp
-            STOP
-         endif
-         if (abs(Vx(i,j)-3*r_tmp)>1e-3) then
-            print*,'>>Error Axi2Cart Vx',Vx(i,j),3*r_tmp
-            STOP
-         endif
-      enddo
-   enddo
-end subroutine 
-
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1616,7 +1643,17 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       if ( p%OutAllPlanes ) then
          call mkdir(p%OutFileVTKDir)
       endif
-      
+
+      ! set initial outputs for Cartesian/Curl wake models from the polar info.
+      if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+         call Axisymmetric2CartesianVx(y%Vx_wake(:,0), p%r, p%y, p%z, y%Vx_wake2(:,:,0))
+         y%Vy_wake2(:,:,0) = 0.0_ReKi
+         y%Vz_wake2(:,:,0) = 0.0_ReKi
+         y%Vx_wake2(:,:,1) = y%Vx_wake2(:,:,0)
+         y%Vy_wake2(:,:,1) = 0.0_ReKi
+         y%Vz_wake2(:,:,1) = 0.0_ReKi
+      end if
+
    else
       y%x_plane    = xd%x_plane
       y%p_plane    = xd%p_plane
@@ -1631,13 +1668,14 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       y%NumPlanes  = xd%NumPlanes
    end if
 
-   ! --- Linearly decay wake deficits in the buffer region based on distance
+   ! --- Linearly decay wake deficits in the buffer region based on distance.
+   !     Polar arrays are tapered first; for the Polar wake model these tapered values
+   !     are then converted to the Cartesian output below, so the taper carries through.
    do i = 0,maxPln
-      if ( xd%x_plane(i) > p%x_full ) then
-          ! Note: Clamp to zero just in case, but all wake planes that propagated past x_buff should have been removed.
-          ScBuff = max( ( p%x_buff - xd%x_plane(i) ) / p%d_buff , 0.0 )
-          y%Vx_wake(:,i) = y%Vx_wake(:,i) * ScBuff
-          y%Vr_wake(:,i) = y%Vr_wake(:,i) * ScBuff
+      ScBuff = BufferScale(xd%x_plane(i))
+      if ( ScBuff < 1.0_ReKi ) then
+         y%Vx_wake(:,i) = y%Vx_wake(:,i) * ScBuff
+         y%Vr_wake(:,i) = y%Vr_wake(:,i) * ScBuff
       end if
    end do
 
@@ -1662,11 +1700,29 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          enddo
       endif
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-      do i = 0, maxPln
-         y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i)
-         y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i)
-         y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i)
-      enddo
+      ! For Cartesian/Curl, the Cartesian output arrays are copied from the (untapered)
+      ! discrete state. Apply the buffer-region taper here so that the wake deficit
+      ! handed to AWAE fades linearly from x_Full to x_Buff. Do NOT modify xd%*_wake2:
+      ! tapering the state would compound the scaling at every time step.
+      ! Skip on firstPass: y%Vx_wake2 was already set from NearWakeCorrection above,
+      ! and xd%Vx_wake2 has not yet been initialized (still zero).
+      if (.not. OtherState%firstPass) then
+         do i = 0, maxPln
+            ScBuff = BufferScale(xd%x_plane(i))
+            y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i) * ScBuff
+            y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i) * ScBuff
+            y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i) * ScBuff
+         enddo
+         ! Recompute Cartesian gradients from the tapered output field so that the WAT
+         ! gradient term in Calc_k_WAT and the dvx_dy/dz VTK diagnostics fade consistently
+         ! with the velocity deficit in the buffer region.
+         if ( p%WAT .or. p%OutAllPlanes ) then
+            do i = 0, maxPln
+               call gradient_y(y%Vx_wake2(:,:,i), p%dr, m%dvx_dy(:,:,i))
+               call gradient_z(y%Vx_wake2(:,:,i), p%dr, m%dvx_dz(:,:,i))
+            end do
+         endif
+      end if
    endif ! Curl or Polar
 
    ! --- WAT - Compute k_mt and add turbulence
@@ -1675,6 +1731,22 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    end if
 
 contains
+   !> Linear buffer-region taper applied to the output wake fields.
+   !! Returns 1 for x_plane <= x_Full, fades linearly to 0 at x_Buff, and is
+   !! clamped to 0 beyond x_Buff (or whenever d_Buff <= 0, which avoids a
+   !! divide-by-zero when the user sets NumDBuff = 0).
+   pure function BufferScale(x_plane) result(ScBuff_loc)
+      real(ReKi), intent(in) :: x_plane
+      real(ReKi)             :: ScBuff_loc
+      if ( x_plane <= p%x_Full ) then
+         ScBuff_loc = 1.0_ReKi
+      else if ( p%d_Buff > 0.0_ReKi ) then
+         ScBuff_loc = max( ( p%x_Buff - x_plane ) / p%d_Buff , 0.0_ReKi )
+      else
+         ScBuff_loc = 0.0_ReKi
+      end if
+   end function BufferScale
+
    subroutine Calc_k_WAT()
       integer(intKi) :: i, iy, iz
       real(ReKi)     :: C, S, dvdr, dvdtheta_r, R, r_tmp
@@ -1850,47 +1922,58 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    character(ErrMsgLen)                         :: ErrMsg2
    real(ReKi)     :: correction(3)
    ! Note, all of these states will have been set to zero in the WD_Init routine
-   
-     
+
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   
+
    correction = 0.0_ReKi
    do i = 0, 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT_low,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
       xd%psi_skew_filt     = u%psi_skew
       xd%chi_skew_filt     = u%chi_skew
-      
+
       correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, xd%x_plane(i), p,  errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
       if (errStat >= AbortErrLev) then
          ! TEST: E3      
          return
       end if
-      
+
       !correction = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*u%YawErr )*xd%x_plane(i) + correctionA
-      
+
       xd%p_plane   (:,i)      = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
       xd%xhat_plane(:,i)      = u%xhat_disk(:)
       xd%V_plane_filt(:,i)    = u%V_plane(:,i)
       xd%Vx_wind_disk_filt(i) = u%Vx_wind_disk
       xd%TI_amb_filt      (i) = u%TI_amb
       xd%D_rotor_filt     (i) = u%D_rotor
-     
-      
    end do
-   
+
    xd%Vx_rel_disk_filt     = u%Vx_rel_disk    
-   
+
    ! Initialze Ct_azavg_filt, Cq_azavg_filt, and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
    xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
    xd%Cq_azavg_filt (:) = u%Cq_azavg(:)
-   
+
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
-      
+
+
+   ! Initialize states for cartesian and curled wake formulations
+   if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+      ! Compute Vx(r)
+      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat2, errMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)
+      if (errStat >= AbortErrLev) return
+      call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
+      xd%Vy_wake2(:,:,0) = 0.0_ReKi
+      xd%Vz_wake2(:,:,0) = 0.0_ReKi
+      xd%Vx_wake2(:,:,1) = xd%Vx_wake2(:,:,0)
+      xd%Vy_wake2(:,:,1) = xd%Vy_wake2(:,:,0)
+      xd%Vz_wake2(:,:,1) = xd%Vz_wake2(:,:,0)
+   endif
+
 end subroutine InitStatesWithInputs
    
 !----------------------------------------------------------------------------------------------------------------------------------

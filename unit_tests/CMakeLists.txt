@@ -62,6 +62,17 @@ add_executable(inflowwind_utest
 target_link_libraries(inflowwind_utest ifwlib versioninfolib testdrivelib)
 add_test(NAME inflowwind_utest COMMAND inflowwind_utest)
 
+# WakeDynamics Unit Tests
+add_executable(wakedynamics_utest 
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/wakedynamics_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_addvelocitycurl.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_axisymmetric2cartesian.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_oobidx.F90
+  ${PROJECT_SOURCE_DIR}/modules/wakedynamics/tests/test_wd_maxplanes_warning.F90
+)
+target_link_libraries(wakedynamics_utest wdlib versioninfolib testdrivelib)
+add_test(NAME wakedynamics_utest COMMAND wakedynamics_utest)
+
 # NWTC Library Unit Tests
 add_executable(nwtc_library_utest 
   ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/nwtc_library_utest.F90
@@ -92,6 +103,7 @@ add_custom_target(
     beamdyn_utest 
     aerodyn_utest 
     inflowwind_utest 
+    wakedynamics_utest 
 )
 
 if (AMREX_READER AND BUILD_FASTFARM)
@@ -105,6 +117,10 @@ if (AMREX_READER AND BUILD_FASTFARM)
     ${CMAKE_SOURCE_DIR}/modules/awae/tests/test_AMReX_reader.f90
   )
   target_link_libraries(amrex_reader_utest awaelib nwtclibs testdrivelib)
+  # Both sources are Fortran and main is a Fortran program, but awaelib pulls in the C++
+  # awaelib_c, so CMake picks the C++ driver to link with and its crt1.o then looks for a
+  # C main. Pin the linker to Fortran, as glue-codes/fast-farm does for the same reason.
+  set_target_properties(amrex_reader_utest PROPERTIES LINKER_LANGUAGE Fortran)
   add_test(NAME amrex_reader_utest COMMAND amrex_reader_utest)
   add_dependencies(amrex_reader_utest copy_amrex_reader_utest_files)     # copy input files needed for this test
   add_dependencies(unit_tests amrex_reader_utest)     # add to the unit_tests target

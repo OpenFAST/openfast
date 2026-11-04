@@ -827,13 +827,15 @@ but include leading zeros.
 
 **WrDisDT** [sec] specifies the time step (inverse of the frame rate) of
 all disturbed wind data output files and must be an integer multiple
-larger than or equal to **DT_Low**. This input is unused when
-**WrDisWind** = FALSE and when **NOutDisWindXY**, **NOutDisWindYZ**, and
-**NOutDisWindXZ** are set to zero. If the DEFAULT keyword is specified
-in place of a numerical value, **WrDisDT** is set to **DT_Low**. Note
-that the full high-resolution disturbed wind data output files are not
-output at a frame rate of 1/**DT_High**, but are only output every
-**WrDisDT** seconds.
+larger than or equal to **DT_Low**. **WrDisDT** also sets the output
+time step of the ambient wind and array effects wake-plane files written
+to ``vtk_ff/wakes`` when **OutAllPlanes** = TRUE. This input is unused when
+**WrDisWind** = FALSE, **OutAllPlanes** = FALSE, and **NOutDisWindXY**,
+**NOutDisWindYZ**, and **NOutDisWindXZ** are set to zero. If the DEFAULT
+keyword is specified in place of a numerical value, **WrDisDT** is set to
+**DT_Low**. Note that the full high-resolution disturbed wind data output
+files are not output at a frame rate of 1/**DT_High**, but are only output
+every **WrDisDT** seconds.
 
 Visualizing the ambient wind and wake interactions can be useful for
 interpreting results and debugging problems. However, FAST.Farm will
@@ -886,6 +888,10 @@ details on time-series results files.
 
 
 **OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+This controls both the Wake Dynamics plane files written to ``vtk_ff_planes`` and the
+wake-plane files written by the ambient wind and array effects module to ``vtk_ff/wakes``
+(see :numref:`FF:Output:Planes`). The ``vtk_ff/wakes`` files are written every **WrDisDT**
+seconds, so increasing **WrDisDT** reduces the number of files written.
 Note: this option requires intensive writing to disk and will drastically slow down the simulation.
 DEFAULT is False.
 
@@ -1134,30 +1140,61 @@ The sub-volume directories must follow the naming convention
    and ``1`` through **NumTurbines** for the high-resolution domain of
    each wind turbine.
 
--  *<index>* is a zero-padded integer index with the same field width as
-   **DirStartIndex**. The index for time step :math:`n` is
-   :math:`\text{DirStartNum} + n \times \Delta_\text{index}`, where
-   :math:`\text{DirStartNum}` is the integer value of **DirStartIndex**
-   and :math:`\Delta_\text{index}` is the stride between successive
-   directory indices (determined automatically by FAST.Farm by scanning
-   the available directories).
+-  *<index>* is an integer index, zero-padded to at least the field width
+   of **DirStartIndex** and widened as needed when the step counter grows
+   past that width.
 
-During initialization, FAST.Farm reads the header of the starting
-sub-volume for each domain (low-resolution sub-volume 0 and each
-high-resolution sub-volume 1 through **NumTurbines**) to obtain the
-grid properties, then calls the directory-discovery routine to confirm
-that a sufficient number of time steps exist and that the grid
-properties are consistent across all time steps. Specifically, FAST.Farm
-verifies:
+FAST.Farm does **not** assume a constant stride between successive
+directory indices. During initialization it reads the ``Header`` of each
+directory matching the prefix and assigns it to a time step by the
+simulation time recorded there: the directory used for time step
+:math:`n` is the one whose header time is
+:math:`t_\text{start} + n\,\Delta t`, where :math:`t_\text{start}` is the
+header time of the directory named by **DirStartIndex** and
+:math:`\Delta t` is **DT_Low-AMReX** for the low-resolution domain or
+**DT_High-AMReX** for the high-resolution domains.
 
--  That at least **NumDT** low-resolution and high-resolution
-   directories are available for the simulation duration.
+This supports precursor data written with a varying solver time step --
+for example an AMR-Wind run that transitions from ``time.initial_dt`` to
+``fixed_dt``, where the stride between directory indices changes but the
+output interval in time does not -- provided the output interval itself
+is uniform.
+
+Times are matched to within a tolerance of
+:math:`\max(10^{-6}\ \mathrm{s},\ 10^{-9}(|t_\text{start}| + |t|))`, which
+accommodates the floating-point drift accumulated by a long precursor
+simulation while remaining far tighter than a single output interval.
+
+Having obtained the grid properties from the starting sub-volume of each
+domain (low-resolution sub-volume 0 and each high-resolution sub-volume 1
+through **NumTurbines**), FAST.Farm verifies:
+
+-  That every required time step is represented by a directory: steps 0
+   through **NumDT** - 1 for the low-resolution domain, and steps 0
+   through (**NumDT** - 1) x (**DT_Low-AMReX** / **DT_High-AMReX**) for each
+   high-resolution domain. A time step matched by no directory (missing
+   data) is a fatal error naming the time step and its expected simulation
+   time, as is a time step matched by more than one of the directories
+   scanned (for example, overlapping output left behind by a restart). The
+   duplicate check is not exhaustive: the scan stops early once every
+   required step has been matched, so a stale duplicate at a higher
+   directory index than the first directory past the simulation window is
+   not read. Directories whose header time falls between two required
+   steps are ignored, so the LES may write its sub-volumes at a finer
+   cadence than FAST.Farm reads them, provided the FAST.Farm time step is
+   an integer multiple of the output interval.
 
 -  That the grid dimensions, origin, and spacing are identical across
    all time steps for a given sub-volume.
 
 -  That the grid dimensions are the same for all high-resolution
    sub-volumes (one per turbine).
+
+-  That every high-resolution sub-volume is written at the same
+   simulation times as sub-volume 1. FAST.Farm uses a single
+   **DT_High-AMReX** for the whole farm, so a sub-volume on a different
+   set of times would supply its turbine a different instant than the
+   rest of the farm.
 
 Because the grid properties are determined from the precursor data
 files, the user does not specify low- or high-resolution grid dimensions
