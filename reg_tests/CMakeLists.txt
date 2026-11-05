@@ -135,6 +135,10 @@ add_custom_target(
     DISCON_OC3Hywind
   # OpenFAST
   COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}/DISCON-1.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}/DISCON-2.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}/DISCON-3.dll
+  COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON> ${of_dest}/DISCON-4.dll
   COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_ITIBarge> ${of_dest}
   COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${of_dest}
   COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:DISCON_OC3Hywind> ${of_dest}/DISCON_OC3Hywind-1.dll
