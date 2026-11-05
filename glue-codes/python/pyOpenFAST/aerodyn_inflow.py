@@ -586,6 +586,64 @@ class AeroDynInflowLib(OpenFASTInterfaceType):
         # Copy results back to numpy array
         output_channel_values[:] = np.reshape(output_channel_values_c, (self.num_channels))
 
+    def adi_calcOutput_and_addedMass(
+        self,
+        time: float,
+        output_channel_values: npt.NDArray[np.float32],
+        node_added_mass: npt.NDArray[np.float32]
+    ) -> None:
+        """Calculate output values and the instantaneous blade added-mass matrices at the given time.
+
+        On return, the internal AeroDyn output holds the remainder loads (loads computed with zero
+        structural acceleration), so a subsequent call to adi_getrotorloads for each turbine returns
+        the loads on the blades excluding the added-mass terms.
+
+        Note:
+            AeroDyn added mass is only nonzero for MHK turbines; otherwise the matrices are zero.
+            Each per-node 6x6 block is a diagonal (block) approximation of the true (banded)
+            structural added-mass matrix (all nodes perturbed simultaneously -> row-sum).
+
+        Args:
+            time: Current simulation time
+            output_channel_values: Array to store calculated output values
+            node_added_mass: Array of shape (num_turbines*num_mesh_pts, 6, 6) to store the per-node
+                added-mass blocks (global frame), ordered by turbine then mesh point.
+
+        Raises:
+            ValueError: If output_channel_values or node_added_mass array has wrong size
+            RuntimeError: If calculation fails
+        """
+        if output_channel_values.size != self.num_channels:
+            raise ValueError(
+                f"Output array must have size {self.num_channels}, "
+                f"got {output_channel_values.size}"
+            )
+
+        total_mesh_pts = self.num_turbines * self.num_mesh_pts
+        if node_added_mass.size != 36 * total_mesh_pts:
+            raise ValueError(
+                f"node_added_mass array must have size {36 * total_mesh_pts} "
+                f"(({total_mesh_pts}, 6, 6)), got {node_added_mass.size}"
+            )
+
+        output_channel_values_c = (c_float * self.num_channels)(0.)
+        node_added_mass_c = (c_float * (36 * total_mesh_pts))(0.)
+
+        self.ADI_C_CalcOutput_and_AddedMass(
+            byref(c_double(time)),           # IN -> current simulation time
+            output_channel_values_c,         # OUT <- calculated output channel values
+            node_added_mass_c,               # OUT <- per-node 6x6 added-mass blocks (column-major per block)
+            byref(self.error_status_c),      # OUT <- error status
+            self.error_message_c             # OUT <- error message
+        )
+        self.check_error()
+
+        # Copy results back to numpy arrays
+        output_channel_values[:] = np.reshape(output_channel_values_c, (self.num_channels))
+        # Each node's 6x6 block is stored column-major -> reshape to (node, col, row) then swap to (node, row, col)
+        flat = np.frombuffer(node_added_mass_c, dtype=np.float32)
+        node_added_mass[:, :, :] = flat.reshape((total_mesh_pts, 6, 6)).transpose(0, 2, 1)
+
     def adi_updateStates(self, time: float, time_next: float) -> None:
         """Update states from current time to next time step.
 
@@ -810,6 +868,18 @@ class AeroDynInflowLib(OpenFASTInterfaceType):
             POINTER(c_char)                     # ErrMsg_C
         ]
         self.ADI_C_CalcOutput.restype = c_int
+
+        #--------------------------------------
+        # ADI_C_CalcOutput_and_AddedMass
+        #--------------------------------------
+        self.ADI_C_CalcOutput_and_AddedMass.argtypes = [
+            POINTER(c_double),                  # Time_C
+            POINTER(c_float),                   # Output Channel Values
+            POINTER(c_float),                   # NodeAdm -- per-node 6x6 added-mass blocks, flat 36*sum(numMeshPts)
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.ADI_C_CalcOutput_and_AddedMass.restype = c_int
 
         #--------------------------------------
         # ADI_C_UpdateStates

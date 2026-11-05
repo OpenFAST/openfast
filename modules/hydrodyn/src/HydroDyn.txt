@@ -116,6 +116,7 @@ typedef   ^                            ContinuousStateType           Morison_Con
 typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               {:}        -          -         "discrete states from the wamit module"        -
 typedef   ^                            DiscreteStateType             Morison_DiscreteStateType            Morison             -          -          -         "discrete states from the Morison module"        -
 typedef   ^                            DiscreteStateType             ReKi                                 PtfmRefY            {:}        -          -         "Reference yaw position of the PRP relative to the inertial frame - Current step and two previous steps" (radians)
+typedef   ^                            DiscreteStateType             ReKi                                 PtfmRefXY           {2}{3}     -          -         "Low-pass filtered x,y drift of the PRP/HD origin - current and two previous steps, consistent with WAMIT ExctnDisp=2" (m)
 #
 #
 # Define constraint states here:
@@ -168,6 +169,8 @@ typedef   ^                            ^                             logical    
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -          -         "Pointer to SeaState wave field" -
 typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -          -         "Large yaw model" - 
 typedef   ^                            ^                             ReKi                     CYawFilt                        -          -          -         "Low-pass filter constant for reference platform yaw position PtfmRefY"   -
+typedef   ^                            ^                             INTEGER                  PtfmXYMod                       -          -          -         "X/Y drift mode for the PRP, from the user-specified ExctnDisp applied regardless of potential-flow bodies (0 none, 1 instantaneous, 2 filtered). Used to displace the Morison members when WaveDisp=0" -
+typedef   ^                            ^                             ReKi                     CXYFilt                         -          -          -         "Low-pass filter constant for the PRP x,y drift position (from ExctnCutOff)"   -
 #
 #
 # ..... Inputs ....................................................................................................................

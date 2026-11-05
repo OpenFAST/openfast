@@ -35,6 +35,7 @@ MODULE AeroDyn_Inflow_C_BINDING
 
    PUBLIC :: ADI_C_Init
    PUBLIC :: ADI_C_CalcOutput
+   PUBLIC :: ADI_C_CalcOutput_and_AddedMass   ! CalcOutput plus instantaneous blade added-mass matrices (MHK)
    PUBLIC :: ADI_C_UpdateStates
    PUBLIC :: ADI_C_End
    PUBLIC :: ADI_C_PreInit             ! Initial call to setup number of turbines
@@ -1176,6 +1177,214 @@ CONTAINS
 END SUBROUTINE ADI_C_CalcOutput
 
 !===============================================================================================================
+!------------------------------------ AeroDyn CalcOutput and AddedMass -----------------------------------------
+!===============================================================================================================
+!> This routine calculates the outputs at Time_C and the instantaneous added-mass matrices for the blade
+!! structural mesh points of all rotors.  On return, ADI%y holds the remainder loads (loads computed with zero
+!! structural acceleration), so a subsequent call to ADI_C_GetRotorLoads for each rotor returns those remainder
+!! loads (i.e. the loads on the blades excluding the added-mass terms).
+!! NOTE: make sure to call ADI_C_SetRotorMotion for every rotor before calling this routine.
+!! NOTE: AeroDyn added mass is only nonzero for MHK turbines (p%MHK /= MHK_None); otherwise the matrix is zero.
+!! NOTE: the returned per-node 6x6 blocks are a diagonal (block) approximation of the true (banded) structural
+!!       added-mass matrix -- all structural nodes are perturbed simultaneously, so each block is the row-sum of
+!!       the corresponding matrix rows.  This conserves rigid-body totals and mirrors the strip-theory approach
+!!       used in HydroDyn_C_CalcOutput_and_AddedMass.
+SUBROUTINE ADI_C_CalcOutput_and_AddedMass(Time_C, &
+               OutputChannelValues_C, NodeAdm_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_CalcOutput_and_AddedMass')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_CalcOutput_and_AddedMass
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_CalcOutput_and_AddedMass
+#endif
+   real(c_double),            intent(in   )  :: Time_C
+   real(c_float),             intent(  out)  :: OutputChannelValues_C(ADI%p%NumOuts)
+   real(c_float),             intent(  out)  :: NodeAdm_C(*)                    !< 6x6 added-mass block per structural mesh point, concatenated by rotor then mesh point, each block column-major (global frame). Sized 36*sum(NumMeshPts).
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local variables
+   real(DbKi)                                :: Time
+   integer(IntKi)                            :: iWT                             !< current rotor/turbine
+   integer(IntKi)                            :: i,j,k,g,pt                      !< generic index variables
+   integer(IntKi)                            :: nWT                             !< number of turbines
+   integer(IntKi)                            :: NT                              !< total number of structural mesh points across all rotors
+   integer(IntKi), allocatable               :: globOffset(:)                   !< global mesh-point offset for each rotor
+   real(ReKi),     allocatable               :: NodeAdm(:,:,:)                  !< (6,6,NT) added-mass blocks
+   real(ReKi),     allocatable               :: baseLoad(:,:)                   !< (6,NT) remainder loads at zero structural acceleration
+   integer(IntKi)                            :: ErrStat_F                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg_F2                       !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'ADI_C_CalcOutput_and_AddedMass' !< for error handling
+
+   ! Initialize error handling
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
+
+   ! Convert the inputs from C to Fortran
+   Time = REAL(Time_C,DbKi)
+
+   ! Global mesh-point bookkeeping (rotors in order, within a rotor by mesh-point index)
+   nWT = Sim%NumTurbines
+   call AllocAry(globOffset, nWT, "globOffset", ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   NT = 0
+   do iWT=1,nWT
+      globOffset(iWT) = NT
+      NT = NT + NumMeshPts(iWT)
+   enddo
+   call AllocAry(NodeAdm,  6, 6, NT, "NodeAdm",  ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   call AllocAry(baseLoad, 6,    NT, "baseLoad", ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   NodeAdm  = 0.0_ReKi
+   baseLoad = 0.0_ReKi
+
+   ! Copy new inputs over once; probes/baseline only override the blade structural acceleration
+   call ADI_CopyInput (ADI_u, ADI%u(1), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2)
+      if (Failed())  return
+
+   !-------------------------------------------------------
+   ! Probe the added-mass response: perturb all blade structural nodes with a unit negative acceleration in
+   ! each of the 6 DOFs.  Perturbing all nodes at once gives the row-sum (diagonal-block) approximation.
+   !-------------------------------------------------------
+   do k=1,6
+      call SetBladeStrAccel(k, -1.0_ReKi)            ! DOF k acceleration = -1 on all blade structural nodes
+      do iWT=1,nWT
+         call AD_SetBladeMotion(iWT, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+      enddo
+      CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
+         if (Failed())  return
+      do iWT=1,nWT
+         call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat_F2, ErrMsg_F2 );  if (Failed())  return
+         call Set_OutputLoadArray(iWT)
+         do i=1,Sim%WT(iWT)%NumBlades
+            do j=1,StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i)
+               pt = StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint(j)
+               g  = globOffset(iWT) + pt
+               NodeAdm(1:6,k,g) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Force(1:6,j)
+            enddo
+         enddo
+      enddo
+   enddo
+
+   !-------------------------------------------------------
+   ! Baseline (zero structural acceleration).  Done last so that ADI%y holds the remainder loads on return,
+   ! ready for subsequent ADI_C_GetRotorLoads calls.
+   !-------------------------------------------------------
+   call SetBladeStrAccel(0, 0.0_ReKi)               ! zero acceleration on all blade structural nodes
+   do iWT=1,nWT
+      call AD_SetBladeMotion(iWT, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   enddo
+   CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
+      if (Failed())  return
+   do iWT=1,nWT
+      call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat_F2, ErrMsg_F2 );  if (Failed())  return
+      call Set_OutputLoadArray(iWT)
+      do i=1,Sim%WT(iWT)%NumBlades
+         do j=1,StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i)
+            pt = StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint(j)
+            g  = globOffset(iWT) + pt
+            baseLoad(1:6,g) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Force(1:6,j)
+         enddo
+      enddo
+   enddo
+
+   ! Subtract baseline: each block is F(-1) - F(0).  Added-mass load is F = -M*accel, so probing with
+   ! accel = -1 gives the added-mass matrix M directly.
+   do g=1,NT
+      do k=1,6
+         NodeAdm(1:6,k,g) = NodeAdm(1:6,k,g) - baseLoad(1:6,g)
+      enddo
+   enddo
+
+   ! Pack into the C return array (per node: 6x6 block in column-major order)
+   do g=1,NT
+      NodeAdm_C(36*(g-1)+1:36*g) = reshape( real(NodeAdm(1:6,1:6,g), c_float), (/36/) )
+   enddo
+
+   ! Get the output channel info out of y (reflects the remainder / zero-acceleration state)
+   OutputChannelValues_C = REAL(ADI%y%WriteOutput, C_FLOAT)
+
+   !-------------------------------------------------------
+   ! write outputs (mirror ADI_C_CalcOutput)
+   !-------------------------------------------------------
+   if (WrOutputsData%WrVTK > 1_IntKi) then
+      VTKn_Global = nint(Time_C / WrOutputsData%VTK_dt )
+      if (VTKn_Global /= VTKn_last) then
+         VTKn_last = VTKn_Global
+         call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat_F2,ErrMsg_F2)
+         if (Failed()) return
+      endif
+   endif
+
+   if (WrOutputsData%fileFmt > idFmtNone) then
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, SeaSt, ErrStat_F2, ErrMsg_F2); if(Failed()) return
+   endif
+
+   ! Set error status
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+
+   ! Store info what time we just ran calcs for
+   InputTimePrev_Calc = Time
+
+   if (allocated(globOffset)) deallocate(globOffset)
+   if (allocated(NodeAdm))    deallocate(NodeAdm)
+   if (allocated(baseLoad))   deallocate(baseLoad)
+
+CONTAINS
+   !> Set the acceleration on all blade structural motion mesh nodes (all rotors, all blades).
+   !! dof = 0 zeroes all 6 DOFs; dof = 1..3 sets that translational DOF; dof = 4..6 sets that rotational DOF.
+   subroutine SetBladeStrAccel(dof, val)
+      integer(IntKi), intent(in) :: dof
+      real(ReKi),     intent(in) :: val
+      integer(IntKi)             :: iWTl, iBl, jn
+      do iWTl=1,Sim%NumTurbines
+         do iBl=1,Sim%WT(iWTl)%NumBlades
+            do jn=1,StrucPts_2_Bld_Map(iWTl)%NumMeshPtsPerBlade(iBl)
+               BldStrMotionMesh(iWTl)%BldMesh(iBl)%TranslationAcc(1:3,jn) = 0.0_ReKi
+               BldStrMotionMesh(iWTl)%BldMesh(iBl)%RotationAcc(   1:3,jn) = 0.0_ReKi
+               if (dof >= 1 .and. dof <= 3) then
+                  BldStrMotionMesh(iWTl)%BldMesh(iBl)%TranslationAcc(dof,jn) = val
+               elseif (dof >= 4 .and. dof <= 6) then
+                  BldStrMotionMesh(iWTl)%BldMesh(iBl)%RotationAcc(dof-3,jn) = val
+               endif
+            enddo
+         enddo
+      enddo
+   end subroutine SetBladeStrAccel
+
+   !> Transfer the blade structural motion mesh to the AD blade motion mesh for a single rotor.  Only the blade
+   !! motion is (re)transferred; hub/nacelle/root motions already present in ADI%u(1) are left unchanged.
+   subroutine AD_SetBladeMotion(iWTl, ErrStat3, ErrMsg3)
+      integer(IntKi),       intent(in   ) :: iWTl
+      integer(IntKi),       intent(  out) :: ErrStat3
+      character(ErrMsgLen), intent(  out) :: ErrMsg3
+      integer(IntKi)                      :: iBl
+      integer(IntKi)                      :: n_elems
+      ErrStat3 = 0_IntKi
+      ErrMsg3  = ''
+      do iBl=1,Sim%WT(iWTl)%NumBlades
+         n_elems = size(BldStrMotionMesh(iWTl)%BldMesh(iBl)%Position, 2)
+         if ( ADI%u(1)%AD%rotors(iWTl)%BladeMotion(iBl)%Committed .and. (n_elems > 0)) then
+            if (PointLoadOutput) then
+               call Transfer_Point_to_Line2(BldStrMotionMesh(iWTl)%BldMesh(iBl), ADI%u(1)%AD%rotors(iWTl)%BladeMotion(iBl), Map_BldStrMotion_2_AD_Blade(iBl,iWTl), ErrStat3, ErrMsg3)
+            else
+               call Transfer_Line2_to_Line2(BldStrMotionMesh(iWTl)%BldMesh(iBl), ADI%u(1)%AD%rotors(iWTl)%BladeMotion(iBl), Map_BldStrMotion_2_AD_Blade(iBl,iWTl), ErrStat3, ErrMsg3)
+            endif
+            if (ErrStat3 >= AbortErrLev)  return
+         endif
+      enddo
+   end subroutine AD_SetBladeMotion
+
+   logical function Failed()
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed) then
+         call ClearTmpStorage()
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
+   end function Failed
+END SUBROUTINE ADI_C_CalcOutput_and_AddedMass
+
+!===============================================================================================================
 !--------------------------------------------- AeroDyn UpdateStates -------------------------------------------
 !===============================================================================================================
 !> This routine updates the states from Time_C to TimeNext_C.  It is assumed that the inputs are given for
@@ -1687,7 +1896,7 @@ contains
                            ErrMess          = ErrMsg_F2                                           ,  &
                            TranslationDisp  = .TRUE.,    Orientation = .TRUE.                     , &
                            TranslationVel   = .TRUE.,    RotationVel = .TRUE.                     , &
-                           TranslationAcc   = .TRUE.,    RotationAcc = .FALSE.                    )
+                           TranslationAcc   = .TRUE.,    RotationAcc = .TRUE.                     )
             if(Failed()) return
       enddo
 
@@ -2126,6 +2335,7 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%TranslationVel( 1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Velocity(1:3,j)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%RotationVel(    1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Velocity(4:6,j)
          BldStrMotionMesh(iWT)%BldMesh(iBlade)%TranslationAcc( 1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Accln(1:3,j)
+         BldStrMotionMesh(iWT)%BldMesh(iBlade)%RotationAcc(    1:3,j) = StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(iBlade)%Accln(4:6,j)
          call OrientRemap(BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j))
          if (TransposeDCM) then
             BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j) = transpose(BldStrMotionMesh(iWT)%BldMesh(iBlade)%Orientation(1:3,1:3,j))
@@ -2210,9 +2420,9 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
       n_elems = size(BldStrMotionMesh(iWT)%BldMesh(iBlade)%Position, 2)
       if (( u_local%AD%rotors(iWT)%BladeMotion(iBlade)%Committed ) .and. (n_elems > 0)) then
          if (PointLoadOutput) then
-            call Transfer_Point_to_Line2(BldStrMotionMesh(iWT)%BldMesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
+            call Transfer_Point_to_Line2(BldStrMotionMesh(iWT)%BldMesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade,iWT), ErrStat, ErrMsg)
          else
-            call Transfer_Line2_to_Line2(BldStrMotionMesh(iWT)%BldMesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
+            call Transfer_Line2_to_Line2(BldStrMotionMesh(iWT)%BldMesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade,iWT), ErrStat, ErrMsg)
             u_local%AD%rotors(iWT)%BladeMotion(iBlade)%RemapFlag = .false.
          end if
          if (ErrStat >= AbortErrLev)  return

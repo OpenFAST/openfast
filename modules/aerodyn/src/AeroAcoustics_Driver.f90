@@ -16,17 +16,6 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 ! 
- 
-!there will also be various control flags... this may be updated as needed:
-!TBLflag = {'BPM','TNO'}
-!bluntnessFlag = {'DTU','BPM'}
-!BPMBLflag = {'true','false'}
-!useOrigModelAtSepOnset = {'true','false'}
-
-
-
-   
-   
 !**********************************************************************************************************************************
 program AeroAcoustics_Driver
    use AeroAcoustics_Driver_Subs

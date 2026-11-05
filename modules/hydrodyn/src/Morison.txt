@@ -130,11 +130,11 @@ typedef   ^                            Morison_MemberType            INTEGER    
 typedef   ^                            ^                             INTEGER        MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER        NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi           RefLength                -          -        -         "the reference total length for this member"    m
-typedef   ^                            ^                             ReKi           cosPhi_ref               -          -        -         "the reference cosine of the inclination angle of the member" -
 typedef   ^                            ^                             ReKi           dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
 typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
 typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
+typedef   ^                            ^                             ReKi           CMatrix                  {3}{3}     -        -         "Rotation matrix from the section local system to the global system" -
 typedef   ^                            ^                             ReKi           x_hat                    {3}        -        -         "unit vector of rectangular member local x-axis aligned with Side A" -
 typedef   ^                            ^                             ReKi           y_hat                    {3}        -        -         "unit vector of rectangular member local y-axis aligned with Side B" -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
@@ -240,6 +240,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            Morison_MemberLoads           ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
 typedef   ^                            ^                             ReKi                     F_I                           {:}{:}         -         -         "Member-based (side-effects) Nodal inertial loads at time t"   -
 typedef   ^                            ^                             ReKi                     F_A                           {:}{:}         -         -         "Member-based (side-effects) Nodal added mass loads at time t"   -
+typedef   ^                            ^                             ReKi                     F_WE                          {:}{:}         -         -         "Member-based (side-effects) Nodal water entry/exit loads at time t"   -
 typedef   ^                            ^                             ReKi                     F_B                           {:}{:}         -         -         "Member-based (side-effects) Nodal buoyancy loads"   -
 typedef   ^                            ^                             ReKi                     F_BF                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads"   -
 typedef   ^                            ^                             ReKi                     F_If                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast inertia loads"   -
@@ -338,8 +339,7 @@ typedef   ^                            ^                             INTEGER    
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef   ^                            InitInputType                 ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
+typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement}" -
 typedef   ^                            ^                             INTEGER                  HstMod                           -          -        -         "Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
@@ -461,11 +461,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_I_End                       {:}{:}         -         -         "Lumped intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_A_End                       {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_WE_End                      {:}{:}         -         -         "Lumped water entry/exit loads at time t"   -
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         "Joint internal ballast hydrostatic loads"        -
 typedef   ^                            ^                             ReKi                     F_tot_End                     {:}{:}         -         -         "Joint total loads"
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
 typedef   ^                            ^                             ReKi                     zFillGroup                    {:}            -         -         "Instantaneous highest point of each filled group"  m
+typedef   ^                            ^                             ReKi                     HM_w                          {:}            -         -         "Weight of the baseline strip-theory model at each node of the current member for blending with the shallow-angle model"  -
+typedef   ^                            ^                             ReKi                     HM_nw                         {:}{:}         -         -         "Free-surface unit normal at each node of the current member"  -
 typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
 typedef   ^                            ^                             GridInterp_MiscVarType   WaveField_m                     -            -         -         "misc var information from the Grid Interpolation module"   -
 
@@ -475,9 +478,8 @@ typedef   ^                            ^                             GridInterp_
 #
 typedef   ^                            ParameterType                 DbKi                     DT                            -          -        -         "Time step for continuous state integration & discrete state update"  (sec)
 typedef   ^                            ^                             ReKi                     Gravity                       -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                         -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
-typedef   ^                            ^                             INTEGER                  HstMod                           -          -        -         "Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
+typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement}" -
+typedef   ^                            ^                             INTEGER                  HstMod                        -          -        -         "Method of computing strip-theory hydrostatic loads. (0: Up to the still water level. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                      -          -        -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                       {:}        -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                        -          -        -         ""        -
@@ -511,6 +513,7 @@ typedef   ^                            ^                             Morison_Fil
 #
 typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
 typedef   ^                            ^                             ReKi                     PtfmRefY                      -          -        -         "Reference platform yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     PtfmRefXY                     {2}        -        -         "x,y drift of the HydroDyn origin (PRP), consistent with potential-flow body ExctnDisp. Used to displace the Morison members when WaveDisp=0" (m)
 typedef   ^                            ^                             ReKi                     PRP                           {3}        -        -         "Coordinates of the principal reference point" (m)
 #
 #

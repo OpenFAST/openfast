@@ -219,7 +219,10 @@ nonzero **MSL2SWL** or **WaveMod** = 6 in SeaState.
 If the load contributions from potential-flow theory are to be included, set
 **PotMod** to 1 to use frequency-to-time domain transforms based
 on WAMIT output or 2 to use FIT (FIT is not yet documented in
-this manual). The remaining parameters in this section are only used when 
+this manual). The inputs **ExctnDisp**, **ExctnCutOff**, **PtfmYMod**,
+**PtfmRefY**, and **PtfmYCutOff** also affect the strip-theory (Morison)
+loads when **WaveDisp** = 0, even if **PotMod** = 0, as explained under Strip theory
+options below. The remaining parameters in this section are only used when
 **PotMod** = 1.
 
 **ExctnMod** can be set to 0 for no wave excitation, 1 for 
@@ -244,12 +247,32 @@ motion to prevent double counting the contributions from first-order
 structural motion already included in the second-order potential-flow wave 
 excitation.
 
+Beyond the potential-flow wave excitation, **ExctnDisp** and **ExctnCutOff** also
+govern the horizontal x-y drift applied to the strip-theory (Morison) members
+when **WaveDisp** = 0, as described under Strip theory options below. These inputs
+are honored regardless of whether potential-flow bodies are present, so a
+strip-theory-only model can use the same reference-position treatment. When
+**ExctnDisp** = 2, **ExctnCutOff** must be greater than zero even without
+potential-flow bodies.
+
 HydroDyn now supports large but slow (well below wave frequencies) 
 transient platform yaw motion with both strip-theory only and hybrid 
 potential-flow models. To enable this capability, the inputs 
-**PtfmYMod**, **PtfmRefY**, **PtfmYCutoff**, and **NExctnHdg** must 
-be set appropriately. Note that HydroDyn still requires the platform 
-roll and pitch angles to be small, i.e., within +/-15 deg.
+**PtfmYMod**, **PtfmRefY**, **PtfmYCutOff**, and **NExctnHdg** must 
+be set appropriately. **PtfmYMod**, **PtfmRefY**, and **PtfmYCutOff**
+also set the reference yaw orientation of the strip-theory members
+when **WaveDisp** = 0 even if potential flow is not used
+(**PotMod** = 0), as described below. **NExctnHdg** only affects the
+potential-flow wave excitation and has no impact on the strip-theory
+members. Strip-theory-only models with **WaveDisp** = 1 support large
+yaw motion without any of these inputs. Note that HydroDyn still
+requires the platform roll and pitch angles to be small, i.e., within
++/-15 deg, with the only exception being strip-theory only models with
+**WaveDisp** = 1. In this latter case, HydroDyn places no restriction
+on platform rotation. A severe warning is displayed if the roll or pitch
+angle of a potential-flow body exceeds this limit. Strip-theory-only
+models with **WaveDisp** = 0 are not checked, even though their loads
+assume small roll and pitch angles.
 
 To conform with the first- and second-order potential-flow theory, 
 which limits the structure to small displacement about a reference 
@@ -273,8 +296,8 @@ platform yaw rotation, analogous to the modeling of slow-drift motion
 with **ExctnDisp** = 2 above. In this case, the **PtfmRefY** input 
 allows the user to specify the initial reference yaw position at 
 **t** = 0. The cutoff frequency of the first-order low-pass filter 
-for platform yaw rotation can be set with **PtfmYCutoff** in Hz. 
-Ideally, **PtfmYCutoff** should be placed between the wave frequency 
+for platform yaw rotation can be set with **PtfmYCutOff** in Hz. 
+Ideally, **PtfmYCutOff** should be placed between the wave frequency 
 region and the characteristic frequency of any slow but large change 
 in platform heading to filter out as much wave-frequency platform 
 motion as possible while minimizing the phase shift in the low-frequency 
@@ -283,6 +306,11 @@ platform yaw rotation should stay within +/-15 deg of the now
 time-dependent **PtfmRefY**. A severe warning will be displayed if 
 this requirement is not met at any point during the simulation, while 
 still allowing the simulation to continue if possible. 
+
+With either **PtfmYMod** option, the +/-15 deg yaw requirement and the
+associated warning only apply when **PtfmRefY** is used, i.e., with
+potential-flow bodies or with strip-theory members and **WaveDisp** = 0.
+They do not apply to strip-theory-only models with **WaveDisp** = 1.
 
 With **PtfmYMod** = 1, HydroDyn requires the first- and second-order 
 (mean- or slow-drift loads from Newman's approximation only) 
@@ -302,24 +330,24 @@ should be set appropriately to ensure adequate angular resolution in
 platform heading. However, a high **NExctnHdg** can increase memory use 
 by OpenFAST substantially.
 
-Additional constraints on HydroDyn inputs apply when **PtfmYMod** = 1. 
-The strip-theory hydrodynamic load must be evaluated using the wave 
-kinematics and dynamic pressure at the displaced structure position 
-by setting **WaveDisp** = 1. State-space wave excitation cannot be used. 
-**ExctnMod** must be either 0 (no wave excitation) or 1 (frequency-to-time 
-domain transform using inverse discrete Fourier transform). Lastly, 
-full difference- and sum-frequency QTFs are not supported, requiring 
-both **DiffQTF** and **SumQTF** to be set to 0. However, mean- or 
-slow-drift loads based on Newman's approximation can be included through 
-the **MnDrift** or **NewmanApp** inputs explained below.
+Additional restrictions on HydroDyn inputs apply when **PtfmYMod** = 1.
+First, state-space wave excitation cannot be used. **ExctnMod** must be
+either 0 (no wave excitation) or 1 (frequency-to-time domain transform
+using inverse discrete Fourier transform). Secondly, full difference-
+and sum-frequency QTFs are not supported, requiring both **DiffQTF**
+and **SumQTF** to be set to 0. However, mean- or slow-drift loads based
+on Newman's approximation can be included through the **MnDrift** or
+**NewmanApp** inputs explained below.
 
-Note that the inputs **PtfmYMod** and **PtfmRefY** also affect the 
-strip-theory hydrodynamic load. This is because the orientation of 
-the strip-theory members is updated based on **PtfmRefY** instead 
-of the instantaneous platform yaw rotation. Behavior of previous 
-versions of HydroDyn can be approximately recovered by setting 
-**PtfmYMod** = 0 and **PtfmRefY** = 0 deg, in which case, the 
-inputs **PtfmYCutoff** and **NExctnHdg** are not used.
+Note that **PtfmYMod** and **PtfmRefY** also affect the strip-theory 
+hydrodynamic load when **WaveDisp** = 0. In that mode, the displacement
+and rotation of the strip-theory members and joints are based on
+**PtfmRefY** (together with the x-y drift from **ExctnDisp**) rather than 
+the full 6DOF instantaneous structure motion, as described under Strip
+theory options below. When **WaveDisp** = 1, the exact instantaneous
+member and joint orientations are used instead, so **PtfmRefY** does not
+affect the strip-theory load. The inputs **PtfmYCutOff** and **NExctnHdg**
+are not used when **PtfmYMod** = 0.
 
 HydroDyn has two methods for calculating the radiation memory effect.
 Set **RdtnMod** to 1 for the convolution method, 2 for the linear
@@ -549,12 +577,12 @@ pressure above the still water level is negative. See **Note** below. The
 instantaneous displaced position of the body is always used to obtain the 
 correct hydrostatic restoring force and moment. Note that when **FKMod** = 1,
 the **ExctnDisp** and **ExctnCutOff** settings only affect the scattering
-part of the wave excitation based on the *.3sc* file. Similarly, **PtfmYMod**,
-**PtfmRefY**, and **PtfmYCutOff** will only affect the scattering part of the
-wave excitation and the wave radiation load calculation, with the Froude-Krylov
-wave excitation and hydrostatic load calculation superseded by the body-exact
-pressure integration. These inputs can still be set freely by the user as
-appropriate.
+part of the wave excitation of that body based on the *.3sc* file. Similarly,
+**PtfmYMod**, **PtfmRefY**, and **PtfmYCutOff** will only affect the scattering
+part of the wave excitation and the wave radiation load calculation for that
+body, with the Froude-Krylov wave excitation and hydrostatic load calculation
+superseded by the body-exact pressure integration. These inputs can still be
+set freely by the user as appropriate.
 
 **Note:** While OpenFAST allows the user to select any of the available
 **WaveStMod** options with the nonlinear Froude-Krylov and hydrostatic load
@@ -707,29 +735,29 @@ apply constant hydrostatic/buoyancy loads to the generalized modes.
 
 Strip theory options
 --------------------
-**WaveDisp** can be set to 0 to compute the strip-theory loads using the 
-wave kinematics and dynamic pressure at the undisplaced position of the 
-structure. If set to 1, the loads will be computed using the wave kinematics 
-and dynamic pressure at the instantaneous displaced positions of the strip-theory 
-members. Note that when wave stretching is not used (\ **WaveStMod** = 0 in 
-SeaState), only the *X*- and *Y*-displacements of the strip-theory member 
-nodes are considered when **WaveDisp** = 1, while the vertical *Z*-displacement is 
-ignored. This is done to avoid discontinuous nodal loads that can result in 
-unphysical structural vibration with a SubDyn substructure model. When 
-**WaveStMod** > 0 and **WaveDisp** = 1, displacements of strip-theory members 
-in all three directions are considered when computing the wave kinematics. 
-A load smoothing procedure is performed to avoid discontinuous nodal loads 
-in this case.
+**WaveDisp** controls both the position at which the wave kinematics and dynamic 
+pressure are evaluated and the orientation of the strip-theory members and joints 
+used when computing the hydrodynamic loads.
 
-**AMMod** controls the computation of distributed strip-theory added-mass force. 
-If **AMMod** = 0, the strip-theory added-mass force is always evaluated up 
-to the SWL while neglecting the vertical displacement of the strip-theory member 
-nodes, even if wave stretching is enabled. With **AMMod** = 1, the strip-theory 
-added-mass force is evaluated up to the instantaneous free surface if 
-**WaveStMod** > 0. The vertical displacement of strip-theory members will also be 
-accounted for if **WaveDisp** = 1. **AMMod** should only be set to 0 if wave 
-stretching is causing numerical instabilities with flexible fixed-bottom support 
-structures modeled in SubDyn.
+Setting **WaveDisp** = 0 evaluates the loads at a reference configuration of the 
+strip-theory members that is consistent with the potential-flow model. Rather 
+than holding the members at their undisplaced position and orientation, HydroDyn 
+positions and orients them using the reference yaw (set through **PtfmYMod** and 
+**PtfmRefY**) together with a horizontal x-y drift of the HydroDyn origin (PRP) 
+governed by **ExctnDisp** and **ExctnCutOff** (see above). This results in 3DOF
+horizontal-plane displacements only (surge, sway, and yaw). Both the member and 
+joint orientations used to compute the hydrodynamic loads and the node positions 
+at which the wave kinematics and dynamic pressure are queried follow this 
+reference configuration, so a mixed potential-flow/strip-theory model remains 
+geometrically self-consistent. The behavior of previous versions of HydroDyn with
+**WaveDisp** = 0 can be recovered by setting **PtfmYMod** = 0 and **ExctnDisp** = 0.
+
+With **WaveDisp** = 1, the strip-theory loads are computed considering the full
+6DOF instantaneous motion of the strip-theory members and joints. The wave
+kinematics and dynamic pressure are evaluated at the exact instantaneous positions
+of the strip-theory member nodes and joints, and member and joint orientations
+consider full 3DOF rotation of the structure. A load smoothing procedure is
+performed to avoid discontinuous nodal loads as members cross the free surface.
 
 **HstMod** controls the computation of distributed hydrostatic loads on 
 strip-theory members. If **HstMod** = 0, the hydrostatic pressure is always 
@@ -919,7 +947,7 @@ Members
 
 **NMembers** is the user-specified number of members and determines the number of rows in the subsequent table. For each member distinguished by **MemberID**, **MJointID1** specifies the starting joint, and **MJointID2** specifies the ending joint, corresponding to an identifier (**JointID**) from the MEMBER JOINTS table. Likewise, **MPropSetID1** corresponds to the starting cross-section properties, and **MProSetID2** specify the ending cross-section properties, allowing for tapered members. **MSecGeom** indicates the cross-section shape of the member. It can be set to either 1 for circular cross section or 2 for rectangular cross section. Depending on **MSecGeom**, **MPropSetID1** and **MPropSetID2** either refer to entries in the CYLINDRICAL MEMBER CROSS-SECTION PROPERTIES table or the RECTANGULAR MEMBER CROSS-SECTION PROPERTIES table. **MSpinOrient** is an angle in degrees that specifies the spin orientation of each member, i.e., the rotation about the member axis. When **MSpinOrient** = 0, Side A of a rectangular section referenced in previous sections is parallel to the horizontal plane. If the member is perfectly vertical, Side A is parallel to the global *X*-axis when **MSpinOrient** = 0. Setting **MSpinOrient** to a nonzero value will rotate the member about its axis (pointing from the starting joint to the ending joint) following the right-hand convention by the prescribed angle. **MSpinOrient** should be specified for both members with rectangular cross sections and members with circular cross sections; however, it has no effect on the latter. **MDivSize** determines the maximum spacing (in meters) between simulation nodes where the distributed loads are actually computed; the smaller the number, the finer the resolution and longer the computational time.
 
-Each member in your model will have hydrodynamic coefficients, which are specified using one of the three models (**MCoefMod**). Model 1 uses a single set of coefficients found in the SIMPLE HYDRODYNAMIC COEFFICIENTS sections. Model 2 is depth-based, and is determined via the table found in the DEPTH-BASED HYDRODYNAMIC COEFFICIENTS sections. Model 3 specifies coefficients for a particular member, by referring to the MEMBER-BASED HYDRODYNAMIC COEFFICIENTS sections. Depending on **MSecGeom**, HydroDyn will either use the hydrodynamic coefficients from the input tables for circular sections or rectangular sections as appropriate. The **MHstLMod** switch controls the computation of hydrostatic loads on strip-theory members when **PropPot** = FALSE. Setting **MHstLMod** to 0 disables hydrostatic load. If set to 1, hydrostatic loads will be computed analytically. This approach is efficient, but it only works for fully submerged or surface-piercing members that are far from horizontal without partially wetted endplates. For nearly horizontal members close to the free surface or members that experience partially wetted endplates, a semi-numerical approach for hydrostatic load can be selected by setting **MHstLMod** to 2. This approach works with any member positioning in relation to the free surface at the cost of slightly longer computing time. Note that for members with rectangular cross sections, **MHstLMod** must be either 0 or 2. The analytical approach with **MHstLMod** set to 1 is not available for rectangular members. The **PropPot** flag indicates whether the corresponding member is included in the potential-flow solution. When **PropPot** = TRUE, only viscous-drag loads and ballasting loads will be computed for that member, with the assumption that all other load components are already included in the potential-flow solution.
+Each member in your model will have hydrodynamic coefficients, which are specified using one of the three models (**MCoefMod**). Model 1 uses a single set of coefficients found in the SIMPLE HYDRODYNAMIC COEFFICIENTS sections. Model 2 is depth-based, and is determined via the table found in the DEPTH-BASED HYDRODYNAMIC COEFFICIENTS sections. Model 3 specifies coefficients for a particular member, by referring to the MEMBER-BASED HYDRODYNAMIC COEFFICIENTS sections. Depending on **MSecGeom**, HydroDyn will either use the hydrodynamic coefficients from the input tables for circular sections or rectangular sections as appropriate. The **MHstLMod** switch controls the computation of hydrostatic loads on strip-theory members when **PropPot** = FALSE. Setting **MHstLMod** to 0 disables hydrostatic load. If set to 1, hydrostatic loads will be computed analytically. This approach is efficient, but it only works for fully submerged or surface-piercing members that are far from horizontal without partially wetted endplates. For nearly horizontal members close to the free surface or members that experience partially wetted endplates, a semi-numerical approach for hydrostatic load can be selected by setting **MHstLMod** to 2. This approach works with any member positioning in relation to the free surface at the cost of slightly longer computing time. Circular members at a shallow angle to the free surface also use a modified hydrodynamic load model that accounts for partial submergence of each section; see :numref:`hd-shallow-angle-members`. **MHstLMod** = 2 is recommended for these members. Note that for members with rectangular cross sections, **MHstLMod** must be either 0 or 2. The analytical approach with **MHstLMod** set to 1 is not available for rectangular members. The **PropPot** flag indicates whether the corresponding member is included in the potential-flow solution. When **PropPot** = TRUE, only viscous-drag loads and ballasting loads will be computed for that member, with the assumption that all other load components are already included in the potential-flow solution.
 
 In addition to the required inputs for each member explained above, we have several optional inputs for more advanced transverse drag modeling for rectangular members. These are **FDMod**, **VnCOffA**, **VnCOffB**, **FDLoFScA**, and **FDLoFScB**, as shown in the example below. For each rectangular member (**MSecGeom** = 2), users can either omit all these optional inputs together, in which case the simple default drag formulation will be used, or provide all five optional inputs to enable more advanced drag formulation. It is not allowed to provide only a subset of these optional inputs, while omitting others. These inputs are not relevant to members with circular cross sections (**MSecGeom** = 1) and should be omitted for these members. HydroDyn will simply ignore these optional inputs if provided for a circular member, and a warning will be displayed at the start of the simulation.
 

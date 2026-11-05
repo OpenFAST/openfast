@@ -10,11 +10,11 @@ structure::
       ------- HydroDyn Input File ----------------------------------------------------
       historic NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
       False            Echo           - Echo the input file data (flag)
-      ---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
+      ---------------------- FLOATING PLATFORM --------------------------------------- [only ExctnDisp, ExctnCutOff, PtfmYMod, PtfmRefY, and PtfmYCutOff used with WaveMod=6]
                    1   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)
                    1   ExctnMod       - Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE; if PtfmYMod=1, need ExctnMod=0 or 1]
-                   0   ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
-                  10   ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
+                   0   ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position} [used by potential flow when PotMod=1, ExctnMod>0, and SeaState's WaveMod>0; also used by strip theory when WaveDisp=0] (switch)
+                  10   ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0; only used when ExctnDisp=2]
                    0   PtfmYMod       - Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)
                    0   PtfmRefY       - Constant (if PtfmYMod=0) or initial (if PtfmYMod=1) platform reference yaw offset (deg)
                 0.01   PtfmYCutOff    - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [>0.0; unused when PtfmYMod=0] (Hz)
@@ -67,8 +67,7 @@ structure::
                    0             0             0             0             0             0
                    0             0             0             0             0             0
       ---------------------- STRIP THEORY OPTIONS --------------------------------------
-                   0   WaveDisp       - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position} (switch)
-                   0   AMMod          - Method of computing distributed added-mass force. {0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
+                   0   WaveDisp       - Method of displacing strip-theory members and joints {0: use potential-flow consistent displacement, 1: use exact instantaneous displacement} (switch)
                    0   HstMod         - Method of computing hydrostatic loads. {0: Up to the still water level. 1: Up to the instantaneous free surface} (switch) [overwrite to 0 when WaveStMod = 0 in SeaState]
       ---------------------- AXIAL COEFFICIENTS --------------------------------------
                    2   NAxCoef        - Number of axial coefficients (-)
@@ -339,6 +338,7 @@ MαNβFBxi, MαNβFByi, MαNβFBzi, MαNβMBxi, MαNβMByi, MαNβMBzi       (N/
 MαNβFBFxi, MαNβFBFyi, MαNβFBFzi, MαNβMBFxi, MαNβMBFyi, MαNβMBFzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Negative buoyancy loads due to flooding/ballasting at MαNβ
 MαNβFMGxi, MαNβFMGyi, MαNβFMGzi, MαNβMMGxi, MαNβMMGyi, MαNβMMGzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Loads due to marine growth weight at MαNβ
 MαNβFAMxi, MαNβFAMyi, MαNβFAMzi                                  (N/m), (N/m), (N/m)                                                                                        Hydrodynamic added-mass forces at MαNβ
+MαNβFWExi, MαNβFWEyi, MαNβFWEzi                                  (N/m), (N/m), (N/m)                                                                                        Hydrodynamic water-entry/exit forces at MαNβ
 MαNβFAGxi, MαNβFAGyi, MαNβFAGzi, MαNβMAGxi, MαNβMAGyi, MαNβMAGzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Marine growth mass inertia loads at MαNβ
 MαNβFAFxi, MαNβFAFyi, MαNβFAFzi, MαNβMAFxi, MαNβMAFyi, MαNβMAFzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Flooding/ballasting mass inertia loads at MαNβ
 **Lumped Loads at Joints**                                                                                                                                                  
@@ -348,5 +348,6 @@ JαFBxi, JαFByi, JαFBzi, JαMBxi, JαMByi, JαMBzi                   (N), (N),
 JαFBFxi, JαFBFyi, JαFBFzi, JαMBFxi, JαMBFyi, JαMBFzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Negative buoyancy loads due to flooding/ballasting at Jα
 JαFMGxi, JαFMGyi, JαFMGzi                                        (N), (N), (N)                                                                                              Forces due to marine growth weight at Jα
 JαFAMxi, JαFAMyi, JαFAMzi                                        (N), (N), (N)                                                                                              Hydrodynamic added-mass forces at Jα
+JαFWExi, JαFWEyi, JαFWEzi                                        (N), (N), (N)                                                                                              Hydrodynamic water-entry/exit forces at Jα
 JαFAGxi, JαFAGyi, JαFAGzi, JαMAGxi, JαMAGyi, JαMAGzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Marine growth mass inertia loads at Jα
 ================================================================ ========================================================================================================== ========================================================================================
