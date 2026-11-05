@@ -384,6 +384,8 @@ of_regression("IEA22MW_ModalDamping"                   "openfast;beamdyn;servody
 of_regression("IEA22MW_ModalDampingLoose"              "openfast;beamdyn;servodyn")
 of_regression("OC6_phaseII"                            "openfast;soildyn;subdyn;hydrodyn;offshore;stc")
 of_regression("MinimalExample"                         "openfast;elastodyn")
+of_regression("OC7_PhaseII_VolturnUS_Strip"            "openfast;elastodyn;subdyn;seastate;hydrodyn;map;offshore")
+of_regression("OC7_PhaseII_VolturnUS_PotFlow"          "openfast;elastodyn;subdyn;seastate;hydrodyn;map;offshore")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn")
 
