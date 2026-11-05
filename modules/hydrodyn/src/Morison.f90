@@ -557,23 +557,15 @@ SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    REAL(ReKi),                     INTENT    ( OUT   )  :: Il
    REAL(ReKi),                     INTENT    ( OUT   )  :: Ir
    
-   real(ReKi) :: m, Ir_tip, h_c
-   
-   m = (R2-R1)/H
+   real(DbKi) :: R1D, R2D, HD, S4
 
-   if ( EqualRealNos(R1, R2) ) then             ! if just a cylinder
-      Ir = abs(1.0/12.0* rho*pi*R1*R1*H *(3.0*R1*R1 + 4.0*H*H)) ! radial inertia about node 1 
-      Il = abs(0.5* rho*pi*R1*R1*H *R1*R1)    
-   ELSEIF ( EqualRealNos(R1,0.0_ReKi) ) then        ! separate this case out because it gives a divide by zero in general formula
-      Ir = abs(rho*pi*(1.0/20.0/m + 1.0/5.0/m**3) * R2**5)      
-      Il = abs(1.0/10.0*rho*pi/m*R2**5)            
-   ELSE 
-     h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4.0/(R1**2 + R1*R2 + R2**2) 
-     !l_c = R1/M + (R2-R1)/m *(R1**2 + 2*R1*R2 + 3*R2**2)/4/(R1**2 + R1*R2 + R2**2) 
-     Ir_tip = abs(pi/20.0 *rho/m*(1.0 + 4.0/m**2) * (R2**5 - R1**5))                    ! radial moment of inertia about tip of cone
-     Ir = abs(Ir_tip - rho/3.0/m*pi*(R2**3-R1**3) * (R1/m + 2.0*h_c)*R1/m )  ! radial moment of inertia about node 1
-     Il = abs(1.0/10.0/m*rho*pi*(R2**5 - R1**5))  
-   END IF
+   ! Exact integrals over the frustum without dividing by the taper, valid for H < 0 and R1 = R2 or R1 = 0
+   R1D = real(R1,DbKi)
+   R2D = real(R2,DbKi)
+   HD  = real(H, DbKi)
+   S4  = R1D**4 + R1D**3*R2D + R1D**2*R2D**2 + R1D*R2D**3 + R2D**4
+   Ir  = real( abs( rho*Pi_D*( HD*S4/20.0_DbKi + HD**3*(R1D*R1D/30.0_DbKi + R1D*R2D/10.0_DbKi + R2D*R2D/5.0_DbKi) ) ), ReKi ) ! radial inertia about node 1
+   Il  = real( abs( rho*Pi_D*HD*S4/10.0_DbKi ), ReKi )
    
 END SUBROUTINE CylInertia
 !----------------------------------------------------------------------------------------------------------------------------------
