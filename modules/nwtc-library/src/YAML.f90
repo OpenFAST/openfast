@@ -470,6 +470,10 @@ subroutine yaml_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    ! Data
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
+   elseif (nc==0) then
+      do i=1,nr
+         write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat)
+      end do
    else
       ! YAML Line format
       if (present(label)) then
@@ -533,6 +537,10 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ! Data
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
+   elseif (nc==0) then
+      do i=1,nr
+         write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat)
+      end do
    else
       ! YAML Line format
       if (present(AllFmt)) then
@@ -586,6 +594,10 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ! Data
    if (nr==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
+   elseif (nc==0) then
+      do i=1,nr
+         write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat)
+      end do
    else
       ! YAML Line format
       if (present(AllFmt)) then
