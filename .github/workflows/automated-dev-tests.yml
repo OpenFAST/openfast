@@ -217,8 +217,8 @@ jobs:
 
 
   # LLVM Flang jobs: compile with LLVM Flang (and clang/clang++) in debug mode in double
-  # and single precision; the double-precision build is then used to run the unit tests
-  # (utest-llvm-flang-debug). No regression tests are run with LLVM Flang.
+  # and single precision, then run the unit tests on each build
+  # (utest-llvm-flang-debug-double/-single). No regression tests are run with LLVM Flang.
   # FAST.Farm and the C library driver are built as well; the C++ API is not, since it
   # adds no Fortran and is covered by the gfortran jobs.
   # The toolchain comes from conda-forge, pinned and updated deliberately. flang_linux-64
@@ -228,12 +228,12 @@ jobs:
   # Pinned to 22.1.8: the conda-forge flang 23.1.x packages (through 23.1.4) do not ship
   # the intrinsic module files (iso_c_binding.mod, iso_fortran_env.mod, ...), so nothing
   # that USEs them compiles. 22.1.8 ships them in include/flang.
-  # Keep LLVM_VERSION and the micromamba create-args identical in all three jobs: the unit
+  # Keep LLVM_VERSION and the micromamba create-args identical in all four jobs: the unit
   # test job recreates the same environment (same prefix) so the rpaths in the downloaded
   # executables (flang runtime, OpenBLAS) resolve.
 
   build-llvm-flang-debug-double:
-    # Builds with LLVM Flang in double precision; saves the build for utest-llvm-flang-debug.
+    # Builds with LLVM Flang in double precision; saves the build for utest-llvm-flang-debug-double.
     runs-on: ubuntu-24.04
     env:
       LLVM_VERSION: '22.1.8'
@@ -298,9 +298,7 @@ jobs:
           path: build.tar
 
   build-llvm-flang-debug-single:
-    # Compile-only check with LLVM Flang in single precision (like build-all-debug-single).
-    # Unit tests are not run in single precision: beamdyn_utest fails there with any compiler
-    # because its baselines are default-real literals (see the BeamDyn single-precision issue).
+    # Builds with LLVM Flang in single precision; saves the build for utest-llvm-flang-debug-single.
     runs-on: ubuntu-24.04
     env:
       LLVM_VERSION: '22.1.8'
@@ -353,8 +351,18 @@ jobs:
         shell: bash -el {0}
         run: |
           cmake --build ${{github.workspace}}/build --target all
+      - name: Archive build
+        run: |
+          # The unit test executables are statically linked against OpenFAST, so
+          # build/unit_tests (without object files) is all the unit test job needs.
+          tar -cf build.tar -C ${{github.workspace}} --exclude='CMakeFiles' build/unit_tests
+      - name: Save build for unit tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-llvm-flang-debug-single
+          path: build.tar
 
-  utest-llvm-flang-debug:
+  utest-llvm-flang-debug-double:
     # Runs the unit tests on the double-precision LLVM Flang build.
     runs-on: ubuntu-24.04
     needs: build-llvm-flang-debug-double
@@ -401,7 +409,62 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: utest-llvm-flang-debug
+          name: utest-llvm-flang-debug-double
+          path: |
+            ${{github.workspace}}/build/unit_tests
+
+
+  utest-llvm-flang-debug-single:
+    # Runs the unit tests on the single-precision LLVM Flang build.
+    # beamdyn_utest is excluded: its baselines are default-real literals compared at
+    # 1e-13 against BDKi (R8Ki) results, so it fails in single precision with any
+    # compiler. Remove the exclusion once the BeamDyn unit tests are fixed.
+    runs-on: ubuntu-24.04
+    needs: build-llvm-flang-debug-single
+    env:
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings (must match the build job).
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
+    steps:
+      # Checkout and compilers are needed by aerodyn_utest_trapping_flags, which
+      # configures a small CMake project from cmake/tests/aerodyn_trapping.
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Restore build from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-llvm-flang-debug-single
+      - name: Untar build
+        run: |
+          tar -xf build.tar -C ${{github.workspace}}
+          rm build.tar
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            openblas
+            libblas=*=*openblas
+            liblapack
+            cmake
+            ninja
+          cache-environment: true
+      - name: Run unit tests
+        shell: bash -el {0}
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest" -E "beamdyn_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: utest-llvm-flang-debug-single
           path: |
             ${{github.workspace}}/build/unit_tests
 
