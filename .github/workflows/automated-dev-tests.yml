@@ -225,6 +225,9 @@ jobs:
     # pulls in the Fortran runtime (libflang-rt). conda-forge clang/flang use their own
     # sysroot and link from $CONDA_PREFIX/lib (with rpath), so BLAS/LAPACK also come from
     # conda-forge rather than apt.
+    # Pinned to 22.1.8: the conda-forge flang 23.1.x packages (through 23.1.4) do not ship
+    # the intrinsic module files (iso_c_binding.mod, iso_fortran_env.mod, ...), so nothing
+    # that USEs them compiles. 22.1.8 ships them in include/flang.
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -232,7 +235,11 @@ jobs:
         double-precision: ['ON', 'OFF']
     name: build-llvm-flang-debug (double precision ${{ matrix.double-precision }})
     env:
-      LLVM_VERSION: '23.1.4'
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings for this job.
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -256,16 +263,17 @@ jobs:
       - name: Compiler versions
         shell: bash -el {0}
         run: |
-          flang --version
-          clang --version
+          ${{env.FORTRAN_COMPILER}} --version
+          ${{env.C_COMPILER}} --version
+          ${{env.CXX_COMPILER}} --version
       - name: Configure build
         shell: bash -el {0}
         run: |
           cmake -S ${GITHUB_WORKSPACE} -B ${{github.workspace}}/build -G Ninja \
             -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=flang \
-            -DCMAKE_CXX_COMPILER:STRING=clang++ \
-            -DCMAKE_C_COMPILER:STRING=clang \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_PREFIX_PATH:PATH=${CONDA_PREFIX} \
             -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
