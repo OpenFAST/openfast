@@ -37,13 +37,15 @@ jobs:
   #-----------------------------------------------------------------------------
 
   build-all-debug-single:
-    # Tests compiling in debug mode with single precision.
+    # Tests compiling in debug mode with single precision; saves the unit tests for utest-debug-single.
     # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
     # Debug speeds up the build.
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive   # BUILD_TESTING requires reg_tests/r-test
       - name: Install dependencies
         run: |
           sudo apt-get update -y
@@ -63,6 +65,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DDOUBLE_PRECISION:BOOL=OFF \
+            -DBUILD_TESTING:BOOL=ON \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
             -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
             -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
@@ -72,6 +75,49 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
+      - name: Archive build
+        run: |
+          # The unit test executables are statically linked against OpenFAST, so
+          # build/unit_tests (without object files) is all the unit test job needs.
+          tar -cf build.tar -C ${{github.workspace}} --exclude='CMakeFiles' build/unit_tests
+      - name: Save build for unit tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-all-debug-single
+          path: build.tar
+
+  utest-debug-single:
+    # Runs the unit tests on the single-precision gfortran Debug build.
+    runs-on: ubuntu-24.04
+    needs: build-all-debug-single
+    steps:
+      # Checkout and compilers are needed by aerodyn_utest_trapping_flags, which
+      # configures a small CMake project from cmake/tests/aerodyn_trapping.
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Restore build from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-all-debug-single
+      - name: Untar build
+        run: |
+          tar -xf build.tar -C ${{github.workspace}}
+          rm build.tar
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libatlas-base-dev
+      - name: Run unit tests
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: utest-debug-single
+          path: |
+            ${{github.workspace}}/build/unit_tests
 
   build-all-release:
     runs-on: ubuntu-24.04
@@ -130,6 +176,35 @@ jobs:
         with:
           name: build-all-release
           path: workspace.tar
+
+  utest-release:
+    # Runs the unit tests on the release build before the regression test jobs.
+    runs-on: ubuntu-24.04
+    needs: build-all-release
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libatlas-base-dev
+      - name: Run unit tests
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: utest-release
+          path: |
+            ${{github.workspace}}/build/unit_tests
 
   #-----------------------------------------------------------------------------
   #  BUILD AND TEST JOBS
@@ -416,9 +491,6 @@ jobs:
 
   utest-llvm-flang-debug-single:
     # Runs the unit tests on the single-precision LLVM Flang build.
-    # beamdyn_utest is excluded: its baselines are default-real literals compared at
-    # 1e-13 against BDKi (R8Ki) results, so it fails in single precision with any
-    # compiler. Remove the exclusion once the BeamDyn unit tests are fixed.
     runs-on: ubuntu-24.04
     needs: build-llvm-flang-debug-single
     env:
@@ -459,7 +531,7 @@ jobs:
         shell: bash -el {0}
         working-directory: ${{github.workspace}}/build/unit_tests
         run: |
-          ctest -VV -R "_utest" -E "beamdyn_utest"
+          ctest -VV -R "_utest"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -518,7 +590,7 @@ jobs:
 
   rtest-module-drivers:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -581,7 +653,7 @@ jobs:
 
   rtest-interfaces:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -638,7 +710,7 @@ jobs:
 
   rtest-OF:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -694,7 +766,7 @@ jobs:
 
   rtest-OF-offshore:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -749,7 +821,7 @@ jobs:
 
   rtest-OF-multirotor:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -804,7 +876,7 @@ jobs:
 
   rtest-OF-linearization:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -856,7 +928,7 @@ jobs:
 
   rtest-OF-aeromap:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -909,7 +981,7 @@ jobs:
 
   rtest-openfast_io:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v4
@@ -961,7 +1033,7 @@ jobs:
 
   rtest-FF:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     env:
       CTEST_PARALLEL_LEVEL: 2
       OMP_NUM_THREADS: 2
