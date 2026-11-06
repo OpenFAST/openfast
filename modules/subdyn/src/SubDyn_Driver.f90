@@ -421,6 +421,10 @@ CONTAINS
       CALL ReadCom( UnIn, FileName, 'INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%InputsMod , 'InputsMod', 'Model for the inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%InputsFile, 'InputsFile', 'Filename for the SubDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      if ( InitInp%nTP == 0 .and. InitInp%InputsMod /= 0 ) then
+         call WrScr('Warning: NTPs=0, transition-piece inputs are ignored (InputsMod set to 0).')
+         InitInp%InputsMod = 0
+      end if
       !---------------------- STEADY INPUTS (for InputsMod = 1) ----------------------------------------
       CALL ReadCom( UnIn, FileName, 'STEADY STATE INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       allocate(InitInp%uTPInSteady(      6*InitInp%nTP), stat=ErrStat2); call AbortIfFailed()
