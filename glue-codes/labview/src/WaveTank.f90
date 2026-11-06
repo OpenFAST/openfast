@@ -151,7 +151,7 @@ subroutine WaveTank_Init(  &
 
    ! return rootname
    RootName_C = c_null_char
-   RootName_C = transfer(trim(SimSettings%Sim%OutRootName),RootName_C)
+   RootName_C = transfer(trim(SimSettings%Sim%OutRootName)//c_null_char, RootName_C, size(RootName_C))
 
    ! If SendScreenToFile - send to file <OutRootName>.screen.log if true
    if (SimSettings%Outs%SendScreenToFile) then
@@ -173,7 +173,7 @@ subroutine WaveTank_Init(  &
 
    ! VTK directory
    WrVTK_Dir_C = c_null_char
-   WrVTK_Dir_C = transfer( trim(SimSettings%Viz%WrVTK_Dir), WrVTK_Dir_C )
+   WrVTK_Dir_C = transfer( trim(SimSettings%Viz%WrVTK_Dir)//c_null_char, WrVTK_Dir_C, size(WrVTK_Dir_C) )
    ! return VTKdir
    VTKdir_C = c_null_char
    if (SimSettings%Viz%WrVTK > 0_c_int) VTKdir_C = WrVTK_Dir_C
@@ -224,8 +224,8 @@ subroutine WaveTank_Init(  &
    if (Failed_c('SeaSt_C_PreInit')) return
 
    SS_InputFile_C = c_null_char
-   SS_InputFile_C = transfer(trim(SimSettings%ModSettings%SS_InputFile ), SS_InputFile_C )
-   OutRootName_C  = transfer(trim(SimSettings%Sim%OutRootName)//'.SeaSt'//c_null_char, OutRootName_C)
+   SS_InputFile_C = transfer(trim(SimSettings%ModSettings%SS_InputFile )//c_null_char, SS_InputFile_C, size(SS_InputFile_C) )
+   OutRootName_C  = transfer(trim(SimSettings%Sim%OutRootName)//'.SeaSt'//c_null_char, OutRootName_C, size(OutRootName_C))
    call SeaSt_C_Init(            &
       SS_InputFile_C,            &
       OutRootName_C,             &
@@ -259,8 +259,8 @@ subroutine WaveTank_Init(  &
 !FIXME: this interface will change!!! -- Split with PreInit
 !FIXME: add WrVTK_Dir_C,  SimSettings%Viz%WrVTK, SimSettings%Viz%WrVTK_DT
    MD_InputFile_C = c_null_char
-   MD_InputFile_C = transfer(trim(SimSettings%ModSettings%MD_InputFile ), MD_InputFile_C )
-   OutRootName_C  = transfer(trim(SimSettings%Sim%OutRootName)//'.MD'//c_null_char, OutRootName_C)
+   MD_InputFile_C = transfer(trim(SimSettings%ModSettings%MD_InputFile )//c_null_char, MD_InputFile_C, size(MD_InputFile_C) )
+   OutRootName_C  = transfer(trim(SimSettings%Sim%OutRootName)//'.MD'//c_null_char, OutRootName_C, size(OutRootName_C))
    call MD_C_Init(                           &
       0_c_int,                               &   !< InputFilePassed: 0 for file, 1 for string
       c_loc(MD_InputFile_C(1)),              &
@@ -346,10 +346,10 @@ subroutine WaveTank_Init(  &
    if (Failed_c('ADI_C_SetupRotor')) return
 
    AD_InputFile_C  = c_null_char
-   AD_InputFile_C  = transfer(trim(SimSettings%ModSettings%AD_InputFile ), AD_InputFile_C )
+   AD_InputFile_C  = transfer(trim(SimSettings%ModSettings%AD_InputFile )//c_null_char, AD_InputFile_C, size(AD_InputFile_C) )
    IfW_InputFile_C = c_null_char
-   IfW_InputFile_C = transfer(trim(SimSettings%ModSettings%IfW_InputFile), IfW_InputFile_C)
-   OutRootName_C = transfer(trim(SimSettings%Sim%OutRootName)//'.ADI'//c_null_char, OutRootName_C)
+   IfW_InputFile_C = transfer(trim(SimSettings%ModSettings%IfW_InputFile)//c_null_char, IfW_InputFile_C, size(IfW_InputFile_C))
+   OutRootName_C = transfer(trim(SimSettings%Sim%OutRootName)//'.ADI'//c_null_char, OutRootName_C, size(OutRootName_C))
    call ADI_C_Init(                          &
       0,                                     &  ! ADinputFilePassed; 0 for file, 1 for string
       c_loc(AD_InputFile_C(1)),              &  ! ADinputFileString_C; Input file as a single string with lines delineated by C_NULL_CHAR

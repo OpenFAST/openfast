@@ -543,25 +543,25 @@ subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, E
                   Num=p%nDOFRB, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('Rigid-body mode '//trim(num2lstr(i))//' displacement, m or rad', i=1, p%nDOFRB)])
+                  LinNames=[(MV_LinName('Rigid-body mode '//trim(num2lstr(i))//' displacement, m or rad'), i=1, p%nDOFRB)])
 
    call MV_AddVar(Vars%x, "RBMotion", FieldScalar, DatLoc(SD_x_qRdot), &
                   Num=p%nDOFRB, &
                   DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('First time derivative of rigid-body mode '//trim(num2lstr(i))//' displacement, (m or rad)/s', i=1, p%nDOFRB)])
+                  LinNames=[(MV_LinName('First time derivative of rigid-body mode '//trim(num2lstr(i))//' displacement, (m or rad)/s'), i=1, p%nDOFRB)])
 
    call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qm), &
                   Num=p%nDOFM, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -', i=1, p%nDOFM)])
+                  LinNames=[(MV_LinName('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -'), i=1, p%nDOFM)])
 
    call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
                   Num=p%nDOFM, &
                   DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s', i=1, p%nDOFM)])
+                  LinNames=[(MV_LinName('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s'), i=1, p%nDOFM)])
 
    !----------------------------------------------------------------------------
    ! Input variables

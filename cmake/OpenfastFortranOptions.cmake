@@ -31,6 +31,8 @@
 # - set_fast_intel_fortran
 # - set_fast_intel_fortran_posix
 # - set_fast_intel_fortran_windows
+# - set_fast_flang
+# - set_fast_llvm_flang
 #
 ################################################################################
 
@@ -40,10 +42,13 @@
 macro(set_fast_fortran)
   get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
 
-  # Abort if we do not have gfortran or Intel Fortran Compiler.
+  # Abort if we do not have gfortran, Intel Fortran, or a Flang compiler.
+  # Note: CMake reports Classic Flang (and Classic-based ROCm Flang) as "Flang",
+  # and the modern LLVM Flang (flang-new / flang) as "LLVMFlang" (CMake >= 3.24).
   if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
         ${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel" OR
-        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang" OR
+        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang"))
     message(FATAL_ERROR "OpenFAST requires GFortran, Intel, or Flang Compiler. Compiler detected by CMake: ${FCNAME}.")
   endif()
 
@@ -52,12 +57,16 @@ macro(set_fast_fortran)
   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     if("${CMAKE_Fortran_COMPILER_VERSION}" STREQUAL "")
         message(WARNING "A version of GNU GFortran greater than 4.6.0 is required but CMake could not detect your GFortran version.")
-    elseif("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "4.6.0")  
+    elseif("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "4.6.0")
         message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
   elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
     if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "11")
       message(FATAL_ERROR "A version of Intel ifort greater than 11 is required. ifort version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
+    endif()
+  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "20")
+      message(WARNING "LLVM Flang ${CMAKE_Fortran_COMPILER_VERSION} detected. OpenFAST has only been tested with LLVM Flang 23 and newer.")
     endif()
   endif()
 
@@ -73,6 +82,8 @@ macro(set_fast_fortran)
     set_fast_intel_fortran()
   elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
     set_fast_flang()
+  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
+    set_fast_llvm_flang()
   endif()
 
   # If double precision option enabled, set preprocessor define to use
@@ -256,3 +267,40 @@ macro(set_fast_flang)
 
   check_f2008_features()
 endmacro(set_fast_flang)
+
+#
+# set_fast_llvm_flang - Customizations for the modern LLVM Flang compiler
+#
+macro(set_fast_llvm_flang)
+
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fno-backslash -cpp -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+
+  # LLVM Flang fuses multiply-adds (FMA) by default on targets that support them (e.g. arm64).
+  # Several OpenFAST time-step consistency checks (e.g. Conv_Rdtn_UpdateDiscState in HydroDyn)
+  # compare `Time - n*DT` against EPSILON and fail when the product is not rounded separately;
+  # disabling contraction also keeps results consistent with the regression-test baselines.
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffp-contract=off")
+
+  # On macOS, CMake's Darwin platform module gives Fortran the clang-style shared library
+  # flags (-dynamiclib, -install_name), which the flang driver rejects. Use the equivalent
+  # driver/linker spellings instead.
+  if(APPLE)
+    set(CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS "-shared -Wl,-headerpad_max_install_names")
+    set(CMAKE_SHARED_MODULE_CREATE_Fortran_FLAGS "-Wl,-bundle -Wl,-headerpad_max_install_names")
+    set(CMAKE_SHARED_LIBRARY_SONAME_Fortran_FLAG "-Xlinker -install_name -Xlinker")
+  endif()
+
+  # If double precision, make default reals 8 bytes.  As with gfortran, LLVM Flang's
+  # -fdefault-real-8 on its own promotes DOUBLE PRECISION to REAL(16), which breaks the
+  # interfaces to the F77 NetLib routines (and REAL(16) is not available on all targets,
+  # e.g. arm64 macOS), so -fdefault-double-8 is required to keep DOUBLE PRECISION at 8 bytes.
+  # LLVM Flang has no -fno-default-real-8, so sources that must not be promoted (FFTPACK)
+  # are handled in modules/nwtc-library by stripping these flags in a separate directory scope.
+  if (DOUBLE_PRECISION)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8")
+  endif()
+
+  check_f2008_features()
+endmacro(set_fast_llvm_flang)
