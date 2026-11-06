@@ -85,14 +85,14 @@ subroutine test_BD_InputGlobalLocal(error)
    testname = "test_BD_InputGlobalLocal:"
 
    totalnodes = 2
-   vectorInit = [0.0, 0.0, 1.0]
-   vectorAfterRotation = [0.0, 0.0, -1.0]
-   rotationaxis = [1.0, 0.0, 0.0]
+   vectorInit = [0.0_BDKi, 0.0_BDKi, 1.0_BDKi]
+   vectorAfterRotation = [0.0_BDKi, 0.0_BDKi, -1.0_BDKi]
+   rotationaxis = [1.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    ! build the parameter type
    parametertype%node_total = totalnodes
    otherstate = simpleOtherState()
-   otherstate%GlbRot = calcRotationMatrix(real(Pi, BDKi), rotationaxis)
+   otherstate%GlbRot = calcRotationMatrix(real(Pi_R8, BDKi), rotationaxis)
 
    ! build the inputs
    call AllocAry(inputtype%RootMotion%TranslationDisp, 3, 1, 'TranslationDisp', ErrStat, ErrMsg)
@@ -163,7 +163,7 @@ subroutine test_BD_GravityForce(error)
    ! --------------------------------------------------------------------------
    testname = "static simple beam under gravity:"
    baseline(1:3) = getGravityInZ()
-   baseline(4:6) = [0.0, 0.0, 0.0]
+   baseline(4:6) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    ! allocate and build the custom types
    parametertype = simpleParameterType(1, 16, 16, 0, 1)
@@ -194,11 +194,11 @@ subroutine test_BD_QPData_mEta_rho(error)
    ! --------------------------------------------------------------------------
    testname = "static simple beam under gravity:"
 
-   baselineRho(1, :) = [1.0, 0.0, 0.0]
-   baselineRho(2, :) = [0.0, 1.0, 0.0]
-   baselineRho(3, :) = [0.0, 0.0, 2.0]
+   baselineRho(1, :) = [1.0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   baselineRho(2, :) = [0.0_BDKi, 1.0_BDKi, 0.0_BDKi]
+   baselineRho(3, :) = [0.0_BDKi, 0.0_BDKi, 2.0_BDKi]
 
-   baselineRR0mEta = [0.0, 0.0, 0.0]
+   baselineRR0mEta = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    ! allocate and build the custom input types
    parametertype = simpleParameterType(1, 16, 16, 0, 1)

@@ -22,13 +22,13 @@ jobs:
       #     echo ${{runner.workspace}} # /home/runner/work/openfast
       #     echo $GITHUB_WORKSPACE     # /home/runner/work/openfast/openfast
       - name: Checkout OpenFAST/dev
-        uses: actions/checkout@main
+        uses: actions/checkout@v5
         with:
           path: ${{runner.workspace}}/openfast
           ref: dev
 
       - name: Checkout openfast-feedstock
-        uses: actions/checkout@main
+        uses: actions/checkout@v5
         with: 
           repository: conda-forge/openfast-feedstock
           token: ${{ secrets.ACTIONS_TOKEN }}
