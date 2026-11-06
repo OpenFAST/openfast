@@ -43,7 +43,7 @@ subroutine test_BD_TrapezoidalPointWeight_2station(error)
    call AllocAry(station_eta, station_total, "station_eta", ErrStat, ErrMsg)
 
    ! simple case where we have enpoints only; typical with constant cross sections
-   station_eta(1:station_total) = (/0., 1./)
+   station_eta(1:station_total) = (/0._BDKi, 1._BDKi/)
 
    refine = 8
 
@@ -54,8 +54,8 @@ subroutine test_BD_TrapezoidalPointWeight_2station(error)
    call AllocAry(baseline_QPtN, nqp, "baseline_QPtN", ErrStat, ErrMsg)
    call AllocAry(baseline_QPtW, nqp, "baseline_QPtW", ErrStat, ErrMsg)
 
-   baseline_QPtN(1:nqp) = (/-1., -0.75, -0.5, -0.25, 0., 0.25, 0.5, 0.75, 1./)
-   baseline_QPtW(1:nqp) = (/0.125, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.125/)
+   baseline_QPtN(1:nqp) = (/-1._BDKi, -0.75_BDKi, -0.5_BDKi, -0.25_BDKi, 0._BDKi, 0.25_BDKi, 0.5_BDKi, 0.75_BDKi, 1._BDKi/)
+   baseline_QPtW(1:nqp) = (/0.125_BDKi, 0.25_BDKi, 0.25_BDKi, 0.25_BDKi, 0.25_BDKi, 0.25_BDKi, 0.25_BDKi, 0.25_BDKi, 0.125_BDKi/)
 
    call BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
@@ -96,7 +96,7 @@ subroutine test_BD_TrapezoidalPointWeight_3station(error)
 
    call AllocAry(station_eta, station_total, "station_eta", ErrStat, ErrMsg)
 
-   station_eta(1:station_total) = (/0., 0.25, 1./)
+   station_eta(1:station_total) = (/0._BDKi, 0.25_BDKi, 1._BDKi/)
 
    refine = 2
 
@@ -107,8 +107,8 @@ subroutine test_BD_TrapezoidalPointWeight_3station(error)
    call AllocAry(baseline_QPtN, nqp, "baseline_QPtN", ErrStat, ErrMsg)
    call AllocAry(baseline_QPtW, nqp, "baseline_QPtW", ErrStat, ErrMsg)
 
-   baseline_QPtN(1:nqp) = (/-1., -0.75, -0.5, 0.25, 1./)
-   baseline_QPtW(1:nqp) = (/0.125, 0.25, 0.125 + 0.5 * 0.75, 0.75, 0.5 * 0.75/)
+   baseline_QPtN(1:nqp) = (/-1._BDKi, -0.75_BDKi, -0.5_BDKi, 0.25_BDKi, 1._BDKi/)
+   baseline_QPtW(1:nqp) = (/0.125_BDKi, 0.25_BDKi, 0.125_BDKi + 0.5_BDKi * 0.75_BDKi, 0.75_BDKi, 0.5_BDKi * 0.75_BDKi/)
 
    call BD_TrapezoidalPointWeight(p, station_eta, station_total)
 
