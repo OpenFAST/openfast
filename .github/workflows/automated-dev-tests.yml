@@ -216,6 +216,73 @@ jobs:
             ${{github.workspace}}/build/unit_tests
 
 
+  build-llvm-flang-debug:
+    # Tests compiling with LLVM Flang (and clang/clang++) in debug mode, in both
+    # double and single precision, then runs the unit tests only (no regression tests).
+    # FAST.Farm and the C/C++ interfaces are built to cover the C-binding code.
+    # The compiler comes from conda-forge; the version is pinned and updated deliberately.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        double-precision: ['ON', 'OFF']
+    name: build-llvm-flang-debug (double precision ${{ matrix.double-precision }})
+    env:
+      LLVM_VERSION: '23.1.4'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang=${{env.LLVM_VERSION}}
+            flang-rt_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            cmake
+            ninja
+          cache-environment: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libatlas-base-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Compiler versions
+        shell: bash -el {0}
+        run: |
+          flang --version
+          clang --version
+      - name: Configure build
+        shell: bash -el {0}
+        run: |
+          cmake -S ${GITHUB_WORKSPACE} -B ${{github.workspace}}/build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=flang \
+            -DCMAKE_CXX_COMPILER:STRING=clang++ \
+            -DCMAKE_C_COMPILER:STRING=clang \
+            -DBLA_VENDOR:STRING=ATLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DDOUBLE_PRECISION:BOOL=${{matrix.double-precision}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON
+      - name: Build all
+        shell: bash -el {0}
+        run: |
+          cmake --build ${{github.workspace}}/build --target all
+      - name: Run unit tests
+        shell: bash -el {0}
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest -VV -R "_utest"
+
+
   build-test-OF-simulink:
     runs-on: ubuntu-24.04
     steps:
