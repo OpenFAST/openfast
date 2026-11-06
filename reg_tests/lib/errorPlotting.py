@@ -1,6 +1,7 @@
 
 #
-# Copyright 2017 National Renewable Energy Laboratory
+# Copyright 2017-2025 National Renewable Energy Laboratory
+# Copyright 2025-2026 National Laboratory of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

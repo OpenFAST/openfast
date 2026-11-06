@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -1622,7 +1623,12 @@ END SUBROUTINE CheckR8Var
    CALL WrScr(Stars)
    CALL WrScr( TRIM(ProgramName) )
    CALL WrScr('')
-   CALL WrScr( 'Copyright (C) '//TRIM(Year)//' National Renewable Energy Laboratory' )
+   CALL WrScr( 'Copyright (C) 2013-2025 National Renewable Energy Laboratory' )
+   IF ( LEN_TRIM(Year) == 0 .OR. Year <= '2025' ) THEN
+      CALL WrScr( 'Copyright (C) 2025 National Laboratory of the Rockies' )
+   ELSE
+      CALL WrScr( 'Copyright (C) 2025-'//TRIM(Year)//' National Laboratory of the Rockies' )
+   END IF
    CALL WrScr( 'Copyright (C) '//TRIM(Year)//' Envision Energy USA LTD' )
    CALL WrScr('')
    IF (PRESENT(AdditionalComment)) THEN

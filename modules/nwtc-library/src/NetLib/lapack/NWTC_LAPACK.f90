@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !> This code provides a wrapper for the LAPACK routines currently used at the NWTC (mainly codes in the FAST framework). This 
 !! enables us to call generic routines (not single- or double-precision specific ones) so that we don't have to change source

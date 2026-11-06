@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! Copyright (C) 2014  National Renewable Energy Laboratory
+! Copyright (C) 2014-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 ! This code provides a wrapper for Dierckx's FitPack routines currently used at the NWTC (mainly codes in the FAST framework).
 !

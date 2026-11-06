@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2026  National Renewable Energy Laboratory
+! Copyright (C) 2026  National Laboratory of the Rockies
 !
 !    This file is part of FAST.Farm.
 !

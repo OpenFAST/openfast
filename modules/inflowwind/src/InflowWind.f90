@@ -4,7 +4,8 @@
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2015-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 ! Copyright (C) 2017  Envision Energy
 !
 !    This file is part of InflowWind.

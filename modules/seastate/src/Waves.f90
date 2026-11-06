@@ -3,7 +3,8 @@
 ! Framework. Waves_Types will be auto-generated based on a description of the variables for the module.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of Waves.
 !
