@@ -1,3 +1,22 @@
+//********************************************************************************************************************************
+// LICENSING
+// Copyright (C) 2023-2025  National Renewable Energy Laboratory
+// Copyright (C) 2025-2026  National Laboratory of the Rockies
+//
+//    This file is part of the OpenFAST Registry.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//********************************************************************************************************************************
 #include <fstream>
 
 #include "registry.hpp"
@@ -189,6 +208,7 @@ void output_template(std::string &module_name, std::string &module_nickname, boo
     // Populate module name and module nickname
     contents = std::regex_replace(contents, std::regex("ModuleName"), module_name);
     contents = std::regex_replace(contents, std::regex("ModName"), module_nickname);
+    contents = std::regex_replace(contents, std::regex("CurrentYear"), current_year());
 
     // Output contents to file
     outfile << contents;

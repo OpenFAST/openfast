@@ -3,7 +3,8 @@
 ! Framework. SS_Excitations_Types will be auto-generated based on a description of the variables for the module.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012, 2018  National Renewable Energy Laboratory
+! Copyright (C) 2012-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of SS_Excitation.
 !

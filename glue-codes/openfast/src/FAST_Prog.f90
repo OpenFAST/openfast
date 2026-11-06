@@ -3,7 +3,8 @@
 ! FAST_Prog.f90, FAST_Library.f90, FAST_Prog.c are different drivers for this code.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of FAST.
 !
