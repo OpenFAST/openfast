@@ -174,7 +174,6 @@ typedef     ^                   ParameterType        IntKi               NumOuts
 typedef     ^                   ParameterType        IntKi               NumOutsAll       {4}        -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               unOutFile        {4}        -     -     "unit number for writing output file" "-"
 typedef     ^                   ParameterType        CHARACTER(1024)     RootName          -         -     -     "RootName for writing output files"     -
-typedef     ^                   ParameterType        ReKi                StallStart       {:}{:}     -     -     "ation"     -
 typedef     ^                   ParameterType        ReKi                TEThick          {:}{:}     -     -     "ation"     -
 typedef     ^                   ParameterType        ReKi                TEAngle          {:}{:}     -     -     "ation"     -
 typedef     ^                   ParameterType        ReKi                AerCent          {:}{:}{:}  -     -     "ation"     -
@@ -201,6 +200,7 @@ typedef     ^                   ParameterType        ReKi                AFThick
 typedef     ^                   InputType            ReKi                RotGtoL       {:}{:}{:}{:}  -     -     "3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system"     -
 typedef     ^                   InputType            ReKi                AeroCent_G    {:}{:}{:}     -     -     "location in global coordinates of the blade element aerodynamic center.  1st index = vector components, 2nd index = blade node, 3rd index = blade"     -
 typedef     ^                   InputType            ReKi                Vrel          {:}{:}        -     -     "Vrel"     -
+typedef     ^                   InputType            ReKi                Re            {:}{:}        -     -     "Reynolds number used to interpolate the stall angle across airfoil Re tables"     -
 typedef     ^                   InputType            ReKi                AoANoise      {:}{:}        -     -     "Angle of attack"     rad
 typedef     ^                   InputType            ReKi                Inflow        {:}{:}{:}     -     -     "atmospheric undisturbed flow on blade"
 
