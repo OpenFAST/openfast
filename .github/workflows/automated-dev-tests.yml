@@ -219,8 +219,12 @@ jobs:
   build-llvm-flang-debug:
     # Tests compiling with LLVM Flang (and clang/clang++) in debug mode, in both
     # double and single precision, then runs the unit tests only (no regression tests).
-    # FAST.Farm and the C/C++ interfaces are built to cover the C-binding code.
-    # The compiler comes from conda-forge; the version is pinned and updated deliberately.
+    # FAST.Farm and the C library driver are built as well; the C++ API is not, since it
+    # adds no Fortran and is covered by the gfortran jobs.
+    # The toolchain comes from conda-forge, pinned and updated deliberately. flang_linux-64
+    # pulls in the Fortran runtime (libflang-rt). conda-forge clang/flang use their own
+    # sysroot and link from $CONDA_PREFIX/lib (with rpath), so BLAS/LAPACK also come from
+    # conda-forge rather than apt.
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -240,17 +244,14 @@ jobs:
           environment-name: llvm-flang
           create-args: >-
             -c conda-forge
-            flang=${{env.LLVM_VERSION}}
-            flang-rt_linux-64=${{env.LLVM_VERSION}}
+            flang_linux-64=${{env.LLVM_VERSION}}
             clang=${{env.LLVM_VERSION}}
             clangxx=${{env.LLVM_VERSION}}
+            libblas=*=*openblas
+            liblapack
             cmake
             ninja
           cache-environment: true
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Compiler versions
         shell: bash -el {0}
         run: |
@@ -264,13 +265,12 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=flang \
             -DCMAKE_CXX_COMPILER:STRING=clang++ \
             -DCMAKE_C_COMPILER:STRING=clang \
-            -DBLA_VENDOR:STRING=ATLAS \
+            -DCMAKE_PREFIX_PATH:PATH=${CONDA_PREFIX} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DDOUBLE_PRECISION:BOOL=${{matrix.double-precision}} \
             -DBUILD_TESTING:BOOL=ON \
-            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
             -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
-            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
             -DBUILD_FASTFARM:BOOL=ON
       - name: Build all
         shell: bash -el {0}
