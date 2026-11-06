@@ -1,4 +1,7 @@
 ##################  Registry for SS Excitation ###############
+# Copyright (C) 2018-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # column  1: <keyword>
 # column  2: ModuleName/ModName or ^ to use the value from the previous line (ModName is nickname for ModuleName)
 # column  3: Derived data type (without "ModName_" prefix)
