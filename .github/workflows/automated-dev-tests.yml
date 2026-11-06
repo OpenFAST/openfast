@@ -288,8 +288,15 @@ jobs:
       - name: Run unit tests
         shell: bash -el {0}
         working-directory: ${{github.workspace}}/build
+        # beamdyn_utest is excluded in single precision: its baselines are default-real
+        # literals compared at 1e-13 against BDKi (R8Ki) results, so it fails with any
+        # compiler when -fdefault-real-8 is not set. Remove the exclusion once the tests are fixed.
         run: |
-          ctest -VV -R "_utest"
+          if [ "${{matrix.double-precision}}" = "ON" ]; then
+            ctest -VV -R "_utest"
+          else
+            ctest -VV -R "_utest" -E "beamdyn_utest"
+          fi
 
 
   build-test-OF-simulink:
