@@ -247,6 +247,7 @@ jobs:
             flang_linux-64=${{env.LLVM_VERSION}}
             clang=${{env.LLVM_VERSION}}
             clangxx=${{env.LLVM_VERSION}}
+            openblas
             libblas=*=*openblas
             liblapack
             cmake
