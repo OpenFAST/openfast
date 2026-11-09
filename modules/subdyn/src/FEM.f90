@@ -440,7 +440,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       if (present(CRR)) CMM  = 0.0_FEKi
    end if
 
-   if (nL>0) then
+   if (nL>0 .and. nR>0) then
       ! --- Compute Guyan Modes (PhiR)
       ! factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
       ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
@@ -500,7 +500,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          ENDIF
       endif
    else
-      PhiR(1:nL,1:nR) = 0.0_FEKi   ! Empty
+      PhiR(1:nL,1:nR) = 0.0_FEKi ! Empty
       MBM (1:nR,1:nM) = 0.0_FEKi ! Empty
       MBB = MRR
       KBB = KRR
@@ -509,7 +509,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
          CBM=0.0_FEKi
       endif
    endif
-        
+
    call CleanUp()
 CONTAINS
 

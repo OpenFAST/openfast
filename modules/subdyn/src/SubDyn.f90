@@ -281,18 +281,21 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    if (p%TP1IsRBRefPt) then
       ! If the first transition piece is a dummy one used as the rigid-body reference point
       Init%nTP         = InitInput%nTP + 1
-      call AllocAry(Init%TP_RefPoint, 3, Init%nTP, 'TP_RefPoint', ErrStat2, ErrMsg2); if(Failed()) return
-      Init%TP_RefPoint(1:3,1) = Init%Joints(FINDLOCI(Init%Joints(:,1),Init%RB_RefJoint),2:4)
-      Init%TP_RefPoint(1:3,2:Init%nTP) = InitInput%TP_RefPoint
    else
       Init%nTP         = InitInput%nTP
-      Init%TP_RefPoint = InitInput%TP_RefPoint
    endif
    if (Init%nTP/=p%nTP) then
       ErrStat2=ErrID_Fatal
       ErrMsg2=' SD Error: The number of transition pieces referenced by the interface nodes does not match that from the glue-code or SubDyn driver input file. '
+      if(Failed()) return
    endif
-   if(Failed()) return
+   call AllocAry(Init%TP_RefPoint, 3, Init%nTP, 'TP_RefPoint', ErrStat2, ErrMsg2); if(Failed()) return
+   if (p%TP1IsRBRefPt) then
+      Init%TP_RefPoint(1:3,1) = Init%Joints(FINDLOCI(Init%Joints(:,1),Init%RB_RefJoint),2:4)
+      if (Init%nTP>1) Init%TP_RefPoint(1:3,2:Init%nTP) = InitInput%TP_RefPoint(1:3,1:InitInput%nTP)
+   else
+      if (Init%nTP>0) Init%TP_RefPoint(1:3,1:Init%nTP) = InitInput%TP_RefPoint(1:3,1:InitInput%nTP)
+   endif
 
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
@@ -464,7 +467,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Guyan Modes
       CALL AllocAry(Omega_GY,                size(p%KBB,1), 'Omega_GY', ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(Modes_GY, size(p%KBB,1), size(p%KBB,1), 'Modes_GY', ErrStat2, ErrMsg2); if(Failed()) return
-      call EigenSolveWrap(real(p%KBB,FEKi), real(p%MBB,FEKi), size(p%KBB,1), size(p%KBB,1), .False., Modes_GY, Omega_GY, ErrStat2, ErrMsg2);
+      if (size(p%KBB,1)>0) then
+         call EigenSolveWrap(real(p%KBB,FEKi), real(p%MBB,FEKi), size(p%KBB,1), size(p%KBB,1), .False., Modes_GY, Omega_GY, ErrStat2, ErrMsg2);
+      endif
       IF (ALLOCATED(Modes_GY)  ) DEALLOCATE(Modes_GY)
    ENDIF
    ! Write a summary of the SubDyn Initialization
@@ -2885,7 +2890,8 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%nTP, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
    TI_transpose =  TRANSPOSE(p%TI)
-   p%RBRefPt = Init%TP_RefPoint(:,1) ! Undisplaced position of the rigid-body reference point (1st dummy transition piece)
+   p%RBRefPt = 0.0_ReKi
+   if (p%nTP>0) p%RBRefPt = Init%TP_RefPoint(:,1) ! Undisplaced position of the rigid-body reference point (1st dummy transition piece)
    if (p%TP1IsRBRefPt) then
       ! Set G, transformation matrix to reconstruct rigid-body modes to replace the first 6 Guyan modes (Note: G allocated in AllocParameters)
       CALL Eye(p%GMat, ErrStat2, ErrMsg2); if(Failed()) return
@@ -4125,7 +4131,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       enddo
 
       ! --- CB Modes
-      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//NewLine
+      if (p%nDOFM>0 .and. p%nDOFL_TP>0) write(UnSum, '(A)', advance='no')','//NewLine
       do i = 1, p%nDOFM
          U_red              = 0.0_ReKi
          U_red(p%ID__L)     = CBparams%PhiL(:,i)
@@ -4384,14 +4390,18 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
 
    call rigidBodyMassMatrixCOG(M_O, rOG)   ! r_OG=distance from origin to center of mass
    call translateMassMatrixToCOG(M_O, M_G) ! M_G mass matrix at COG
-   call translateMassMatrixToP(M_O, Init%TP_RefPoint(1:3,1), M_P) ! Mass matrix to first TP ref point
+   if (p%nTP>0) then
+      call translateMassMatrixToP(M_O, Init%TP_RefPoint(1:3,1), M_P) ! Mass matrix to first TP ref point
+   endif
    call yaml_write_var  (UnSum, 'Mass', M_O(1,1), ReFmt, ErrStat2, ErrMsg2, comment='Total Mass')
    call yaml_write_list (UnSum, 'CM_point', rOG                       , ReFmt, ErrStat2, ErrMsg2, comment='Center of mass coordinates (Xcm,Ycm,Zcm)')
    call yaml_write_list (UnSum, 'TP_point_x', Init%TP_RefPoint(1,:) ,ReFmt, ErrStat2, ErrMsg2, comment='Transition piece reference point x-coordinates')
    call yaml_write_list (UnSum, 'TP_point_y', Init%TP_RefPoint(2,:) ,ReFmt, ErrStat2, ErrMsg2, comment='Transition piece reference point y-coordinates')
    call yaml_write_list (UnSum, 'TP_point_z', Init%TP_RefPoint(3,:) ,ReFmt, ErrStat2, ErrMsg2, comment='Transition piece reference point z-coordinates')
    call yaml_write_array(UnSum, 'MRB' , M_O     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).')
-   call yaml_write_array(UnSum, 'M_P' , M_P     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. TP Ref point')
+   if (p%nTP>0) then
+      call yaml_write_array(UnSum, 'M_P' , M_P     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. TP Ref point')
+   endif
    call yaml_write_array(UnSum, 'M_G' , M_G     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. CM (Xcm,Ycm,Zcm).')
 
    ! --- write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
@@ -4714,11 +4724,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    call yaml_write_array(UnSum, 'T_red', p%T_red, 'ES9.2E2', ErrStat2, ErrMsg2, comment='(Constraint elimination matrix)')
 
    ! --- Linearization/ state matrices
-   call StateMatrices(p, ErrStat2, ErrMsg2, AA, BB, CC, DD); if(Failed()) return
-   call yaml_write_array(UnSum, 'AA', AA, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdx)')
-   call yaml_write_array(UnSum, 'BB', BB, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdu)')
-   call yaml_write_array(UnSum, 'CC', CC, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdx)')
-   call yaml_write_array(UnSum, 'DD', DD, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdu)')
+   if (.not. p%Floating) then ! StateMatrices does not include rigid-body states or rotations
+      call StateMatrices(p, ErrStat2, ErrMsg2, AA, BB, CC, DD); if(Failed()) return
+      call yaml_write_array(UnSum, 'AA', AA, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdx)')
+      call yaml_write_array(UnSum, 'BB', BB, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dXdu)')
+      call yaml_write_array(UnSum, 'CC', CC, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdx)')
+      call yaml_write_array(UnSum, 'DD', DD, 'ES10.3E2', ErrStat2, ErrMsg2, comment='(State matrix dYdu)')
+   endif
    if(allocated(AA)) deallocate(AA)
    if(allocated(BB)) deallocate(BB)
    if(allocated(CC)) deallocate(CC)
@@ -4751,6 +4763,9 @@ contains
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
 
+! Generate state-space matrices of the system for the summary file only (actual simulation uses numerical Jacobian)
+! Only fixed-bottom structures are supported at the moment and the C and D matrices do not include all outputs or 
+! contributions from extra moments, static solve, or direct load feedthrough.
 SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
    type(SD_ParameterType),                 intent(in)  :: p       !< Parameters
    integer(IntKi),                         intent(out) :: ErrStat !< Error status of the operation
@@ -4760,7 +4775,7 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
    real(R8Ki), dimension(:,:), allocatable, optional   :: CC      !<
    real(R8Ki), dimension(:,:), allocatable, optional   :: DD      !<
    type(SD_InputType),  intent(in), optional           :: u       !< Inputs
-   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iOff, k, nMembers, iField
+   integer(IntKi)             :: nU, nX, nY, nCB, i, j, iNode, iOff, k, nMembers, iField, iTP, iCol, iDOF
    real(R8Ki), dimension(:), allocatable   :: dFext_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFred_dFmeshk
    real(R8Ki), dimension(:), allocatable   :: dFL_dFmeshk
@@ -4770,10 +4785,11 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! Inputs per TP: [disp(6), vel(6), acc(6)], followed by LMesh forces and moments
    nCB = p%nDOFM
    nX = 2*nCB
-   nU = 18 + 6*p%nNodes
-   nY=6
+   nU = 18*p%nTP + 6*p%nNodes
+   nY = p%nDOFL_TP
 
    ! --- A matrix
    if (present(AA)) then
@@ -4795,14 +4811,17 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       if(allocated(BB)) deallocate(BB)
       call AllocAry(BB, nX, nU, 'BB',    ErrStat2, ErrMsg2 ); if(Failed()) return; BB(:,:) = 0.0_ReKi
       if(nCB>0) then
-         BB(nCB+1:nX, 1 :6  ) = 0.0_ReKi
-         BB(nCB+1:nX, 13:18 ) = -p%MMB(1:nCB,1:6) ! TODO rotate
+         do iTP = 1,p%nTP
+            iCol = 18*(iTP-1)
+            iDOF = 6*(iTP-1)
+            BB(nCB+1:nX, iCol+13:iCol+18) = -p%MMB(1:nCB, iDOF+1:iDOF+6)
+         enddo
          call AllocAry(dFext_dFmeshk, p%nDOF              , 'dFext',    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(dFred_dFmeshk, p%nDOF_red          , 'dFred',    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(dFL_dFmeshk  , p%nDOF__L           , 'dFl'  ,    ErrStat2, ErrMsg2 ); if(Failed()) return
          call AllocAry(PhiM_T       , p%nDOFM , p%nDOF__L , 'PhiMT',    ErrStat2, ErrMsg2 ); if(Failed()) return
          PhiM_T = transpose(p%PhiM)
-         iOff=18
+         iOff=18*p%nTP
          k=0
          do iField = 1,2 ! Forces, Moment
             do iNode = 1,p%nNodes
@@ -4850,21 +4869,19 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
 
    ! --- D matrix
    if (present(DD)) then
-      !print*,'Warning: D matrix does not have all outputs, or extra moment, or static solve'
+      !print*,'Warning: D matrix does not have all outputs, or extra moment, or static solve, or direct load feedthrough'
       if(allocated(DD)) deallocate(DD)
       call AllocAry(DD, nY, nU, 'DD',    ErrStat2, ErrMsg2 ); if(Failed()) return; DD(:,:) = 0.0_ReKi
-      DD(1:nY,1:6   ) = - p%KBB
-      DD(1:nY,7:12  ) = - p%CBB
-      DD(1:nY,13:18 ) = - p%MBB
-      if (p%nDOFM>0) then
-         if (p%Floating .and. present(u)) then
-            ! TODO TODO rotate it A MBmmB A^t
-            !DD(1:3,:) = DD(1:3,:) + matmul(transpose(u%TPMesh%Orientation(:,:,1)), p%MBmmB(1:3,:) ! >>> Rotate All
-            DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
-         else
-            DD(1:nY,13:18 ) = DD(1:nY,13:18 )+ p%MBmmB
+      do iTP = 1,p%nTP
+         iCol = 18*(iTP-1)
+         iDOF = 6*(iTP-1)
+         DD(1:nY, iCol+1 :iCol+6 ) = - p%KBB(:, iDOF+1:iDOF+6)
+         DD(1:nY, iCol+7 :iCol+12) = - p%CBB(:, iDOF+1:iDOF+6)
+         DD(1:nY, iCol+13:iCol+18) = - p%MBB(:, iDOF+1:iDOF+6)
+         if (p%nDOFM>0) then
+            DD(1:nY, iCol+13:iCol+18) = DD(1:nY, iCol+13:iCol+18) + p%MBmmB(:, iDOF+1:iDOF+6)
          endif
-      endif
+      enddo
    endif
 
    call CleanUp()

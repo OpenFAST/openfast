@@ -923,6 +923,7 @@ subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
    integer(IntKi),         intent(out)   :: ErrStat     ! Error status of the operation
    character(*),           intent(out)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    integer(Intki)       :: i
+   real(ReKi)           :: RefPoint(3)
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -931,10 +932,11 @@ subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
    ! NOTE: using efficient memory order
    call AllocAry(p%DP0, 3, size(Init%Nodes,1), 'DP0', ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! DP0 is only used for floating, which always has at least one TP
+   RefPoint = 0.0_ReKi
+   if (size(Init%TP_RefPoint,2)>0) RefPoint = Init%TP_RefPoint(1:3,1)
    do i = 1, size(Init%Nodes,1)
-      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1,1)
-      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2,1)
-      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3,1)
+      p%DP0(1:3, i) = Init%Nodes(i, 2:4) - RefPoint
    enddo
 
 contains
@@ -1407,7 +1409,7 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
 
    call AllocAry(TPExist,p%nNodes_I,'TPExist',ErrStat,ErrMsg); if (ErrStat/=ErrID_None) return;
    TPExist = .FALSE.
-   p%nTP   = -1;
+   p%nTP   = 0
 
    DO I = 1, p%nNodes_I
       iNode = p%Nodes_I(I,1) ! Node index
@@ -1438,7 +1440,7 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
       iNode = p%Nodes_I(I,1) ! Node index
       if ( (TPIdxInput(I)<=0) .or. (TPIdxInput(I)>p%nNodes_I) ) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), check interface node:'//trim(Num2LStr(iNode))
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with rigid-body reference point) or 1 (all other cases), check interface node:'//trim(Num2LStr(iNode))
          return
       else
          if (TPIdxInput(I)>p%nTP) p%nTP = TPIdxInput(I)
@@ -1450,22 +1452,31 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
    DO I = 1,p%nTP
       if (.not.TPExist(I)) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), missing reference to transition piece '//trim(Num2LStr(I-TPIDOffset))
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with rigid-body reference point) or 1 (all other cases), missing reference to transition piece '//trim(Num2LStr(I-TPIDOffset))
          return
       end if
    ENDDO
 
    p%nDOFRB = 0
-   if (p%Floating .and. (p%nTP>1)) then
-      p%TP1IsRBRefPt = .true.
-      p%nDOFRB = 6
-      if (TPIDOffset == 0) then
+   p%TP1IsRBRefPt = .false.
+   if (p%Floating) then
+      if (p%nNodes_I == 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'A floating structure requires at least one interface joint: either one joint assigned to the dummy transition piece (TPID=0) used to represent rigid-body motion, or interface joint(s) assigned to a single transition piece (TPID=1). '
+         return
+      else if (TPIDOffset == 1) then
+         ! TPID=0 (dummy TP1 internally) tracks rigid-body motion, with or without additional coupled transition pieces
+         p%TP1IsRBRefPt = .true.
+         p%nDOFRB = 6
+      else if (p%nTP > 1) then
          ErrStat = ErrID_Fatal
          ErrMsg  = 'For a floating structure with more than one transition pieces, must have one and only one interface joint assigned to the dummy transition piece (TPID=0) used to represent rigid-body motion. '
          return
       end if
-   else
-      p%TP1IsRBRefPt = .false.
+   else if (TPIDOffset == 1) then
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Transition-piece index TPID=0 (rigid-body reference point) is only allowed for floating structures. Use TPID starting from 1 for fixed-bottom structures. '
+      return
    end if
 
    TP1NodeFound = .false.
