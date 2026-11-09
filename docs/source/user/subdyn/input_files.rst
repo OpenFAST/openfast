@@ -63,24 +63,31 @@ will be generated in that folder. If this output is left empty,
 the driver filename is used (without the extension) is used.
 **NSteps** specifies the number of
 simulation time steps, and **TimeStep** specifies the time between
-steps. Next, the user must specify the locations of the transition piece (TP) 
-reference points. These are normally set by OpenFAST through the ElastoDyn 
-input files, and they are the so-called *platform* reference points 
-given by **PtfmRefxt**, **PtfmRefyt**, and **PtfmRefzt** in ElastoDyn. 
+steps. Next, the user must specify the locations of the transition piece (TP)
+reference points. These are normally set by OpenFAST through the ElastoDyn
+input files, and they are the so-called *platform* reference points
+given by **PtfmRefxt**, **PtfmRefyt**, and **PtfmRefzt** in ElastoDyn.
 The interface joints, defined in SubDyn’s main input file,
-are rigidly connected to these ElastoDyn platform reference points. 
-When running the SubDyn standalone driver, the positions of these TP 
-reference points must be defined in the driver input file instead, 
-and prescribed motions can be defined for these transition pieces below. 
-**NTPs** is the number of actual transition pieces, excluding the 
-rigid-body reference point for a floating structure (see the **Interface Joints** 
-section of the SubDyn's main input file below). The next three lines are 
-**TP\_RefPoint\_X**, **TP\_RefPoint\_Y**, and **TP\_RefPoint\_Z**, which should 
-respectively contain the **X**, **Y**, and **Z** coordinates of each transition 
-pieces in the global coordinate system. Each line should contain exactly 
-**NTPs** entries. To utilize the same geometry definition within SubDyn’s main 
-input file, while still allowing for different substructure orientations about 
-the vertical, the user can set **SubRotateZ** to a prescribed angle in degrees 
+are rigidly connected to these ElastoDyn platform reference points.
+When running the SubDyn standalone driver, the positions of these TP
+reference points must be defined in the driver input file instead,
+and prescribed motions can be defined for these transition pieces below.
+**NTPs** is the number of actual transition pieces, excluding the
+rigid-body reference point for a floating structure (see the **Interface Joints**
+section of the SubDyn's main input file below). The next three lines are
+**TP\_RefPoint\_X**, **TP\_RefPoint\_Y**, and **TP\_RefPoint\_Z**, which should
+respectively contain the **X**, **Y**, and **Z** coordinates of each transition
+pieces in the global coordinate system. Each line should contain exactly
+**NTPs** entries. **NTPs** can be set to zero for a structure that is not coupled
+to any transition piece, i.e., a fixed-bottom structure with **NInterf** = 0 or a
+floating structure with only the rigid-body reference point (**TPID** = 0) in the
+**Interface Joints** section of the main input file. In this case, the three
+**TP\_RefPoint** lines should be left without entries, the TP motion inputs
+below are ignored (**InputsMod** is reset to 0), and the structure can be
+loaded through the applied loads at the end of the driver input file.
+To utilize the same geometry definition within SubDyn’s main
+input file, while still allowing for different substructure orientations about
+the vertical, the user can set **SubRotateZ** to a prescribed angle in degrees
 with respect to the global *Z*-axis. The entire substructure will be rotated
 by that angle. (This feature is only available in standalone mode.)
 
@@ -309,11 +316,34 @@ line, separated by white space. If the number of **JDampings** is less
 than the number of retained modes, the last value will be replicated for
 all the remaining modes. (see :numref:`SD_DampingSpecifications`)
 
-**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified matrix] (see :numref:`SD_DampingSpecifications`)
+**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user
+specified matrix] (see :numref:`SD_DampingSpecifications`)
 
-**RayleighDamp** Mass and stiffness proportional damping  coefficients (:math:`(\alpha,\beta)` Rayleigh damping) [only if GuyanDampMod=1]
+**RayleighDamp** Mass and stiffness proportional damping  coefficients
+(:math:`(\alpha,\beta)` Rayleigh damping) [only if GuyanDampMod=1]
 
-**GuyanDampSize** Size of the square Guyan damping matrix [only if GuyanDampMod=2]. For a fixed-bottom structure, **GuyanDampSize** must be set to 6 x **nTP** where **nTP** is the number of independent transition pieces, i.e., the number of unique **TPID** in the **Interface Joints** section below. For a floating structure, the first six Guyan modes are always converted to rigid-body modes. Therefore, **GuyanDampSize** must be set to 6 x ( **nTP** - 1 ) because SubDyn no longer applies damping to rigid-body modes. Note that for a floating structure modeled with a rigid-body reference point, Guyan damping is only applied to the part of interface/transition piece velocity associated with elastic deflection of the structure, i.e., the velocity of the transition piece(s) relative to rigid-body motion. For more information on the rigid-body modes and the rigid-body reference point for a floating structure, see the **Interface Joints** section below. The next **GuyanDampSize** lines following this input line should provide the coefficients of the damping matrix to be applied at the interfaces/transition pieces. Each of the following lines should contain **GuyanDampSize** entries to provide the full square damping matrix. (see :numref:`SD_DampingSpecifications`)
+**GuyanDampSize** Size of the square Guyan damping matrix [only if
+GuyanDampMod=2]. For a fixed-bottom structure, **GuyanDampSize** must
+be set to 6 x **nTP** where **nTP** is the number of independent
+transition pieces, i.e., the number of unique **TPID** in the
+**Interface Joints** section below. For a floating structure, the
+first six Guyan modes are always converted to rigid-body modes.
+Therefore, **GuyanDampSize** must be set to 6 x ( **nTP** - 1 )
+because SubDyn no longer applies damping to rigid-body modes.
+Consequently, **GuyanDampSize** must be zero for a fixed-bottom
+structure without interface joints or a floating structure with
+only the rigid-body reference point (**TPID** = 0). Note that for
+a floating structure modeled with a rigid-body reference point,
+Guyan damping is only applied to the part of interface/transition
+piece velocity associated with elastic deflection of the structure,
+i.e., the velocity of the transition piece(s) relative to rigid-body
+motion. For more information on the rigid-body modes and the rigid-body
+reference point for a floating structure, see the **Interface Joints**
+section below. The next **GuyanDampSize** lines following this input
+line should provide the coefficients of the damping matrix to be
+applied at the interfaces/transition pieces. Each of the following
+lines should contain **GuyanDampSize** entries to provide the full
+square damping matrix. (see :numref:`SD_DampingSpecifications`)
 
 For more information on these parameters and guidelines on how to set
 them, see Sections :numref:`sd_modeling-considerations` and :numref:`subdyn-theory`.
@@ -420,35 +450,42 @@ Interface Joints
 SubDyn requires the user to specify the interface joints. **NInterf**
 should be set equal to the number of joints at the top of the structure,
 i.e., transition pieces (TP). **NInterf** also determines the number of rows in the
-subsequent table. In SubDyn, **NInterf** must be greater than or equal
-to one. With the exception of the rigid-body reference point of a floating structure 
+subsequent table. For a fixed-bottom structure, **NInterf** can be zero, in which
+case the structure is only supported by the base reaction joints and is not coupled
+to any transition piece. For a floating structure, **NInterf** must be greater than
+or equal to one. With the exception of the rigid-body reference point of a floating structure
 with **TPID** = 0, these joints will be assumed to be rigidly connected
 to the platform reference points of ElastoDyn instances (see FAST documentation)
 when coupled to FAST, or to the TP reference points if SubDyn is run in
 stand-alone mode. Each joint listed in the table is identified by a
 unique integer, **IJointID**, which must correspond to the *JointID*
-value found in the STRUCTURE JOINTS table. Note that only cantilever joints can 
-serve as interface joints. Furthermore, it is not allowed to assign multiple joints 
-belonging to the same rigid-body assembly as interface joints. (This is also redundant.) 
+value found in the STRUCTURE JOINTS table. Note that only cantilever joints can
+serve as interface joints. Furthermore, it is not allowed to assign multiple joints
+belonging to the same rigid-body assembly as interface joints. (This is also redundant.)
 
-Each interface joint must also be assigned a transition piece ID or **TPID**. 
-Each transition piece, identified by its unique **TPID**, can deflect 
-independently from all other transition pieces, and multiple joints can be 
-rigidly attached to each transition piece by assigning them the same 
-**TPID**. Note that all joints with the same **TPID** will effectively be 
-rigidly connected to each other through their rigid connection to the shared 
-transition piece. For a fixed-bottom structure, all **TPID** present in the 
-table must form a continuous sequence of integers starting from 1. For a floating 
-structure, one and exactly one joint can be assigned to **TPID** = 0. This 
-joint is a dummy transition piece that acts as the rigid-body reference point 
-for the floating substructure. Alternatively, **TPID** = 0 can be omitted for 
-a floating structure, in which case, there can only be one and exactly one 
-transition piece with **TPID** = 1 (though multiple joints can be assigned 
-to it). In this case, the single transition piece also serves as the rigid-body 
-reference point, replicating how previous versions of SubDyn models a floating 
-substructure. For accuracy and numerical stability, it is recommended to 
-select a joint near the center of the floater as the rigid-body reference point 
+Each interface joint must also be assigned a transition piece ID or **TPID**.
+Each transition piece, identified by its unique **TPID**, can deflect
+independently from all other transition pieces, and multiple joints can be
+rigidly attached to each transition piece by assigning them the same
+**TPID**. Note that all joints with the same **TPID** will effectively be
+rigidly connected to each other through their rigid connection to the shared
+transition piece. For a fixed-bottom structure, all **TPID** present in the
+table must form a continuous sequence of integers starting from 1. For a floating
+structure, one and exactly one joint can be assigned to **TPID** = 0. This
+joint is a dummy transition piece that acts as the rigid-body reference point
+for the floating substructure. Alternatively, **TPID** = 0 can be omitted for
+a floating structure, in which case, there can only be one and exactly one
+transition piece with **TPID** = 1 (though multiple joints can be assigned
+to it). In this case, the single transition piece also serves as the rigid-body
+reference point, replicating how previous versions of SubDyn models a floating
+substructure. For accuracy and numerical stability, it is recommended to
+select a joint near the center of the floater as the rigid-body reference point
 to minimize elastic deflection relative to the rigid-body displacement.
+A floating structure can also be modeled with only the joint assigned to
+**TPID** = 0 and no other interface joints, in which case the structure is not
+coupled to any transition piece. The number of actual transition pieces,
+excluding **TPID** = 0, must match **NTPs** in the SubDyn driver input file or the
+number of ElastoDyn instances when coupled to OpenFAST.
 
 The ability to include multiple independent transition pieces is added 
 to SubDyn to enable the modeling of substructures (both fixed-bottom 
