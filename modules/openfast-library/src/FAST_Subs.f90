@@ -2107,8 +2107,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       if (p%CompSub /= Module_SD) then
          call SetErrStat(ErrID_Fatal, 'SubDyn must be used when multiple rotors are present. Set CompSub = 1 in the FAST input file.', ErrStat, ErrMsg, RoutineName)
       end if
-      if (p%CompAero /= Module_Unknown .and. p%CompAero /= Module_AD) then
-         call SetErrStat(ErrID_Fatal, 'AeroDyn must be used when multiple rotors are present. Set CompAero = 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName)
+      if (p%CompAero /= Module_Unknown .and. p%CompAero /= Module_None .and. p%CompAero /= Module_AD) then
+         call SetErrStat(ErrID_Fatal, 'CompAero must be 0 (None) or 2 (AeroDyn) when multiple rotors are present.', ErrStat, ErrMsg, RoutineName)
       end if
    end if
 
