@@ -26,13 +26,17 @@
  *         beamdyn_c_binding_driver <mode> <BeamDyn primary input file> [key=value ...]
  *
  * With a single argument, the file is read as a BeamDyn driver input file (the input file of beamdyn_driver) and the
- * case is run through the C interface; <root>.out is written in the same format as beamdyn_driver writes it.  The
- * multi-point load table and GlbRotBladeT0 = False are not supported by this driver.
+ * case is run through the C interface; <root>.out is written in the same format as beamdyn_driver writes it.  Not
+ * supported by this driver (the run stops with a message): the multi-point load table (NumPointLoads > 0),
+ * GlbRotBladeT0 = False, a nonzero t_initial, and driver files without the NumPointLoads line.  VTK output (WrVTK)
+ * is not written; a message is printed if it is requested.
  *
  * Modes:
  *    run         Run the beam from t=0 to tmax and write <root>.out (same format as the BeamDyn driver output file).
  *    cantilever  Static tip deflection and first bending frequency of a uniform cantilever, compared with the
- *                Euler-Bernoulli values for the EI and mass per unit length given (EI=, mu=, tip=Fx).
+ *                Euler-Bernoulli values for the EI and mass per unit length given (EI=, mu=, tip=Fx).  The beam must
+ *                be slender, lightly damped (the tip must settle before trelease), and oriented so that a force
+ *                along global x bends it (the default root orientation); gravity is set to zero.
  *    checkpoint  Run to tmax, then repeat the run with a checkpoint written at tchk and restored into a fresh
  *                instance; compare the tip motion and root reaction of the two runs.
  *
@@ -118,6 +122,15 @@ static int parse_vector(const char *s, double *v, int n)
       s = end;
       if (*s == ',') s++;
    }
+   return (*s == '\0') ? 0 : 1;      /* nothing may follow the last value */
+}
+
+static int parse_int(const char *s, int *v)
+{
+   char *end;
+   long  l = strtol(s, &end, 10);
+   if (end == s || *end != '\0') return 1;
+   *v = (int)l;
    return 0;
 }
 
@@ -133,23 +146,23 @@ static int parse_options(int argc, char **argv, Options *o)
       int bad = 0;
 #define KEY(name) (klen == strlen(name) && strncmp(argv[i], name, klen) == 0)
       if      (KEY("root"))     { strncpy(o->root, val, sizeof(o->root) - 1); }
-      else if (KEY("dt"))       { o->dt = atof(val); }
-      else if (KEY("tmax"))     { o->tmax = atof(val); }
-      else if (KEY("interp"))   { o->interp = atoi(val); }
-      else if (KEY("dynamic"))  { o->dynamic = atoi(val); }
-      else if (KEY("wrout"))    { o->wrout = atoi(val); }
+      else if (KEY("dt"))       { bad = parse_vector(val, &o->dt, 1); }
+      else if (KEY("tmax"))     { bad = parse_vector(val, &o->tmax, 1); }
+      else if (KEY("interp"))   { bad = parse_int(val, &o->interp); }
+      else if (KEY("dynamic"))  { bad = parse_int(val, &o->dynamic); }
+      else if (KEY("wrout"))    { bad = parse_int(val, &o->wrout); }
       else if (KEY("grav"))     { bad = parse_vector(val, v, 3); for (k = 0; k < 3; k++) o->grav[k] = v[k]; }
       else if (KEY("pos"))      { bad = parse_vector(val, v, 3); for (k = 0; k < 3; k++) o->pos[k]  = v[k]; }
       else if (KEY("ori"))      { bad = parse_vector(val, o->ori, 9); }
       else if (KEY("omega"))    { bad = parse_vector(val, o->omega, 3); }
       else if (KEY("tip"))      { bad = parse_vector(val, o->tip, 3); }
-      else if (KEY("trelease")) { o->t_release = atof(val); }
-      else if (KEY("amp"))      { o->amp = atof(val); }
-      else if (KEY("freq"))     { o->freq = atof(val); }
-      else if (KEY("EI"))       { o->EI = atof(val); }
-      else if (KEY("mu"))       { o->mu = atof(val); }
-      else if (KEY("tchk"))     { o->t_chk = atof(val); }
-      else if (KEY("tol"))      { o->tol = atof(val); }
+      else if (KEY("trelease")) { bad = parse_vector(val, &o->t_release, 1); }
+      else if (KEY("amp"))      { bad = parse_vector(val, &o->amp, 1); }
+      else if (KEY("freq"))     { bad = parse_vector(val, &o->freq, 1); }
+      else if (KEY("EI"))       { bad = parse_vector(val, &o->EI, 1); }
+      else if (KEY("mu"))       { bad = parse_vector(val, &o->mu, 1); }
+      else if (KEY("tchk"))     { bad = parse_vector(val, &o->t_chk, 1); }
+      else if (KEY("tol"))      { bad = parse_vector(val, &o->tol, 1); }
       else { fprintf(stderr, "Unknown option '%s'\n", argv[i]); return 1; }
 #undef KEY
       if (bad) { fprintf(stderr, "Could not parse the value of option '%s'\n", argv[i]); return 1; }
@@ -241,7 +254,7 @@ static void root_motion(const Options *o, double t, double disp[3], double ori[9
 typedef struct {
    int     n, nmax;
    double *t;
-   double *tip;      /* [3*n] tip displacement from the reference tip position (m) */
+   double *tip;      /* [3*n] tip position minus the reference tip position (m); includes the rigid motion of the root */
    double *react;    /* [6*n] root reaction force and moment (N, N-m) */
    double  length;   /* distance from the root to the tip output node in the reference configuration (m) */
 } Series;
@@ -252,6 +265,7 @@ static void series_alloc(Series *s, int nmax)
    s->t     = (double*)calloc((size_t)nmax, sizeof(double));
    s->tip   = (double*)calloc((size_t)3*nmax, sizeof(double));
    s->react = (double*)calloc((size_t)6*nmax, sizeof(double));
+   if (!s->t || !s->tip || !s->react) { fprintf(stderr, "Out of memory\n"); exit(EXIT_FAILURE); }
    s->length = 0.0;
 }
 
@@ -272,11 +286,11 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    int    passed = 0, len = (int)strlen(o->input_file);
    const char *input_file = o->input_file;
    int    nOut = 0, nPL = 0, nDL = 0, nCh = 0;
-   int    i, k, n, n0, iTip = 0, jTip = 0;
+   int    k, n, n0, iTip = 0, jTip = 0;
    char   rootbuf[BD_C_INTFSTRLEN], chkpbuf[BD_C_INTFSTRLEN];
    char  *names, *units;
-   float *refpos, *plpos, *dlpos, *nodepos, *nodevel, *nodeacc, *ploads, *dloads, *chan;
-   double *refori, *nodeori;
+   float *nodevel, *nodeacc, *ploads, *dloads, *chan;
+   double *refpos, *plpos, *dlpos, *nodepos, *refori, *nodeori;
    float  react[6]; double disp[3], vel[6], acc[6], rootvel0[6];
    double ori[9], omega_x_r0[3], r0[3], d, dmax;
    double t, tn;
@@ -292,16 +306,17 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
 
    names = (char*)malloc(BD_C_CHANNELBUFLEN);
    units = (char*)malloc(BD_C_CHANNELBUFLEN);
+   if (!names || !units) { fprintf(stderr, "Out of memory\n"); exit(EXIT_FAILURE); }
 
    BD_C_Init(&passed, &input_file, &len, rootbuf, o->pos, o->ori, rootvel0, o->grav, &o->dt, &o->interp,
              &o->dynamic, &o->wrout, &nOut, &nPL, &nDL, &nCh, names, units, &err_stat, err_msg);
    check("BD_C_Init");
 
-   refpos  = (float*) malloc((size_t)3*nOut*sizeof(float));
+   refpos  = (double*)malloc((size_t)3*nOut*sizeof(double));
    refori  = (double*)malloc((size_t)9*nOut*sizeof(double));
-   plpos   = (float*) malloc((size_t)3*nPL *sizeof(float));
-   dlpos   = (float*) malloc((size_t)3*nDL *sizeof(float));
-   nodepos = (float*) malloc((size_t)3*nOut*sizeof(float));
+   plpos   = (double*)malloc((size_t)3*nPL *sizeof(double));
+   dlpos   = (double*)malloc((size_t)3*nDL *sizeof(double));
+   nodepos = (double*)malloc((size_t)3*nOut*sizeof(double));
    nodeori = (double*)malloc((size_t)9*nOut*sizeof(double));
    nodevel = (float*) malloc((size_t)6*nOut*sizeof(float));
    nodeacc = (float*) malloc((size_t)6*nOut*sizeof(float));
@@ -312,18 +327,18 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    BD_C_GetRefPositions(refpos, refori, plpos, dlpos, &err_stat, err_msg);
    check("BD_C_GetRefPositions");
 
-   /* Tip: the output node and point load node farthest from the first output node */
-   dmax = -1.0;
-   for (i = 0; i < nOut; i++) {
-      d = 0.0; for (k = 0; k < 3; k++) d += pow(refpos[3*i+k] - refpos[k], 2);
-      if (d > dmax) { dmax = d; iTip = i; }
+   if (!refpos || !refori || !plpos || !dlpos || !nodepos || !nodeori || !nodevel || !nodeacc || !ploads || !dloads || !chan) {
+      fprintf(stderr, "Out of memory\n");
+      BD_C_End(&err_stat, err_msg);
+      exit(EXIT_FAILURE);
    }
+
+   /* Tip: the last output node and the last point load node (the node beamdyn_driver applies its tip load to) */
+   iTip = nOut - 1;
+   jTip = nPL - 1;
+   dmax = 0.0;
+   for (k = 0; k < 3; k++) { d = refpos[3*iTip+k] - refpos[k]; dmax += d*d; }
    s->length = sqrt(dmax);
-   dmax = -1.0;
-   for (i = 0; i < nPL; i++) {
-      d = 0.0; for (k = 0; k < 3; k++) d += pow(plpos[3*i+k] - refpos[k], 2);
-      if (d > dmax) { dmax = d; jTip = i; }
-   }
 
    printf("   Beam: %d output nodes, %d point load nodes, %d distributed load nodes, %d output channels, length %.6f m\n",
           nOut, nPL, nDL, nCh, s->length);
@@ -355,7 +370,7 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
       int kk;                                                                                        \
       if (s->n < s->nmax) {                                                                          \
          s->t[s->n] = (time);                                                                        \
-         for (kk = 0; kk < 3; kk++) s->tip[3*s->n+kk] = (double)nodepos[3*iTip+kk] - (double)refpos[3*iTip+kk]; \
+         for (kk = 0; kk < 3; kk++) s->tip[3*s->n+kk] = nodepos[3*iTip+kk] - refpos[3*iTip+kk]; \
          for (kk = 0; kk < 6; kk++) s->react[6*s->n+kk] = (double)react[kk];                        \
          s->n++;                                                                                     \
       }                                                                                              \
@@ -400,28 +415,32 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
 /*----------------------------------------------------------------------------------------------------------------*/
 /* Analysis helpers                                                                                                 */
 /*----------------------------------------------------------------------------------------------------------------*/
-/* Frequency and damping ratio of a decaying oscillation x(t) about zero for t >= t0, from the upward zero crossings
- * and the logarithmic decrement of the positive peaks.  Returns the number of cycles used (0 on failure). */
+/* Frequency and damping ratio of a decaying oscillation x(t) about zero for t >= t0.  The frequency is taken from
+ * the upward zero crossings and the damping from the logarithmic decrement of the cycle maxima, with one maximum per
+ * cycle (the largest value between two consecutive upward crossings), so that plateaus of rounded values are not
+ * counted as extra peaks.  Returns the number of cycles used (0 on failure). */
 static int measure_oscillation(const Series *s, int comp, double t0, double *f_damped, double *zeta)
 {
    int    i, ncross = 0, npeak = 0;
-   double t_first = 0.0, t_last = 0.0, a_first = 0.0, a_last = 0.0;
-   for (i = 1; i < s->n - 1; i++) {
-      double x0 = s->tip[3*(i-1)+comp], x1 = s->tip[3*i+comp], x2 = s->tip[3*(i+1)+comp];
+   double t_first = 0.0, t_last = 0.0, a_first = 0.0, a_last = 0.0, cycle_max = 0.0;
+   for (i = 1; i < s->n; i++) {
+      double x0 = s->tip[3*(i-1)+comp], x1 = s->tip[3*i+comp];
       if (s->t[i] < t0) continue;
       if (x0 < 0.0 && x1 >= 0.0) {                                   /* upward zero crossing, linear interpolation */
          double tc = s->t[i-1] + (0.0 - x0)/(x1 - x0)*(s->t[i] - s->t[i-1]);
          if (ncross == 0) t_first = tc;
          t_last = tc;
+         if (ncross > 0 && cycle_max > 0.0) {                        /* maximum of the cycle that just ended */
+            if (npeak == 0) a_first = cycle_max;
+            a_last = cycle_max;
+            npeak++;
+         }
          ncross++;
+         cycle_max = 0.0;
       }
-      if (x1 > 0.0 && x1 >= x0 && x1 > x2) {                         /* positive peak */
-         if (npeak == 0) a_first = x1;
-         a_last = x1;
-         npeak++;
-      }
+      if (ncross > 0 && x1 > cycle_max) cycle_max = x1;
    }
-   if (ncross < 3 || npeak < 2) return 0;
+   if (ncross < 4 || npeak < 2 || a_last <= 0.0) return 0;
    *f_damped = (ncross - 1)/(t_last - t_first);
    {
       double delta = log(a_first/a_last)/(npeak - 1);                 /* logarithmic decrement */
@@ -448,14 +467,17 @@ static int mode_run(const Options *o)
    series_alloc(&s, n);
    run_simulation(o, o->root, 0.0, o->tmax, -1.0, 0, NULL, 0, &s);
 
-   printf("   Final time %.6f s: tip displacement [%.8e %.8e %.8e] m, root reaction force [%.8e %.8e %.8e] N\n",
+   printf("   Final time %.6f s: tip position change [%.8e %.8e %.8e] m, root reaction force [%.8e %.8e %.8e] N\n",
           s.t[s.n-1], s.tip[3*(s.n-1)], s.tip[3*(s.n-1)+1], s.tip[3*(s.n-1)+2],
           s.react[6*(s.n-1)], s.react[6*(s.n-1)+1], s.react[6*(s.n-1)+2]);
 
    if (o->amp != 0.0 && o->freq > 0.0) {
       /* Prescribed sinusoidal root motion: the root reaction must follow the root acceleration.  Over the last
-       * period, compare the amplitude of the x reaction force with the rigid-body inertial estimate
-       * mu*L*amp*(2*pi*f)^2 (times the single-mode dynamic amplification if EI is given). */
+       * period, compare the amplitude of the x reaction force with the steady-state base shear of a uniform
+       * cantilever: M*a for a rigid beam (M = mu*L, a = amp*(2*pi*f)^2) and, if EI is given, with the first bending
+       * mode included, M*a*(1 + 0.6131*r^2/(1 - r^2)) with r = f/f1 (0.6131 is the effective mass fraction of the
+       * first mode; within 0.1% for r <= 0.5).  The start-up transient must have decayed, so the beam needs damping
+       * and tmax must be several times 1/(zeta*2*pi*f1). */
       double T = 1.0/o->freq, fmax = 0.0, amax = 0.0;
       for (i = 0; i < s.n; i++) {
          if (s.t[i] < o->tmax - T) continue;
@@ -469,7 +491,8 @@ static int mode_run(const Options *o)
          double M = o->mu*s.length, a = o->amp*pow(2.0*M_PI*o->freq, 2), est = M*a;
          if (o->EI > 0.0) {
             double f1 = 1.8751040687*1.8751040687/(2.0*M_PI)*sqrt(o->EI/(o->mu*pow(s.length, 4)));
-            est /= fabs(1.0 - pow(o->freq/f1, 2));
+            double r = o->freq/f1;
+            est *= 1.0 + 0.6131*r*r/(1.0 - r*r);
          }
          fails += report("max |root Fx| vs. inertial estimate", fmax, est, o->tol);
       }
@@ -495,6 +518,7 @@ static int mode_cantilever(const Options *o)
    /* (a) static solve: tip deflection under the tip force */
    printf("\n-- Static solve: tip force %.4e N\n", F);
    os.dynamic = 0; os.t_release = -1.0; os.amp = 0.0;
+   os.grav[0] = os.grav[1] = os.grav[2] = 0.0;       /* the analytic values are for a beam without gravity */
    snprintf(root, sizeof(root), "%s_static", o->root);
    series_alloc(&s, 20);
    run_simulation(&os, root, 0.0, 5.0*o->dt, -1.0, 0, NULL, 0, &s);
@@ -506,6 +530,7 @@ static int mode_cantilever(const Options *o)
 
    /* (b) dynamic solve: settle under the tip force, release, measure the first bending frequency from the tip motion */
    od.dynamic = 1; od.amp = 0.0;
+   od.grav[0] = od.grav[1] = od.grav[2] = 0.0;
    if (od.t_release < 0.0) od.t_release = 0.5*o->tmax;
    printf("\n-- Dynamic solve: tip force applied until t = %.3f s, free vibration until t = %.3f s\n", od.t_release, od.tmax);
    snprintf(root, sizeof(root), "%s_dynamic", o->root);
@@ -513,6 +538,19 @@ static int mode_cantilever(const Options *o)
    series_alloc(&s, n);
    run_simulation(&od, root, 0.0, od.tmax, -1.0, 0, NULL, 0, &s);
    for (i = 0; i < s.n; i++) if (s.t[i] <= od.t_release - 0.5*o->dt) d_settled = s.tip[3*i];
+   {
+      /* the tip must have settled before the release: its range over the last period must be within the tolerance */
+      double dmin = d_settled, dmax = d_settled, Tper = 1.0/(1.8751040687*1.8751040687/(2.0*M_PI)*sqrt(o->EI/(o->mu*pow(L, 4))));
+      for (i = 0; i < s.n; i++) {
+         if (s.t[i] > od.t_release - 0.5*o->dt || s.t[i] < od.t_release - Tper) continue;
+         if (s.tip[3*i] < dmin) dmin = s.tip[3*i];
+         if (s.tip[3*i] > dmax) dmax = s.tip[3*i];
+      }
+      if (dmax - dmin > o->tol*fabs(d_eb)) {
+         printf("   FAIL: the tip has not settled before the release (range %.3e m over the last period); increase trelease or the damping\n", dmax - dmin);
+         fails++;
+      }
+   }
    fails += report("static tip deflection (settled dynamic solve)", d_settled, d_eb, o->tol);
 
    f_eb = 1.8751040687*1.8751040687/(2.0*M_PI)*sqrt(o->EI/(o->mu*pow(L, 4)));
@@ -594,33 +632,61 @@ static int dvr_skip(FILE *fp, int nlines, const char *what)
    return 0;
 }
 
-/* Read nvals numbers from the start of the next line */
+/* Read the next line that is not blank (list-directed reads in beamdyn_driver skip blank lines) */
+static int dvr_value_line(FILE *fp, char *line, size_t n, const char *what)
+{
+   const char *c;
+   for (;;) {
+      if (dvr_line(fp, line, n, what)) return 1;
+      for (c = line; *c == ' ' || *c == '\t' || *c == '\r' || *c == '\n'; c++) ;
+      if (*c != '\0') return 0;
+   }
+}
+
+/* Read nvals numbers from the start of the next non-blank line.  Fortran D exponents are accepted; values are
+ * separated by blanks and/or a comma. */
 static int dvr_numbers(FILE *fp, double *v, int nvals, const char *what)
 {
-   char  line[2048], *s, *end;
+   char  line[2048], tok[128], *s, *end;
    int   i;
-   if (dvr_line(fp, line, sizeof(line), what)) return 1;
+   size_t k;
+   if (dvr_value_line(fp, line, sizeof(line), what)) return 1;
    s = line;
    for (i = 0; i < nvals; i++) {
-      v[i] = strtod(s, &end);
-      if (end == s) { fprintf(stderr, "Driver input file: invalid numerical input while reading %s\n", what); return 1; }
-      s = end;
-      while (*s == ',' ) s++;
+      while (*s == ' ' || *s == '\t') s++;
+      if (i > 0 && *s == ',') { s++; while (*s == ' ' || *s == '\t') s++; }
+      for (k = 0; k < sizeof(tok) - 1 && *s && *s != ' ' && *s != '\t' && *s != ',' && *s != '\r' && *s != '\n'; k++, s++)
+         tok[k] = (*s == 'd' || *s == 'D') ? 'e' : *s;
+      tok[k] = '\0';
+      v[i] = strtod(tok, &end);
+      if (k == 0 || *end != '\0') { fprintf(stderr, "Driver input file: invalid numerical input while reading %s\n", what); return 1; }
    }
    return 0;
 }
 
-/* Read a Fortran logical (T, F, True, False, .true., .false.) from the start of the next line */
+/* Read a Fortran logical (T, F, True, False, .true., .false.) from the start of the next non-blank line */
 static int dvr_logical(FILE *fp, int *v, const char *what)
 {
    char line[2048], *s;
-   if (dvr_line(fp, line, sizeof(line), what)) return 1;
+   if (dvr_value_line(fp, line, sizeof(line), what)) return 1;
    s = line;
    while (*s == ' ' || *s == '\t' || *s == '.' || *s == '"') s++;
    if      (*s == 'T' || *s == 't') *v = 1;
    else if (*s == 'F' || *s == 'f') *v = 0;
    else { fprintf(stderr, "Driver input file: invalid logical input while reading %s\n", what); return 1; }
    return 0;
+}
+
+/* Last path separator in a file name ('/' or, for Windows paths, '\\'); NULL if there is none */
+static const char *last_separator(const char *path)
+{
+   const char *a = strrchr(path, '/'), *b = strrchr(path, '\\');
+   return (a == NULL) ? b : (b == NULL || a > b) ? a : b;
+}
+
+static int is_absolute_path(const char *path)
+{
+   return path[0] == '/' || path[0] == '\\' || (path[0] != '\0' && path[1] == ':');
 }
 
 /* Read a BeamDyn driver input file into the options.  The primary input file name is returned in primary (resolved
@@ -631,7 +697,7 @@ static int read_driver_file(const char *file, Options *o, char *primary, size_t 
    FILE  *fp = fopen(file, "r");
    char   line[2048], name[1024], *s, *e;
    double v[3], t_initial, t_final;
-   int    i, k, flag, npl, nfinal;
+   int    i, k, flag, npl, nfinal, wrvtk = 0;
    const char *slash;
 
    if (fp == NULL) { fprintf(stderr, "Cannot open the driver input file %s\n", file); return 1; }
@@ -660,9 +726,12 @@ static int read_driver_file(const char *file, Options *o, char *primary, size_t 
    npl = (int)v[0];
    if (npl > 0) { fprintf(stderr, "Driver input file: the multi-point load table (NumPointLoads > 0) is not supported by this driver\n"); fclose(fp); return 1; }
    DVR(dvr_skip(fp, 3, "the point load table header and the primary input file section header"));
-   DVR(dvr_line(fp, line, sizeof(line), "InputFile"));
+   DVR(dvr_value_line(fp, line, sizeof(line), "InputFile"));
 #undef DVR
+   /* output section (optional here): only WrVTK is looked at */
+   if (dvr_line(fp, name, sizeof(name), "the output section header") == 0 && dvr_numbers(fp, v, 1, "WrVTK") == 0) wrvtk = (int)v[0];
    fclose(fp);
+   if (wrvtk != 0) printf("Driver input file: WrVTK = %d is ignored, this driver does not write VTK files\n", wrvtk);
 
    /* primary input file name: first token on the line, optionally quoted */
    s = line;
@@ -672,14 +741,15 @@ static int read_driver_file(const char *file, Options *o, char *primary, size_t 
    snprintf(name, sizeof(name), "%.*s", (int)(e - s), s);
 
    /* resolve relative to the directory of the driver input file; root name is the driver file without extension */
-   slash = strrchr(file, '/');
-   if (slash != NULL && name[0] != '/') snprintf(primary, nprimary, "%.*s/%s", (int)(slash - file), file, name);
+   slash = last_separator(file);
+   if (slash != NULL && !is_absolute_path(name)) snprintf(primary, nprimary, "%.*s%c%s", (int)(slash - file), file, *slash, name);
    else                                 snprintf(primary, nprimary, "%s", name);
    snprintf(o->root, sizeof(o->root), "%s", file);
    s = strrchr(o->root, '.');
    if (s != NULL && (slash == NULL || s > o->root + (slash - file))) *s = '\0';
 
    if (t_initial != 0.0) { fprintf(stderr, "Driver input file: t_initial must be 0 for this driver\n"); return 1; }
+   if (!(o->dt > 0.0))   { fprintf(stderr, "Driver input file: dt must be positive\n"); return 1; }
    for (k = 0; k < 6; k++) if (o->distr[k] != 0.0) o->use_distr = 1;
 
    /* beamdyn_driver takes INT((t_final - t_initial)/dt) + 1 steps; a static solve stops after 9 load steps */
