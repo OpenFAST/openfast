@@ -2013,7 +2013,10 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Place any last minute operations or calculations here:
 
    ! Close files here:
-   if (m%Un_Sum > 0) CLOSE(m%Un_Sum)
+   if (m%Un_Sum > 0) then
+      CLOSE(m%Un_Sum)
+      m%Un_Sum = -1
+   endif
 
 
    ! Destroy the input data:
