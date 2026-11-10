@@ -127,6 +127,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       ! this routine sets *some* of the parameters (basically the "easy" ones)
    call SetParameters(InitInp, InputFileData, p, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
 
+      ! Return the time step BeamDyn uses (DTBeam) so the caller can step (or sub-step) consistently
+   Interval = p%dt
+
 
    ! Temporary GLL point intrinsic coordinates array
    CALL BD_GenerateGLL(p%nodes_per_elem,GLL_nodes,ErrStat2,ErrMsg2); if (Failed()) return

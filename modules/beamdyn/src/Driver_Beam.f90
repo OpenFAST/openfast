@@ -32,6 +32,11 @@ PROGRAM BeamDyn_Driver_Program
    CHARACTER(1024)                  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
    REAL(DbKi)                       :: dt_global        ! fixed/constant global time step
    REAL(DbKi)                       :: t_global         ! global-loop time marker
+   REAL(DbKi)                       :: dt_BD            ! BeamDyn time step (DTBeam, returned from BD_Init)
+   REAL(DbKi)                       :: t_BD             ! BeamDyn sub-step time marker
+   INTEGER(IntKi)                   :: n_substeps       ! number of BeamDyn time steps per driver time step
+   INTEGER(IntKi)                   :: j_ss             ! BeamDyn sub-step counter
+   INTEGER(IntKi)                   :: n_t_BD           ! BeamDyn time step counter
    INTEGER(IntKi)                   :: n_t_final        ! total number of time steps
    INTEGER(IntKi)                   :: n_t_global       ! global-loop time counter
    INTEGER(IntKi)                   :: n_t_vtk          ! global vtk step counter
@@ -112,6 +117,9 @@ PROGRAM BeamDyn_Driver_Program
    ALLOCATE(BD_Input(BD_interp_order + 1)) 
    ALLOCATE(BD_InputTimes(BD_interp_order + 1)) 
 
+      ! Suggested BeamDyn time step.  BD_Init returns the time step BeamDyn actually uses (DTBeam)
+   dt_BD = dt_global
+
    CALL BD_Init(BD_InitInput             &
                    , BD_Input(1)         &
                    , BD_Parameter        &
@@ -121,10 +129,14 @@ PROGRAM BeamDyn_Driver_Program
                    , BD_OtherState       &
                    , BD_Output           &
                    , BD_MiscVar          &
-                   , dt_global           &
+                   , dt_BD               &
                    , BD_InitOutput       &
                    , ErrStat             &
                    , ErrMsg )
+      CALL CheckError()
+
+      ! BeamDyn may use a smaller time step (DTBeam) than the driver.  Sub-step BeamDyn in that case.
+   call SetBDSubSteps()
       CALL CheckError()
    
       ! If the Quasi-Static solve is in use, rerun the initialization with loads at t=0 
@@ -155,7 +167,7 @@ PROGRAM BeamDyn_Driver_Program
          CALL CheckError()
          
          ! solve for inputs at previous time steps
-      BD_InputTimes(j) = DvrData%t_initial - (j - 1) * dt_global
+      BD_InputTimes(j) = DvrData%t_initial - (j - 1) * dt_BD
       CALL BD_InputSolve( BD_InputTimes(j), BD_Input(j), DvrData, ErrStat, ErrMsg)
          CALL CheckError()
    END DO
@@ -194,27 +206,30 @@ PROGRAM BeamDyn_Driver_Program
      
    DO n_t_global = 0, n_t_final
 
-      ! Shift "window" of BD_Input 
-      DO j = BD_interp_order, 1, -1
-         CALL BD_CopyInput (BD_Input(j),  BD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS .AND. n_t_global > max_ld_step) EXIT
+
+         ! update states from n_t_global to n_t_global + 1, sub-stepping BeamDyn at its own time step
+      DO j_ss = 1, n_substeps
+         n_t_BD = n_t_global*n_substeps + j_ss - 1
+         t_BD   = n_t_BD * dt_BD + DvrData%t_initial
+
+         ! Shift "window" of BD_Input 
+         DO j = BD_interp_order, 1, -1
+            CALL BD_CopyInput (BD_Input(j),  BD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+               CALL CheckError()
+            BD_InputTimes(j+1) = BD_InputTimes(j)
+         END DO
+         
+         BD_InputTimes(1)  = t_BD + dt_BD
+         CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), DvrData, ErrStat, ErrMsg)
             CALL CheckError()
-         BD_InputTimes(j+1) = BD_InputTimes(j)
+
+         CALL BD_UpdateStates( t_BD, n_t_BD, BD_Input, BD_InputTimes, BD_Parameter, &
+                                  BD_ContinuousState, &
+                                  BD_DiscreteState, BD_ConstraintState, &
+                                  BD_OtherState, BD_MiscVar, ErrStat, ErrMsg )
+            CALL CheckError()
       END DO
-      
-      BD_InputTimes(1)  = t_global + dt_global
-      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), DvrData, ErrStat, ErrMsg)
-         CALL CheckError()
-      
-                       
-     IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS .AND. n_t_global > max_ld_step) EXIT
-
-      ! update states from n_t_global to n_t_global + 1
-     CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
-                               BD_ContinuousState, &
-                               BD_DiscreteState, BD_ConstraintState, &
-                               BD_OtherState, BD_MiscVar, ErrStat, ErrMsg )
-        CALL CheckError()
-
         
       ! advance time
      t_global = (n_t_global+1) * dt_global + DvrData%t_initial
@@ -247,6 +262,29 @@ PROGRAM BeamDyn_Driver_Program
    CALL Dvr_End()
 
 CONTAINS
+!----------------------------------------------------------------------------------------------------------------------------------
+   !> Set the number of BeamDyn sub-steps per driver time step.  The BeamDyn time step (DTBeam) must be
+   !! equal to or an integer divisor of the driver time step.
+   SUBROUTINE SetBDSubSteps()
+      if (EqualRealNos(dt_BD, dt_global)) then
+         n_substeps = 1
+         dt_BD      = dt_global
+      elseif (dt_BD > dt_global) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'BeamDyn time step DTBeam ('//trim(Num2LStr(dt_BD))//' s) cannot be larger than the driver time step DT ('// &
+                   trim(Num2LStr(dt_global))//' s).'
+      else
+         n_substeps = nint(dt_global / dt_BD)
+         if (.not. EqualRealNos(dt_global, dt_BD*n_substeps)) then
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'BeamDyn time step DTBeam ('//trim(Num2LStr(dt_BD))//' s) must be an integer divisor of the driver time step DT ('// &
+                      trim(Num2LStr(dt_global))//' s).'
+         else
+            call WrScr(' BeamDyn time step DTBeam ('//trim(Num2LStr(dt_BD))//' s) is smaller than the driver time step DT ('// &
+                       trim(Num2LStr(dt_global))//' s).  Using '//trim(Num2LStr(n_substeps))//' BeamDyn sub-steps per driver step.')
+         endif
+      endif
+   END SUBROUTINE SetBDSubSteps
 !----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE Dvr_End()
 

@@ -459,6 +459,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         BD%OtherSt(j,STATE_CURR), BD%y(j), BD%m(j), dt_module, Init%OutData_BD(j), ErrStat2, ErrMsg2)
             if (Failed()) return
 
+            ! BeamDyn is tightly coupled in the glue code, so it cannot be sub-stepped: DTBeam must match DT
+            if (.not. EqualRealNos(dt_module, p_FAST%DT)) then
+               call SetErrStat(ErrID_Fatal, "BeamDyn time step DTBeam ("//trim(Num2LStr(dt_module))//" s) must equal the "// &
+                               "OpenFAST time step DT ("//trim(Num2LStr(p_FAST%DT))//" s). Set DTBeam to DEFAULT or to DT.", &
+                               ErrStat, ErrMsg, RoutineName)
+               call Cleanup()
+               return
+            end if
+
             ! We're going to do fewer computations if the BD input and output meshes that couple to AD are siblings (but it needs to be true for all instances):
             if (BD%p(j)%BldMotionNodeLoc /= BD_MESH_QP) p_FAST%BD_OutputSibling = .false.
             if (p_FAST%CompAeroMaps .and. BD%p(j)%BldMotionNodeLoc /= BD_MESH_FE) call SetErrStat(ErrID_Fatal, "BeamDyn aero maps must have outputs at FE nodes.", ErrStat, ErrMsg, RoutineName)
