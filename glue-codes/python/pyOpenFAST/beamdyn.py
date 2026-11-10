@@ -24,8 +24,9 @@
 # Conventions of the BeamDyn C interface (see BeamDyn_C_Binding.f90 / BeamDyn_C_Binding.h):
 #   - Direction cosine matrices (DCMs) map a vector from the global frame to the local frame.  They cross the
 #     interface as flat arrays stored row by row; here they are passed and returned as (3,3) or (N,3,3) arrays.
-#   - Root kinematics (position, orientation, velocity, acceleration) and gravity are double precision.
-#   - Loads, node motions, reaction loads, and output channel values are single precision.
+#   - Root kinematics (position, orientation, velocity, acceleration), gravity, and node positions are double precision.
+#   - Loads, node velocities and accelerations, reaction loads, and output channel values are single precision.
+#   - bd_calcOutput must be called at the initial time before the first bd_updateStates.
 from ctypes import (
     POINTER,
     create_string_buffer,
@@ -61,10 +62,8 @@ class BeamDynLib(OpenFASTInterfaceType):
         self._numDistrLoadNodes = c_int(0)
         self._numChannels       = c_int(0)
 
-        # Time stepping (set by the calling code before bd_init)
-        self.dt           = 0.0
-        self.total_time   = 0.0
-        self.numTimeSteps = 0
+        # Time step (set by bd_init)
+        self.dt = 0.0
 
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
@@ -93,10 +92,10 @@ class BeamDynLib(OpenFASTInterfaceType):
         self.BD_C_Init.restype = None
 
         self.BD_C_GetRefPositions.argtypes = [
-            POINTER(c_float),                     # OUT: output node reference positions (3 x NumOutputNodes)
+            POINTER(c_double),                     # OUT: output node reference positions (3 x NumOutputNodes)
             POINTER(c_double),                    # OUT: output node reference orientations (9 x NumOutputNodes)
-            POINTER(c_float),                     # OUT: point load node reference positions (3 x NumPointLoadNodes)
-            POINTER(c_float),                     # OUT: distributed load node reference positions (3 x NumDistrLoadNodes)
+            POINTER(c_double),                     # OUT: point load node reference positions (3 x NumPointLoadNodes)
+            POINTER(c_double),                     # OUT: distributed load node reference positions (3 x NumDistrLoadNodes)
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
@@ -136,7 +135,7 @@ class BeamDynLib(OpenFASTInterfaceType):
 
         self.BD_C_CalcOutput.argtypes = [
             POINTER(c_double),                    # IN: time
-            POINTER(c_float),                     # OUT: node positions (3 x NumOutputNodes)
+            POINTER(c_double),                     # OUT: node positions (3 x NumOutputNodes)
             POINTER(c_double),                    # OUT: node orientations (9 x NumOutputNodes)
             POINTER(c_float),                     # OUT: node velocities (6 x NumOutputNodes)
             POINTER(c_float),                     # OUT: node accelerations (6 x NumOutputNodes)
@@ -169,19 +168,25 @@ class BeamDynLib(OpenFASTInterfaceType):
 
     # bd_init ------------------------------------------------------------------------------------------------------------
     def bd_init(self, input_file_passed, input_string_array, out_root_name,
-                root_position, root_orientation, root_velocity, gravity,
+                root_position, root_orientation, root_velocity, gravity, dt,
                 interp_order=1, dynamic_solve=True, write_outputs=False):
         """Initialize the beam.
 
         input_file_passed  -- 1: input_string_array holds the lines of the primary input file;
-                              0: input_string_array is a one-item list holding the path to the primary input file
+                              0: input_string_array is the path to the primary input file
         out_root_name      -- root name for the summary, echo, and (optional) output files
         root_position      -- (3) initial root position, global frame (m)
         root_orientation   -- (3,3) initial root orientation DCM (global to root)
         root_velocity      -- (6) initial root translational and rotational velocity, global frame (m/s, rad/s)
         gravity            -- (3) gravity vector, global frame (m/s^2)
+        dt                 -- time step (s), > 0
         """
-        # Convert the string into a c_char byte array
+        self.dt = float(dt)
+        self.ended = False
+
+        # Convert the string into a c_char byte array (a single string is a path, not a list of lines)
+        if isinstance(input_string_array, str):
+            input_string_array = [input_string_array]
         input_string = '\x00'.join(input_string_array)
         input_string = input_string.encode('utf-8')
         input_string_length = len(input_string)
@@ -224,10 +229,10 @@ class BeamDynLib(OpenFASTInterfaceType):
         """Return the reference positions (N,3) and orientations (N,3,3) of the output nodes and the reference
         positions of the point load nodes (Np,3) and distributed load nodes (Nd,3)."""
         n_out, n_pl, n_dl = self.num_output_nodes, self.num_point_load_nodes, self.num_distr_load_nodes
-        out_pos_c = (c_float  * (3 * n_out))()
+        out_pos_c = (c_double * (3 * n_out))()
         out_ori_c = (c_double * (9 * n_out))()
-        pl_pos_c  = (c_float  * (3 * n_pl))()
-        dl_pos_c  = (c_float  * (3 * n_dl))()
+        pl_pos_c  = (c_double * (3 * n_pl))()
+        dl_pos_c  = (c_double * (3 * n_dl))()
 
         self.BD_C_GetRefPositions(
             out_pos_c,                             # OUT: output node reference positions
@@ -304,7 +309,7 @@ class BeamDynLib(OpenFASTInterfaceType):
         Returns the node positions (N,3), orientations (N,3,3), velocities (N,6), accelerations (N,6), and the
         root reaction force and moment (6)."""
         n_out = self.num_output_nodes
-        node_pos_c = (c_float  * (3 * n_out))()
+        node_pos_c = (c_double * (3 * n_out))()
         node_ori_c = (c_double * (9 * n_out))()
         node_vel_c = (c_float  * (6 * n_out))()
         node_acc_c = (c_float  * (6 * n_out))()
@@ -384,9 +389,9 @@ class BeamDynLib(OpenFASTInterfaceType):
         if self.error_status_c.value == 0:
             return
         elif self.error_status_c.value < self.abort_error_level.value:
-            print(f"BeamDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            print(f"BeamDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii', errors='replace')}")
         else:
-            print(f"BeamDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            print(f"BeamDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii', errors='replace')}")
             self.bd_end()
             raise Exception("\nBeamDyn terminated prematurely.")
 
