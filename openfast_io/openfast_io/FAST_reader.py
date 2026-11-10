@@ -2031,7 +2031,6 @@ class InputReader_OpenFAST(object):
         #STRIP THEORY OPTIONS
         f.readline()
         self.fst_vt['HydroDyn']['WaveDisp']     = int_read(f.readline().split()[0])
-        self.fst_vt['HydroDyn']['AMMod']        = int_read(f.readline().split()[0])
         self.fst_vt['HydroDyn']['HstMod']       = int_read(f.readline().split()[0])
 
         #AXIAL COEFFICIENTS
@@ -3533,7 +3532,7 @@ class InputReader_OpenFAST(object):
                 f.readline()
 
                 # Lines
-                self.fst_vt['MoorDyn']['Line_ID']          = []
+                self.fst_vt['MoorDyn']['Line_ID']     = []
                 self.fst_vt['MoorDyn']['LineType']    = []
                 self.fst_vt['MoorDyn']['AttachA']     = []
                 self.fst_vt['MoorDyn']['AttachB']     = []
@@ -3549,6 +3548,38 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['UnstrLen'].append(float(data_line[4]))
                     self.fst_vt['MoorDyn']['NumSegs'].append(int(data_line[5]))
                     self.fst_vt['MoorDyn']['Outputs'].append(str(data_line[6]))
+                    data_line = readline_filterComments(f).split()
+                data_line = ''.join(data_line)  # re-join for reading next section uniformly
+
+            elif '---' in data_line and 'slipsupport' in data_line: 
+                f.readline()
+                f.readline()
+
+                # Lines
+                self.fst_vt['MoorDyn']['SlipSupport_ID']        = []
+                self.fst_vt['MoorDyn']['SlipSupport_Point']     = []
+                self.fst_vt['MoorDyn']['SlipSupport_Line']      = []
+                self.fst_vt['MoorDyn']['SlipSupport_Width']     = []
+                self.fst_vt['MoorDyn']['SlipSupport_K']         = []
+                self.fst_vt['MoorDyn']['SlipSupport_Zeta']      = []
+                self.fst_vt['MoorDyn']['SlipSupport_MuS']       = []
+                self.fst_vt['MoorDyn']['SlipSupport_MuK']       = []
+                self.fst_vt['MoorDyn']['SlipSupport_VTol']      = []
+                self.fst_vt['MoorDyn']['SlipSupport_VS']        = []
+                self.fst_vt['MoorDyn']['SlipSupport_StickDisp'] = []
+                data_line = readline_filterComments(f).split()
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                    self.fst_vt['MoorDyn']['SlipSupport_ID'].append(int(data_line[0]))
+                    self.fst_vt['MoorDyn']['SlipSupport_Point'].append(int(data_line[1]))
+                    self.fst_vt['MoorDyn']['SlipSupport_Line'].append(int(data_line[2]))
+                    self.fst_vt['MoorDyn']['SlipSupport_Width'].append(float(data_line[3]))
+                    self.fst_vt['MoorDyn']['SlipSupport_K'].append(float(data_line[4]))
+                    self.fst_vt['MoorDyn']['SlipSupport_Zeta'].append(float(data_line[5]))
+                    self.fst_vt['MoorDyn']['SlipSupport_MuS'].append(float(data_line[6]))
+                    self.fst_vt['MoorDyn']['SlipSupport_MuK'].append(float(data_line[7]))
+                    self.fst_vt['MoorDyn']['SlipSupport_VTol'].append(float(data_line[8]))
+                    self.fst_vt['MoorDyn']['SlipSupport_VS'].append(float(data_line[9]))
+                    self.fst_vt['MoorDyn']['SlipSupport_StickDisp'].append(float(data_line[10]))
                     data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly
 

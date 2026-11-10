@@ -62,10 +62,10 @@ subroutine test_BD_MemberEta_5node(error)
    call AllocAry(test_member_eta, member_total, 'test member_eta', ErrStat, ErrMsg)
 
    ! 5-point Guass-Legendre quadrature; see https://pomax.github.io/bezierinfo/legendre-gauss.html
-   baseline_QPtW(1:nqp) = [0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891]
+   baseline_QPtW(1:nqp) = [0.2369268850561891_BDKi, 0.4786286704993665_BDKi, 0.5688888888888889_BDKi, 0.4786286704993665_BDKi, 0.2369268850561891_BDKi]
 
    ! assign baseline jacobian based; these values were calculated in separate mathematica script
-   baseline_jac(1:nqp, 1) = [0.6715870058501458, 1.509599209717604, 2.861380785564901, 4.097191592895223, 4.880926263217582]
+   baseline_jac(1:nqp, 1) = [0.6715870058501458_BDKi, 1.509599209717604_BDKi, 2.861380785564901_BDKi, 4.097191592895223_BDKi, 4.880926263217582_BDKi]
 
    ! total length of beam calculated in mathematica; note that for this curved beam, GL quadrature is APPROXIMATE, but
    !   converged rapidly; TR quadrature is not nearly as good; commented-out values are useful for understanding quadrature performance
@@ -73,8 +73,8 @@ subroutine test_BD_MemberEta_5node(error)
    !baseline_total_length = 5.627175237247959   ! this is actual length based on mathematica
    !baseline_total_length = 5.634413547964786   ! this is approximation with 9-point Trapezoidal quadrature; 0.13% error
    !baseline_total_length = 5.627202424388781   ! this is approximation with 7-point gauss quadrature; 0.0005% error
-   baseline_total_length = 5.626918236484061    ! this is approximation with 5-point gauss quadrature; 0.005% error  (tested here)
-   baseline_member_eta(1) = 1.                  ! just one element; so member_length / total_length = 1
+   baseline_total_length = 5.626918236484061_BDKi    ! this is approximation with 5-point gauss quadrature; 0.005% error  (tested here)
+   baseline_member_eta(1) = 1._BDKi                  ! just one element; so member_length / total_length = 1
 
    call BD_MemberEta(member_total, baseline_QPtW, baseline_jac, test_member_eta, test_total_length)
 

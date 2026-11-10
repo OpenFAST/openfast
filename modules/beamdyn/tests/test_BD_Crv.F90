@@ -74,11 +74,11 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    ! --------------------------------------------------------------------------
    testname = "Tangent aligned with z-axis and 0 degree twist:"
-   n = [real(0.0, BDKi), real(0.0, BDKi), real(1.0, BDKi)] ! tangent axis
+   n = [real(0.0_BDKi, BDKi), real(0.0_BDKi, BDKi), real(1.0_BDKi, BDKi)] ! tangent axis
    angle = 0
 
    ! Baseline Wiener-Milenkovic parameters
-   baseline_wmparams = [0.0, 0.0, 0.0]
+   baseline_wmparams = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -92,7 +92,7 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    ! Baseline Wiener-Milenkovic parameters
    param = 4 * tan((Pi_D / 4) / 4)
-   baseline_wmparams = [real(0.0, BDKi), param, real(0.0, BDKi)]
+   baseline_wmparams = [real(0.0_BDKi, BDKi), param, real(0.0_BDKi, BDKi)]
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -105,8 +105,8 @@ subroutine test_BD_ComputeIniNodalCrv(error)
    angle = 0.0_BDKi
 
    ! Baseline Wiener-Milenkovic parameters
-   param = 4.*tan((-Pi_D / 4.) / 4.)
-   baseline_wmparams = [param, real(0.0, BDKi), real(0.0, BDKi)]
+   param = 4._BDKi*tan((-Pi_D / 4._BDKi) / 4._BDKi)
+   baseline_wmparams = [param, real(0.0_BDKi, BDKi), real(0.0_BDKi, BDKi)]
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -115,12 +115,12 @@ subroutine test_BD_ComputeIniNodalCrv(error)
 
    ! --------------------------------------------------------------------------
    testname = "Tangent along z-axis with 45 degree twist:"
-   n = [real(0.0, BDKi), real(0.0, BDKi), 1.0_BDKi] ! tangent axis
+   n = [real(0.0_BDKi, BDKi), real(0.0_BDKi, BDKi), 1.0_BDKi] ! tangent axis
    angle = 45.0_BDKi
 
    ! Baseline Wiener-Milenkovic parameters
-   param = 4.*tan((Pi_D / 4.) / 4.)
-   baseline_wmparams = [real(0.0, BDKi), real(0.0, BDKi), param]
+   param = 4._BDKi*tan((Pi_D / 4._BDKi) / 4._BDKi)
+   baseline_wmparams = [real(0.0_BDKi, BDKi), real(0.0_BDKi, BDKi), param]
 
    call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
 
@@ -190,7 +190,7 @@ subroutine test_BD_CrvCompose(error)
    ! --------------------------------------------------------------------------
    testname = "delta2 < 0, no transpose of input rotations (flag = 0):"
    angle1 = PiBy2_D ! 90 degrees
-   angle2 = 1.5 * Pi  ! 270 degrees
+   angle2 = 1.5_BDKi * Pi  ! 270 degrees
    flag = 0
 
    r1 = calcRotationMatrix(angle1, n1)
@@ -272,7 +272,7 @@ subroutine test_BD_CrvExtractCrv(error)
    angle = Pi_D
 
    ! Wiener-Milenkovic parameters are <4.0, 0.0, 0.0>
-   baseline_wmparams = [4.0, 0.0, 0.0]
+   baseline_wmparams = [4.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    r = RonXAxis(angle)
    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
@@ -285,7 +285,7 @@ subroutine test_BD_CrvExtractCrv(error)
    angle = 0
 
    ! Wiener-Milenkovic parameters are <0.0, 0.0, 0.0>
-   baseline_wmparams = [0.0, 0.0, 0.0]
+   baseline_wmparams = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    r = RonXAxis(angle)
    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
@@ -295,7 +295,7 @@ subroutine test_BD_CrvExtractCrv(error)
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
-   angle = 0.1 * Pi_D
+   angle = 0.1_BDKi * Pi_D
 
    ! Wiener-Milenkovic parameters are calculated; note tangent is asymptotic at +/- pi/2
    baseline_wmparams = 4 * tan(angle / 4) * n
@@ -328,14 +328,14 @@ subroutine test_BD_CrvMatrixH(error)
    character                  :: ErrMsg
 
    ! set the rotation axis for all tests
-   n = [1., 0., 0.] ! x axis
+   n = [1._BDKi, 0._BDKi, 0._BDKi] ! x axis
 
    ! --------------------------------------------------------------------------
    testname = "simple rotation with known parameters: Pi on xaxis:"
    angle = Pi_D
 
    ! Wiener-Milenkovic parameters are <4.0, 0.0, 0.0>
-   wmparams = [4.0, 0.0, 0.0]
+   wmparams = [4.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    baselineH = H(wmparams)
 
@@ -348,7 +348,7 @@ subroutine test_BD_CrvMatrixH(error)
    angle = 0
 
    ! Wiener-Milenkovic parameters are <0.0, 0.0, 0.0>
-   wmparams = [0.0, 0.0, 0.0]
+   wmparams = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
 
    baselineH = H(wmparams)
 
@@ -358,10 +358,10 @@ subroutine test_BD_CrvMatrixH(error)
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
-   angle = 0.1 * Pi_D
+   angle = 0.1_BDKi * Pi_D
 
    ! Wiener-Milenkovic parameters are calculated; note tangent is asymptotic at +/- pi/2
-   wmparams = 4.*tan(angle / 4.) * n
+   wmparams = 4._BDKi*tan(angle / 4._BDKi) * n
 
    baselineH = H(wmparams)
 
@@ -374,12 +374,12 @@ contains
       real(BDKi)          :: c0, c(3)
       real(BDKi)          :: H(3, 3)
 
-      c0 = 2.0 - dot_product(c, c) / 8.0
+      c0 = 2.0_BDKi - dot_product(c, c) / 8.0_BDKi
 
-      H(1, :) = [c0 + c(1) * c(1) / 4., c(1) * c(2) / 4.-c(3), c(1) * c(3) / 4.+c(2)]
-      H(2, :) = [c(1) * c(2) / 4.+c(3), c0 + c(2) * c(2) / 4., c(2) * c(3) / 4.-c(1)]
-      H(3, :) = [c(1) * c(3) / 4.-c(2), c(2) * c(3) / 4.+c(1), c0 + c(3) * c(3) / 4.]
-      H = 2.*H / (4.-c0)**2
+      H(1, :) = [c0 + c(1) * c(1) / 4._BDKi, c(1) * c(2) / 4._BDKi-c(3), c(1) * c(3) / 4._BDKi+c(2)]
+      H(2, :) = [c(1) * c(2) / 4._BDKi+c(3), c0 + c(2) * c(2) / 4._BDKi, c(2) * c(3) / 4._BDKi-c(1)]
+      H(3, :) = [c(1) * c(3) / 4._BDKi-c(2), c(2) * c(3) / 4._BDKi+c(1), c0 + c(3) * c(3) / 4._BDKi]
+      H = 2._BDKi*H / (4._BDKi-c0)**2
 
    end function
 end subroutine
@@ -413,7 +413,7 @@ subroutine test_BD_CrvMatrixR(error)
    baselineR = RonXAxis(angle)
 
    ! Wiener-Milenkovic parameters are <4.0, 0.0, 0.0>
-   wmparams = [4.0, 0.0, 0.0]
+   wmparams = [4.0_BDKi, 0.0_BDKi, 0.0_BDKi]
    call BD_CrvMatrixR(wmparams, testR)
 
    call check_array(error, baselineR, testR, testname, tolerance); if (allocated(error)) return
@@ -425,14 +425,14 @@ subroutine test_BD_CrvMatrixR(error)
    baselineR = RonXAxis(angle)
 
    ! Wiener-Milenkovic parameters are <0.0, 0.0, 0.0>
-   wmparams = [0.0, 0.0, 0.0]
+   wmparams = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
    call BD_CrvMatrixR(wmparams, testR)
 
    call check_array(error, baselineR, testR, testname, tolerance); if (allocated(error)) return
 
    ! --------------------------------------------------------------------------
    testname = "small rotation with baseline WM parameters calculated:"
-   angle = 0.1 * Pi_D
+   angle = 0.1_BDKi * Pi_D
 
    baselineR = RonXAxis(angle)
 

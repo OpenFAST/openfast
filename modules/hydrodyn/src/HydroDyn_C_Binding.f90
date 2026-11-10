@@ -193,9 +193,9 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
    integer                                :: i
    ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
    if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
+      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C, SIZE(ErrMsg_C) )
    else
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C, SIZE(ErrMsg_C) )
    endif
 end subroutine SetErr
 

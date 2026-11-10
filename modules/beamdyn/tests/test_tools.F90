@@ -146,7 +146,7 @@ subroutine calcWMParameters(params, angle, n)
    real(BDKi), intent(in)               :: angle
    real(BDKi), intent(in), dimension(3) :: n
 
-   params = 4.0 * tan(angle / 4.0) * n
+   params = 4.0_BDKi * tan(angle / 4.0_BDKi) * n
 end subroutine
 
 function calcRotationMatrix(angle, axis)
@@ -166,9 +166,9 @@ end function
 function identity()
    real(BDKi) :: identity(3, 3)
 
-   identity(1, :) = [1.0, 0.0, 0.0]
-   identity(2, :) = [0.0, 1.0, 0.0]
-   identity(3, :) = [0.0, 0.0, 1.0]
+   identity(1, :) = [1.0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   identity(2, :) = [0.0_BDKi, 1.0_BDKi, 0.0_BDKi]
+   identity(3, :) = [0.0_BDKi, 0.0_BDKi, 1.0_BDKi]
 end function
 
 function RonXAxis(angle)
@@ -182,32 +182,32 @@ end function
 
 function getMassMatrix()
    real(BDKi), dimension(6, 6) :: getMassMatrix
-   getMassMatrix(1, :) = [1.E0, 0.0, 0.0, 0.0, 0.0, -0.5]
-   getMassMatrix(2, :) = [0.0, 1.E0, 0.0, 0.0, 0.0, 0.5]
-   getMassMatrix(3, :) = [0.0, 0.0, 1.E0, 0.5, -0.5, 0.0]
-   getMassMatrix(4, :) = [0.0, 0.0, 0.5, 1.E0, 0.0, 0.0]
-   getMassMatrix(5, :) = [0.0, 0.0, -0.5, 0.0, 1.E0, 0.0]
-   getMassMatrix(6, :) = [-0.5, 0.5, 0.0, 0.0, 0.0, 2.E0]
+   getMassMatrix(1, :) = [1.E0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, -0.5_BDKi]
+   getMassMatrix(2, :) = [0.0_BDKi, 1.E0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.5_BDKi]
+   getMassMatrix(3, :) = [0.0_BDKi, 0.0_BDKi, 1.E0_BDKi, 0.5_BDKi, -0.5_BDKi, 0.0_BDKi]
+   getMassMatrix(4, :) = [0.0_BDKi, 0.0_BDKi, 0.5_BDKi, 1.E0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   getMassMatrix(5, :) = [0.0_BDKi, 0.0_BDKi, -0.5_BDKi, 0.0_BDKi, 1.E0_BDKi, 0.0_BDKi]
+   getMassMatrix(6, :) = [-0.5_BDKi, 0.5_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 2.E0_BDKi]
 end function
 
 function getStiffnessMatrix()
    real(BDKi), dimension(6, 6) :: getStiffnessMatrix
-   getStiffnessMatrix(1, :) = [1.E4, 0.0, 0.0, 0.0, 0.0, 0.0]
-   getStiffnessMatrix(2, :) = [0.0, 1.E4, 0.0, 0.0, 0.0, 0.0]
-   getStiffnessMatrix(3, :) = [0.0, 0.0, 1.E4, 0.0, 0.0, 0.0]
-   getStiffnessMatrix(4, :) = [0.0, 0.0, 0.0, 1.E2, 0.0, 0.0]
-   getStiffnessMatrix(5, :) = [0.0, 0.0, 0.0, 0.0, 1.E2, 0.0]
-   getStiffnessMatrix(6, :) = [0.0, 0.0, 0.0, 0.0, 0.0, 200.E0]
+   getStiffnessMatrix(1, :) = [1.E4_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   getStiffnessMatrix(2, :) = [0.0_BDKi, 1.E4_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   getStiffnessMatrix(3, :) = [0.0_BDKi, 0.0_BDKi, 1.E4_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
+   getStiffnessMatrix(4, :) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 1.E2_BDKi, 0.0_BDKi, 0.0_BDKi]
+   getStiffnessMatrix(5, :) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 1.E2_BDKi, 0.0_BDKi]
+   getStiffnessMatrix(6, :) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 0.0_BDKi, 200.E0_BDKi]
 end function
 
 function getGravityInZ()
    real(BDKi), dimension(3) :: getGravityInZ
-   getGravityInZ = [0.0, 0.0, -9.806]
+   getGravityInZ = [0.0_BDKi, 0.0_BDKi, -9.806_BDKi]
 end function
 
 type(BD_OtherStateType) function simpleOtherState() result(otherstate)
    ! fixed size arrays
-   otherstate%Glb_crv = [0.0, 0.0, 0.0]
+   otherstate%Glb_crv = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
    otherstate%GlbRot = identity()
 end function
 type(BD_ParameterType) function simpleParameterType(elem_total, nodes_per_elem, nqp, qp_indx_offset, refine) result(p)
@@ -253,7 +253,7 @@ type(BD_ParameterType) function simpleParameterType(elem_total, nodes_per_elem, 
    call AllocAry(p%node_elem_idx, p%elem_total, 2, 'start and end node numbers of elements in p%node_total sized arrays', ErrStat, ErrMsg)
 
    ! construct arrays
-   p%qp%mmm = 1.0
+   p%qp%mmm = 1.0_BDKi
 
    do i = 1, p%elem_total
       p%node_elem_idx(i, 1) = (i - 1) * (p%nodes_per_elem - 1) + 1           ! First node in element
@@ -262,7 +262,7 @@ type(BD_ParameterType) function simpleParameterType(elem_total, nodes_per_elem, 
 
    do j = 1, p%elem_total
       do i = 1, p%nqp
-         p%qp%mEta(:, i, j) = [0.0, 0.0, 0.0]
+         p%qp%mEta(:, i, j) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
          p%Mass0_QP(:, :, (i - 1) * p%elem_total + j) = getMassMatrix()
       end do
    end do
@@ -307,7 +307,7 @@ type(BD_MiscVarType) function simpleMiscVarType(nqp, dof_node, elem_total, nodes
    do j = 1, elem_total
       do i = 1, nqp
          m%qp%RR0(:, :, i, j) = identity()
-         m%qp%RR0mEta(:, i, j) = [0.0, 0.0, 0.0]
+         m%qp%RR0mEta(:, i, j) = [0.0_BDKi, 0.0_BDKi, 0.0_BDKi]
       end do
    end do
 
@@ -349,8 +349,8 @@ type(BD_InputFile) function simpleInputFile() result(i)
    i%quadrature = 1      ! -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
    i%n_fact = 5          ! -  - - "Factorization frequency" -
    i%refine = 1          ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
-   i%rhoinf = 0.0        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
-   i%DTBeam = 2E-03      ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
+   i%rhoinf = 0.0_BDKi        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
+   i%DTBeam = 2E-03_BDKi      ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
    i%Echo = .true.       ! -  - - "Echo"
    i%NNodeOuts = 1       ! -  - - "Number of node outputs [0 - 9]" -
    i%OutNd = 1           ! {9} - - "Nodes whose values will be output" -
@@ -365,9 +365,9 @@ type(BD_InputFile) function simpleInputFile() result(i)
    call AllocAry(i%kp_coordinate, 3, 4, 'kp_coordinate', ErrStat, ErrMsg)
 
    ! construct arrays
-   i%kp_coordinate(1, :) = [0.000000, 0.000000, 0.0000, 0.00000]  !  {:}{:} - - "Key point coordinates array" -
-   i%kp_coordinate(2, :) = [0.000000, 0.000000, 5.0000, 0.00000]
-   i%kp_coordinate(3, :) = [0.000000, 0.000000, 10.0000, 0.00000]
+   i%kp_coordinate(1, :) = [0.000000_BDKi, 0.000000_BDKi, 0.0000_BDKi, 0.00000_BDKi]  !  {:}{:} - - "Key point coordinates array" -
+   i%kp_coordinate(2, :) = [0.000000_BDKi, 0.000000_BDKi, 5.0000_BDKi, 0.00000_BDKi]
+   i%kp_coordinate(3, :) = [0.000000_BDKi, 0.000000_BDKi, 10.0000_BDKi, 0.00000_BDKi]
 
 end function
 

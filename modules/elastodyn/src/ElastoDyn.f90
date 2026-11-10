@@ -11263,14 +11263,14 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
                   Num=p%NumBl, &
                   Flags=VF_RotFrame + VF_Linearize + VF_2PI, &
                   Perturb=2.0_R8Ki * D2R_D, &
-                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
+                  LinNames=[(MV_LinName('Blade '//trim(num2lstr(i))//' pitch command, rad'), i=1,p%NumBl)])
 
    call MV_AddVar(Vars%u, "BlPitchMom", FieldScalar, &
                   DL=DatLoc(ED_u_BlPitchMom), iAry=1, &
                   Num=p%NumBl, &
                   Flags=VF_RotFrame + VF_Linearize, &
                   Perturb=MaxTorque / 100.0_R8Ki, &
-                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch moment, Nm', i=1,p%NumBl)])
+                  LinNames=[(MV_LinName('Blade '//trim(num2lstr(i))//' pitch moment, Nm'), i=1,p%NumBl)])
 
    call MV_AddVar(Vars%u, "YawMom", FieldScalar, &
                   DL=DatLoc(ED_u_YawMom), &
@@ -11334,12 +11334,12 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
    call MV_AddVar(Vars%y, 'BlPitch', FieldScalar, &
                   DatLoc(ED_y_BlPitch), &
                   Num=p%NumBl, &
-                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch angle, rad', i=1,p%NumBl)])
+                  LinNames=[(MV_LinName('Blade '//trim(num2lstr(i))//' pitch angle, rad'), i=1,p%NumBl)])
 
    call MV_AddVar(Vars%y, 'BlPRate', FieldScalar, &
                   DatLoc(ED_y_BlPRate), &
                   Num=p%NumBl, &
-                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch rate, rad/s', i=1,p%NumBl)])
+                  LinNames=[(MV_LinName('Blade '//trim(num2lstr(i))//' pitch rate, rad/s'), i=1,p%NumBl)])
 
    call MV_AddMeshVar(Vars%y, 'Nacelle', MotionFields, &
                       DatLoc(ED_y_NacelleMotion), &

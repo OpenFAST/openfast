@@ -3,7 +3,9 @@
 module FVW_BiotSavart 
 
    use NWTC_Library, only: ReKi, IntKi, Pi, EqualRealNos
+#ifdef _OPENMP
    use OMP_LIB
+#endif
 
    implicit none
 

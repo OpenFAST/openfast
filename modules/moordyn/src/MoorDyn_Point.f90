@@ -286,6 +286,13 @@ CONTAINS
          Point%Fnet(J) = Point%Fnet(J) - Point%Blin(J) * Point%rd(J) - Point%Bquad(J) * ABS(Point%rd(J)) * Point%rd(J)
       END DO
 
+      ! reaction from any lines threaded through this point via slip supports
+      DO l = 1, p%nSlips
+         IF ((m%SlipList(l)%PointID == Point%IdNum) .AND. (m%SlipList(l)%status == 1)) THEN
+            Point%Fnet = Point%Fnet + m%SlipList(l)%Fhoop
+         END IF
+      END DO
+
       ! would this sub ever need to include the m*a inertial term?  Is it ever called for coupled points? <<<
 
    END SUBROUTINE Point_DoRHS

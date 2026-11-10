@@ -37,13 +37,15 @@ jobs:
   #-----------------------------------------------------------------------------
 
   build-all-debug-single:
-    # Tests compiling in debug mode with single precision.
+    # Tests compiling in debug mode with single precision; saves the unit tests for utest-debug-single.
     # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
     # Debug speeds up the build.
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive   # BUILD_TESTING requires reg_tests/r-test
       - name: Install dependencies
         run: |
           sudo apt-get update -y
@@ -63,6 +65,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DDOUBLE_PRECISION:BOOL=OFF \
+            -DBUILD_TESTING:BOOL=ON \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
             -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
             -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
@@ -72,16 +75,59 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           cmake --build . --target all
+      - name: Archive build
+        run: |
+          # The unit test executables are statically linked against OpenFAST, so
+          # build/unit_tests (without object files) is all the unit test job needs.
+          tar -cf build.tar -C ${{github.workspace}} --exclude='CMakeFiles' build/unit_tests
+      - name: Save build for unit tests
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-all-debug-single
+          path: build.tar
+
+  utest-debug-single:
+    # Runs the unit tests on the single-precision gfortran Debug build.
+    runs-on: ubuntu-24.04
+    needs: build-all-debug-single
+    steps:
+      # Checkout and compilers are needed by aerodyn_utest_trapping_flags, which
+      # configures a small CMake project from cmake/tests/aerodyn_trapping.
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Restore build from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-all-debug-single
+      - name: Untar build
+        run: |
+          tar -xf build.tar -C ${{github.workspace}}
+          rm build.tar
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libatlas-base-dev
+      - name: Run unit tests
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: utest-debug-single
+          path: |
+            ${{github.workspace}}/build/unit_tests
 
   build-all-release:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: List files in workspace
@@ -126,10 +172,39 @@ jobs:
           --exclude='docs' --exclude='vs-build' \
           .
       - name: Save workspace for other jobs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-all-release
           path: workspace.tar
+
+  utest-release:
+    # Runs the unit tests on the release build before the regression test jobs.
+    runs-on: ubuntu-24.04
+    needs: build-all-release
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libatlas-base-dev
+      - name: Run unit tests
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: utest-release
+          path: |
+            ${{github.workspace}}/build/unit_tests
 
   #-----------------------------------------------------------------------------
   #  BUILD AND TEST JOBS
@@ -142,11 +217,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -207,7 +282,7 @@ jobs:
       - name: Run VersionInfo tests
         uses: ./.github/actions/tests-module-version
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-modules-debug
@@ -216,11 +291,261 @@ jobs:
             ${{github.workspace}}/build/unit_tests
 
 
+  # LLVM Flang jobs: compile with LLVM Flang (and clang/clang++) in debug mode in double
+  # and single precision, then run the unit tests on each build
+  # (utest-llvm-flang-debug-double/-single). No regression tests are run with LLVM Flang.
+  # FAST.Farm and the C library driver are built as well; the C++ API is not, since it
+  # adds no Fortran and is covered by the gfortran jobs.
+  # The toolchain comes from conda-forge, pinned and updated deliberately. flang_linux-64
+  # pulls in the Fortran runtime (libflang-rt). conda-forge clang/flang use their own
+  # sysroot and link from $CONDA_PREFIX/lib (with rpath), so BLAS/LAPACK also come from
+  # conda-forge rather than apt.
+  # Pinned to 22.1.8: the conda-forge flang 23.1.x packages (through 23.1.4) do not ship
+  # the intrinsic module files (iso_c_binding.mod, iso_fortran_env.mod, ...), so nothing
+  # that USEs them compiles. 22.1.8 ships them in include/flang.
+  # Keep LLVM_VERSION and the micromamba create-args identical in all four jobs: the unit
+  # test job recreates the same environment (same prefix) so the rpaths in the downloaded
+  # executables (flang runtime, OpenBLAS) resolve.
+
+  build-llvm-flang-debug-double:
+    # Builds with LLVM Flang in double precision; saves the build for utest-llvm-flang-debug-double.
+    runs-on: ubuntu-24.04
+    env:
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings for this job.
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            openblas
+            libblas=*=*openblas
+            liblapack
+            cmake
+            ninja
+          cache-environment: true
+      - name: Compiler versions
+        shell: bash -el {0}
+        run: |
+          ${{env.FORTRAN_COMPILER}} --version
+          ${{env.C_COMPILER}} --version
+          ${{env.CXX_COMPILER}} --version
+      - name: Configure build
+        shell: bash -el {0}
+        run: |
+          cmake -S ${GITHUB_WORKSPACE} -B ${{github.workspace}}/build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_PREFIX_PATH:PATH=${CONDA_PREFIX} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DDOUBLE_PRECISION:BOOL=ON \
+            -DBUILD_TESTING:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON
+      - name: Build all
+        shell: bash -el {0}
+        run: |
+          cmake --build ${{github.workspace}}/build --target all
+      - name: Archive build
+        run: |
+          # The unit test executables are statically linked against OpenFAST, so
+          # build/unit_tests (without object files) is all the unit test job needs.
+          tar -cf build.tar -C ${{github.workspace}} --exclude='CMakeFiles' build/unit_tests
+      - name: Save build for unit tests
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-llvm-flang-debug-double
+          path: build.tar
+
+  build-llvm-flang-debug-single:
+    # Builds with LLVM Flang in single precision; saves the build for utest-llvm-flang-debug-single.
+    runs-on: ubuntu-24.04
+    env:
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings for this job.
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            openblas
+            libblas=*=*openblas
+            liblapack
+            cmake
+            ninja
+          cache-environment: true
+      - name: Compiler versions
+        shell: bash -el {0}
+        run: |
+          ${{env.FORTRAN_COMPILER}} --version
+          ${{env.C_COMPILER}} --version
+          ${{env.CXX_COMPILER}} --version
+      - name: Configure build
+        shell: bash -el {0}
+        run: |
+          cmake -S ${GITHUB_WORKSPACE} -B ${{github.workspace}}/build -G Ninja \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_PREFIX_PATH:PATH=${CONDA_PREFIX} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            -DBUILD_TESTING:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON
+      - name: Build all
+        shell: bash -el {0}
+        run: |
+          cmake --build ${{github.workspace}}/build --target all
+      - name: Archive build
+        run: |
+          # The unit test executables are statically linked against OpenFAST, so
+          # build/unit_tests (without object files) is all the unit test job needs.
+          tar -cf build.tar -C ${{github.workspace}} --exclude='CMakeFiles' build/unit_tests
+      - name: Save build for unit tests
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-llvm-flang-debug-single
+          path: build.tar
+
+  utest-llvm-flang-debug-double:
+    # Runs the unit tests on the double-precision LLVM Flang build.
+    runs-on: ubuntu-24.04
+    needs: build-llvm-flang-debug-double
+    env:
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings (must match the build job).
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
+    steps:
+      # Checkout and compilers are needed by aerodyn_utest_trapping_flags, which
+      # configures a small CMake project from cmake/tests/aerodyn_trapping.
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Restore build from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-llvm-flang-debug-double
+      - name: Untar build
+        run: |
+          tar -xf build.tar -C ${{github.workspace}}
+          rm build.tar
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            openblas
+            libblas=*=*openblas
+            liblapack
+            cmake
+            ninja
+          cache-environment: true
+      - name: Run unit tests
+        shell: bash -el {0}
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: utest-llvm-flang-debug-double
+          path: |
+            ${{github.workspace}}/build/unit_tests
+
+
+  utest-llvm-flang-debug-single:
+    # Runs the unit tests on the single-precision LLVM Flang build.
+    runs-on: ubuntu-24.04
+    needs: build-llvm-flang-debug-single
+    env:
+      LLVM_VERSION: '22.1.8'
+      # Override the workflow-level gfortran/gcc settings (must match the build job).
+      FORTRAN_COMPILER: flang
+      CXX_COMPILER: clang++
+      C_COMPILER: clang
+    steps:
+      # Checkout and compilers are needed by aerodyn_utest_trapping_flags, which
+      # configures a small CMake project from cmake/tests/aerodyn_trapping.
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Restore build from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-llvm-flang-debug-single
+      - name: Untar build
+        run: |
+          tar -xf build.tar -C ${{github.workspace}}
+          rm build.tar
+      - name: Install LLVM Flang
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: llvm-flang
+          create-args: >-
+            -c conda-forge
+            flang_linux-64=${{env.LLVM_VERSION}}
+            clang=${{env.LLVM_VERSION}}
+            clangxx=${{env.LLVM_VERSION}}
+            openblas
+            libblas=*=*openblas
+            liblapack
+            cmake
+            ninja
+          cache-environment: true
+      - name: Run unit tests
+        shell: bash -el {0}
+        working-directory: ${{github.workspace}}/build/unit_tests
+        run: |
+          ctest -VV -R "_utest"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: utest-llvm-flang-debug-single
+          path: |
+            ${{github.workspace}}/build/unit_tests
+
+
   build-test-OF-simulink:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install dependencies
@@ -228,7 +553,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libatlas-base-dev
       - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
+        uses: matlab-actions/setup-matlab@v3
         with:
           products: Simulink
       - name: Setup workspace
@@ -253,7 +578,7 @@ jobs:
         run: |
           cmake --build . --target FAST_SFunc
       - name: Run MATLAB tests and generate artifacts
-        uses: matlab-actions/run-tests@v2
+        uses: matlab-actions/run-tests@v3
         with:
           source-folder: ${{github.workspace}}/build/glue-codes/simulink; ${{github.workspace}}/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
@@ -265,10 +590,10 @@ jobs:
 
   rtest-module-drivers:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -278,7 +603,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -318,7 +643,7 @@ jobs:
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-module-drivers
@@ -328,10 +653,10 @@ jobs:
 
   rtest-interfaces:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -341,7 +666,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -367,7 +692,7 @@ jobs:
               -L "cpp|python|fastlib" \
               -LE "openfast_io"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-interfaces
@@ -385,10 +710,10 @@ jobs:
 
   rtest-OF:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -398,7 +723,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -425,7 +750,7 @@ jobs:
           -L openfast \
           -LE "cpp|linear|python|fastlib|offshore"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF
@@ -441,10 +766,10 @@ jobs:
 
   rtest-OF-offshore:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -454,7 +779,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -481,7 +806,7 @@ jobs:
           -L openfast -L offshore \
           -LE "cpp|linear|python|fastlib|multirotor"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-offshore
@@ -496,10 +821,10 @@ jobs:
 
   rtest-OF-multirotor:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -509,7 +834,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -536,7 +861,7 @@ jobs:
           -L openfast -L multirotor \
           -LE "cpp|linear|python|fastlib"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-multirotor
@@ -551,10 +876,10 @@ jobs:
 
   rtest-OF-linearization:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -564,7 +889,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -588,7 +913,7 @@ jobs:
         run: |
           ctest -VV -L linear
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-linearization
@@ -603,10 +928,10 @@ jobs:
 
   rtest-OF-aeromap:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -616,7 +941,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -640,7 +965,7 @@ jobs:
         run: |
           ctest -VV -L aeromap -LE "cpp|linear|python"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-aeromap
@@ -656,10 +981,10 @@ jobs:
 
   rtest-openfast_io:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -669,7 +994,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -698,7 +1023,7 @@ jobs:
         run: |
           ctest -VV -L openfast_io 
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-openfast_io
@@ -708,13 +1033,13 @@ jobs:
 
   rtest-FF:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: utest-release
     env:
       CTEST_PARALLEL_LEVEL: 2
       OMP_NUM_THREADS: 2
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -724,7 +1049,7 @@ jobs:
       - name: List files in workspace
         run: ls
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install dependencies
@@ -750,7 +1075,7 @@ jobs:
         run: |
           ctest -VV -j1 -L fastfarm --verbose
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-FF

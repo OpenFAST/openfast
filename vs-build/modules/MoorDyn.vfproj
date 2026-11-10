@@ -118,6 +118,7 @@
 			<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Misc.f90"/>
 			<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Point.f90"/>
 			<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Rod.f90"/>
+			<File RelativePath="..\..\modules\moordyn\src\MoorDyn_SlipSupport.f90"/>
 			<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Types.f90"/>
 		</Filter>
 	</Files>

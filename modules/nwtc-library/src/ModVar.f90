@@ -39,7 +39,7 @@ public :: MV_NumVars, MV_NumVals, MV_FindVarDatLoc
 public :: LoadFields, MotionFields, TransFields, AngularFields
 public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, wm_to_quat, quat_to_wm, wm_inv, quat_compose
 public :: rvec_to_quat, rvec_to_tan_inv, rvec_to_tan
-public :: MV_FieldString, MV_IsLoad, MV_IsMotion, IdxStr
+public :: MV_FieldString, MV_IsLoad, MV_IsMotion, IdxStr, MV_LinName
 public :: DumpMatrix, MV_AddModule
 public :: MV_EqualDL
 public :: MV_PackMesh, MV_UnpackMesh
@@ -1095,6 +1095,18 @@ end subroutine
 ! String Utilities
 !-------------------------------------------------------------------------------
 
+!> Returns a linearization name padded to the fixed length LinChanLen. Use this to build
+!! LinNames arrays with an implied-do (e.g. `[(MV_LinName('Blade '//trim(Num2LStr(i))), i=1,n)]`):
+!! the standard requires all elements of an array constructor without a type-spec to have the
+!! same length, which is not true when the names embed numbers of varying width (LLVM Flang
+!! aborts at runtime; gfortran truncates). A character type-spec cannot be used instead because
+!! gfortran ignores it for implied-do constructors.
+function MV_LinName(Str) result(s)
+   character(*), intent(in)   :: Str
+   character(LinChanLen)      :: s
+   s = Str
+end function
+
 function IdxStr(i1, i2, i3, i4, i5) result(s)
    integer(IntKi), intent(in)             :: i1
    integer(IntKi), optional, intent(in)   :: i2, i3, i4, i5
@@ -1365,7 +1377,7 @@ pure function rvec_to_tan_inv(rvec) result(T)
    if (theta < 0.01_R8Ki) then
       a = 1.0_R8Ki / 12.0_R8Ki + theta**2/720.0_R8Ki + theta**4/30240.0_R8Ki
    else
-      a = (1.0_R8Ki - 0.5_R8Ki * theta * cotan(0.5_R8Ki * theta)) / theta**2
+      a = (1.0_R8Ki - 0.5_R8Ki * theta / tan(0.5_R8Ki * theta)) / theta**2   ! x*cot(y) = x/tan(y); COTAN is a non-standard extension
    end if
    T = I33 + 0.5_R8Ki * rv_tilde + a * matmul(rv_tilde, rv_tilde)
 end function

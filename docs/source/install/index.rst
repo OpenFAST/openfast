@@ -491,7 +491,6 @@ The CMake options specific to OpenFAST and their default settings are:
     CMAKE_MACOSX_RPATH             - Use RPATH runtime linking (Default: ON)
     CODECOVERAGE                   - Enable infrastructure for measuring code coverage (Default: OFF)
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
-    FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
     GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules (Default: OFF)
     OPENMP                         - Enable OpenMP support (Default: OFF)
     WIN_DLL_LOAD                   - Enable loading of Windows DLLs for OrcaFlex and SoilDyn (Default: ON)
@@ -523,6 +522,22 @@ The commands above are equivalent to having run this command the first time:
 
     # Initial configuration in Debug mode with dynamic linking
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
+
+Floating-point exception trapping
+*********************************
+
+Enable floating-point exception trapping with compiler flags. For GNU Fortran,
+add the flags to ``CMAKE_Fortran_FLAGS`` or ``CMAKE_Fortran_FLAGS_DEBUG``:
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_Fortran_FLAGS="-ffpe-trap=invalid,zero,overflow"
+
+For Intel Fortran on Linux or macOS, use ``-fpe0``. For Intel Fortran on
+Windows, use ``/fpe:0``. Add the applicable flag to the same CMake variable.
+
+OpenFAST sets its NaN and infinity constants with ``ieee_value``. This avoids
+an initialization exception in builds that enable floating-point traps.
 
 CMAKE_BUILD_TYPE
 ****************

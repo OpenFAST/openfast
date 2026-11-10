@@ -543,25 +543,25 @@ subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, E
                   Num=p%nDOFRB, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('Rigid-body mode '//trim(num2lstr(i))//' displacement, m or rad', i=1, p%nDOFRB)])
+                  LinNames=[(MV_LinName('Rigid-body mode '//trim(num2lstr(i))//' displacement, m or rad'), i=1, p%nDOFRB)])
 
    call MV_AddVar(Vars%x, "RBMotion", FieldScalar, DatLoc(SD_x_qRdot), &
                   Num=p%nDOFRB, &
                   DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('First time derivative of rigid-body mode '//trim(num2lstr(i))//' displacement, (m or rad)/s', i=1, p%nDOFRB)])
+                  LinNames=[(MV_LinName('First time derivative of rigid-body mode '//trim(num2lstr(i))//' displacement, (m or rad)/s'), i=1, p%nDOFRB)])
 
    call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qm), &
                   Num=p%nDOFM, &
                   DerivOrder=0, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -', i=1, p%nDOFM)])
+                  LinNames=[(MV_LinName('Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -'), i=1, p%nDOFM)])
 
    call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
                   Num=p%nDOFM, &
                   DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
-                  LinNames=[('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s', i=1, p%nDOFM)])
+                  LinNames=[(MV_LinName('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s'), i=1, p%nDOFM)])
 
    !----------------------------------------------------------------------------
    ! Input variables
@@ -3930,7 +3930,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
       Rb2g = transpose(Rg2b) ! Body (Guyan) to global
       do i = 1, size(p%ElemProps) ! Loop through all elements
          ! --- Element Fg in the earth-fixed frame
-         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, p%ElemProps(i)%Rho, matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
+         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, ElemGravityRho(p%ElemProps(i)), matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
          ! --- Element Fg in the Guyan rigid-body frame
          FGe( 1: 3) = matmul(Rg2b,FGe( 1: 3)) ! Node 1 force
          FGe( 4: 6) = matmul(Rg2b,FGe( 4: 6)) ! Node 1 moment
@@ -4585,7 +4585,8 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
                  mMass,mLength,' ',(MemberNodeIDs(j), j = 1, Init%MemberNDiv(i)+1)
         else if (mType==idMemberCable) then
            iProp(1) = FINDLOCI(Init%PropSetsC(:,1), propIDs(1))
-           mMass= Init%PropSetsC(iProp(1),3) * mLength ! rho [kg/m] * L
+           ! rho [kg/m] * L0, with rest length L0 = L/(1+T0/EA), consistent with ElemMassLength
+           mMass= Init%PropSetsC(iProp(1),3) * mLength / (1.0_ReKi + Init%PropSetsC(iProp(1),4)/Init%PropSetsC(iProp(1),2))
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(MemberNodeIDs(j), j = 1, 2), ' # Cable'
         else if (mType==idMemberRigid) then
