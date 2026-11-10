@@ -22,7 +22,12 @@
  * Fortran driver does (root rotating about the origin at a constant angular velocity, constant tip load, output file
  * with the requested channels) and provides checks of the interface against analytic results and against itself.
  *
- * Usage:  beamdyn_c_binding_driver <mode> <BeamDyn primary input file> [key=value ...]
+ * Usage:  beamdyn_c_binding_driver <BeamDyn driver input file>
+ *         beamdyn_c_binding_driver <mode> <BeamDyn primary input file> [key=value ...]
+ *
+ * With a single argument, the file is read as a BeamDyn driver input file (the input file of beamdyn_driver) and the
+ * case is run through the C interface; <root>.out is written in the same format as beamdyn_driver writes it.  The
+ * multi-point load table and GlbRotBladeT0 = False are not supported by this driver.
  *
  * Modes:
  *    run         Run the beam from t=0 to tmax and write <root>.out (same format as the BeamDyn driver output file).
@@ -76,6 +81,9 @@ typedef struct {
    double      ori[9];
    double      omega[3];
    double      tip[3];
+   double      tipm[3];          /* point moment at the tip node (N-m) */
+   double      distr[6];         /* constant distributed force and moment on every distributed load node (N/m, N-m/m) */
+   int         use_distr;        /* set the distributed loads through the interface */
    double      t_release;
    double      amp;
    double      freq;
@@ -267,7 +275,7 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    int    i, k, n, n0, iTip = 0, jTip = 0;
    char   rootbuf[BD_C_INTFSTRLEN], chkpbuf[BD_C_INTFSTRLEN];
    char  *names, *units;
-   float *refpos, *plpos, *dlpos, *nodepos, *nodevel, *nodeacc, *ploads, *chan;
+   float *refpos, *plpos, *dlpos, *nodepos, *nodevel, *nodeacc, *ploads, *dloads, *chan;
    double *refori, *nodeori;
    float  react[6]; double disp[3], vel[6], acc[6], rootvel0[6];
    double ori[9], omega_x_r0[3], r0[3], d, dmax;
@@ -298,6 +306,7 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    nodevel = (float*) malloc((size_t)6*nOut*sizeof(float));
    nodeacc = (float*) malloc((size_t)6*nOut*sizeof(float));
    ploads  = (float*) calloc((size_t)6*nPL, sizeof(float));
+   dloads  = (float*) calloc((size_t)6*(nDL > 0 ? nDL : 1), sizeof(float));
    chan    = (float*) malloc((size_t)(nCh > 0 ? nCh : 1)*sizeof(float));
 
    BD_C_GetRefPositions(refpos, refori, plpos, dlpos, &err_stat, err_msg);
@@ -329,9 +338,16 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
       int kk;                                                                                        \
       root_motion(o, (time), disp, ori, vel, acc);                                                  \
       BD_C_SetRootMotion(disp, ori, vel, acc, &err_stat, err_msg);  check("BD_C_SetRootMotion");    \
-      for (kk = 0; kk < 3; kk++)                                                                     \
-         ploads[6*jTip+kk] = (o->t_release < 0.0 || (time) < o->t_release - 0.5*o->dt) ? (float)o->tip[kk] : 0.0f; \
+      for (kk = 0; kk < 3; kk++) {                                                                   \
+         ploads[6*jTip+kk]   = (o->t_release < 0.0 || (time) < o->t_release - 0.5*o->dt) ? (float)o->tip[kk]  : 0.0f; \
+         ploads[6*jTip+3+kk] = (o->t_release < 0.0 || (time) < o->t_release - 0.5*o->dt) ? (float)o->tipm[kk] : 0.0f; \
+      }                                                                                              \
       BD_C_SetPointLoads(ploads, &err_stat, err_msg);  check("BD_C_SetPointLoads");                 \
+      if (o->use_distr) {                                                                            \
+         int ii;                                                                                     \
+         for (ii = 0; ii < nDL; ii++) for (kk = 0; kk < 6; kk++) dloads[6*ii+kk] = (float)o->distr[kk]; \
+         BD_C_SetDistrLoads(dloads, &err_stat, err_msg);  check("BD_C_SetDistrLoads");              \
+      }                                                                                              \
    } while (0)
 
 #define RECORD(time)                                                                                 \
@@ -378,7 +394,7 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    check("BD_C_End");
 
    free(names); free(units); free(refpos); free(refori); free(plpos); free(dlpos);
-   free(nodepos); free(nodeori); free(nodevel); free(nodeacc); free(ploads); free(chan);
+   free(nodepos); free(nodeori); free(nodevel); free(nodeacc); free(ploads); free(dloads); free(chan);
 }
 
 /*----------------------------------------------------------------------------------------------------------------*/
@@ -562,13 +578,136 @@ static int mode_checkpoint(const Options *o)
 }
 
 /*----------------------------------------------------------------------------------------------------------------*/
+/* BeamDyn driver input file (the input file of beamdyn_driver)                                                     */
+/*----------------------------------------------------------------------------------------------------------------*/
+static int dvr_line(FILE *fp, char *line, size_t n, const char *what)
+{
+   if (fgets(line, (int)n, fp) == NULL) { fprintf(stderr, "Driver input file: premature end of file while reading %s\n", what); return 1; }
+   return 0;
+}
+
+static int dvr_skip(FILE *fp, int nlines, const char *what)
+{
+   char line[2048];
+   int  i;
+   for (i = 0; i < nlines; i++) if (dvr_line(fp, line, sizeof(line), what)) return 1;
+   return 0;
+}
+
+/* Read nvals numbers from the start of the next line */
+static int dvr_numbers(FILE *fp, double *v, int nvals, const char *what)
+{
+   char  line[2048], *s, *end;
+   int   i;
+   if (dvr_line(fp, line, sizeof(line), what)) return 1;
+   s = line;
+   for (i = 0; i < nvals; i++) {
+      v[i] = strtod(s, &end);
+      if (end == s) { fprintf(stderr, "Driver input file: invalid numerical input while reading %s\n", what); return 1; }
+      s = end;
+      while (*s == ',' ) s++;
+   }
+   return 0;
+}
+
+/* Read a Fortran logical (T, F, True, False, .true., .false.) from the start of the next line */
+static int dvr_logical(FILE *fp, int *v, const char *what)
+{
+   char line[2048], *s;
+   if (dvr_line(fp, line, sizeof(line), what)) return 1;
+   s = line;
+   while (*s == ' ' || *s == '\t' || *s == '.' || *s == '"') s++;
+   if      (*s == 'T' || *s == 't') *v = 1;
+   else if (*s == 'F' || *s == 'f') *v = 0;
+   else { fprintf(stderr, "Driver input file: invalid logical input while reading %s\n", what); return 1; }
+   return 0;
+}
+
+/* Read a BeamDyn driver input file into the options.  The primary input file name is returned in primary (resolved
+ * relative to the directory of the driver input file) and the output root name is the driver file name without its
+ * extension, as in beamdyn_driver. */
+static int read_driver_file(const char *file, Options *o, char *primary, size_t nprimary)
+{
+   FILE  *fp = fopen(file, "r");
+   char   line[2048], name[1024], *s, *e;
+   double v[3], t_initial, t_final;
+   int    i, k, flag, npl, nfinal;
+   const char *slash;
+
+   if (fp == NULL) { fprintf(stderr, "Cannot open the driver input file %s\n", file); return 1; }
+
+#define DVR(call) do { if (call) { fclose(fp); return 1; } } while (0)
+   DVR(dvr_skip(fp, 3, "the file header"));
+   DVR(dvr_logical(fp, &o->dynamic, "DynamicSolve"));
+   DVR(dvr_numbers(fp, &t_initial, 1, "t_initial"));
+   DVR(dvr_numbers(fp, &t_final, 1, "t_final"));
+   DVR(dvr_numbers(fp, &o->dt, 1, "dt"));
+   DVR(dvr_skip(fp, 1, "the gravity section header"));
+   for (k = 0; k < 3; k++) DVR(dvr_numbers(fp, &o->grav[k], 1, "the gravity vector"));
+   DVR(dvr_skip(fp, 1, "the frame section header"));
+   for (k = 0; k < 3; k++) DVR(dvr_numbers(fp, &o->pos[k], 1, "GlbPos"));
+   DVR(dvr_skip(fp, 2, "the DCM comment lines"));
+   for (i = 0; i < 3; i++) { DVR(dvr_numbers(fp, v, 3, "the root orientation DCM")); for (k = 0; k < 3; k++) o->ori[3*i+k] = v[k]; }
+   DVR(dvr_logical(fp, &flag, "GlbRotBladeT0"));
+   if (!flag) { fprintf(stderr, "Driver input file: GlbRotBladeT0 = False is not supported by this driver\n"); fclose(fp); return 1; }
+   DVR(dvr_skip(fp, 1, "the root velocity section header"));
+   for (k = 0; k < 3; k++) DVR(dvr_numbers(fp, &o->omega[k], 1, "RootVel"));
+   DVR(dvr_skip(fp, 1, "the applied force section header"));
+   for (k = 0; k < 6; k++) DVR(dvr_numbers(fp, &o->distr[k], 1, "DistrLoad"));
+   for (k = 0; k < 3; k++) DVR(dvr_numbers(fp, &o->tip[k], 1, "TipLoad"));
+   for (k = 0; k < 3; k++) DVR(dvr_numbers(fp, &o->tipm[k], 1, "TipLoad"));
+   DVR(dvr_numbers(fp, v, 1, "NumPointLoads"));
+   npl = (int)v[0];
+   if (npl > 0) { fprintf(stderr, "Driver input file: the multi-point load table (NumPointLoads > 0) is not supported by this driver\n"); fclose(fp); return 1; }
+   DVR(dvr_skip(fp, 3, "the point load table header and the primary input file section header"));
+   DVR(dvr_line(fp, line, sizeof(line), "InputFile"));
+#undef DVR
+   fclose(fp);
+
+   /* primary input file name: first token on the line, optionally quoted */
+   s = line;
+   while (*s == ' ' || *s == '\t') s++;
+   if (*s == '"' || *s == '\'') { char q = *s++; e = strchr(s, q); } else { e = s; while (*e && *e != ' ' && *e != '\t' && *e != '\n' && *e != '\r') e++; }
+   if (e == NULL || e == s) { fprintf(stderr, "Driver input file: cannot read the primary input file name\n"); return 1; }
+   snprintf(name, sizeof(name), "%.*s", (int)(e - s), s);
+
+   /* resolve relative to the directory of the driver input file; root name is the driver file without extension */
+   slash = strrchr(file, '/');
+   if (slash != NULL && name[0] != '/') snprintf(primary, nprimary, "%.*s/%s", (int)(slash - file), file, name);
+   else                                 snprintf(primary, nprimary, "%s", name);
+   snprintf(o->root, sizeof(o->root), "%s", file);
+   s = strrchr(o->root, '.');
+   if (s != NULL && (slash == NULL || s > o->root + (slash - file))) *s = '\0';
+
+   if (t_initial != 0.0) { fprintf(stderr, "Driver input file: t_initial must be 0 for this driver\n"); return 1; }
+   for (k = 0; k < 6; k++) if (o->distr[k] != 0.0) o->use_distr = 1;
+
+   /* beamdyn_driver takes INT((t_final - t_initial)/dt) + 1 steps; a static solve stops after 9 load steps */
+   nfinal = (int)(t_final/o->dt) + 1;
+   if (!o->dynamic && nfinal > 9) nfinal = 9;
+   o->tmax  = nfinal*o->dt;
+   o->wrout = 1;
+   return 0;
+}
+
+/*----------------------------------------------------------------------------------------------------------------*/
 int main(int argc, char **argv)
 {
    Options o;
    int     fails;
+   char    primary[2048];
 
+   if (argc == 2) {
+      /* a BeamDyn driver input file */
+      set_defaults(&o, "run");
+      if (read_driver_file(argv[1], &o, primary, sizeof(primary))) return EXIT_FAILURE;
+      o.input_file = primary;
+      fails = mode_run(&o);
+      printf("\n%s: %s\n", argv[1], fails == 0 ? "completed" : "FAILED");
+      return fails == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+   }
    if (argc < 3) {
-      fprintf(stderr, "Usage: %s <run|cantilever|checkpoint> <BeamDyn primary input file> [key=value ...]\n", argv[0]);
+      fprintf(stderr, "Usage: %s <BeamDyn driver input file>\n       %s <run|cantilever|checkpoint> <BeamDyn primary input file> [key=value ...]\n", argv[0], argv[0]);
       return EXIT_FAILURE;
    }
    set_defaults(&o, argv[1]);
