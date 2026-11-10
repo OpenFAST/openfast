@@ -472,6 +472,7 @@ ua_regression("ua_redfreq"                  "unsteadyaero")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"               "beamdyn;dynamic")
+bd_regression("bd_5MW_dynamic_substep"       "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_gravity_Az00"  "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_gravity_Az90"  "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_modal_damping" "beamdyn;dynamic")
