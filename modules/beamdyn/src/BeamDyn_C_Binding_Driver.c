@@ -28,8 +28,8 @@
  * With a single argument, the file is read as a BeamDyn driver input file (the input file of beamdyn_driver) and the
  * case is run through the C interface; <root>.out is written in the same format as beamdyn_driver writes it.  Not
  * supported by this driver (the run stops with a message): the multi-point load table (NumPointLoads > 0),
- * GlbRotBladeT0 = False, a nonzero t_initial, and driver files without the NumPointLoads line.  VTK output (WrVTK)
- * is not written; a message is printed if it is requested.
+ * GlbRotBladeT0 = False, a nonzero t_initial, and driver files without the NumPointLoads line.  VTK output is
+ * written as requested by WrVTK and VTK_fps (file names end in .BD_BldMotion, .BD_PointLoad, .BD_DistrLoad).
  *
  * Modes:
  *    run         Run the beam from t=0 to tmax and write <root>.out (same format as the BeamDyn driver output file).
@@ -47,6 +47,7 @@
  *    interp=          input interpolation order, 1 or 2               [1]
  *    dynamic=         1 dynamic solve, 0 static solve                 [1]
  *    wrout=           1 write <root>.out, 0 do not                    [1 for run, 0 otherwise]
+ *    wrvtk=  vtkdt=   VTK output (0 none, 1 reference, 2 animation) and time between frames (s)  [0, 0]
  *    grav=gx,gy,gz    gravity vector (m/s^2)                          [0,0,0]
  *    pos=x,y,z        root position (m)                               [0,0,0]
  *    ori=r11,...,r33  root orientation DCM, global to root, row by row [identity]
@@ -80,6 +81,8 @@ typedef struct {
    int         interp;
    int         dynamic;
    int         wrout;
+   int         wrvtk;            /* VTK output: 0 none, 1 reference meshes, 2 animation */
+   double      vtkdt;            /* time between VTK animation frames (s) */
    double      grav[3];
    double      pos[3];
    double      ori[9];
@@ -151,6 +154,8 @@ static int parse_options(int argc, char **argv, Options *o)
       else if (KEY("interp"))   { bad = parse_int(val, &o->interp); }
       else if (KEY("dynamic"))  { bad = parse_int(val, &o->dynamic); }
       else if (KEY("wrout"))    { bad = parse_int(val, &o->wrout); }
+      else if (KEY("wrvtk"))    { bad = parse_int(val, &o->wrvtk); }
+      else if (KEY("vtkdt"))    { bad = parse_vector(val, &o->vtkdt, 1); }
       else if (KEY("grav"))     { bad = parse_vector(val, v, 3); for (k = 0; k < 3; k++) o->grav[k] = v[k]; }
       else if (KEY("pos"))      { bad = parse_vector(val, v, 3); for (k = 0; k < 3; k++) o->pos[k]  = v[k]; }
       else if (KEY("ori"))      { bad = parse_vector(val, o->ori, 9); }
@@ -307,6 +312,9 @@ static void run_simulation(const Options *o, const char *root, double t_start, d
    names = (char*)malloc(BD_C_CHANNELBUFLEN);
    units = (char*)malloc(BD_C_CHANNELBUFLEN);
    if (!names || !units) { fprintf(stderr, "Out of memory\n"); exit(EXIT_FAILURE); }
+
+   BD_C_SetVTK(&o->wrvtk, &o->vtkdt, &err_stat, err_msg);
+   check("BD_C_SetVTK");
 
    BD_C_Init(&passed, &input_file, &len, rootbuf, o->pos, o->ori, rootvel0, o->grav, &o->dt, &o->interp,
              &o->dynamic, &o->wrout, &nOut, &nPL, &nDL, &nCh, names, units, &err_stat, err_msg);
@@ -697,7 +705,7 @@ static int read_driver_file(const char *file, Options *o, char *primary, size_t 
    FILE  *fp = fopen(file, "r");
    char   line[2048], name[1024], *s, *e;
    double v[3], t_initial, t_final;
-   int    i, k, flag, npl, nfinal, wrvtk = 0;
+   int    i, k, flag, npl, nfinal;
    const char *slash;
 
    if (fp == NULL) { fprintf(stderr, "Cannot open the driver input file %s\n", file); return 1; }
@@ -728,10 +736,13 @@ static int read_driver_file(const char *file, Options *o, char *primary, size_t 
    DVR(dvr_skip(fp, 3, "the point load table header and the primary input file section header"));
    DVR(dvr_value_line(fp, line, sizeof(line), "InputFile"));
 #undef DVR
-   /* output section (optional here): only WrVTK is looked at */
-   if (dvr_line(fp, name, sizeof(name), "the output section header") == 0 && dvr_numbers(fp, v, 1, "WrVTK") == 0) wrvtk = (int)v[0];
+   /* output section: WrVTK and VTK_fps (frames per second; 0 means no frames after the first) */
+   if (dvr_line(fp, name, sizeof(name), "the output section header") || dvr_numbers(fp, v, 1, "WrVTK")) { fclose(fp); return 1; }
+   o->wrvtk = (int)v[0];
+   if (dvr_numbers(fp, v, 1, "VTK_fps")) { fclose(fp); return 1; }
    fclose(fp);
-   if (wrvtk != 0) printf("Driver input file: WrVTK = %d is ignored, this driver does not write VTK files\n", wrvtk);
+   if (o->wrvtk < 0 || o->wrvtk > 2) { fprintf(stderr, "Driver input file: WrVTK must be 0=none; 1=init; 2=animation\n"); return 1; }
+   o->vtkdt = (v[0] > 0.0) ? 1.0/v[0] : 1.0e30;
 
    /* primary input file name: first token on the line, optionally quoted */
    s = line;

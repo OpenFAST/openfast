@@ -67,6 +67,14 @@ class BeamDynLib(OpenFASTInterfaceType):
 
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
+        self.BD_C_SetVTK.argtypes = [
+            POINTER(c_int),                       # IN: VTK output switch
+            POINTER(c_double),                    # IN: time between animation frames
+            POINTER(c_int),                       # OUT: ErrStat_C
+            POINTER(c_char)                       # OUT: ErrMsg_C
+        ]
+        self.BD_C_SetVTK.restype = None
+
         self.BD_C_Init.argtypes = [
             POINTER(c_int),                       # IN: input file passed
             POINTER(c_char_p),                    # IN: input file string
@@ -165,6 +173,22 @@ class BeamDynLib(OpenFASTInterfaceType):
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
         self.BD_C_End.restype = None
+
+    # bd_setVTK ------------------------------------------------------------------------------------------------------------
+    def bd_setVTK(self, write_vtk, vtk_dt=0.0):
+        """Request VTK output of the meshes (call before bd_init).
+
+        write_vtk -- 0: none; 1: reference meshes at initialization; 2: reference meshes and animation
+        vtk_dt    -- time between animation frames (s); rounded to a multiple of the time step, at least one step
+        """
+        self.BD_C_SetVTK(
+            byref(c_int(write_vtk)),               # IN: VTK output switch
+            byref(c_double(vtk_dt)),               # IN: time between animation frames
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
+        )
+
+        self.check_error()
 
     # bd_init ------------------------------------------------------------------------------------------------------------
     def bd_init(self, input_file_passed, input_string_array, out_root_name,

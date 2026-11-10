@@ -37,6 +37,7 @@
  * fatal error the module is left in a state where BD_C_End can still be called safely.
  *
  * Call sequence:
+ *    BD_C_SetVTK               (optional) request VTK output of the meshes; call before BD_C_Init
  *    BD_C_Init                 initialize the beam from an input file (returns node counts and output channel info)
  *    BD_C_GetRefPositions      (optional) reference positions of the output nodes and load nodes
  *    BD_C_SetRootMotion, BD_C_SetPointLoads, BD_C_SetDistrLoads     inputs at the initial time
@@ -73,6 +74,21 @@ extern "C" {
 #define BD_C_ERRID_WARN     2
 #define BD_C_ERRID_SEVERE   3
 #define BD_C_ERRID_FATAL    4
+
+/*
+ * Request VTK output of the motion output mesh and the point load and distributed load input meshes, written as
+ * the BeamDyn driver writes them, to <root>.BD_BldMotion*, <root>.BD_PointLoad* and <root>.BD_DistrLoad* files next
+ * to the output root name given to BD_C_Init.  Call before BD_C_Init; the setting stays until it is changed.  With
+ * the animation, frame 0 is written at the first BD_C_CalcOutput call and later frames every VTK_DT_C; after
+ * BD_C_UnpackStates the frame numbering continues from the checkpoint.
+ */
+void BD_C_SetVTK(
+   const int    *WrVTK_C,                 /* IN:  0: none; 1: reference meshes, written by BD_C_Init; 2: reference meshes and animation */
+   const double *VTK_DT_C,                /* IN:  time between animation frames (s), >= 0; rounded to a multiple of the time step, at least
+                                                   one time step [used only if WrVTK_C = 2] */
+   int          *ErrStat_C,               /* OUT: error status */
+   char         *ErrMsg_C                 /* OUT: [BD_C_ERRMSGLEN] error message */
+);
 
 /*
  * Initialize a BeamDyn beam from a BeamDyn primary input file.  The root of the beam is placed at RootPos_C with

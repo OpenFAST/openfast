@@ -24,6 +24,7 @@
 !! steps are handled here, and all values cross the interface as flat C arrays.
 !!
 !! Call sequence:
+!!    BD_C_SetVTK               -- (optional) request VTK output of the meshes; call before BD_C_Init
 !!    BD_C_Init                 -- initialize the beam from an input file (returns node counts and output channel info)
 !!    BD_C_GetRefPositions      -- (optional) reference positions of the output nodes and load nodes
 !!    BD_C_SetRootMotion, BD_C_SetPointLoads, BD_C_SetDistrLoads -- inputs at the initial time
@@ -54,6 +55,7 @@ MODULE BeamDyn_C
    IMPLICIT NONE
    SAVE
 
+   PUBLIC :: BD_C_SetVTK
    PUBLIC :: BD_C_Init
    PUBLIC :: BD_C_GetRefPositions
    PUBLIC :: BD_C_SetRootMotion
@@ -93,7 +95,7 @@ MODULE BeamDyn_C
 
    !------------------------------------------------------------------------------------
    !  Checkpoint file identifier (written at the start of the file by BD_C_PackStates)
-   INTEGER(IntKi),   PARAMETER            :: CheckpointFileID = 42102
+   INTEGER(IntKi),   PARAMETER            :: CheckpointFileID = 42103
 
    !------------------------------------------------------------------------------------
    !  Tolerance on the times passed through the interface, as a fraction of the timestep.  Times are compared with
@@ -170,7 +172,61 @@ MODULE BeamDyn_C
    REAL(DbKi)                              :: OutTimePrev         !< Time of the last line written to the output file
    CHARACTER(IntfStrLen)                   :: OutRootName         !< Root name for the output, summary, and echo files
 
+   !--------------------------------------------------------------------------------------------------------------------------------------------------------
+   ! VTK output (set by BD_C_SetVTK before BD_C_Init)
+   !     The blade motion output mesh and the point load and distributed load input meshes are written as in the
+   !     BeamDyn driver, to <OutRootName>.BD_BldMotion, _PointLoad and _DistrLoad files.
+   !        WrVTK = 0  none
+   !        WrVTK = 1  reference meshes, written by BD_C_Init
+   !        WrVTK = 2  reference meshes and animation: frame 0 at the first CalcOutput call (motion mesh at its initial
+   !                   state, as in the BeamDyn driver), then one frame every VTK_nSkip time steps
+   INTEGER(IntKi)                          :: WrVTK = 0           !< VTK output switch
+   REAL(DbKi)                              :: VTK_DT = 0.0_DbKi   !< Requested time between VTK frames (s)
+   INTEGER(IntKi)                          :: VTK_nSkip = 1       !< Number of time steps between VTK frames
+   INTEGER(IntKi)                          :: VTK_nFrame = 0      !< Number of the last VTK frame written
+   INTEGER(IntKi)                          :: VTK_nStep = 0       !< Number of time steps seen by the VTK output
+   LOGICAL                                 :: VTK_First = .TRUE.  !< Frame 0 has not been written yet
+   REAL(DbKi)                              :: VTK_TimePrev        !< Time of the last CalcOutput call seen by the VTK output
+   INTEGER(IntKi),   PARAMETER             :: VTK_tWidth = 6      !< Number of digits of the frame number in the VTK file names
+
 CONTAINS
+
+!===============================================================================================================
+!---------------------------------------------- BD SET VTK -----------------------------------------------------
+!===============================================================================================================
+!> Request VTK output of the BeamDyn meshes.  Call before BD_C_Init; the setting applies to that and to later
+!! initializations until it is changed.  The files are written next to the output root name given to BD_C_Init.
+SUBROUTINE BD_C_SetVTK( WrVTK_C, VTK_DT_C, ErrStat_C, ErrMsg_C ) BIND (C, NAME='BD_C_SetVTK')
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: BD_C_SetVTK
+!GCC$ ATTRIBUTES DLLEXPORT :: BD_C_SetVTK
+#endif
+   INTEGER(C_INT),            INTENT(IN   )  :: WrVTK_C                   !< VTK output: 0 none; 1 reference meshes at initialization; 2 reference meshes and animation
+   REAL(C_DOUBLE),            INTENT(IN   )  :: VTK_DT_C                  !< Time between animation frames (s), >= 0; rounded to a multiple of the timestep, at least one timestep [used only if WrVTK_C = 2]
+   INTEGER(C_INT),            INTENT(  OUT)  :: ErrStat_C
+   CHARACTER(KIND=C_CHAR),    INTENT(  OUT)  :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local Variables
+   INTEGER(IntKi)                            :: ErrStat_F
+   CHARACTER(ErrMsgLen)                      :: ErrMsg_F
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'BD_C_SetVTK'
+
+   ErrStat_F = ErrID_None
+   ErrMsg_F = ''
+
+   IF (Initialized) THEN
+      CALL SetErrStat( ErrID_Fatal, RoutineName//' must be called before BD_C_Init', ErrStat_F, ErrMsg_F, RoutineName )
+   ELSEIF ( WrVTK_C < 0_c_int .OR. WrVTK_C > 2_c_int ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'WrVTK_C must be 0 (none), 1 (reference meshes), or 2 (animation).', ErrStat_F, ErrMsg_F, RoutineName )
+   ELSEIF ( .NOT. (VTK_DT_C >= 0.0_c_double) .OR. VTK_DT_C > HUGE(VTK_DT_C) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'VTK_DT_C must be zero or a positive, finite time.', ErrStat_F, ErrMsg_F, RoutineName )
+   ELSE
+      WrVTK  = INT(WrVTK_C, IntKi)
+      VTK_DT = REAL(VTK_DT_C, DbKi)
+   ENDIF
+
+   CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+END SUBROUTINE BD_C_SetVTK
 
 !===============================================================================================================
 !---------------------------------------------- BD INIT --------------------------------------------------------
@@ -353,6 +409,22 @@ SUBROUTINE BD_C_Init(                                                      &
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'The BeamDyn timestep DTBeam ('//TRIM(Num2LStr(p%dt))//' s) must be DEFAULT or equal to the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
       IF (Failed()) RETURN
+   ENDIF
+
+   ! VTK output: reference meshes (the animation frames are written by BD_C_CalcOutput)
+   IF ( VTK_DT / dT_Global >= REAL( HUGE(VTK_nSkip), DbKi ) ) THEN
+      VTK_nSkip = HUGE(VTK_nSkip)             ! no frames after the first
+   ELSE
+      VTK_nSkip = MAX( 1_IntKi, NINT( VTK_DT / dT_Global ) )
+   ENDIF
+   VTK_nFrame   = 0
+   VTK_nStep    = 0
+   VTK_First    = .TRUE.
+   VTK_TimePrev = -HUGE(VTK_TimePrev)
+   IF (WrVTK > 0) THEN
+      CALL MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), y%BldMotion,    TRIM(OutRootName)//'.BD_BldMotion', ErrStat_F2, ErrMsg_F2 ); IF (Failed()) RETURN
+      CALL MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), u(1)%PointLoad, TRIM(OutRootName)//'.BD_PointLoad', ErrStat_F2, ErrMsg_F2 ); IF (Failed()) RETURN
+      CALL MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), u(1)%DistrLoad, TRIM(OutRootName)//'.BD_DistrLoad', ErrStat_F2, ErrMsg_F2 ); IF (Failed()) RETURN
    ENDIF
 
    ! If the quasi-static solve is in use, rerun the initialization with the loads at t=0 (the loads are not known during
@@ -806,6 +878,11 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
    CALL BD_CopyInput( BD_u, u(1), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
    InitialInputsSet = .TRUE.
 
+   ! VTK frame 0: the inputs at the initial time and the motion mesh in its state from initialization (as in the BeamDyn driver)
+   IF (WrVTK == 2 .AND. VTK_First) THEN
+      CALL WriteVTKFrame( ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
+   ENDIF
+
    !-------------------------------------------------
    ! Call the main subroutine BD_CalcOutput
    !-------------------------------------------------
@@ -827,6 +904,23 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
    RootReaction_C(4:6) = REAL(y%ReactionForce%Moment(1:3,1), c_float)
 
    OutputChannelValues_C = REAL(y%WriteOutput, c_float)
+
+   !-------------------------------------------------
+   ! Write a VTK frame every VTK_nSkip time steps.  Calls that repeat a time (correction steps) are not counted.
+   !-------------------------------------------------
+   IF (WrVTK == 2) THEN
+      IF (VTK_First) THEN
+         VTK_First    = .FALSE.
+         VTK_TimePrev = t
+      ELSEIF ( ABS( t - VTK_TimePrev ) > TimeTol*dT_Global ) THEN
+         VTK_TimePrev = t
+         IF ( MOD( VTK_nStep, VTK_nSkip ) == 0 ) THEN
+            VTK_nFrame = VTK_nFrame + 1
+            CALL WriteVTKFrame( ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
+         ENDIF
+         VTK_nStep = VTK_nStep + 1
+      ENDIF
+   ENDIF
 
    !-------------------------------------------------
    ! Write the output file line.  One line is written per time, at the first CalcOutput call for that time; calls
@@ -909,6 +1003,8 @@ SUBROUTINE BD_C_PackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, NAM
    WRITE (UnOut, IOSTAT=IOS) T_Initial;               IOSum = IOSum + ABS(IOS)
    WRITE (UnOut, IOSTAT=IOS) InputTimePrev;           IOSum = IOSum + ABS(IOS)
    WRITE (UnOut, IOSTAT=IOS) InputTimes;              IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) VTK_nFrame;              IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) VTK_nStep;               IOSum = IOSum + ABS(IOS)
    IF (IOSum /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'Error writing the header of checkpoint file '//TRIM(FileName)
@@ -984,7 +1080,7 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
    CHARACTER(IntfStrLen)                     :: FileName
    INTEGER(IntKi)                            :: UnIn
    INTEGER(IntKi)                            :: FileID, InterpOrderIn, node_total, dof_total, NnodesOut, NnodesDistr, analysis_type
-   INTEGER(IntKi)                            :: N_GlobalIn, IOS, IOSum
+   INTEGER(IntKi)                            :: N_GlobalIn, VTK_nFrameIn, VTK_nStepIn, IOS, IOSum
    INTEGER(B8Ki)                             :: FileSize, FileSizeIn
    REAL(DbKi)                                :: dT_In, T_InitialIn, InputTimePrevIn
    REAL(DbKi), ALLOCATABLE                   :: InputTimesIn(:)
@@ -1054,6 +1150,8 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
       READ (UnIn, IOSTAT=IOS) T_InitialIn;          IOSum = IOSum + ABS(IOS)
       READ (UnIn, IOSTAT=IOS) InputTimePrevIn;      IOSum = IOSum + ABS(IOS)
       READ (UnIn, IOSTAT=IOS) InputTimesIn;         IOSum = IOSum + ABS(IOS)
+      READ (UnIn, IOSTAT=IOS) VTK_nFrameIn;         IOSum = IOSum + ABS(IOS)
+      READ (UnIn, IOSTAT=IOS) VTK_nStepIn;          IOSum = IOSum + ABS(IOS)
    ENDIF
    IF (IOSum /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
@@ -1095,6 +1193,11 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
    InputTimePrev = InputTimePrevIn
    InputTimes    = InputTimesIn
    InitialInputsSet = .TRUE.      ! the input history was restored
+
+   ! VTK animation: continue the frame numbering of the run that wrote the checkpoint (frame 0 is not written again)
+   VTK_nFrame = VTK_nFrameIn
+   VTK_nStep  = VTK_nStepIn
+   VTK_First  = .FALSE.
 
    ! The restored states are the states at the current time; the predicted states are scratch for the next update
    CALL BD_CopyContState   (x(      STATE_CURR), x(      STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
@@ -1269,6 +1372,25 @@ SUBROUTINE WritePassedInputFile( InputFileString, FileName, ErrStat, ErrMsg )
 
    CLOSE(Un)
 END SUBROUTINE WritePassedInputFile
+
+!---------------------------------------------------------------------------------------------------------------
+!> Write VTK frame number VTK_nFrame of the motion output mesh and the load input meshes (as in the BeamDyn driver)
+SUBROUTINE WriteVTKFrame( ErrStat, ErrMsg )
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
+   CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'WriteVTKFrame'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   CALL MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), y%BldMotion,    TRIM(OutRootName)//'.BD_BldMotion', VTK_nFrame, .TRUE., ErrStat2, ErrMsg2, VTK_tWidth )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), u(1)%PointLoad, TRIM(OutRootName)//'.BD_PointLoad', VTK_nFrame, .TRUE., ErrStat2, ErrMsg2, VTK_tWidth )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi/), u(1)%DistrLoad, TRIM(OutRootName)//'.BD_DistrLoad', VTK_nFrame, .TRUE., ErrStat2, ErrMsg2, VTK_tWidth )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+END SUBROUTINE WriteVTKFrame
 
 !---------------------------------------------------------------------------------------------------------------
 !> Convert a C_NULL_CHAR terminated C string of at most IntfStrLen characters to a Fortran string
