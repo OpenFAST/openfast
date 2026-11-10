@@ -266,12 +266,12 @@ keyword “DEFAULT” sets ``N_Fact = 5``.
 time-integration in seconds. The keyword “DEFAULT” may be used to
 indicate that the module should employ the time increment prescribed by
 the driver code (FAST/stand-alone driver program).
-In OpenFAST, BeamDyn is tightly coupled to the other structural modules
-and cannot be sub-stepped, so ``DTBeam`` must be “DEFAULT” or equal to
-``DT``. In the stand-alone BeamDyn driver, ``DTBeam`` may be smaller than
-the driver time step ``DT`` if it is an integer divisor of ``DT``; the
-driver then takes ``DT``/``DTBeam`` BeamDyn steps per driver step and
-writes output every ``DT``.
+``DTBeam`` must be equal to or an integer divisor of the glue-code or
+driver time step ``DT``. When it is smaller, BeamDyn takes
+``DT``/``DTBeam`` steps per glue-code or driver step, and output is
+written every ``DT``. In OpenFAST with tight coupling (``ModCoupling`` =
+2 or 3), the glue code integrates the BeamDyn states at ``DT`` and
+``DTBeam`` is not used.
 
 ``load_retries`` specifies the maximum number of load retries allowed. This option
 currently works only for static analysis. For every load retry, the applied load is
