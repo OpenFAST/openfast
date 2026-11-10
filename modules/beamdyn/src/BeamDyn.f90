@@ -2066,6 +2066,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
+   TYPE(BD_InputType)                             :: u_interp   ! Inputs interpolated to t+dt (used only when sub-stepping)
    INTEGER(IntKi)                                 :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                           :: ErrMsg2    ! Temporary Error message
 
@@ -2077,9 +2078,26 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
-      ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+      ! change reference frame to root motion at t+dt
+      if (EqualRealNos(utimes(1), t + p%dt)) then
+         ! u(1) is at t+dt (BeamDyn time step is the same as the caller's)
+         call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+      else
+         ! BeamDyn is being sub-stepped, so u(1) is at the end of the caller's step, not at t+dt.
+         ! Interpolate the (global frame) inputs to t+dt so the root motion matches the states.
+         call BD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         if (ErrStat < AbortErrLev) then
+            call BD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         end if
+         if (ErrStat < AbortErrLev) then
+            call BD_UpdateGlobalRef(u_interp,p,x,OtherState,ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         end if
+         call BD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
+      end if
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
