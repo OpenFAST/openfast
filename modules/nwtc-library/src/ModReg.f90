@@ -328,11 +328,24 @@ contains
       type(c_ptr), intent(out)      :: Ptr
       integer(B8Ki), intent(out)    :: Idx
 
+      ! Initialize outputs
+      Ptr = c_null_ptr
+      Idx = 0
+
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
-      ! Unpack pointer index
+      ! Unpack pointer index, return if error
       call RegUnpack(RF, Idx)
+      if (RegCheckErr(RF, "RegUnpackPointer")) return
+
+      ! Check that index is within pointer index bounds
+      if (Idx < 1 .or. Idx > size(RF%Pointers, kind=B8Ki)) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "RegUnpackPointer: pointer index", Idx, "out of range 1 to", size(RF%Pointers, kind=B8Ki)
+         Idx = 0
+         return
+      end if
 
       ! Get pointer from index
       Ptr = RF%Pointers(Idx)
