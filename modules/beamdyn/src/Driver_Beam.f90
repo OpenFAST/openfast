@@ -269,6 +269,9 @@ CONTAINS
       if (EqualRealNos(dt_BD, dt_global)) then
          n_substeps = 1
          dt_BD      = dt_global
+      elseif (dt_BD <= 0.0_DbKi) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'BeamDyn time step DTBeam ('//trim(Num2LStr(dt_BD))//' s) must be greater than 0.'
       elseif (dt_BD > dt_global) then
          ErrStat = ErrID_Fatal
          ErrMsg  = 'BeamDyn time step DTBeam ('//trim(Num2LStr(dt_BD))//' s) cannot be larger than the driver time step DT ('// &
