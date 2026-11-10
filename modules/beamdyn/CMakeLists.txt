@@ -60,9 +60,6 @@ set_target_properties(beamdyn_c_binding PROPERTIES PUBLIC_HEADER src/BeamDyn_C_B
 # C-bindings non-shared interface
 add_library(beamdyn_c_bind_static STATIC $<TARGET_OBJECTS:beamdyn_c_binding_object>)
 target_link_libraries(beamdyn_c_bind_static beamdynlib beamdyn_driver_subs nwtclibs versioninfolib)
-if(APPLE OR UNIX)
-   target_compile_definitions(beamdyn_c_bind_static PRIVATE IMPLICIT_DLLEXPORT)
-endif()
 
 # C driver for the C-bindings interface (example of driving a standalone beam from C, and checks of the interface)
 add_executable(beamdyn_c_binding_driver

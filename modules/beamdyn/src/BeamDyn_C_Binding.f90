@@ -26,14 +26,20 @@
 !! Call sequence:
 !!    BD_C_Init                 -- initialize the beam from an input file (returns node counts and output channel info)
 !!    BD_C_GetRefPositions      -- (optional) reference positions of the output nodes and load nodes
-!!    loop over time:
-!!       BD_C_SetRootMotion     -- root motion at the time of the next BD_C_CalcOutput or BD_C_UpdateStates call
-!!       BD_C_SetPointLoads     -- (optional) point loads at the finite element nodes
-!!       BD_C_SetDistrLoads     -- (optional) distributed loads at the quadrature point nodes
-!!       BD_C_CalcOutput        -- outputs at the current time (node motions, root reaction, output channels)
-!!       BD_C_UpdateStates      -- advance the states from Time_C to TimeNext_C using the inputs set for TimeNext_C
+!!    BD_C_SetRootMotion, BD_C_SetPointLoads, BD_C_SetDistrLoads -- inputs at the initial time
+!!    BD_C_CalcOutput           -- outputs at the initial time (required before the first BD_C_UpdateStates)
+!!    loop over time, from t to t+dt:
+!!       BD_C_SetRootMotion     -- root motion at t+dt
+!!       BD_C_SetPointLoads     -- (optional) point loads at the finite element nodes at t+dt
+!!       BD_C_SetDistrLoads     -- (optional) distributed loads at the quadrature point nodes at t+dt
+!!       BD_C_UpdateStates      -- advance the states from t to t+dt using the inputs set for t+dt
+!!       BD_C_CalcOutput        -- outputs at t+dt (node motions, root reaction, output channels)
 !!    BD_C_PackStates / BD_C_UnpackStates -- (optional) write/read a checkpoint file with the complete beam state
 !!    BD_C_End
+!!
+!! Inputs that are not set keep their previous values (loads are zero and the root motion is the initial root
+!! motion until they are set).  The input interpolation order only sets the length of the input history: BeamDyn
+!! evaluates its inputs at t and t+dt, so the results do not depend on it.
 MODULE BeamDyn_C
 
    USE ISO_C_BINDING
@@ -70,8 +76,13 @@ MODULE BeamDyn_C
    !     The root kinematics (position, orientation, velocity, acceleration) and gravity are passed in double
    !     precision: BeamDyn imposes the root motion as a boundary condition at every step, and single precision
    !     rounding of a prescribed root motion appears as root acceleration noise of order eps_single*|disp|/dt^2.
-   !     Loads and the returned node motions, reaction loads, and channel values are single precision (as in the
-   !     MoorDyn and AeroDyn-Inflow interfaces); orientations are always double precision.
+   !     Node positions are returned in double precision so that displacements can be formed by subtracting the
+   !     reference positions.  Loads and the returned node velocities, accelerations, reaction loads, and channel
+   !     values are single precision (as in the MoorDyn and AeroDyn-Inflow interfaces); orientations are always
+   !     double precision.
+   !
+   !  Limits
+   !     All data is module-level: one beam per process, and the routines are not thread safe.
    !
    !  Potential issues
    !     -  if MaxBDOutputs is sufficiently large, we may overrun the buffer on the calling
@@ -82,7 +93,12 @@ MODULE BeamDyn_C
 
    !------------------------------------------------------------------------------------
    !  Checkpoint file identifier (written at the start of the file by BD_C_PackStates)
-   INTEGER(IntKi),   PARAMETER            :: CheckpointFileID = 42101
+   INTEGER(IntKi),   PARAMETER            :: CheckpointFileID = 42102
+
+   !------------------------------------------------------------------------------------
+   !  Tolerance on the times passed through the interface, as a fraction of the timestep.  Times are compared with
+   !  this relative tolerance (not with EqualRealNos) because the roundoff of a time grows with the time itself.
+   REAL(DbKi),       PARAMETER            :: TimeTol = 1.0E-6_DbKi
 
    !--------------------------------------------------------------------------------------------------------------------------------------------------------
    !  Data storage
@@ -127,6 +143,7 @@ MODULE BeamDyn_C
    INTEGER(IntKi)                          :: N_Global            !< global timestep
    REAL(DbKi)                              :: T_Initial           !< initial Time of simulation (time passed to the first UpdateStates call)
    LOGICAL                                 :: Initialized = .FALSE. !< BD_C_Init completed successfully
+   LOGICAL                                 :: InitialInputsSet = .FALSE. !< BD_C_CalcOutput has been called, so u(1) holds the inputs at the current time
 
    ! Mesh and channel sizes (kept here so the interface array sizes are defined even before BD_C_Init is called)
    INTEGER(IntKi)                          :: NumOutputNodes    = 0 !< Number of nodes on y%BldMotion
@@ -213,14 +230,46 @@ SUBROUTINE BD_C_Init(                                                      &
    NumChannels_C        = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
+   OutputChannelNames_C(1) = C_NULL_CHAR      ! empty C strings unless the channel names are set below
+   OutputChannelUnits_C(1) = C_NULL_CHAR
    TmpFileName = ''
 
    CALL NWTC_Init( ProgNameIn=version%Name )
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
 
-   ! Destroy global memory (in case Init is called a second time without an End)
-   CALL DestroyAll( ErrStat_F2, ErrMsg_F2 )
+   ! End any previous instance (in case Init is called a second time without an End): close its files and destroy
+   ! its data.  From here until the end of this routine the library is not initialized.
+   CALL EndAll( ErrStat_F2, ErrMsg_F2 )
+
+   !----------------------------------------------------------------------------------------------------------------------------------------------
+   ! Check the inputs that are not checked by BeamDyn
+   !----------------------------------------------------------------------------------------------------------------------------------------------
+   IF ( .NOT. (DT_C > 0.0_c_double) .OR. DT_C > HUGE(DT_C) ) THEN      ! also catches NaN and infinity
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'DT_C must be a positive, finite timestep.'
+      IF (Failed()) RETURN
+   ENDIF
+   IF ( InputFilePassed /= 0_c_int .AND. InputFilePassed /= 1_c_int ) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'InputFilePassed must be 0 (path to the input file) or 1 (contents of the input file).'
+      IF (Failed()) RETURN
+   ENDIF
+   IF ( DynamicSolve_C /= 0_c_int .AND. DynamicSolve_C /= 1_c_int ) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'DynamicSolve_C must be 0 (static solve) or 1 (dynamic solve).'
+      IF (Failed()) RETURN
+   ENDIF
+   IF ( WrOutputs_C /= 0_c_int .AND. WrOutputs_C /= 1_c_int ) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'WrOutputs_C must be 0 (no output file) or 1 (write the output file).'
+      IF (Failed()) RETURN
+   ENDIF
+   IF ( .NOT. C_ASSOCIATED(InputFileString_C) .OR. InputFileStringLength_C < 1_c_int ) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'InputFileString_C must point to a string of InputFileStringLength_C > 0 characters.'
+      IF (Failed()) RETURN
+   ENDIF
 
    !----------------------------------------------------------------------------------------------------------------------------------------------
    ! Root name for output files
@@ -280,12 +329,16 @@ SUBROUTINE BD_C_Init(                                                      &
    InitInp%RootDisp         = 0.0_R8Ki
    InitInp%RootVel          = REAL(RootVel_C, ReKi)
 
+   InputTimes               = 0.0_DbKi                    ! Set in the first UpdateStates call
+   InitialInputsSet         = .FALSE.                     ! Set by the first CalcOutput call
+
    ALLOCATE(u(InterpOrder+1), STAT=ErrStat_F2)
    IF (ErrStat_F2 /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'Failed to allocate Inputs type for BD'
       IF (Failed()) RETURN
    ENDIF
+   m%Un_Sum = -1      ! no summary file is open (BD_End closes this unit if it is positive)
 
    !-------------------------------------------------
    ! Call the main subroutine BD_Init
@@ -296,10 +349,9 @@ SUBROUTINE BD_C_Init(                                                      &
    IF (LEN_TRIM(TmpFileName) > 0) CALL DeleteFile( TmpFileName )
 
    ! The states are advanced by DT_C here, so BeamDyn must use the same timestep (DTBeam in the input file must be DEFAULT or equal to DT_C).
-   ! BD_Init returns the timestep it uses in dT_Interval.
-   IF ( .NOT. EqualRealNos( dT_Interval, dT_Global ) ) THEN
+   IF ( ABS( p%dt - dT_Global ) > TimeTol*dT_Global ) THEN
       ErrStat_F2 = ErrID_Fatal
-      ErrMsg_F2  = 'The BeamDyn timestep DTBeam ('//TRIM(Num2LStr(dT_Interval))//' s) must be DEFAULT or equal to the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
+      ErrMsg_F2  = 'The BeamDyn timestep DTBeam ('//TRIM(Num2LStr(p%dt))//' s) must be DEFAULT or equal to the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
       IF (Failed()) RETURN
    ENDIF
 
@@ -406,10 +458,10 @@ SUBROUTINE BD_C_GetRefPositions( OutputNodePos_C, OutputNodeOri_C, PointLoadNode
 !DEC$ ATTRIBUTES DLLEXPORT :: BD_C_GetRefPositions
 !GCC$ ATTRIBUTES DLLEXPORT :: BD_C_GetRefPositions
 #endif
-   REAL(C_FLOAT),             INTENT(  OUT)  :: OutputNodePos_C(3*NumOutputNodes)       !< Reference positions of the output nodes [x,y,z] (m)
+   REAL(C_DOUBLE),            INTENT(  OUT)  :: OutputNodePos_C(3*NumOutputNodes)       !< Reference positions of the output nodes [x,y,z] (m)
    REAL(C_DOUBLE),            INTENT(  OUT)  :: OutputNodeOri_C(9*NumOutputNodes)       !< Reference orientations of the output nodes: DCM from the global frame to the node frame, stored row by row
-   REAL(C_FLOAT),             INTENT(  OUT)  :: PointLoadNodePos_C(3*NumPointLoadNodes) !< Reference positions of the point load nodes [x,y,z] (m)
-   REAL(C_FLOAT),             INTENT(  OUT)  :: DistrLoadNodePos_C(3*NumDistrLoadNodes) !< Reference positions of the distributed load nodes [x,y,z] (m)
+   REAL(C_DOUBLE),            INTENT(  OUT)  :: PointLoadNodePos_C(3*NumPointLoadNodes) !< Reference positions of the point load nodes [x,y,z] (m)
+   REAL(C_DOUBLE),            INTENT(  OUT)  :: DistrLoadNodePos_C(3*NumDistrLoadNodes) !< Reference positions of the distributed load nodes [x,y,z] (m)
    INTEGER(C_INT),            INTENT(  OUT)  :: ErrStat_C
    CHARACTER(KIND=C_CHAR),    INTENT(  OUT)  :: ErrMsg_C(ErrMsgLen_C)
 
@@ -429,14 +481,14 @@ SUBROUTINE BD_C_GetRefPositions( OutputNodePos_C, OutputNodeOri_C, PointLoadNode
    ENDIF
 
    DO I=1,y%BldMotion%Nnodes
-      OutputNodePos_C(3*(I-1)+1:3*I) = REAL(y%BldMotion%Position(1:3,I), c_float)
+      OutputNodePos_C(3*(I-1)+1:3*I) = REAL(y%BldMotion%Position(1:3,I), c_double)
       OutputNodeOri_C(9*(I-1)+1:9*I) = REAL(RESHAPE(TRANSPOSE(y%BldMotion%RefOrientation(1:3,1:3,I)), (/9/)), c_double)
    END DO
    DO I=1,u(1)%PointLoad%Nnodes
-      PointLoadNodePos_C(3*(I-1)+1:3*I) = REAL(u(1)%PointLoad%Position(1:3,I), c_float)
+      PointLoadNodePos_C(3*(I-1)+1:3*I) = REAL(u(1)%PointLoad%Position(1:3,I), c_double)
    END DO
    DO I=1,u(1)%DistrLoad%Nnodes
-      DistrLoadNodePos_C(3*(I-1)+1:3*I) = REAL(u(1)%DistrLoad%Position(1:3,I), c_float)
+      DistrLoadNodePos_C(3*(I-1)+1:3*I) = REAL(u(1)%DistrLoad%Position(1:3,I), c_double)
    END DO
 
    CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
@@ -473,7 +525,7 @@ SUBROUTINE BD_C_SetRootMotion( RootDisp_C, RootOri_C, RootVel_C, RootAcc_C, ErrS
       RETURN
    ENDIF
 
-   BD_u%RootMotion%TranslationDisp(1:3,1)  = REAL(RootDisp_C(1:3), ReKi)
+   BD_u%RootMotion%TranslationDisp(1:3,1)  = REAL(RootDisp_C(1:3), R8Ki)
    BD_u%RootMotion%Orientation(1:3,1:3,1)  = TRANSPOSE(RESHAPE(REAL(RootOri_C, R8Ki), (/3,3/)))
    BD_u%RootMotion%TranslationVel(1:3,1)   = REAL(RootVel_C(1:3), ReKi)
    BD_u%RootMotion%RotationVel(1:3,1)      = REAL(RootVel_C(4:6), ReKi)
@@ -577,6 +629,7 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
    INTEGER(IntKi)                            :: ErrStat_F, ErrStat_F2
    CHARACTER(ErrMsgLen)                      :: ErrMsg_F,  ErrMsg_F2
    LOGICAL                                   :: CorrectionStep
+   REAL(DbKi)                                :: tUpdate
    CHARACTER(*), PARAMETER                   :: RoutineName = 'BD_C_UpdateStates'
 
    ! Set up error handling
@@ -590,7 +643,15 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
       IF (Failed()) RETURN
    ENDIF
 
-   IF ( .NOT. EqualRealNos( REAL(TimeNext_C - Time_C, DbKi), dT_Global ) ) THEN
+   ! The first step needs the inputs at the initial time (the dynamic solve initializes the accelerations with them).
+   ! They are the inputs of the BD_C_CalcOutput call at the initial time, so that call must come first.
+   IF (.NOT. InitialInputsSet) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'BD_C_CalcOutput must be called at the initial time (after setting the inputs at that time) before the first call to '//RoutineName//'.'
+      IF (Failed()) RETURN
+   ENDIF
+
+   IF ( ABS( REAL(TimeNext_C - Time_C, DbKi) - dT_Global ) > TimeTol*dT_Global ) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'TimeNext_C - Time_C ('//TRIM(Num2LStr(REAL(TimeNext_C - Time_C, DbKi)))//' s) must equal the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
       IF (Failed()) RETURN
@@ -610,11 +671,20 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
    !        and the stored DbKi timestep rather than from the times passed in, so that
    !        the input times stay exact multiples of the timestep.
 
-   !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop)
-   IF ( EqualRealNos( REAL(Time_C,DbKi), InputTimePrev ) ) THEN
+   !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop).  Time_C must be
+   !  either the time of the previous call (a correction step) or the current time of the states (a new step).
+   IF ( N_Global > 0_IntKi .AND. ABS( REAL(Time_C,DbKi) - InputTimePrev ) <= TimeTol*dT_Global ) THEN
       CorrectionStep = .TRUE.
    ELSE ! Setup time input times array
-      IF (N_Global == 0_IntKi) T_Initial = REAL(Time_C,DbKi)     ! first call sets the initial time
+      IF (N_Global == 0_IntKi) THEN
+         T_Initial = REAL(Time_C,DbKi)                           ! first call sets the initial time
+      ELSEIF ( ABS( REAL(Time_C,DbKi) - (T_Initial + N_Global*dT_Global) ) > TimeTol*dT_Global ) THEN
+         ErrStat_F2 = ErrID_Fatal
+         ErrMsg_F2  = 'Time_C ('//TRIM(Num2LStr(REAL(Time_C,DbKi)))//' s) must be the current time of the states ('// &
+                      TRIM(Num2LStr(T_Initial + N_Global*dT_Global))//' s) or the time of the previous call ('// &
+                      TRIM(Num2LStr(InputTimePrev))//' s, a correction step).'
+         IF (Failed()) RETURN
+      ENDIF
       InputTimePrev          = REAL(Time_C,DbKi)                 ! Store for check next time
       IF (InterpOrder>1) THEN ! quadratic, so keep the old time
          InputTimes(INPUT_LAST) = T_Initial + ( N_Global - 1 ) * dT_Global    ! u(3) at T-dT
@@ -655,8 +725,15 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
    !-------------------------------------------------
    ! Call the main subroutine BD_UpdateStates
    !     -- the step number passed is the index of the step at time T (N_Global was incremented above), as in the BeamDyn driver
+   !     -- the dynamic solve takes the time T and uses the inputs at T+dt.  The static solve uses the inputs at the
+   !        time it is given, so it is given T+dt: in both cases the solution at T+dt is for the inputs set for T+dt.
    !-------------------------------------------------
-   CALL BD_UpdateStates( InputTimes(INPUT_CURR), N_Global-1, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherSt(STATE_PRED), m, ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
+   IF (p%analysis_type == BD_STATIC_ANALYSIS) THEN
+      tUpdate = InputTimes(INPUT_PRED)
+   ELSE
+      tUpdate = InputTimes(INPUT_CURR)
+   ENDIF
+   CALL BD_UpdateStates( tUpdate, N_Global-1, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherSt(STATE_PRED), m, ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
 
    !-------------------------------------------------------
    ! Cycle the states
@@ -696,11 +773,11 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
 !GCC$ ATTRIBUTES DLLEXPORT :: BD_C_CalcOutput
 #endif
    REAL(C_DOUBLE),            INTENT(IN   )  :: Time_C                                   !< Current time (s)
-   REAL(C_FLOAT),             INTENT(  OUT)  :: NodePos_C(3*NumOutputNodes)          !< Position of each output node in the global frame [x,y,z] (m)
+   REAL(C_DOUBLE),            INTENT(  OUT)  :: NodePos_C(3*NumOutputNodes)          !< Position of each output node in the global frame [x,y,z] (m)
    REAL(C_DOUBLE),            INTENT(  OUT)  :: NodeOri_C(9*NumOutputNodes)          !< Orientation of each output node: DCM from the global frame to the node frame, stored row by row
    REAL(C_FLOAT),             INTENT(  OUT)  :: NodeVel_C(6*NumOutputNodes)          !< Translational (1:3) and rotational (4:6) velocity of each output node, global frame (m/s, rad/s)
    REAL(C_FLOAT),             INTENT(  OUT)  :: NodeAcc_C(6*NumOutputNodes)          !< Translational (1:3) and rotational (4:6) acceleration of each output node, global frame (m/s^2, rad/s^2)
-   REAL(C_FLOAT),             INTENT(  OUT)  :: RootReaction_C(6)                        !< Reaction force (1:3) and moment (4:6) at the root, global frame (N, N-m)
+   REAL(C_FLOAT),             INTENT(  OUT)  :: RootReaction_C(6)                        !< Reaction force (1:3) and moment (4:6) at the root, global frame (N, N-m): the load the beam applies to its support
    REAL(C_FLOAT),             INTENT(  OUT)  :: OutputChannelValues_C(NumChannels)  !< Output channel values
    INTEGER(C_INT),            INTENT(  OUT)  :: ErrStat_C
    CHARACTER(KIND=C_CHAR),    INTENT(  OUT)  :: ErrMsg_C(ErrMsgLen_C)
@@ -727,6 +804,7 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
 
    ! Copy the inputs set by the BD_C_Set* routines into the input at the current time
    CALL BD_CopyInput( BD_u, u(1), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2 );  IF (Failed())  RETURN
+   InitialInputsSet = .TRUE.
 
    !-------------------------------------------------
    ! Call the main subroutine BD_CalcOutput
@@ -737,7 +815,7 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
    ! Convert the outputs of BD_CalcOutput back to C
    !-------------------------------------------------
    DO I=1,y%BldMotion%Nnodes
-      NodePos_C(3*(I-1)+1:3*I)       = REAL(y%BldMotion%Position(1:3,I) + y%BldMotion%TranslationDisp(1:3,I), c_float)
+      NodePos_C(3*(I-1)+1:3*I)       = REAL(y%BldMotion%Position(1:3,I), c_double) + REAL(y%BldMotion%TranslationDisp(1:3,I), c_double)
       NodeOri_C(9*(I-1)+1:9*I)       = REAL(RESHAPE(TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,I)), (/9/)), c_double)
       NodeVel_C(6*(I-1)+1:6*(I-1)+3) = REAL(y%BldMotion%TranslationVel(1:3,I), c_float)
       NodeVel_C(6*(I-1)+4:6*(I-1)+6) = REAL(y%BldMotion%RotationVel(1:3,I), c_float)
@@ -751,10 +829,11 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
    OutputChannelValues_C = REAL(y%WriteOutput, c_float)
 
    !-------------------------------------------------
-   ! Write the output file line (only once per time; a repeated time is a correction step)
+   ! Write the output file line.  One line is written per time, at the first CalcOutput call for that time; calls
+   ! that repeat a time (correction steps) do not add or replace lines.
    !-------------------------------------------------
    IF (UnOutFile > 0) THEN
-      IF ( .NOT. EqualRealNos( t, OutTimePrev ) ) THEN
+      IF ( ABS( t - OutTimePrev ) > TimeTol*dT_Global ) THEN
          CALL Dvr_WriteOutputLine( t, UnOutFile, p%OutFmt, y )
          OutTimePrev = t
       ENDIF
@@ -791,6 +870,8 @@ SUBROUTINE BD_C_PackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, NAM
    TYPE(RegFile)                             :: RF
    CHARACTER(IntfStrLen)                     :: FileName
    INTEGER(IntKi)                            :: UnOut
+   INTEGER(IntKi)                            :: IOS, IOSum
+   INTEGER(B8Ki)                             :: FileSize
    INTEGER(IntKi)                            :: ErrStat_F, ErrStat_F2
    CHARACTER(ErrMsgLen)                      :: ErrMsg_F,  ErrMsg_F2
    INTEGER(IntKi)                            :: I
@@ -811,20 +892,24 @@ SUBROUTINE BD_C_PackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, NAM
    CALL GetNewUnit( UnOut, ErrStat_F2, ErrMsg_F2 );             IF (Failed()) RETURN
    CALL OpenBOutFile( UnOut, FileName, ErrStat_F2, ErrMsg_F2 ); IF (Failed()) RETURN
 
-   ! Checkpoint file header: file identifier, sizes used to check the file against the current beam, and time stepping information
-   WRITE (UnOut, IOSTAT=ErrStat_F2) CheckpointFileID
-   WRITE (UnOut, IOSTAT=ErrStat_F2) InterpOrder
-   WRITE (UnOut, IOSTAT=ErrStat_F2) p%node_total
-   WRITE (UnOut, IOSTAT=ErrStat_F2) p%dof_total
-   WRITE (UnOut, IOSTAT=ErrStat_F2) y%BldMotion%Nnodes
-   WRITE (UnOut, IOSTAT=ErrStat_F2) u(1)%DistrLoad%Nnodes
-   WRITE (UnOut, IOSTAT=ErrStat_F2) N_Global
-   WRITE (UnOut, IOSTAT=ErrStat_F2) dT_Global
-   WRITE (UnOut, IOSTAT=ErrStat_F2) T_Initial
-   WRITE (UnOut, IOSTAT=ErrStat_F2) InputTimePrev
-   WRITE (UnOut, IOSTAT=ErrStat_F2) OutTimePrev
-   WRITE (UnOut, IOSTAT=ErrStat_F2) InputTimes
-   IF (ErrStat_F2 /= 0) THEN
+   ! Checkpoint file header: file identifier, file size (written at the end, used to detect a truncated file), values
+   ! used to check the file against the current beam, and time stepping information
+   FileSize = -1_B8Ki
+   IOSum    = 0
+   WRITE (UnOut, IOSTAT=IOS) CheckpointFileID;        IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) FileSize;                IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) InterpOrder;             IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) p%node_total;            IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) p%dof_total;             IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) y%BldMotion%Nnodes;      IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) u(1)%DistrLoad%Nnodes;   IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) p%analysis_type;         IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) dT_Global;               IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) N_Global;                IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) T_Initial;               IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) InputTimePrev;           IOSum = IOSum + ABS(IOS)
+   WRITE (UnOut, IOSTAT=IOS) InputTimes;              IOSum = IOSum + ABS(IOS)
+   IF (IOSum /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'Error writing the header of checkpoint file '//TRIM(FileName)
       IF (Failed()) RETURN
@@ -844,8 +929,25 @@ SUBROUTINE BD_C_PackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, NAM
    END DO
    CALL BD_PackInput( RF, BD_u )
 
+   ! The root reaction of the static solve is held in the misc variables (it is set by the static solution and read
+   ! by CalcOutput), so it is part of the state that must be restored.
+   CALL RegPackAlloc( RF, m%FirstNodeReactionLclForceMoment )
+
    ! Close registry file and get any errors that occurred while writing (this also closes the unit)
    CALL CloseRegFile( RF, ErrStat_F2, ErrMsg_F2 ); IF (Failed()) RETURN
+   UnOut = -1
+
+   ! Record the size of the complete file in the header
+   CALL GetNewUnit( UnOut, ErrStat_F2, ErrMsg_F2 );             IF (Failed()) RETURN
+   OPEN ( UNIT=UnOut, FILE=TRIM(FileName), STATUS='OLD', FORM='UNFORMATTED', ACCESS='STREAM', ACTION='READWRITE', IOSTAT=IOS )
+   IF (IOS == 0) INQUIRE( UNIT=UnOut, SIZE=FileSize, IOSTAT=IOS )
+   IF (IOS == 0) WRITE  ( UnOut, POS=1+STORAGE_SIZE(CheckpointFileID)/8, IOSTAT=IOS ) FileSize
+   IF (IOS /= 0) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'Error writing the file size to checkpoint file '//TRIM(FileName)
+      IF (Failed()) RETURN
+   ENDIF
+   CLOSE(UnOut)
    UnOut = -1
 
    CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
@@ -881,7 +983,11 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
    TYPE(BD_InputType)                        :: u_tmp             !< Inputs read from the file (copied into the existing input meshes so mesh siblings stay intact)
    CHARACTER(IntfStrLen)                     :: FileName
    INTEGER(IntKi)                            :: UnIn
-   INTEGER(IntKi)                            :: FileID, InterpOrderIn, node_total, dof_total, NnodesOut, NnodesDistr
+   INTEGER(IntKi)                            :: FileID, InterpOrderIn, node_total, dof_total, NnodesOut, NnodesDistr, analysis_type
+   INTEGER(IntKi)                            :: N_GlobalIn, IOS, IOSum
+   INTEGER(B8Ki)                             :: FileSize, FileSizeIn
+   REAL(DbKi)                                :: dT_In, T_InitialIn, InputTimePrevIn
+   REAL(DbKi), ALLOCATABLE                   :: InputTimesIn(:)
    INTEGER(IntKi)                            :: ErrStat_F, ErrStat_F2
    CHARACTER(ErrMsgLen)                      :: ErrMsg_F,  ErrMsg_F2
    INTEGER(IntKi)                            :: I
@@ -909,29 +1015,47 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
       ErrMsg_F2  = TRIM(FileName)//' is not a BeamDyn checkpoint file written by BD_C_PackStates.'
       IF (Failed()) RETURN
    ENDIF
-   READ (UnIn, IOSTAT=ErrStat_F2) InterpOrderIn
-   READ (UnIn, IOSTAT=ErrStat_F2) node_total
-   READ (UnIn, IOSTAT=ErrStat_F2) dof_total
-   READ (UnIn, IOSTAT=ErrStat_F2) NnodesOut
-   READ (UnIn, IOSTAT=ErrStat_F2) NnodesDistr
-   IF (ErrStat_F2 /= 0) THEN
+   ! The file size recorded in the header must match the size of the file (an incomplete file cannot be unpacked)
+   IOSum = 0
+   READ (UnIn, IOSTAT=IOS) FileSizeIn;              IOSum = IOSum + ABS(IOS)
+   INQUIRE( UNIT=UnIn, SIZE=FileSize, IOSTAT=IOS ); IOSum = IOSum + ABS(IOS)
+   IF (IOSum /= 0 .OR. FileSizeIn /= FileSize) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'Checkpoint file '//TRIM(FileName)//' is incomplete: its size does not match the size recorded when it was written.'
+      IF (Failed()) RETURN
+   ENDIF
+   READ (UnIn, IOSTAT=IOS) InterpOrderIn;           IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) node_total;              IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) dof_total;               IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) NnodesOut;               IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) NnodesDistr;             IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) analysis_type;           IOSum = IOSum + ABS(IOS)
+   READ (UnIn, IOSTAT=IOS) dT_In;                   IOSum = IOSum + ABS(IOS)
+   IF (IOSum /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'Error reading the header of checkpoint file '//TRIM(FileName)
       IF (Failed()) RETURN
    ENDIF
    IF ( InterpOrderIn /= InterpOrder .OR. node_total /= p%node_total .OR. dof_total /= p%dof_total .OR. &
-        NnodesOut /= y%BldMotion%Nnodes .OR. NnodesDistr /= u(1)%DistrLoad%Nnodes ) THEN
+        NnodesOut /= y%BldMotion%Nnodes .OR. NnodesDistr /= u(1)%DistrLoad%Nnodes .OR. analysis_type /= p%analysis_type ) THEN
       ErrStat_F2 = ErrID_Fatal
-      ErrMsg_F2  = 'Checkpoint file '//TRIM(FileName)//' was written for a different beam discretization or interpolation order than the current one.'
+      ErrMsg_F2  = 'Checkpoint file '//TRIM(FileName)//' was written for a different beam discretization, analysis type, or interpolation order than the current one.'
       IF (Failed()) RETURN
    ENDIF
-   READ (UnIn, IOSTAT=ErrStat_F2) N_Global
-   READ (UnIn, IOSTAT=ErrStat_F2) dT_Global
-   READ (UnIn, IOSTAT=ErrStat_F2) T_Initial
-   READ (UnIn, IOSTAT=ErrStat_F2) InputTimePrev
-   READ (UnIn, IOSTAT=ErrStat_F2) OutTimePrev
-   READ (UnIn, IOSTAT=ErrStat_F2) InputTimes
-   IF (ErrStat_F2 /= 0) THEN
+   IF ( ABS( dT_In - dT_Global ) > TimeTol*dT_Global ) THEN
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'Checkpoint file '//TRIM(FileName)//' was written with a timestep of '//TRIM(Num2LStr(dT_In))// &
+                   ' s; the timestep passed to BD_C_Init is '//TRIM(Num2LStr(dT_Global))//' s.'
+      IF (Failed()) RETURN
+   ENDIF
+   ALLOCATE( InputTimesIn(InterpOrder+1), STAT=IOS );  IOSum = IOSum + ABS(IOS)
+   IF (IOSum == 0) THEN
+      READ (UnIn, IOSTAT=IOS) N_GlobalIn;           IOSum = IOSum + ABS(IOS)
+      READ (UnIn, IOSTAT=IOS) T_InitialIn;          IOSum = IOSum + ABS(IOS)
+      READ (UnIn, IOSTAT=IOS) InputTimePrevIn;      IOSum = IOSum + ABS(IOS)
+      READ (UnIn, IOSTAT=IOS) InputTimesIn;         IOSum = IOSum + ABS(IOS)
+   ENDIF
+   IF (IOSum /= 0) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'Error reading the header of checkpoint file '//TRIM(FileName)
       IF (Failed()) RETURN
@@ -954,6 +1078,7 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
    CALL BD_UnPackInput( RF, u_tmp )
    CALL BD_CopyInput( u_tmp, BD_u, MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2 );     IF (Failed())  RETURN
    CALL BD_DestroyInput( u_tmp, ErrStat_F2, ErrMsg_F2 );                         IF (Failed())  RETURN
+   CALL RegUnpackAlloc( RF, m%FirstNodeReactionLclForceMoment )
 
    ErrStat_F2 = RF%ErrStat
    ErrMsg_F2  = RF%ErrMsg
@@ -962,6 +1087,14 @@ SUBROUTINE BD_C_UnpackStates( CheckpointRoot_C, ErrStat_C, ErrMsg_C ) BIND (C, N
    CLOSE(UnIn)
    UnIn = -1
    IF (ALLOCATED(RF%Pointers)) DEALLOCATE(RF%Pointers)
+
+   ! The file has been read without error: restore the time stepping information.  The time of the last line written
+   ! to the output file is not restored: the output file of this instance starts with the checkpoint time.
+   N_Global      = N_GlobalIn
+   T_Initial     = T_InitialIn
+   InputTimePrev = InputTimePrevIn
+   InputTimes    = InputTimesIn
+   InitialInputsSet = .TRUE.      ! the input history was restored
 
    ! The restored states are the states at the current time; the predicted states are scratch for the next update
    CALL BD_CopyContState   (x(      STATE_CURR), x(      STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
@@ -1006,6 +1139,30 @@ SUBROUTINE BD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='BD_C_End')
    ErrStat_F = ErrID_None
    ErrMsg_F = ''
 
+   ! Close the files, call BD_End, and destroy all data
+   CALL EndAll( ErrStat_F2, ErrMsg_F2 )
+   CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+
+   CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+END SUBROUTINE BD_C_End
+
+!===============================================================================================================
+!----------------------------------------- ADDITIONAL SUBROUTINES ----------------------------------------------
+!===============================================================================================================
+!> End the current instance: close the output file, call BD_End (which closes the summary file), and destroy all
+!! module-level data.  Safe to call when the library was never initialized or initialization failed part way.
+SUBROUTINE EndAll( ErrStat, ErrMsg )
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
+   CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'EndAll'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   Initialized = .FALSE.
+
    ! Close the output file
    IF (UnOutFile > 0) CLOSE(UnOutFile)
    UnOutFile = -1
@@ -1015,25 +1172,20 @@ SUBROUTINE BD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='BD_C_End')
    !     or BD_C_End got called before Init.  We don't want a segfault, so check
    !     for allocation.
    IF (ALLOCATED(u)) THEN
-      CALL BD_End( u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherSt(STATE_CURR), y, m, ErrStat_F2, ErrMsg_F2 )
-      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      CALL BD_End( u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherSt(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      m%Un_Sum = -1      ! BD_End closed the summary file; do not close that unit again
    ENDIF
 
    !  NOTE: BD_End only takes 1 instance of u, not the array.  So extra
    !        logic is required here (this isn't necessary in the fortran driver
    !        or in openfast, but may be when this code is called from C, Python,
    !        or some other code using the c-bindings)
-   CALL DestroyAll( ErrStat_F2, ErrMsg_F2 )
-   CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   CALL DestroyAll( ErrStat2, ErrMsg2 )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+END SUBROUTINE EndAll
 
-   Initialized = .FALSE.
-
-   CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
-END SUBROUTINE BD_C_End
-
-!===============================================================================================================
-!----------------------------------------- ADDITIONAL SUBROUTINES ----------------------------------------------
-!===============================================================================================================
+!---------------------------------------------------------------------------------------------------------------
 !> Destroy all module-level BeamDyn data (safe to call on data that was never allocated or was already destroyed)
 SUBROUTINE DestroyAll( ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
