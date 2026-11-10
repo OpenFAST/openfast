@@ -1,3 +1,22 @@
+#*********************************************************************************************************************************
+# LICENSING
+# Copyright (C) 2024-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
+#    This file is part of openfast_io.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#*********************************************************************************************************************************
 import os
 import xlrd
 
@@ -11,10 +30,37 @@ by Evan Gaertner, maintained by Pietro Bortolotti @ NREL on June 2nd, 2021
 """
 
 
+# License block written at the top of the generated file (keep in sync with the copyright
+# notices used elsewhere in openfast_io)
+LICENSE_HEADER = (
+    '#*********************************************************************************************************************************\n'
+    '# LICENSING\n'
+    '# Copyright (C) 2024-2025  National Renewable Energy Laboratory\n'
+    '# Copyright (C) 2025-2026  National Laboratory of the Rockies\n'
+    '#\n'
+    '#    This file is part of openfast_io.\n'
+    '#\n'
+    '# Licensed under the Apache License, Version 2.0 (the "License");\n'
+    '# you may not use this file except in compliance with the License.\n'
+    '# You may obtain a copy of the License at\n'
+    '#\n'
+    '#     http://www.apache.org/licenses/LICENSE-2.0\n'
+    '#\n'
+    '# Unless required by applicable law or agreed to in writing, software\n'
+    '# distributed under the License is distributed on an "AS IS" BASIS,\n'
+    '# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n'
+    '# See the License for the specific language governing permissions and\n'
+    '# limitations under the License.\n'
+    '#*********************************************************************************************************************************\n'
+)
+
+
 def GetOutlistParameters(fname_vars_out, xl_files_in, sheet_list, write_mode, final_dict):
 
     f = open(fname_vars_out, write_mode)
-    f.write('""" Generated from FAST OutListParameters.xlsx files with AeroelasticSE/src/AeroelasticSE/Util/create_output_vars.py """\n')
+    if 'w' in write_mode:
+        f.write(LICENSE_HEADER)
+    f.write('""" Generated from FAST OutListParameters.xlsx files with openfast_io/openfast_io/create_output_vars.py """\n')
 
     for fname, sheet_name in zip(xl_files_in, sheet_list):
         book = xlrd.open_workbook(fname)

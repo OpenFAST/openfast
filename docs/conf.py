@@ -129,7 +129,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = f'OpenFAST'
-copyright = f'{datetime.date.today().year}, National Renewable Energy Laboratory'
+copyright = f'2017-2025, National Renewable Energy Laboratory; 2025-{datetime.date.today().year}, National Laboratory of the Rockies'
 author = f'OpenFAST Team'
 
 # The version info for the project you're documenting, acts as replacement for

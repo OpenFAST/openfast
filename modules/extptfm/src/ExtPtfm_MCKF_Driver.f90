@@ -2,7 +2,8 @@
 !> ## ExtPtfm_MCKF_Driver: This code tests the template modules
 !!..................................................................................................................................
 !! LICENSING
-!! Copyright (C) 2016  National Renewable Energy Laboratory
+!! Copyright (C) 2016-2025  National Renewable Energy Laboratory
+!! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !!
 !!    This file is part of ExtPtfm_MCKF.
 !!

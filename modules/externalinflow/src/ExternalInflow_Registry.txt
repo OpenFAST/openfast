@@ -1,4 +1,7 @@
 ###################################################################################################################################
+# Copyright (C) 2023-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # Registry for ExternalInflow - CFD interface types in the FAST Modularization Framework
 # Entries are of the form
 # <keyword>   <ModuleName/ModName>   <TypeName>   <FieldType>   <FieldName>   <Dims>   <IO>   <DNAME>   <DESCRIP>   <UNITS>

@@ -6,7 +6,8 @@
 ! "Conv_Rdtn" (in Conv_Rdtn_*) should be replaced with the module name or an abbreviation of it. Example: HD
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2015  National Renewable Energy Laboratory
+! Copyright (C) 2012-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of Conv_Radiation.
 !

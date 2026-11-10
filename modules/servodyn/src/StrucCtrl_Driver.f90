@@ -3,7 +3,8 @@
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2014 William La Cava & Matt Lackner, UMass Amherst
-! Copyright (C) 2012 National Renewable Energy Laboratory
+! Copyright (C) 2012-2025 National Renewable Energy Laboratory
+! Copyright (C) 2025-2026 National Laboratory of the Rockies
 !
 ! This file is part of StrucCtrl. 
 !

@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-!> Copyright (C) 2013-2016  National Renewable Energy Laboratory
+!> Copyright (C) 2013-2025  National Renewable Energy Laboratory
+!> Copyright (C) 2025-2026  National Laboratory of the Rockies
 !!
 !! Licensed under the Apache License, Version 2.0 (the "License");
 !! you may not use this file except in compliance with the License.
