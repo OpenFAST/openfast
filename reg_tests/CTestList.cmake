@@ -196,6 +196,24 @@ function(bd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
 endfunction(bd_regression)
 
+# beamdyn c-bindings interface driven from Python
+function(py_bd_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynPyRegressionCase.py")
+  set(BEAMDYN_EXECUTABLE "${Python_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/beamdyn")
+  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
+endfunction(py_bd_regression)
+
+# beamdyn c-bindings interface driven from the C driver (reads the same driver input file as the BeamDyn driver)
+function(c_bd_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
+  set(BEAMDYN_EXECUTABLE "${CTEST_BEAMDYN_C_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/beamdyn")
+  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
+endfunction(c_bd_regression)
+
 # hydrodyn
 function(hd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynRegressionCase.py")
@@ -484,6 +502,9 @@ bd_regression("bd_curved_beam"              "beamdyn;static")
 bd_regression("bd_isotropic_rollup"         "beamdyn;static")
 bd_regression("bd_static_cantilever_beam"   "beamdyn;static")
 bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
+py_bd_regression("py_bd_5MW_dynamic"         "beamdyn;dynamic;python")
+py_bd_regression("py_bd_5MW_dynamic_restart" "beamdyn;dynamic;python;restart")
+c_bd_regression("c_bd_5MW_dynamic"           "beamdyn;dynamic")
 
 # HydroDyn regression tests
 hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
