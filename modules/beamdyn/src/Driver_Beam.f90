@@ -264,9 +264,13 @@ PROGRAM BeamDyn_Driver_Program
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
    !> Set the number of BeamDyn sub-steps per driver time step.  The BeamDyn time step (DTBeam) must be
-   !! equal to or an integer divisor of the driver time step.
+   !! equal to or an integer divisor of the driver time step.  Static analysis does not use DTBeam (each
+   !! driver step is a load step), so it is not sub-stepped.
    SUBROUTINE SetBDSubSteps()
-      if (EqualRealNos(dt_BD, dt_global)) then
+      if (BD_Parameter%analysis_type == BD_STATIC_ANALYSIS) then
+         n_substeps = 1
+         dt_BD      = dt_global
+      elseif (EqualRealNos(dt_BD, dt_global)) then
          n_substeps = 1
          dt_BD      = dt_global
       elseif (dt_BD <= 0.0_DbKi) then
