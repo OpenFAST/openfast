@@ -99,7 +99,8 @@ MODULE BeamDyn_C
 
    !------------------------------------------------------------------------------------
    !  Tolerance on the times passed through the interface, as a fraction of the timestep.  Times are compared with
-   !  this relative tolerance (not with EqualRealNos) because the roundoff of a time grows with the time itself.
+   !  the tolerance TimeEps(t) (not with EqualRealNos) because the roundoff of a time grows with the time itself:
+   !  TimeEps is this fraction of the timestep, or a few spacings of the time when that is larger.
    REAL(DbKi),       PARAMETER            :: TimeTol = 1.0E-6_DbKi
 
    !--------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -723,7 +724,7 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
       IF (Failed()) RETURN
    ENDIF
 
-   IF ( ABS( REAL(TimeNext_C - Time_C, DbKi) - dT_Global ) > TimeTol*dT_Global ) THEN
+   IF ( ABS( REAL(TimeNext_C,DbKi) - (REAL(Time_C,DbKi) + dT_Global) ) > TimeEps( REAL(TimeNext_C,DbKi) ) ) THEN
       ErrStat_F2 = ErrID_Fatal
       ErrMsg_F2  = 'TimeNext_C - Time_C ('//TRIM(Num2LStr(REAL(TimeNext_C - Time_C, DbKi)))//' s) must equal the timestep passed to BD_C_Init ('//TRIM(Num2LStr(dT_Global))//' s).'
       IF (Failed()) RETURN
@@ -745,12 +746,12 @@ SUBROUTINE BD_C_UpdateStates( Time_C, TimeNext_C, ErrStat_C, ErrMsg_C ) BIND (C,
 
    !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop).  Time_C must be
    !  either the time of the previous call (a correction step) or the current time of the states (a new step).
-   IF ( N_Global > 0_IntKi .AND. ABS( REAL(Time_C,DbKi) - InputTimePrev ) <= TimeTol*dT_Global ) THEN
+   IF ( N_Global > 0_IntKi .AND. ABS( REAL(Time_C,DbKi) - InputTimePrev ) <= TimeEps( REAL(Time_C,DbKi) ) ) THEN
       CorrectionStep = .TRUE.
    ELSE ! Setup time input times array
       IF (N_Global == 0_IntKi) THEN
          T_Initial = REAL(Time_C,DbKi)                           ! first call sets the initial time
-      ELSEIF ( ABS( REAL(Time_C,DbKi) - (T_Initial + N_Global*dT_Global) ) > TimeTol*dT_Global ) THEN
+      ELSEIF ( ABS( REAL(Time_C,DbKi) - (T_Initial + N_Global*dT_Global) ) > TimeEps( REAL(Time_C,DbKi) ) ) THEN
          ErrStat_F2 = ErrID_Fatal
          ErrMsg_F2  = 'Time_C ('//TRIM(Num2LStr(REAL(Time_C,DbKi)))//' s) must be the current time of the states ('// &
                       TRIM(Num2LStr(T_Initial + N_Global*dT_Global))//' s) or the time of the previous call ('// &
@@ -912,7 +913,7 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
       IF (VTK_First) THEN
          VTK_First    = .FALSE.
          VTK_TimePrev = t
-      ELSEIF ( ABS( t - VTK_TimePrev ) > TimeTol*dT_Global ) THEN
+      ELSEIF ( ABS( t - VTK_TimePrev ) > TimeEps( t ) ) THEN
          VTK_TimePrev = t
          IF ( MOD( VTK_nStep, VTK_nSkip ) == 0 ) THEN
             VTK_nFrame = VTK_nFrame + 1
@@ -927,7 +928,7 @@ SUBROUTINE BD_C_CalcOutput( Time_C, NodePos_C, NodeOri_C, NodeVel_C, NodeAcc_C, 
    ! that repeat a time (correction steps) do not add or replace lines.
    !-------------------------------------------------
    IF (UnOutFile > 0) THEN
-      IF ( ABS( t - OutTimePrev ) > TimeTol*dT_Global ) THEN
+      IF ( ABS( t - OutTimePrev ) > TimeEps( t ) ) THEN
          CALL Dvr_WriteOutputLine( t, UnOutFile, p%OutFmt, y )
          OutTimePrev = t
       ENDIF
@@ -1372,6 +1373,15 @@ SUBROUTINE WritePassedInputFile( InputFileString, FileName, ErrStat, ErrMsg )
 
    CLOSE(Un)
 END SUBROUTINE WritePassedInputFile
+
+!---------------------------------------------------------------------------------------------------------------
+!> Tolerance for comparing two times near t: a fraction of the timestep, or a few spacings of t if that is larger
+!! (so that the comparison still holds when the roundoff of t exceeds that fraction of the timestep)
+FUNCTION TimeEps( t ) RESULT( eps )
+   REAL(DbKi),                INTENT(IN   )  :: t
+   REAL(DbKi)                                :: eps
+   eps = MAX( TimeTol*dT_Global, 8.0_DbKi*SPACING( MAX( ABS(t), dT_Global ) ) )
+END FUNCTION TimeEps
 
 !---------------------------------------------------------------------------------------------------------------
 !> Write VTK frame number VTK_nFrame of the motion output mesh and the load input meshes (as in the BeamDyn driver)
