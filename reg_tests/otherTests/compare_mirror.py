@@ -54,16 +54,23 @@ def expected_class(ch):
 INFORMATIONAL = []
 
 
-def load(path):
+def load(path, with_units=False):
     lines = open(path, errors="replace").read().split("\n")
     h = next(i for i, l in enumerate(lines) if l.strip().startswith("Time"))
     names = lines[h].split()
     rows = [[float(x) for x in l.split()] for l in lines[h + 2:] if l.strip()]
+    if with_units:
+        units = lines[h + 1].split()
+        return names, units, np.array(rows)
     return names, np.array(rows)
 
 
-def classify(x, y, tol, floor):
-    """Return (class, residual) for one channel pair."""
+def classify(x, y, tol, floor, unit=None):
+    """Return (class, residual) for one channel pair.
+
+    unit, when known, restricts the mirrored-angle class to channels measured in
+    degrees; callers without unit information keep the magnitude heuristic alone.
+    """
     # Both signals must sit below the floor before the channel is skipped: a channel
     # that is zero clockwise but wakes up in the mirrored run is exactly the kind of
     # one-sided sign/frame bug this comparison exists to catch.
@@ -81,8 +88,10 @@ def classify(x, y, tol, floor):
     # 1/360 normalisation makes this far more lenient and it shadows a genuine flip.
     # Only meaningful for a quantity actually measured in degrees: the residual can
     # never exceed 180, so for a large channel this test passes on magnitude alone
-    # and will happily label a mooring tension a mirrored angle.
-    if den <= 400.0:
+    # and would happily label a mooring tension a mirrored angle. When the caller
+    # supplies the channel's unit, the class is refused outright for non-degree
+    # quantities; the magnitude cutoff remains as the fallback.
+    if den <= 400.0 and (unit is None or "deg" in unit.lower()):
         ra = np.abs(((y + x + 180.0) % 360.0) - 180.0).max() / den
         if ra < tol:
             return "A", ra
@@ -91,10 +100,11 @@ def classify(x, y, tol, floor):
 
 def compare(cw_path, mir_path, tol=1e-6, only=None):
     """Return (nchecked, mismatches, unclassified, observed)."""
-    n1, a = load(cw_path)
+    n1, u1, a = load(cw_path, with_units=True)
     n2, b = load(mir_path)
     if n1 != n2:
         raise ValueError("channel lists differ between the two files")
+    unit_of = dict(zip(n1, u1))
     idx = {k: v for v, k in enumerate(n1)}
     sl = slice(int(0.75 * len(a)), None)
 
@@ -109,7 +119,8 @@ def compare(cw_path, mir_path, tol=1e-6, only=None):
             continue
         if only is not None and not any(re.search(p, ch) for p in only):
             continue
-        got, rel = classify(a[sl, idx[ch]], b[sl, idx[ch]], tol, floor)
+        got, rel = classify(a[sl, idx[ch]], b[sl, idx[ch]], tol, floor,
+                            unit=unit_of.get(ch))
         observed[ch] = got
         if any(re.search(p, ch) for p in INFORMATIONAL):
             continue
