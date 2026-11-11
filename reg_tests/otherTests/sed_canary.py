@@ -65,9 +65,13 @@ def build(mirrored):
     p = subprocess.run([DRIVER, "sed_driver.dvr"], cwd=d,
                        capture_output=True, text=True)
     out = os.path.join(d, f"{name}.out")
-    if not os.path.exists(out):
+    # The text output grows incrementally, so a mid-run abort leaves a partial
+    # file; with both twins aborting at the same step the identical and flipped
+    # checks pass on the truncated prefixes and the final-speed check passes on
+    # any decelerating stretch. A nonzero driver exit therefore fails the build.
+    if p.returncode != 0 or not os.path.exists(out):
         print((p.stdout + p.stderr)[-1500:])
-        sys.exit(f"{name} run failed")
+        sys.exit(f"{name} run failed (exit status {p.returncode})")
     return out
 
 
