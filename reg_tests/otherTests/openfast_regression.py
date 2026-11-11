@@ -51,10 +51,15 @@ def run_case(case):
                 os.symlink(os.path.join(RTEST, entry), os.path.join(tmp, entry))
         work = os.path.join(tmp, case)
         shutil.copytree(src, work)
+        # copytree brought the committed reference output along with the inputs;
+        # remove it so the existence check below can only be satisfied by a
+        # freshly written result, never by comparing the reference against its
+        # own untouched copy.
+        os.remove(os.path.join(work, ref))
 
         p = subprocess.run([EXE, fst], cwd=work, capture_output=True, text=True)
         out = os.path.join(work, ref)
-        if not os.path.exists(out):
+        if p.returncode != 0 or not os.path.exists(out):
             tail = [l for l in (p.stdout + p.stderr).split("\n") if l.strip()][-3:]
             return case, "RUNFAIL", " | ".join(tail)
 
