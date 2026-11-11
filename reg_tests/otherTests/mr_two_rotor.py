@@ -54,6 +54,13 @@ def main():
     r1 = {n[2:]: n for n in names if n.startswith("R1")}
     r2 = {n[2:]: n for n in names if n.startswith("R2")}
 
+    # A file with no per-rotor pairs, or with rotor-2 counterparts missing, must
+    # fail rather than pass vacuously: the whole point is the R1/R2 comparison.
+    if not r1 or not r2:
+        print(f"ERROR: no per-rotor channel pairs found "
+              f"(R1 channels: {len(r1)}, R2 channels: {len(r2)})")
+        return 1
+
     counts, unresolved, rows = Counter(), [], []
     for base in sorted(r1):
         if base not in r2:
@@ -93,7 +100,12 @@ def main():
         if n in col:
             print(f"  {n:12s} peak {np.abs(col[n]).max():.6e}   expect nonzero")
 
-    return 1 if unresolved else 0
+    if counts["missing"]:
+        print(f"\nERROR: {counts['missing']} rotor-1 channels have no rotor-2 "
+              "counterpart; the comparison is incomplete")
+    if not rows:
+        print("\nERROR: no channel pair was actually compared")
+    return 1 if (unresolved or counts["missing"] or not rows) else 0
 
 
 if __name__ == "__main__":
