@@ -84,7 +84,7 @@ BEHAVIOUR = (
 )
 
 
-def emit_map(groups, mooring, origin, conflicts, tol, floor):
+def emit_map(groups, mooring, origin, conflicts, tol, floor, unresolved_in=None):
     """Write the per-channel sign map into docs/source.
 
     One artefact from one measurement: a YAML file for anything that wants to
@@ -96,14 +96,20 @@ def emit_map(groups, mooring, origin, conflicts, tol, floor):
     """
     docs = os.path.join(REPO_ROOT, "docs", "source", "user", "glue-code")
     labels = {k: lbl for k, lbl, _ in BEHAVIOUR}
+    unresolved_in = unresolved_in or {}
 
+    # measured_in lists the pairs whose observation stands behind the behaviour;
+    # a pair in which the channel failed to classify is reported separately as
+    # unresolved_in rather than being passed off as a successful measurement.
     rows = []
     for k, lbl, _ in BEHAVIOUR:
         for n in sorted(groups.get(k, [])):
-            rows.append((n, k, lbl, sorted(origin[n])))
+            unres = sorted(unresolved_in.get(n, set()))
+            rows.append((n, k, lbl, sorted(origin[n] - set(unres)), unres))
     for n in sorted(mooring):
+        unres = sorted(unresolved_in.get(n, set()))
         rows.append((n, "mooring", "set aside, layout-specific",
-                     sorted(origin[n])))
+                     sorted(origin[n] - set(unres)), unres))
     rows.sort(key=lambda r: r[0].upper())
 
     yml = os.path.join(docs, "mirror_rotor_sign_map.yaml")
@@ -127,12 +133,16 @@ def emit_map(groups, mooring, origin, conflicts, tol, floor):
         fh.write('  mooring: {name: "set aside", '
                  'meaning: "pairing is layout-specific"}\n')
         fh.write("channels:\n")
-        for n, k, lbl, src in rows:
+        for n, k, lbl, src, unres in rows:
             # Quote every value in the flow mapping: a source label containing a
             # comma ("AeroDisk, yawed") otherwise splits into two list entries,
             # and a bare "?" behaviour is not valid YAML at all.
-            srcs = ", ".join(f'"{s}"' for s in src)
-            fh.write(f'  {n}: {{behaviour: "{k}", measured_in: [{srcs}]}}\n')
+            fields = [f'behaviour: "{k}"',
+                      "measured_in: [%s]" % ", ".join(f'"{s}"' for s in src)]
+            if unres:
+                fields.append(
+                    "unresolved_in: [%s]" % ", ".join(f'"{s}"' for s in unres))
+            fh.write(f'  {n}: {{{", ".join(fields)}}}\n')
 
     print(f"\nwrote {yml}")
     print(f"  {len(rows)} channels")
@@ -150,6 +160,9 @@ def main():
 
     seen = defaultdict(set)
     origin = defaultdict(set)
+    # Pairs in which a channel failed to classify: a resolved class from another
+    # pair must not erase the failed observation from the emitted map.
+    unresolved_in = defaultdict(set)
 
     for label, cw, mir in FILE_PAIRS:
         if cw.startswith("/") or "/" in cw:
@@ -170,6 +183,8 @@ def main():
         for n, (cl, _) in res.items():
             seen[n].add(cl)
             origin[n].add(label)
+            if cl == "?":
+                unresolved_in[n].add(label)
 
     for label, pa, pb, prefixes in WITHIN_PAIRS:
         if not os.path.exists(pa):
@@ -203,6 +218,8 @@ def main():
         for n, (cl, _) in res.items():
             seen[n].add(cl)
             origin[n].add(label)
+            if cl == "?":
+                unresolved_in[n].add(label)
 
     # A channel measured in several pairs must agree; 'negligible' carries no
     # information, so it never contradicts a real observation.
@@ -235,6 +252,14 @@ def main():
         for n, cl, src in conflicts:
             print(f"  {n:20s} {cl}  seen in {src}")
 
+    # Channels that classified in one pair but failed in another: named here, and
+    # the failed pair is excluded from measured_in in the emitted map.
+    mixed = sorted(n for n in unresolved_in if seen[n] - {"negligible", "?"})
+    if mixed:
+        print("\n=== PARTIALLY UNRESOLVED (classified in some pairs, failed in others)")
+        for n in mixed:
+            print(f"  {n:20s} unresolved in {sorted(unresolved_in[n])}")
+
     if a.show_unresolved and groups["?"]:
         print("\n=== unresolved")
         print("  " + ", ".join(groups["?"]))
@@ -245,7 +270,8 @@ def main():
         print("  " + ", ".join(groups[k]))
 
     if a.emit_map:
-        emit_map(groups, mooring, origin, conflicts, a.tol, a.floor)
+        emit_map(groups, mooring, origin, conflicts, a.tol, a.floor,
+                 unresolved_in)
 
 
 if __name__ == "__main__":
