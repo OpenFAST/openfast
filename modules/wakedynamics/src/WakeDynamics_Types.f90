@@ -92,6 +92,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     INTEGER(IntKi)  :: MaxNumPlanes = 0_IntKi      !< Maximum number of wake planes allowed [-]
+    REAL(ReKi) , DIMENSION(1:3,1:2)  :: LowResBounds = 0.0_ReKi      !< Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper [m]
   END TYPE WD_InitInputType
 ! =======================
 ! =========  WD_InitOutputType  =======
@@ -137,6 +138,7 @@ IMPLICIT NONE
 ! =========  WD_OtherStateType  =======
   TYPE, PUBLIC :: WD_OtherStateType
     LOGICAL  :: firstPass = .false.      !< Flag indicating whether or not the states have been initialized with proper inputs [-]
+    LOGICAL  :: MaxPlanesWarned = .false.      !< Flag indicating the MaxNumPlanes-exceeded warning has already been issued for this turbine [-]
   END TYPE WD_OtherStateType
 ! =======================
 ! =========  WD_MiscVarType  =======
@@ -208,6 +210,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
+    REAL(ReKi) , DIMENSION(1:3,1:2)  :: LowResBounds = 0.0_ReKi      !< Physical bounds of the low-resolution domain; index 1=XYZ, index 2=lower/upper [m]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def_k_c = 0.0_ReKi      !< Calibrated parameter for the influence of the maximum wake deficit on wake-added turblence (-) [>=0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Def_FMin = 0.0_ReKi      !< Calibrated parameter in the eddy viscosity filter function for the WAT maximum wake deficit defining the value in the minimum region [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0] [-]
@@ -457,6 +460,7 @@ subroutine WD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%TurbNum = SrcInitInputData%TurbNum
    DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
    DstInitInputData%MaxNumPlanes = SrcInitInputData%MaxNumPlanes
+   DstInitInputData%LowResBounds = SrcInitInputData%LowResBounds
 end subroutine
 
 subroutine WD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -481,6 +485,7 @@ subroutine WD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%MaxNumPlanes)
+   call RegPack(RF, InData%LowResBounds)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -493,6 +498,7 @@ subroutine WD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxNumPlanes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LowResBounds); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -972,6 +978,7 @@ subroutine WD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%firstPass = SrcOtherStateData%firstPass
+   DstOtherStateData%MaxPlanesWarned = SrcOtherStateData%MaxPlanesWarned
 end subroutine
 
 subroutine WD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -989,6 +996,7 @@ subroutine WD_PackOtherState(RF, Indata)
    character(*), parameter         :: RoutineName = 'WD_PackOtherState'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%firstPass)
+   call RegPack(RF, InData%MaxPlanesWarned)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -998,6 +1006,7 @@ subroutine WD_UnPackOtherState(RF, OutData)
    character(*), parameter            :: RoutineName = 'WD_UnPackOtherState'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%firstPass); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MaxPlanesWarned); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -1409,7 +1418,7 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'WD_CopyParam'
    ErrStat = ErrID_None
@@ -1487,6 +1496,7 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileVTKDir = SrcParamData%OutFileVTKDir
    DstParamData%TurbNum = SrcParamData%TurbNum
+   DstParamData%LowResBounds = SrcParamData%LowResBounds
    DstParamData%WAT = SrcParamData%WAT
    DstParamData%WAT_k_Def_k_c = SrcParamData%WAT_k_Def_k_c
    DstParamData%WAT_k_Def_FMin = SrcParamData%WAT_k_Def_FMin
@@ -1563,6 +1573,7 @@ subroutine WD_PackParam(RF, Indata)
    call RegPack(RF, InData%OutFileRoot)
    call RegPack(RF, InData%OutFileVTKDir)
    call RegPack(RF, InData%TurbNum)
+   call RegPack(RF, InData%LowResBounds)
    call RegPack(RF, InData%WAT)
    call RegPack(RF, InData%WAT_k_Def_k_c)
    call RegPack(RF, InData%WAT_k_Def_FMin)
@@ -1581,7 +1592,7 @@ subroutine WD_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WD_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WD_UnPackParam'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1625,6 +1636,7 @@ subroutine WD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFileVTKDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LowResBounds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Def_k_c); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAT_k_Def_FMin); if (RegCheckErr(RF, RoutineName)) return
