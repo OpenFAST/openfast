@@ -863,8 +863,8 @@ END SUBROUTINE HydroDyn_C_CalcOutput
 !! contribution; the potential-flow (WAMIT) contribution is omitted. Otherwise the full matrix is returned.
 !===============================================================================================================
 
-SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, &
-               NodeFrc_C, NodeAdm_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C, DynamicOnly_C) BIND (C, NAME='HydroDyn_C_CalcOutput_and_AddedMass')
+SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, DynamicOnly_C, &
+               NodeFrc_C, NodeAdm_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_CalcOutput_and_AddedMass')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_CalcOutput_and_AddedMass
