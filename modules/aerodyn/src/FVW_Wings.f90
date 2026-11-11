@@ -290,7 +290,10 @@ contains
       ! Prescribed circulation
       case (idCircPrescribed)
          do iW = 1, p%nWings !Loop over lifting lines
-            z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
+            ! MirrorRotor: the circulation file describes the clockwise rotor, like every
+            ! other input, so a mirrored wing takes the opposite bound circulation, just
+            ! as the polar-data solve does when it converts Cl to Gamma.
+            z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%RotDir * p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
             m%W(iW)%Vind_CP=-9999._ReKi !< Safety 
             m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
          enddo
