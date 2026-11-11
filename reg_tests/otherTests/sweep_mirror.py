@@ -91,7 +91,10 @@ def build_case(dst, mirrored, dvr_edits, pri_edits, overrides):
         if f.endswith((".dat", ".dvr", ".csv", ".ipt")):
             shutil.copy(os.path.join(BASE, f), dst)
 
-    pri = open(os.path.join(BASE, "ad_primary.dat")).read()
+    # The committed decks reference the 5MW airfoils and blade files through the
+    # @RTEST@ placeholder so they work from any checkout; resolve it here.
+    rtest = os.path.join(REPO_ROOT, "reg_tests", "r-test", "glue-codes", "openfast")
+    pri = open(os.path.join(BASE, "ad_primary.dat")).read().replace("@RTEST@", rtest)
     for k, v in pri_edits.items():
         pri = set_var(pri, k, v)
     open(os.path.join(dst, "ad_primary.dat"), "w").write(pri)
