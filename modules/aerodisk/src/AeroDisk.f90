@@ -517,15 +517,22 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    tmp1 = TwoNorm(tmp3)
    if (EqualRealNos(tmp1, 0.0_SiKi))  then
       m%x_hat = x_hatDisk
-      m%y_hat = y_hatDisk
+      ! MirrorRotor: with the inflow along the shaft there is no skew direction to build
+      ! the triad from, so the disk axes are used, and the mirror must be carried by
+      ! reflecting the lateral axis instead of the cross-product axis. Left unreflected,
+      ! a mirrored rotor kept its lateral force and reversed its tilt moment, each the
+      ! opposite of the reflection.
+      m%y_hat = p%RotDir * y_hatDisk
       m%z_hat = z_hatDisk
       z_hat_phys = z_hatDisk
    else
       m%x_hat = x_hatDisk
       m%y_hat = tmp3 / tmp1
       z_hat_phys = cross_product( VRel_vec, x_hatDisk ) / tmp1
-      ! MirrorRotor: a cross product of two true vectors is a pseudovector, so without
-      ! this the skew-aligned triad comes out left-handed on a mirrored rotor.
+      ! MirrorRotor: reflecting the cross-product axis makes this triad deliberately
+      ! left-handed on a mirrored rotor; components against it then reflect a true
+      ! vector (force), and, with the RotDir applied to the moment components below,
+      ! reverse a pseudovector (moment), exactly as the mirror requires.
       m%z_hat = p%RotDir * z_hat_phys
    endif
 
