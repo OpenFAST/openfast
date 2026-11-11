@@ -578,7 +578,8 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ! RotDir on z_hat achieves. Taking components against that triad, a true vector such
    ! as force keeps every component, since both the vector and the basis vector reflect
    ! together, while a pseudovector such as moment reverses every one. C_F and C_M are
-   ! left alone, since the Ct and Cq outputs report the rotor's own convention.
+   ! left alone, so the ADCt and ADCq file channels report the rotor's own convention;
+   ! the y%Cq boundary output below is signed physically for FAST.Farm.
    tmp1 = real(p%halfRhoA,SiKi) * m%VRel_xd * m%VRel_xd
    m%Force(1)    = tmp1 * m%C_F(1)
    m%Force(2)    = tmp1 * m%C_F(2)
@@ -596,7 +597,12 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ \vec{F} = F_\textrm{x,disk} \hat{x} + F_\textrm{y,disk} \hat{y} + F_\textrm{z,disk} \hat{z} \f$ 
    !! - \f$ \vec{M} = M_\textrm{x,disk} \hat{x} + M_\textrm{y,disk} \hat{y} + M_\textrm{z,disk} \hat{z} \f$ 
    y%Ct = m%C_F(1)    ! Fx in disk reference frame
-   y%Cq = m%C_M(1)    ! Mx in disk reference frame
+   ! MirrorRotor: Cq crosses the FAST.Farm boundary (FASTWrapper builds AzimAvg_Cq from
+   ! it, and is its only consumer), where the AeroDyn path delivers a physically signed
+   ! torque coefficient, so the mirrored disk reports the physical sign too; without it
+   ! a mirrored AeroDisk turbine's wake swirl would not reverse. The ADCq file channel
+   ! reads m%C_M(1) directly and keeps the rotor's own convention.
+   y%Cq = real(p%RotDir,SiKi) * m%C_M(1)    ! Mx in disk reference frame, physical sign
 
    ! AeroLoads in global coordinates
    y%AeroLoads%Force( 1:3,1) = m%Force( 1)*m%x_hat + m%Force( 2)*m%y_hat + m%Force( 3)*m%z_hat
