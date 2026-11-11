@@ -4315,16 +4315,22 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          x5_eff  = x5 * x5_fade
 
          CN_D = CN_f + x5_eff                                       ! Eq. 50 (CN_V = x5)
-         CT_D = Get_Cc( AFI_interpF, alphaF )                       ! Eq. 51, viscous Cc at alphaF
+            ! Eq. 51, viscous chordwise force at alphaF. IAG defines CT positive toward the
+            ! LEADING edge (suction), which is the negative of the Cc convention used by
+            ! Get_Cc (= Cl*sin(a) - (Cd-Cd0)*cos(a), positive aft). The sign flip here is what
+            ! makes Eq. 52 (Cl = CN*cos - CT*sin) the correct inverse of the Cn/Cc transform:
+            !    Cl = Cn*cos(a) + Cc*sin(a)  ==>  Cl = CN_D*cos(a) - CT_D*sin(a) with CT_D = -Cc.
+         CT_D = -Get_Cc( AFI_interpF, alphaF )
 
          y%Cn = CN_D
             ! NOTE y%Cc is NOT the same quantity here as on the HGM/HGMV paths, which set
             ! y%Cc = y%Cl*SinAlpha - y%Cd*CosAlpha at u%alpha and do NOT subtract Cd0.
-            ! This is CT_D: the viscous chordwise force at alphaF, Cd0 removed (Eq. 51).
+            ! Here it is -CT_D, i.e. the viscous chordwise force at alphaF with Cd0 removed,
+            ! reported in the same (positive-aft) sign convention as the other models.
             ! Nothing downstream reads y%Cc -- BEMT, AeroDyn and FVW take only Cl/Cd/Cm -- so
-            ! this affects the UA_OUTS 'Cc' channel and nothing else. It does mean the Cc
-            ! column is not comparable between UA_Mod=9 and UA_Mod=4/5; see theory_ua.rst.
-         y%Cc = CT_D
+            ! this affects the UA_OUTS 'Cc' channel and nothing else.
+         y%Cc = -CT_D
+         y%Cl = CN_D*CosAlpha - CT_D*SinAlpha                       ! Eq. 52
          y%Cl = CN_D*CosAlpha - CT_D*SinAlpha                       ! Eq. 52
 
             ! Eq. 53. AFI_interp is the static interpolation at u%alpha, made further below for
