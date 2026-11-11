@@ -324,8 +324,9 @@ subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutp
    m%AllOuts( GenAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio
 
    ! MirrorRotor: physical components about the shaft x axis, which do change sign.
+   ! The speed is registered in rpm and the acceleration in deg/s^2, as in ElastoDyn.
    m%AllOuts( LSSTipVxa ) = x%QDT(DOF_Az)    * RPS2RPM
-   m%AllOuts( LSSTipAxa ) = dxdt%QDT(DOF_Az) * RPS2RPM
+   m%AllOuts( LSSTipAxa ) = dxdt%QDT(DOF_Az) * R2D
 
    ! Yaw commands
    m%AllOuts( Yaw      ) = y%Yaw     * R2D
