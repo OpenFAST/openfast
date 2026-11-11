@@ -35,12 +35,28 @@ ANTISYM_SHARED = ("HydroFyi", "HydroMxi", "HydroMzi",
 SYM_SHARED = ("HydroFxi", "HydroFzi", "HydroMyi",
               "RBTDXss", "RBTDZss", "RBRDYss")
 
+# Each antisymmetric channel is judged against symmetric counterparts of its own
+# kind, so the assertion is unit-free: force against force, moment against
+# moment, displacement against displacement, rotation against rotation.
+ANTISYM_REF = {
+    "HydroFyi": ("HydroFxi", "HydroFzi"),
+    "HydroMxi": ("HydroMyi",),
+    "HydroMzi": ("HydroMyi",),
+    "RBTDYss": ("RBTDXss", "RBTDZss"),
+    "RBRDXss": ("RBRDYss",),
+    "RBRDZss": ("RBRDYss",),
+}
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("outb")
     ap.add_argument("--tol", type=float, default=1e-6)
     ap.add_argument("--floor", type=float, default=1e-8)
     ap.add_argument("--start", type=float, default=0.0)
+    ap.add_argument("--antisym-ratio", type=float, default=1e-4,
+                    help="an antisymmetric platform channel may not exceed this "
+                         "fraction of its symmetric counterpart's peak (the MRSemi "
+                         "WAMIT-database floor measures ~1e-6)")
     ap.add_argument("--show", action="store_true",
                     help="list every channel and its observed class")
     a = ap.parse_args()
@@ -93,19 +109,34 @@ def main():
 
     print("\n--- shared platform channels")
     print("    (a solution symmetric about y=0 has zero antisymmetric response)")
+    sym_bad = []
     for n in ANTISYM_SHARED:
-        if n in col:
-            print(f"  {n:12s} peak {np.abs(col[n]).max():.6e}   expect ~0")
+        if n not in col:
+            continue
+        peak = np.abs(col[n]).max()
+        refs = [np.abs(col[r]).max() for r in ANTISYM_REF[n] if r in col]
+        scale = max(refs) if refs else 0.0
+        note = ""
+        if scale > 0.0:
+            frac = peak / scale
+            ok = frac <= a.antisym_ratio
+            note = f"   {frac:.2e} of its symmetric scale  {'ok' if ok else 'FAIL'}"
+            if not ok:
+                sym_bad.append(n)
+        print(f"  {n:12s} peak {peak:.6e}   expect ~0{note}")
     for n in SYM_SHARED:
         if n in col:
             print(f"  {n:12s} peak {np.abs(col[n]).max():.6e}   expect nonzero")
+    if sym_bad:
+        print(f"\nERROR: antisymmetric platform response exceeds "
+              f"{a.antisym_ratio:g} of the symmetric scale on: {', '.join(sym_bad)}")
 
     if counts["missing"]:
         print(f"\nERROR: {counts['missing']} rotor-1 channels have no rotor-2 "
               "counterpart; the comparison is incomplete")
     if not rows:
         print("\nERROR: no channel pair was actually compared")
-    return 1 if (unresolved or counts["missing"] or not rows) else 0
+    return 1 if (unresolved or counts["missing"] or not rows or sym_bad) else 0
 
 
 if __name__ == "__main__":
