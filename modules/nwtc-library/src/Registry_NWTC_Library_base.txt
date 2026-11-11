@@ -151,3 +151,20 @@ typedef     ^       ^           IntKi           NDims               -   0   -   
 typedef     ^       ^           ReKi            Nodes               ::  0   -   "Array of node positions"  -
 typedef     ^       ^           IntKi           OriginalIndices     :   0   -   "Array of original node indices"  -
 typedef     ^       ^           IntKi           Dimensions          :   0   -   "The splitting dimension (1 for x, 2 for y) for each node."  -
+
+typedef     ^       BTSBlockType   R8Ki         LU                  ::  -   -   "LU factors of a multi-variable diagonal block (from getrf)"  -
+typedef     ^       ^              IntKi        Piv                 :   -   -   "Pivot indices of a multi-variable diagonal block (from getrf)"  -
+
+typedef     ^       BlockTriSolveType IntKi     N                   -   0   -   "Number of equations/unknowns"  -
+typedef     ^       ^              IntKi        Method              -   0   -   "Factorization method in use {0=not factored, 1=dense LU, 2=block triangular}"  -
+typedef     ^       ^              IntKi        NumBlocks           -   0   -   "Number of diagonal blocks in the block triangular form"  -
+typedef     ^       ^              IntKi        Perm                :   -   -   "Solve order: Perm(k) is the original index of the k-th unknown/equation"  -
+typedef     ^       ^              IntKi        BlkStart            :   -   -   "Start position (in solve order) of each diagonal block, size NumBlocks+1"  -
+typedef     ^       ^              IntKi        BlkIdx              :   -   -   "Index into Blk for multi-variable blocks, 0 for single-variable blocks"  -
+typedef     ^       ^              BTSBlockType Blk                 :   -   -   "Factored multi-variable diagonal blocks"  -
+typedef     ^       ^              R8Ki         Diag                :   -   -   "Diagonal values of single-variable blocks (solve order)"  -
+typedef     ^       ^              IntKi        RowPtr              :   -   -   "Row pointers of off-diagonal-block entries (CSR, solve order)"  -
+typedef     ^       ^              IntKi        ColInd              :   -   -   "Column indices of off-diagonal-block entries (CSR, solve order)"  -
+typedef     ^       ^              R8Ki         Val                 :   -   -   "Values of off-diagonal-block entries (CSR)"  -
+typedef     ^       ^              IntKi        Piv                 :   -   -   "Pivot indices for the dense LU method"  -
+typedef     ^       ^              R8Ki         Work                :   -   -   "Solve workspace (solve order)"  -

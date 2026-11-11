@@ -209,6 +209,29 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Dimensions      !< The splitting dimension (1 for x, 2 for y) for each node. [-]
   END TYPE KdTreeType
 ! =======================
+! =========  BTSBlockType  =======
+  TYPE, PUBLIC :: BTSBlockType
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: LU      !< LU factors of a multi-variable diagonal block (from getrf) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Piv      !< Pivot indices of a multi-variable diagonal block (from getrf) [-]
+  END TYPE BTSBlockType
+! =======================
+! =========  BlockTriSolveType  =======
+  TYPE, PUBLIC :: BlockTriSolveType
+    INTEGER(IntKi)  :: N = 0      !< Number of equations/unknowns [-]
+    INTEGER(IntKi)  :: Method = 0      !< Factorization method in use {0=not factored, 1=dense LU, 2=block triangular} [-]
+    INTEGER(IntKi)  :: NumBlocks = 0      !< Number of diagonal blocks in the block triangular form [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Perm      !< Solve order: Perm(k) is the original index of the k-th unknown/equation [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BlkStart      !< Start position (in solve order) of each diagonal block, size NumBlocks+1 [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BlkIdx      !< Index into Blk for multi-variable blocks, 0 for single-variable blocks [-]
+    TYPE(BTSBlockType) , DIMENSION(:), ALLOCATABLE  :: Blk      !< Factored multi-variable diagonal blocks [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: Diag      !< Diagonal values of single-variable blocks (solve order) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RowPtr      !< Row pointers of off-diagonal-block entries (CSR, solve order) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ColInd      !< Column indices of off-diagonal-block entries (CSR, solve order) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: Val      !< Values of off-diagonal-block entries (CSR) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Piv      !< Pivot indices for the dense LU method [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: Work      !< Solve workspace (solve order) [-]
+  END TYPE BlockTriSolveType
+! =======================
 
 contains
 
@@ -1574,6 +1597,338 @@ subroutine NWTC_Library_UnPackKdTreeType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OriginalIndices); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Dimensions); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_CopyBTSBlockType(SrcBTSBlockTypeData, DstBTSBlockTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(BTSBlockType), intent(in) :: SrcBTSBlockTypeData
+   type(BTSBlockType), intent(inout) :: DstBTSBlockTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyBTSBlockType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcBTSBlockTypeData%LU)) then
+      LB(1:2) = lbound(SrcBTSBlockTypeData%LU)
+      UB(1:2) = ubound(SrcBTSBlockTypeData%LU)
+      if (.not. allocated(DstBTSBlockTypeData%LU)) then
+         allocate(DstBTSBlockTypeData%LU(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBTSBlockTypeData%LU.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBTSBlockTypeData%LU = SrcBTSBlockTypeData%LU
+   end if
+   if (allocated(SrcBTSBlockTypeData%Piv)) then
+      LB(1:1) = lbound(SrcBTSBlockTypeData%Piv)
+      UB(1:1) = ubound(SrcBTSBlockTypeData%Piv)
+      if (.not. allocated(DstBTSBlockTypeData%Piv)) then
+         allocate(DstBTSBlockTypeData%Piv(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBTSBlockTypeData%Piv.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBTSBlockTypeData%Piv = SrcBTSBlockTypeData%Piv
+   end if
+end subroutine
+
+subroutine NWTC_Library_DestroyBTSBlockType(BTSBlockTypeData, ErrStat, ErrMsg)
+   type(BTSBlockType), intent(inout) :: BTSBlockTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyBTSBlockType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(BTSBlockTypeData%LU)) then
+      deallocate(BTSBlockTypeData%LU)
+   end if
+   if (allocated(BTSBlockTypeData%Piv)) then
+      deallocate(BTSBlockTypeData%Piv)
+   end if
+end subroutine
+
+subroutine NWTC_Library_PackBTSBlockType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(BTSBlockType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackBTSBlockType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%LU)
+   call RegPackAlloc(RF, InData%Piv)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_UnPackBTSBlockType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(BTSBlockType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackBTSBlockType'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%LU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Piv); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_CopyBlockTriSolveType(SrcBlockTriSolveTypeData, DstBlockTriSolveTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(BlockTriSolveType), intent(in) :: SrcBlockTriSolveTypeData
+   type(BlockTriSolveType), intent(inout) :: DstBlockTriSolveTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyBlockTriSolveType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstBlockTriSolveTypeData%N = SrcBlockTriSolveTypeData%N
+   DstBlockTriSolveTypeData%Method = SrcBlockTriSolveTypeData%Method
+   DstBlockTriSolveTypeData%NumBlocks = SrcBlockTriSolveTypeData%NumBlocks
+   if (allocated(SrcBlockTriSolveTypeData%Perm)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Perm)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Perm)
+      if (.not. allocated(DstBlockTriSolveTypeData%Perm)) then
+         allocate(DstBlockTriSolveTypeData%Perm(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Perm.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%Perm = SrcBlockTriSolveTypeData%Perm
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%BlkStart)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%BlkStart)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%BlkStart)
+      if (.not. allocated(DstBlockTriSolveTypeData%BlkStart)) then
+         allocate(DstBlockTriSolveTypeData%BlkStart(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%BlkStart.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%BlkStart = SrcBlockTriSolveTypeData%BlkStart
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%BlkIdx)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%BlkIdx)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%BlkIdx)
+      if (.not. allocated(DstBlockTriSolveTypeData%BlkIdx)) then
+         allocate(DstBlockTriSolveTypeData%BlkIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%BlkIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%BlkIdx = SrcBlockTriSolveTypeData%BlkIdx
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%Blk)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Blk)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Blk)
+      if (.not. allocated(DstBlockTriSolveTypeData%Blk)) then
+         allocate(DstBlockTriSolveTypeData%Blk(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Blk.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyBTSBlockType(SrcBlockTriSolveTypeData%Blk(i1), DstBlockTriSolveTypeData%Blk(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%Diag)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Diag)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Diag)
+      if (.not. allocated(DstBlockTriSolveTypeData%Diag)) then
+         allocate(DstBlockTriSolveTypeData%Diag(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Diag.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%Diag = SrcBlockTriSolveTypeData%Diag
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%RowPtr)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%RowPtr)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%RowPtr)
+      if (.not. allocated(DstBlockTriSolveTypeData%RowPtr)) then
+         allocate(DstBlockTriSolveTypeData%RowPtr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%RowPtr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%RowPtr = SrcBlockTriSolveTypeData%RowPtr
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%ColInd)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%ColInd)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%ColInd)
+      if (.not. allocated(DstBlockTriSolveTypeData%ColInd)) then
+         allocate(DstBlockTriSolveTypeData%ColInd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%ColInd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%ColInd = SrcBlockTriSolveTypeData%ColInd
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%Val)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Val)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Val)
+      if (.not. allocated(DstBlockTriSolveTypeData%Val)) then
+         allocate(DstBlockTriSolveTypeData%Val(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Val.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%Val = SrcBlockTriSolveTypeData%Val
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%Piv)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Piv)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Piv)
+      if (.not. allocated(DstBlockTriSolveTypeData%Piv)) then
+         allocate(DstBlockTriSolveTypeData%Piv(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Piv.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%Piv = SrcBlockTriSolveTypeData%Piv
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%Work)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%Work)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%Work)
+      if (.not. allocated(DstBlockTriSolveTypeData%Work)) then
+         allocate(DstBlockTriSolveTypeData%Work(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%Work.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%Work = SrcBlockTriSolveTypeData%Work
+   end if
+end subroutine
+
+subroutine NWTC_Library_DestroyBlockTriSolveType(BlockTriSolveTypeData, ErrStat, ErrMsg)
+   type(BlockTriSolveType), intent(inout) :: BlockTriSolveTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyBlockTriSolveType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(BlockTriSolveTypeData%Perm)) then
+      deallocate(BlockTriSolveTypeData%Perm)
+   end if
+   if (allocated(BlockTriSolveTypeData%BlkStart)) then
+      deallocate(BlockTriSolveTypeData%BlkStart)
+   end if
+   if (allocated(BlockTriSolveTypeData%BlkIdx)) then
+      deallocate(BlockTriSolveTypeData%BlkIdx)
+   end if
+   if (allocated(BlockTriSolveTypeData%Blk)) then
+      LB(1:1) = lbound(BlockTriSolveTypeData%Blk)
+      UB(1:1) = ubound(BlockTriSolveTypeData%Blk)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyBTSBlockType(BlockTriSolveTypeData%Blk(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(BlockTriSolveTypeData%Blk)
+   end if
+   if (allocated(BlockTriSolveTypeData%Diag)) then
+      deallocate(BlockTriSolveTypeData%Diag)
+   end if
+   if (allocated(BlockTriSolveTypeData%RowPtr)) then
+      deallocate(BlockTriSolveTypeData%RowPtr)
+   end if
+   if (allocated(BlockTriSolveTypeData%ColInd)) then
+      deallocate(BlockTriSolveTypeData%ColInd)
+   end if
+   if (allocated(BlockTriSolveTypeData%Val)) then
+      deallocate(BlockTriSolveTypeData%Val)
+   end if
+   if (allocated(BlockTriSolveTypeData%Piv)) then
+      deallocate(BlockTriSolveTypeData%Piv)
+   end if
+   if (allocated(BlockTriSolveTypeData%Work)) then
+      deallocate(BlockTriSolveTypeData%Work)
+   end if
+end subroutine
+
+subroutine NWTC_Library_PackBlockTriSolveType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(BlockTriSolveType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'NWTC_Library_PackBlockTriSolveType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%N)
+   call RegPack(RF, InData%Method)
+   call RegPack(RF, InData%NumBlocks)
+   call RegPackAlloc(RF, InData%Perm)
+   call RegPackAlloc(RF, InData%BlkStart)
+   call RegPackAlloc(RF, InData%BlkIdx)
+   call RegPack(RF, allocated(InData%Blk))
+   if (allocated(InData%Blk)) then
+      call RegPackBounds(RF, 1, lbound(InData%Blk), ubound(InData%Blk))
+      LB(1:1) = lbound(InData%Blk)
+      UB(1:1) = ubound(InData%Blk)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackBTSBlockType(RF, InData%Blk(i1)) 
+      end do
+   end if
+   call RegPackAlloc(RF, InData%Diag)
+   call RegPackAlloc(RF, InData%RowPtr)
+   call RegPackAlloc(RF, InData%ColInd)
+   call RegPackAlloc(RF, InData%Val)
+   call RegPackAlloc(RF, InData%Piv)
+   call RegPackAlloc(RF, InData%Work)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine NWTC_Library_UnPackBlockTriSolveType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(BlockTriSolveType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackBlockTriSolveType'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%N); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Method); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumBlocks); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Perm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlkStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlkIdx); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%Blk)) deallocate(OutData%Blk)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Blk(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Blk.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackBTSBlockType(RF, OutData%Blk(i1)) ! Blk 
+      end do
+   end if
+   call RegUnpackAlloc(RF, OutData%Diag); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RowPtr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ColInd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Val); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Piv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Work); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 END MODULE NWTC_Library_Types

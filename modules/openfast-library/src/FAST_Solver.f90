@@ -2,6 +2,7 @@ module FAST_Solver
 
 use FAST_Types
 use NWTC_LAPACK
+use BlockTriSolve
 use FAST_ModTypes
 use FAST_Mapping
 use FAST_ModGlue
@@ -28,6 +29,10 @@ character(*), parameter    :: DebugFile = 'solver.dbg'
 logical, parameter         :: DebugJacobian = .false.
 integer(IntKi)             :: MatrixUn = -1
 logical, parameter         :: FiniteDifferenceJacobian = .false.
+
+! Linear solver method for the tight coupling Jacobian
+! (BTS_Method_Auto selects block triangular or dense LU; BTS_Method_Dense forces dense LU)
+integer(IntKi), parameter  :: LinSolveMethod = BTS_Method_Auto
 
 contains
 
@@ -1539,7 +1544,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          !----------------------------------------------------------------------
 
          ! Solve Jacobian and RHS
-         call LAPACK_getrs('N', p%NumJ, m%Mod%Lin%J, m%IPIV, m%XB, ErrStat2, ErrMsg2)
+         call BTS_Solve(m%LinSolve, m%Mod%Lin%J, m%XB(:, 1), ErrStat2, ErrMsg2)
          if (Failed()) return
 
          !----------------------------------------------------------------------
@@ -2052,7 +2057,7 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
    end if
 
    ! Factor jacobian matrix
-   call LAPACK_getrf(size(m%Mod%Lin%J, 1), size(m%Mod%Lin%J, 2), m%Mod%Lin%J, m%IPIV, ErrStat2, ErrMsg2)
+   call BTS_Factor(m%LinSolve, m%Mod%Lin%J, ErrStat2, ErrMsg2, Method=LinSolveMethod)
    if (Failed()) return
 
 contains

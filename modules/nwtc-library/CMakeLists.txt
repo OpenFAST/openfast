@@ -87,6 +87,7 @@ set(NWTCLIBS_SOURCES
   src/YAML.f90
   src/JSON.f90
   src/KdTree.f90
+  src/BlockTriSolve.f90
 
   src/GridInterp.f90
   src/GridInterp_Types.f90
