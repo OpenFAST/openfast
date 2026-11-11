@@ -33,6 +33,8 @@ subroutine test_NWTC_BlockTriSolve_suite(testsuite)
                new_unittest("refactorization switches methods", test_refactor), &
                new_unittest("solve leaves solver data unchanged", test_solve_readonly), &
                new_unittest("copy and pack round trip", test_copy_pack), &
+               new_unittest("low-rank coupling is compressed", test_lowrank_compressed), &
+               new_unittest("noisy coupling is not compressed", test_lowrank_rejected), &
                new_unittest("empty and scalar systems", test_trivial_sizes), &
                new_unittest("invalid arguments", test_invalid_args) &
                ]
@@ -532,6 +534,95 @@ subroutine test_copy_pack(error)
    call check(error, all(x3 == x1), message="unpacked solver gives different result")
 end subroutine
 
+subroutine test_lowrank_compressed(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S, S2, S3
+   type(RegFile)                              :: RF
+   real(R8Ki), allocatable                    :: A(:, :), A0(:, :), b(:), x(:), x2(:), x3(:), xRef(:), Work(:)
+   integer(IntKi), parameter                  :: nUp = 40, nCore = 30, nDown = 80, Rank = 5
+   integer(IntKi)                             :: ErrStat, seed, n, Un
+   character(ErrMsgLen)                       :: ErrMsg
+   character(*), parameter                    :: FileName = 'test_NWTC_BlockTriSolve_lr.bin'
+
+   ! Downstream unknowns coupled to all earlier unknowns through an exactly rank-5 matrix
+   seed = 111
+   call LowRankPanelMatrix(seed, nUp, nCore, nDown, Rank, 0.0_R8Ki, A)
+   A0 = A
+   n = size(A, 1)
+
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, S%Method, BTS_Method_BlockTri); if (allocated(error)) return
+   call check(error, S%NumLR, 1, message="coupling panel should be compressed"); if (allocated(error)) return
+   call check(error, S%LRInfo(4, 1), Rank, message="compressed rank should equal the exact rank"); if (allocated(error)) return
+   call check(error, S%LRInfo(2, 1), nDown, message="panel should contain all downstream rows"); if (allocated(error)) return
+   call check(error, S%LRInfo(3, 1), nUp + nCore, message="panel should reference all earlier unknowns"); if (allocated(error)) return
+   call check(error, size(S%Val), 0, message="compressed rows should be removed from CSR storage"); if (allocated(error)) return
+   call check(error, S%NWork, n + nUp + nCore + Rank, message="workspace size"); if (allocated(error)) return
+
+   call RandomVector(seed, n, b)
+   call DenseReference(A0, b, xRef)
+   x = b
+   call BTS_Solve(S, A, x, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, maxval(abs(x - xRef)) <= RelTol*maxval(abs(xRef)), message="solution differs from dense solution"); if (allocated(error)) return
+   call check(error, ResidualNorm(A0, x, b) <= RelTol, message="residual too large"); if (allocated(error)) return
+
+   ! Caller workspace of the required size gives the same result
+   allocate (Work(S%NWork))
+   x2 = b
+   call BTS_Solve(S, A, x2, ErrStat, ErrMsg, Work=Work)
+   call check(error, all(x2 == x), message="caller workspace changes the solution"); if (allocated(error)) return
+
+   ! Copy and pack/unpack preserve the compressed panel
+   call NWTC_Library_CopyBlockTriSolveType(S, S2, MESH_NEWCOPY, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   x2 = b
+   call BTS_Solve(S2, A, x2, ErrStat, ErrMsg)
+   call check(error, all(x2 == x), message="copied solver gives different result"); if (allocated(error)) return
+
+   open (newunit=Un, file=FileName, access='stream', form='unformatted', status='replace', action='write')
+   call InitRegFile(RF, Un, ErrStat, ErrMsg)
+   call NWTC_Library_PackBlockTriSolveType(RF, S)
+   call CloseRegFile(RF, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   open (newunit=Un, file=FileName, access='stream', form='unformatted', status='old', action='read')
+   call OpenRegFile(RF, Un, ErrStat, ErrMsg)
+   call NWTC_Library_UnPackBlockTriSolveType(RF, S3)
+   close (Un, status='delete')
+   call check(error, RF%ErrStat, ErrID_None, message=trim(RF%ErrMsg)); if (allocated(error)) return
+   x3 = b
+   call BTS_Solve(S3, A, x3, ErrStat, ErrMsg)
+   call check(error, all(x3 == x), message="unpacked solver gives different result")
+end subroutine
+
+subroutine test_lowrank_rejected(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S
+   real(R8Ki), allocatable                    :: A(:, :), A0(:, :), b(:), x(:), xRef(:)
+   integer(IntKi)                             :: ErrStat, seed, n
+   character(ErrMsgLen)                       :: ErrMsg
+
+   ! Rank-5 coupling plus a perturbation far above the compression tolerance must stay exact
+   seed = 121
+   call LowRankPanelMatrix(seed, 40, 30, 80, 5, 1.0e-6_R8Ki, A)
+   A0 = A
+   n = size(A, 1)
+
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, S%Method, BTS_Method_BlockTri); if (allocated(error)) return
+   call check(error, S%NumLR, 0, message="perturbed coupling must not be compressed"); if (allocated(error)) return
+   call check(error, S%NWork, n, message="workspace size"); if (allocated(error)) return
+
+   call RandomVector(seed, n, b)
+   call DenseReference(A0, b, xRef)
+   x = b
+   call BTS_Solve(S, A, x, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, maxval(abs(x - xRef)) <= RelTol*maxval(abs(xRef)), message="solution differs from dense solution")
+end subroutine
+
 subroutine test_trivial_sizes(error)
    type(error_type), allocatable, intent(out) :: error
    type(BlockTriSolveType)                    :: S
@@ -713,6 +804,63 @@ subroutine BlockTriMatrix(seed, BlockSizes, Density, A, Owner)
    end do
    A = T(p, p)
    Owner = Blk(p)
+end subroutine
+
+!> Randomly permuted matrix with nUp independent single unknowns, a coupled block of nCore unknowns,
+!! and nDown single unknowns coupled to all earlier unknowns through a matrix of rank Rank plus a
+!! uniform perturbation of amplitude Noise
+subroutine LowRankPanelMatrix(seed, nUp, nCore, nDown, Rank, Noise, A)
+   integer(IntKi), intent(inout)             :: seed
+   integer(IntKi), intent(in)                :: nUp, nCore, nDown, Rank
+   real(R8Ki), intent(in)                    :: Noise
+   real(R8Ki), allocatable, intent(out)      :: A(:, :)
+   real(R8Ki), allocatable                   :: T(:, :), L(:, :), R(:, :)
+   integer(IntKi), allocatable               :: p(:)
+   integer(IntKi)                            :: n, nE, i, j, k, tmp
+
+   nE = nUp + nCore
+   n = nE + nDown
+   allocate (T(n, n), L(nDown, Rank), R(Rank, nE), p(n))
+   T = 0.0_R8Ki
+
+   do i = 1, nUp
+      T(i, i) = 2.0_R8Ki + RandUniform(seed)
+   end do
+   do j = nUp + 1, nE
+      do i = nUp + 1, nE
+         T(i, j) = RandUniform(seed)
+      end do
+      T(j, j) = T(j, j) + real(nCore, R8Ki)
+   end do
+
+   do j = 1, Rank
+      do i = 1, nDown
+         L(i, j) = RandUniform(seed)
+      end do
+   end do
+   do j = 1, nE
+      do i = 1, Rank
+         R(i, j) = RandUniform(seed)
+      end do
+   end do
+   T(nE + 1:n, 1:nE) = matmul(L, R)
+   do j = 1, nE
+      do i = nE + 1, n
+         T(i, j) = T(i, j) + Noise*RandUniform(seed)
+      end do
+   end do
+   do i = nE + 1, n
+      T(i, i) = 1.0_R8Ki + sum(abs(T(i, 1:nE)))
+   end do
+
+   p = [(i, i=1, n)]
+   do i = n, 2, -1
+      k = min(i, 1 + int(0.5_R8Ki*(RandUniform(seed) + 1.0_R8Ki)*real(i, R8Ki)))
+      tmp = p(i)
+      p(i) = p(k)
+      p(k) = tmp
+   end do
+   A = T(p, p)
 end subroutine
 
 !> First row that is a single-unknown block and has off-diagonal entries (0 if none)

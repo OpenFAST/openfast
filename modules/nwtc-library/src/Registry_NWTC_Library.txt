@@ -164,6 +164,12 @@ typedef     ^       ^              IntKi        RowPtr              :   -   -   
 typedef     ^       ^              IntKi        ColInd              :   -   -   "Column indices of off-diagonal-block entries (CSR, solve order)"  -
 typedef     ^       ^              R8Ki         Val                 :   -   -   "Values of off-diagonal-block entries (CSR)"  -
 typedef     ^       ^              IntKi        Piv                 :   -   -   "Pivot indices: full system for dense LU; block-local pivots at each block's positions for block triangular"  -
+typedef     ^       ^              IntKi        NWork               -   0   -   "Workspace size required by BTS_Solve for the block triangular method"  -
+typedef     ^       ^              IntKi        NumLR               -   0   -   "Number of coupling panels stored in low-rank form"  -
+typedef     ^       ^              IntKi        LRInfo              ::  -   -   "Low-rank panel data (7 x NumLR): first row position, rows, columns, rank, start in LRCols, start in LRU, start in LRW"  -
+typedef     ^       ^              IntKi        LRCols              :   -   -   "Column positions (solve order) referenced by each low-rank panel"  -
+typedef     ^       ^              R8Ki         LRU                 :   -   -   "Left factors (rows x rank, column-major) of the low-rank panels"  -
+typedef     ^       ^              R8Ki         LRW                 :   -   -   "Right factors (rank x columns, column-major) of the low-rank panels"  -
 
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types

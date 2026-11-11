@@ -223,6 +223,12 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ColInd      !< Column indices of off-diagonal-block entries (CSR, solve order) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: Val      !< Values of off-diagonal-block entries (CSR) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Piv      !< Pivot indices: full system for dense LU; block-local pivots at each block's positions for block triangular [-]
+    INTEGER(IntKi)  :: NWork = 0      !< Workspace size required by BTS_Solve for the block triangular method [-]
+    INTEGER(IntKi)  :: NumLR = 0      !< Number of coupling panels stored in low-rank form [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: LRInfo      !< Low-rank panel data (7 x NumLR): first row position, rows, columns, rank, start in LRCols, start in LRU, start in LRW [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LRCols      !< Column positions (solve order) referenced by each low-rank panel [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LRU      !< Left factors (rows x rank, column-major) of the low-rank panels [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: LRW      !< Right factors (rank x columns, column-major) of the low-rank panels [-]
   END TYPE BlockTriSolveType
 ! =======================
 
@@ -1598,7 +1604,7 @@ subroutine NWTC_Library_CopyBlockTriSolveType(SrcBlockTriSolveTypeData, DstBlock
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyBlockTriSolveType'
    ErrStat = ErrID_None
@@ -1714,6 +1720,56 @@ subroutine NWTC_Library_CopyBlockTriSolveType(SrcBlockTriSolveTypeData, DstBlock
       end if
       DstBlockTriSolveTypeData%Piv = SrcBlockTriSolveTypeData%Piv
    end if
+   DstBlockTriSolveTypeData%NWork = SrcBlockTriSolveTypeData%NWork
+   DstBlockTriSolveTypeData%NumLR = SrcBlockTriSolveTypeData%NumLR
+   if (allocated(SrcBlockTriSolveTypeData%LRInfo)) then
+      LB(1:2) = lbound(SrcBlockTriSolveTypeData%LRInfo)
+      UB(1:2) = ubound(SrcBlockTriSolveTypeData%LRInfo)
+      if (.not. allocated(DstBlockTriSolveTypeData%LRInfo)) then
+         allocate(DstBlockTriSolveTypeData%LRInfo(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%LRInfo.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%LRInfo = SrcBlockTriSolveTypeData%LRInfo
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%LRCols)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%LRCols)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%LRCols)
+      if (.not. allocated(DstBlockTriSolveTypeData%LRCols)) then
+         allocate(DstBlockTriSolveTypeData%LRCols(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%LRCols.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%LRCols = SrcBlockTriSolveTypeData%LRCols
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%LRU)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%LRU)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%LRU)
+      if (.not. allocated(DstBlockTriSolveTypeData%LRU)) then
+         allocate(DstBlockTriSolveTypeData%LRU(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%LRU.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%LRU = SrcBlockTriSolveTypeData%LRU
+   end if
+   if (allocated(SrcBlockTriSolveTypeData%LRW)) then
+      LB(1:1) = lbound(SrcBlockTriSolveTypeData%LRW)
+      UB(1:1) = ubound(SrcBlockTriSolveTypeData%LRW)
+      if (.not. allocated(DstBlockTriSolveTypeData%LRW)) then
+         allocate(DstBlockTriSolveTypeData%LRW(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBlockTriSolveTypeData%LRW.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBlockTriSolveTypeData%LRW = SrcBlockTriSolveTypeData%LRW
+   end if
 end subroutine
 
 subroutine NWTC_Library_DestroyBlockTriSolveType(BlockTriSolveTypeData, ErrStat, ErrMsg)
@@ -1750,6 +1806,18 @@ subroutine NWTC_Library_DestroyBlockTriSolveType(BlockTriSolveTypeData, ErrStat,
    if (allocated(BlockTriSolveTypeData%Piv)) then
       deallocate(BlockTriSolveTypeData%Piv)
    end if
+   if (allocated(BlockTriSolveTypeData%LRInfo)) then
+      deallocate(BlockTriSolveTypeData%LRInfo)
+   end if
+   if (allocated(BlockTriSolveTypeData%LRCols)) then
+      deallocate(BlockTriSolveTypeData%LRCols)
+   end if
+   if (allocated(BlockTriSolveTypeData%LRU)) then
+      deallocate(BlockTriSolveTypeData%LRU)
+   end if
+   if (allocated(BlockTriSolveTypeData%LRW)) then
+      deallocate(BlockTriSolveTypeData%LRW)
+   end if
 end subroutine
 
 subroutine NWTC_Library_PackBlockTriSolveType(RF, Indata)
@@ -1769,6 +1837,12 @@ subroutine NWTC_Library_PackBlockTriSolveType(RF, Indata)
    call RegPackAlloc(RF, InData%ColInd)
    call RegPackAlloc(RF, InData%Val)
    call RegPackAlloc(RF, InData%Piv)
+   call RegPack(RF, InData%NWork)
+   call RegPack(RF, InData%NumLR)
+   call RegPackAlloc(RF, InData%LRInfo)
+   call RegPackAlloc(RF, InData%LRCols)
+   call RegPackAlloc(RF, InData%LRU)
+   call RegPackAlloc(RF, InData%LRW)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1776,7 +1850,7 @@ subroutine NWTC_Library_UnPackBlockTriSolveType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(BlockTriSolveType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackBlockTriSolveType'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1792,6 +1866,12 @@ subroutine NWTC_Library_UnPackBlockTriSolveType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%ColInd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Val); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Piv); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NWork); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumLR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LRInfo); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LRCols); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LRU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LRW); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 END MODULE NWTC_Library_Types

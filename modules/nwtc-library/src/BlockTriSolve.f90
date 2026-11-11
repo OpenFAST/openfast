@@ -28,11 +28,21 @@
 !! to earlier blocks are stored as exact nonzeros in compressed sparse row (CSR) form. BTS_Solve
 !! then performs block forward substitution.
 !!
+!! Low-rank coupling: the rows of each multi-unknown block, and each run of consecutive
+!! single-unknown blocks whose rows do not reference each other, form a panel whose coupling to
+!! earlier unknowns is applied as a single matrix-vector product. When a panel is large, its
+!! coupling matrix C is compressed with a truncated QR factorization with column pivoting,
+!! C ~ U*W, if ||C - U*W||_F <= LowRankTol*||C||_F (verified after compression), the rank is at
+!! most a small fraction of the panel dimensions, and the solve cost is at least halved. Otherwise
+!! the exact nonzeros are kept. LowRankTol is a fixed, conservative tolerance below the round-off
+!! introduced by a dense LU factorization of the same system.
+!!
 !! Numerical properties:
 !! - No entries are dropped and no Schur complements are formed: the blocks above the diagonal of
 !!   P*A*P^T are exactly zero by construction, so pivoting across blocks is unnecessary. Block
 !!   forward substitution is backward stable when each diagonal-block solve is, and results differ
-!!   from a dense LU solve only by round-off.
+!!   from a dense LU solve only by round-off. Low-rank coupling perturbs the compressed panels by
+!!   at most LowRankTol relative to their Frobenius norm.
 !! - Diagonal entries do not affect the block structure. Zero diagonal entries inside a
 !!   multi-unknown block are handled by pivoting within the block, and an exactly zero
 !!   single-unknown block means A is singular. No maximum-transversal (zero-free diagonal)
@@ -69,6 +79,18 @@ integer(IntKi), parameter :: BTS_Method_BlockTri = 2 !< Block triangular form wi
 integer(IntKi), parameter :: MinSizeAuto  = 64        !< Smaller systems use dense LU in automatic mode
 real(R8Ki), parameter     :: MaxCostRatio = 0.75_R8Ki !< Use BTF only if its estimated solve cost is below this fraction of dense
 real(R8Ki), parameter     :: SparseCost   = 2.0_R8Ki  !< Relative per-entry cost of indexed (CSR) storage vs dense storage
+
+!> Low-rank panel compression: maximum relative Frobenius-norm error of the compressed coupling
+!! (below the round-off of a dense LU factorization of systems where compression applies)
+real(R8Ki), parameter     :: LowRankTol      = 1.0e-13_R8Ki
+integer(IntKi), parameter :: MinPanelNnz     = 4096      !< Minimum number of coupling nonzeros to attempt compression
+integer(IntKi), parameter :: MinPanelDim     = 16        !< Minimum panel rows and columns to attempt compression
+integer(IntKi), parameter :: MaxRankFraction = 8         !< Rank must not exceed min(rows, columns)/MaxRankFraction
+real(R8Ki), parameter     :: MaxLRCostRatio  = 0.5_R8Ki  !< Low-rank solve cost must not exceed this fraction of CSR cost
+
+!> Indices into LRInfo(:, panel)
+integer(IntKi), parameter :: LR_Row0 = 1, LR_NRow = 2, LR_NCol = 3, LR_Rank = 4, LR_ColStart = 5, &
+                             LR_UStart = 6, LR_WStart = 7, LR_NInfo = 7
 
 !> Guard against dividing by a numerically zero single-unknown pivot: minimum |pivot| relative to the
 !! largest entry in its row, below which the dense LU fallback is used. This is not a stability
@@ -214,6 +236,9 @@ subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method, Fallback)
       end do
    end do
 
+   ! Compress large low-rank coupling panels
+   call CompressPanels(S, ErrStat2, ErrMsg2); if (Failed()) return
+
    S%Method = BTS_Method_BlockTri
 
 contains
@@ -223,6 +248,8 @@ contains
       S%N = n
       S%Method = 0
       S%NumBlocks = 0
+      S%NumLR = 0
+      S%NWork = 0
    end subroutine
 
    subroutine FactorDense()
@@ -305,13 +332,13 @@ subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg, Work)
    real(R8Ki), intent(inout)                 :: x(:)     !< Right-hand side on entry, solution on exit
    integer(IntKi), intent(out)               :: ErrStat  !< Error status
    character(*), intent(out)                 :: ErrMsg   !< Error message
-   real(R8Ki), optional, intent(inout)       :: Work(:)  !< Workspace of at least S%N values for the block method
+   real(R8Ki), optional, intent(inout)       :: Work(:)  !< Workspace of at least S%NWork values for the block method
                                                          !! (allocated internally if absent or too small)
 
    character(*), parameter                   :: RoutineName = 'BTS_Solve'
    integer(IntKi)                            :: ErrStat2
    character(ErrMsgLen)                      :: ErrMsg2
-   real(R8Ki), allocatable                   :: y(:)
+   real(R8Ki), allocatable                   :: w(:)
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -330,18 +357,18 @@ subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg, Work)
 
    case (BTS_Method_BlockTri)
       if (present(Work)) then
-         if (size(Work) >= S%N) then
-            call SolveBlocks(S, S%N, x, Work, ErrStat2, ErrMsg2)
+         if (size(Work) >= S%NWork) then
+            call SolveBlocks(S, S%N, S%NWork, x, Work, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      allocate (y(S%N), stat=ErrStat2)
+      allocate (w(S%NWork), stat=ErrStat2)
       if (ErrStat2 /= 0) then
          call SetErrStat(ErrID_Fatal, 'Error allocating solve workspace.', ErrStat, ErrMsg, RoutineName)
          return
       end if
-      call SolveBlocks(S, S%N, x, y, ErrStat2, ErrMsg2)
+      call SolveBlocks(S, S%N, S%NWork, x, w, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    case default
@@ -349,15 +376,17 @@ subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg, Work)
    end select
 end subroutine
 
-!> Block forward substitution for the block triangular method, using workspace y in solve order
-subroutine SolveBlocks(S, n, x, y, ErrStat, ErrMsg)
+!> Block forward substitution for the block triangular method. Workspace w holds the solution in
+!! solve order (1:n), followed by the gathered panel inputs and the low-rank intermediate vector.
+subroutine SolveBlocks(S, n, nw, x, w, ErrStat, ErrMsg)
    type(BlockTriSolveType), intent(in)       :: S
-   integer(IntKi), intent(in)                :: n
+   integer(IntKi), intent(in)                :: n, nw
    real(R8Ki), intent(inout)                 :: x(:)
-   real(R8Ki), intent(inout)                 :: y(n)
+   real(R8Ki), intent(inout)                 :: w(nw)
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
-   integer(IntKi)                            :: b, i0, i1, k, q, m, p0
+   integer(IntKi)                            :: b, i0, i1, k, q, m, p0, ip
+   integer(IntKi)                            :: r0, mR, nC, rk, cs, us, ws
    integer                                   :: Info
    real(R8Ki)                                :: Sum
 
@@ -366,29 +395,51 @@ subroutine SolveBlocks(S, n, x, y, ErrStat, ErrMsg)
 
    ! Reorder right-hand side into solve order
    do k = 1, n
-      y(k) = x(S%Perm(k))
+      w(k) = x(S%Perm(k))
    end do
 
+   ip = 1
    do b = 1, S%NumBlocks
       i0 = S%BlkStart(b)
       i1 = S%BlkStart(b + 1) - 1
 
+      ! Apply a low-rank panel starting at this block: rows -= U*(W*y(cols))
+      if (ip <= S%NumLR) then
+         if (S%LRInfo(LR_Row0, ip) == i0) then
+            r0 = S%LRInfo(LR_Row0, ip)
+            mR = S%LRInfo(LR_NRow, ip)
+            nC = S%LRInfo(LR_NCol, ip)
+            rk = S%LRInfo(LR_Rank, ip)
+            cs = S%LRInfo(LR_ColStart, ip)
+            us = S%LRInfo(LR_UStart, ip)
+            ws = S%LRInfo(LR_WStart, ip)
+            do k = 1, nC
+               w(n + k) = w(S%LRCols(cs + k - 1))
+            end do
+            call DGEMV('N', rk, nC, 1.0_R8Ki, S%LRW(ws:ws + rk*nC - 1), rk, w(n + 1:n + nC), 1, &
+                             0.0_R8Ki, w(n + nC + 1:n + nC + rk), 1)
+            call DGEMV('N', mR, rk, -1.0_R8Ki, S%LRU(us:us + mR*rk - 1), mR, w(n + nC + 1:n + nC + rk), 1, &
+                             1.0_R8Ki, w(r0:r0 + mR - 1), 1)
+            ip = ip + 1
+         end if
+      end if
+
       ! Subtract contributions of unknowns in earlier blocks
       do k = i0, i1
-         Sum = y(k)
+         Sum = w(k)
          do q = S%RowPtr(k), S%RowPtr(k + 1) - 1
-            Sum = Sum - S%Val(q)*y(S%ColInd(q))
+            Sum = Sum - S%Val(q)*w(S%ColInd(q))
          end do
-         y(k) = Sum
+         w(k) = Sum
       end do
 
       ! Solve the diagonal block
       if (S%BlkLUStart(b) == 0) then
-         y(i0) = y(i0)/S%Diag(i0)
+         w(i0) = w(i0)/S%Diag(i0)
       else
          m = i1 - i0 + 1
          p0 = S%BlkLUStart(b)
-         call DGETRS('N', m, 1, S%BlkLU(p0:p0 + m*m - 1), m, S%Piv(i0:i1), y(i0:i1), m, Info)
+         call DGETRS('N', m, 1, S%BlkLU(p0:p0 + m*m - 1), m, S%Piv(i0:i1), w(i0:i1), m, Info)
          if (Info /= 0) then
             ErrStat = ErrID_Fatal
             write (ErrMsg, '(A,I0,A)') 'SolveBlocks: LAPACK DGETRS illegal value in argument ', -Info, '.'
@@ -399,7 +450,267 @@ subroutine SolveBlocks(S, n, x, y, ErrStat, ErrMsg)
 
    ! Return solution in original ordering
    do k = 1, n
-      x(S%Perm(k)) = y(k)
+      x(S%Perm(k)) = w(k)
+   end do
+end subroutine
+
+!> Find coupling panels and store large low-rank ones as U*W, removing their rows from the CSR
+!! storage. A panel is a multi-unknown block, or a run of consecutive single-unknown blocks whose
+!! rows only reference unknowns before the run. Also sets the solve workspace size S%NWork.
+subroutine CompressPanels(S, ErrStat, ErrMsg)
+   type(BlockTriSolveType), intent(inout)    :: S
+   integer(IntKi), intent(out)               :: ErrStat
+   character(*), intent(out)                 :: ErrMsg
+
+   character(*), parameter                   :: RoutineName = 'CompressPanels'
+   integer(IntKi)                            :: n, b, i0, i1, k, q, NumLR, MaxNC, MaxRank, nnzNew
+   integer(IntKi), allocatable               :: ColMap(:), Cols(:), Info(:, :), LRCols(:), NewRowPtr(:), NewColInd(:)
+   real(R8Ki), allocatable                   :: LRU(:), LRW(:), NewVal(:)
+   logical, allocatable                      :: InPanel(:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   n = S%N
+   S%NumLR = 0
+   S%NWork = n
+   if (S%NumBlocks == 0) return
+
+   allocate (ColMap(n), InPanel(n), Info(LR_NInfo, S%NumBlocks), LRCols(0), LRU(0), LRW(0))
+   ColMap = 0
+   InPanel = .false.
+   NumLR = 0
+   MaxNC = 0
+   MaxRank = 0
+
+   b = 1
+   do while (b <= S%NumBlocks)
+      i0 = S%BlkStart(b)
+      i1 = S%BlkStart(b + 1) - 1
+      if (i1 == i0) then
+         ! Extend the run while the next block is a single unknown that does not reference the run
+         do while (b < S%NumBlocks)
+            k = S%BlkStart(b + 1)
+            if (S%BlkStart(b + 2) - k /= 1) exit
+            if (any(S%ColInd(S%RowPtr(k):S%RowPtr(k + 1) - 1) >= i0)) exit
+            b = b + 1
+            i1 = k
+         end do
+      end if
+      call TryPanel(i0, i1)
+      if (ErrStat >= AbortErrLev) return
+      b = b + 1
+   end do
+
+   if (NumLR == 0) return
+
+   S%NumLR = NumLR
+   S%LRInfo = Info(:, 1:NumLR)
+   call move_alloc(LRCols, S%LRCols)
+   call move_alloc(LRU, S%LRU)
+   call move_alloc(LRW, S%LRW)
+   S%NWork = n + MaxNC + MaxRank
+
+   ! Remove the entries of compressed rows from the CSR storage
+   nnzNew = 0
+   do k = 1, n
+      if (.not. InPanel(k)) nnzNew = nnzNew + S%RowPtr(k + 1) - S%RowPtr(k)
+   end do
+   allocate (NewRowPtr(n + 1), NewColInd(nnzNew), NewVal(nnzNew), stat=k)
+   if (k /= 0) then
+      call SetErrStat(ErrID_Fatal, 'Error allocating coupling storage.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+   NewRowPtr(1) = 1
+   do k = 1, n
+      NewRowPtr(k + 1) = NewRowPtr(k)
+      if (InPanel(k)) cycle
+      do q = S%RowPtr(k), S%RowPtr(k + 1) - 1
+         NewColInd(NewRowPtr(k + 1)) = S%ColInd(q)
+         NewVal(NewRowPtr(k + 1)) = S%Val(q)
+         NewRowPtr(k + 1) = NewRowPtr(k + 1) + 1
+      end do
+   end do
+   call move_alloc(NewRowPtr, S%RowPtr)
+   call move_alloc(NewColInd, S%ColInd)
+   call move_alloc(NewVal, S%Val)
+
+contains
+
+   !> Compress the coupling of rows r0:r1 (solve order) if it is large and low rank
+   subroutine TryPanel(r0, r1)
+      integer(IntKi), intent(in) :: r0, r1
+      real(R8Ki), allocatable    :: C(:, :), C0(:, :), U(:, :), W(:, :)
+      integer(IntKi)             :: mR, nC, nnzP, RMax, Rank, j, stat
+      real(R8Ki)                 :: NormF, ErrF
+      logical                    :: Success
+
+      mR = r1 - r0 + 1
+      nnzP = S%RowPtr(r1 + 1) - S%RowPtr(r0)
+      if ((mR < MinPanelDim) .or. (nnzP < MinPanelNnz)) return
+
+      ! Columns referenced by the panel
+      allocate (Cols(nnzP))
+      nC = 0
+      do q = S%RowPtr(r0), S%RowPtr(r1 + 1) - 1
+         j = S%ColInd(q)
+         if (ColMap(j) == 0) then
+            nC = nC + 1
+            ColMap(j) = nC
+            Cols(nC) = j
+         end if
+      end do
+
+      ! Largest useful rank: well below the panel dimensions and at least halving the solve cost
+      RMax = min(min(mR, nC)/MaxRankFraction, &
+                 int((MaxLRCostRatio*SparseCost*real(nnzP, R8Ki) - real(nC, R8Ki))/real(mR + nC, R8Ki), IntKi))
+
+      if ((nC >= MinPanelDim) .and. (RMax >= 1)) then
+
+         ! Dense coupling matrix
+         allocate (C(mR, nC), stat=stat)
+         if (stat /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating coupling panel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         C = 0.0_R8Ki
+         do k = r0, r1
+            do q = S%RowPtr(k), S%RowPtr(k + 1) - 1
+               C(k - r0 + 1, ColMap(S%ColInd(q))) = S%Val(q)
+            end do
+         end do
+         C0 = C
+         NormF = norm2(C0)
+
+         call TruncatedQRCP(C, LowRankTol, RMax, Rank, U, W, Success)
+
+         ! Verify the compressed panel against the exact coupling
+         if (Success) Success = Rank >= 1
+         if (Success) then
+            ErrF = norm2(C0 - matmul(U, W))
+            Success = ErrF <= LowRankTol*NormF
+         end if
+
+         if (Success) then
+            NumLR = NumLR + 1
+            Info(LR_Row0, NumLR) = r0
+            Info(LR_NRow, NumLR) = mR
+            Info(LR_NCol, NumLR) = nC
+            Info(LR_Rank, NumLR) = Rank
+            Info(LR_ColStart, NumLR) = size(LRCols) + 1
+            Info(LR_UStart, NumLR) = size(LRU) + 1
+            Info(LR_WStart, NumLR) = size(LRW) + 1
+            LRCols = [LRCols, Cols(1:nC)]
+            LRU = [LRU, reshape(U, [mR*Rank])]
+            LRW = [LRW, reshape(W, [Rank*nC])]
+            InPanel(r0:r1) = .true.
+            MaxNC = max(MaxNC, nC)
+            MaxRank = max(MaxRank, Rank)
+         end if
+      end if
+
+      ColMap(Cols(1:nC)) = 0
+      deallocate (Cols)
+   end subroutine
+end subroutine
+
+!> Truncated QR factorization with column pivoting of C (m x nc), stopped at the smallest rank r
+!! with ||C*P - Q(:,1:r)*R(1:r,:)||_F <= Tol*||C||_F, where the residual norm is computed exactly
+!! from the trailing block at each step. On success, C ~ U*W with U = Q(:,1:r) (m x r, orthonormal
+!! columns) and W = R(1:r,:)*P^T (r x nc). Success is false if the tolerance is not met with rank <= RMax.
+!! C is overwritten.
+subroutine TruncatedQRCP(C, Tol, RMax, Rank, U, W, Success)
+   real(R8Ki), intent(inout)                 :: C(:, :)
+   real(R8Ki), intent(in)                    :: Tol
+   integer(IntKi), intent(in)                :: RMax
+   integer(IntKi), intent(out)               :: Rank
+   real(R8Ki), allocatable, intent(out)      :: U(:, :), W(:, :)
+   logical, intent(out)                      :: Success
+
+   real(R8Ki), allocatable                   :: ColNorm2(:), Tau(:), Tmp(:)
+   integer(IntKi), allocatable               :: Jpvt(:)
+   integer(IntKi)                            :: m, nc, k, j, ic, KMax, iTmp
+   real(R8Ki)                                :: Tol2, Alpha, XNorm, Beta, s, dTmp
+
+   m = size(C, 1)
+   nc = size(C, 2)
+   KMax = min(RMax, m, nc)
+   Rank = 0
+   Success = .false.
+
+   allocate (ColNorm2(nc), Tau(KMax), Jpvt(nc))
+   do ic = 1, nc
+      ColNorm2(ic) = dot_product(C(:, ic), C(:, ic))
+      Jpvt(ic) = ic
+   end do
+   Tol2 = Tol**2*sum(ColNorm2)
+
+   do k = 1, KMax + 1
+
+      ! Residual of the rank k-1 approximation is the trailing block C(k:m, k:nc)
+      if (sum(ColNorm2(k:nc)) <= Tol2) then
+         Success = .true.
+         exit
+      end if
+      if (k > KMax) exit
+
+      ! Move the column with the largest remaining norm to position k
+      j = k - 1 + maxloc(ColNorm2(k:nc), 1)
+      if (j /= k) then
+         Tmp = C(:, k)
+         C(:, k) = C(:, j)
+         C(:, j) = Tmp
+         dTmp = ColNorm2(k); ColNorm2(k) = ColNorm2(j); ColNorm2(j) = dTmp
+         iTmp = Jpvt(k); Jpvt(k) = Jpvt(j); Jpvt(j) = iTmp
+      end if
+
+      ! Householder reflector H = I - Tau*v*v^T with v = [1; C(k+1:m, k)] annihilating C(k+1:m, k)
+      Alpha = C(k, k)
+      XNorm = norm2(C(k + 1:m, k))
+      if (XNorm == 0.0_R8Ki) then
+         Tau(k) = 0.0_R8Ki
+      else
+         Beta = -sign(hypot(Alpha, XNorm), Alpha)
+         Tau(k) = (Beta - Alpha)/Beta
+         C(k + 1:m, k) = C(k + 1:m, k)/(Alpha - Beta)
+         C(k, k) = Beta
+      end if
+
+      ! Apply the reflector to the trailing columns and recompute their remaining norms
+      do ic = k + 1, nc
+         if (Tau(k) /= 0.0_R8Ki) then
+            s = Tau(k)*(C(k, ic) + dot_product(C(k + 1:m, k), C(k + 1:m, ic)))
+            C(k, ic) = C(k, ic) - s
+            C(k + 1:m, ic) = C(k + 1:m, ic) - s*C(k + 1:m, k)
+         end if
+         ColNorm2(ic) = dot_product(C(k + 1:m, ic), C(k + 1:m, ic))
+      end do
+      Rank = k
+   end do
+
+   if (.not. Success) return
+
+   ! U = H(1)*...*H(Rank)*[I; 0], accumulated backward
+   allocate (U(m, Rank))
+   U = 0.0_R8Ki
+   do k = 1, Rank
+      U(k, k) = 1.0_R8Ki
+   end do
+   do k = Rank, 1, -1
+      if (Tau(k) == 0.0_R8Ki) cycle
+      do ic = k, Rank
+         s = Tau(k)*(U(k, ic) + dot_product(C(k + 1:m, k), U(k + 1:m, ic)))
+         U(k, ic) = U(k, ic) - s
+         U(k + 1:m, ic) = U(k + 1:m, ic) - s*C(k + 1:m, k)
+      end do
+   end do
+
+   ! W = R(1:Rank, :) with columns returned to their original order
+   allocate (W(Rank, nc))
+   do ic = 1, nc
+      j = min(ic, Rank)
+      W(1:j, Jpvt(ic)) = C(1:j, ic)
+      W(j + 1:Rank, Jpvt(ic)) = 0.0_R8Ki
    end do
 end subroutine
 
