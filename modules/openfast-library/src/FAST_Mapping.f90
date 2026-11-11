@@ -3599,17 +3599,21 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
       iBld = T%p_FAST%BDBldMap(ModSrc%Ins)
 
-      ! MirrorRotor: in-plane root moment is presented in the clockwise convention, as in
-      ! the ElastoDyn path below.
+      ! MirrorRotor: BeamDyn's root moments are physical while BlPitch is presented in
+      ! the clockwise convention, so the in-plane moment is converted to the clockwise
+      ! convention first and the pitch rotation applied after. Flipping the rotated
+      ! result instead would put the wrong sign on the sine terms of both components
+      ! at nonzero pitch. (The ElastoDyn path below flips its already-rotated RootMxc
+      ! because ElastoDyn pitches the mirrored blade physically, by the opposite angle.)
       RotDir = 1.0_ReKi
       if (T%p_FAST%MirrorRotor(ModDst%iRotor)) RotDir = -1.0_ReKi
 
-      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = RotDir*( &
-         T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)))
+      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = &
+         RotDir*T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
+         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld))
 
       T%SrvD%Input(iInput,ModDst%Ins)%RootMyc(iBld) = &
-         -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
+         -RotDir*T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
          T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld))
 
    case (Custom_ED_to_SrvD)
