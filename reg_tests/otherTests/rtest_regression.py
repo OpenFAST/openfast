@@ -59,6 +59,10 @@ def run_case(case):
 
         work = os.path.join(mod_dir, case)
         shutil.copytree(src, work)
+        # copytree brought the committed reference output along with the inputs;
+        # remove it so a zero-exit run that writes a different filename or format
+        # cannot be compared against the stale copy and reported identical.
+        os.remove(os.path.join(work, ref))
 
         dvr = next(f for f in os.listdir(work) if f.endswith(".dvr"))
         proc = subprocess.run([DRIVER, dvr], cwd=work,
