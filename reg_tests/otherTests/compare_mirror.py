@@ -36,6 +36,16 @@ for _b in range(1, 4):
                    "Vdisy", "Vundy"):
             EXPECT[f"B{_b}N{_n}{_q}"] = "F"
 
+# OpenFAST channel names are case-insensitive and the shipped headers mix case
+# (B1N1VIndx, B1N1VDisx), so the table is keyed upper-case and looked up through
+# expected_class(); a case mismatch used to silently skip the assertion.
+EXPECT = {_k.upper(): _v for _k, _v in EXPECT.items()}
+
+
+def expected_class(ch):
+    """Expected symmetry class for a channel name, or None if not asserted."""
+    return EXPECT.get(ch.upper())
+
 # Reported but not asserted. Under the old blade numbering the per-blade azimuth's
 # mirror reference depended on blade index and rotor tilt, so B*Azimuth sat here.
 # With the blades numbered in the direction of rotation it measures as identical
@@ -105,7 +115,7 @@ def compare(cw_path, mir_path, tol=1e-6, only=None):
             continue
         if got == "?":
             unknown.append((ch, rel))
-        exp = EXPECT.get(ch)
+        exp = expected_class(ch)
         if exp is not None and got != "negligible":
             checked += 1
             if got != exp:

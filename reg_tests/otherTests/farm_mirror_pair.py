@@ -150,7 +150,7 @@ def farm_expect(ch):
 
 
 def turbine_expect(ch):
-    exp = TURBINE_EXPECT.get(ch)
+    exp = TURBINE_EXPECT.get(ch.upper())
     s = {exp} if exp is not None else None
     if WRAPPED_TURBINE.match(ch):
         s = (s or set()) | {"W"}
