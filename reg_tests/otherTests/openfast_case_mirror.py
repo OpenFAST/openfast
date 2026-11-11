@@ -127,10 +127,14 @@ def build(case, mirrored, tmax, negate=(), series=(), reuse=False):
 
     p = subprocess.run([EXE, f"{case}.fst"], cwd=d, capture_output=True, text=True)
     out = os.path.join(d, f"{case}.out")
-    if not os.path.exists(out):
+    # The text output grows incrementally and the mirror twins are numerically
+    # near-identical, so a mid-run abort leaves both with equal-length partial
+    # files that would compare clean: a failed exit status must fail the build
+    # even when an output file exists.
+    if p.returncode != 0 or not os.path.exists(out):
         tail = [l for l in (p.stdout + p.stderr).split("\n") if l.strip()][-10:]
         print("\n".join(tail))
-        sys.exit(f"{name} run failed")
+        sys.exit(f"{name} run failed (exit status {p.returncode})")
     return out
 
 
