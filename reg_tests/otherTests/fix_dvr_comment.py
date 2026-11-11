@@ -28,10 +28,16 @@ added = 0
 for path in EXAMPLES:
     lines = path.read_text().split("\n")
     out = []
-    for line in lines:
+    for i, line in enumerate(lines):
         out.append(line)
         m = re.match(r"\s*\S+\s+BasicHAWTFormat\((\d+)\)", line)
         if m:
+            # Idempotent: a second MirrorRotor line would land where the driver's
+            # positional parser expects BaseOriginInit and the example would be
+            # rejected, so skip turbines that already carry the flag.
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            if re.search(r"MirrorRotor\(\d+\)", nxt):
+                continue
             out.append(MIRROR.format(n=m.group(1)))
             added += 1
     path.write_text("\n".join(out))
