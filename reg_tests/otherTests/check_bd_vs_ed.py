@@ -62,10 +62,13 @@ def main():
     worst = 0.0
     worst_ch = ""
     for c in shared:
-        # A mirrored channel that flips sign is compared on magnitude, so take the
-        # smaller of the two orientations.
-        r = mir[c] / max(cw[c], 1e-12)
-        if cw[c] > 1e-6 and r > worst:
+        # Floor both discrepancies at the .outb int16 quantisation (~1.5e-5 of
+        # channel range, so ~1e-4 as a relative discrepancy) rather than exempting
+        # channels where the clockwise models agree: a channel on which they agree
+        # perfectly must still not grow a mirrored-only discrepancy, and a
+        # quantisation-level wiggle must not fail the ratio either.
+        r = max(mir[c], 1e-4) / max(cw[c], 1e-4)
+        if r > worst:
             worst, worst_ch = r, c
         print(f"{c:14s} {cw[c]:13.4e} {mir[c]:13.4e} {r:8.3f}")
 
