@@ -825,6 +825,8 @@ CONTAINS
                                                             m%LineTypeList(l)%nEApoints, &
                                                             m%LineTypeList(l)%stiffXs,   &
                                                             m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
+                     CALL CheckError( ErrStat2, ErrMsg2 )
+                     IF (ErrStat >= AbortErrLev) RETURN
                    end if
 
                    
@@ -847,12 +849,16 @@ CONTAINS
                                                            m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
                                                            m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2, p%PriPath)
-                                                           
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
+
                    ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
                                                            m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2, p%PriPath)
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
@@ -1040,6 +1046,11 @@ CONTAINS
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' Ca entry (col 14) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
 
+                  ! catch any fatal errors raised while processing the bar-separated columns above
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
