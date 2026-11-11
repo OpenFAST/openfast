@@ -128,7 +128,11 @@ def emit_map(groups, mooring, origin, conflicts, tol, floor):
                  'meaning: "pairing is layout-specific"}\n')
         fh.write("channels:\n")
         for n, k, lbl, src in rows:
-            fh.write(f'  {n}: {{behaviour: {k}, measured_in: [{", ".join(src)}]}}\n')
+            # Quote every value in the flow mapping: a source label containing a
+            # comma ("AeroDisk, yawed") otherwise splits into two list entries,
+            # and a bare "?" behaviour is not valid YAML at all.
+            srcs = ", ".join(f'"{s}"' for s in src)
+            fh.write(f'  {n}: {{behaviour: "{k}", measured_in: [{srcs}]}}\n')
 
     print(f"\nwrote {yml}")
     print(f"  {len(rows)} channels")
