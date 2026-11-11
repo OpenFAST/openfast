@@ -26,8 +26,12 @@ subroutine test_NWTC_BlockTriSolve_suite(testsuite)
                new_unittest("diagonal and identity rows", test_diagonal), &
                new_unittest("small pivot falls back to dense", test_small_pivot_fallback), &
                new_unittest("singular block falls back to dense", test_singular_block_fallback), &
+               new_unittest("zero diagonal in coupled block", test_zero_diag_coupled), &
+               new_unittest("zero single-unknown pivot falls back", test_zero_diag_single), &
                new_unittest("singular matrix returns error", test_singular_error), &
+               new_unittest("block row and column scaling", test_scaling), &
                new_unittest("refactorization switches methods", test_refactor), &
+               new_unittest("solve leaves solver data unchanged", test_solve_readonly), &
                new_unittest("copy and pack round trip", test_copy_pack), &
                new_unittest("empty and scalar systems", test_trivial_sizes), &
                new_unittest("invalid arguments", test_invalid_args) &
@@ -151,6 +155,7 @@ subroutine test_auto_selection(error)
    integer(IntKi), allocatable                :: Owner(:), BlockSizes(:)
    integer(IntKi)                             :: ErrStat, seed, n
    character(ErrMsgLen)                       :: ErrMsg
+   logical                                    :: Fallback
 
    ! Mostly single-unknown blocks with a coupled core, similar to the OpenFAST solver Jacobian
    seed = 41
@@ -158,9 +163,10 @@ subroutine test_auto_selection(error)
    call BlockTriMatrix(seed, BlockSizes, 0.05_R8Ki, A, Owner)
    A0 = A
    n = size(A, 1)
-   call BTS_Factor(S, A, ErrStat, ErrMsg)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Fallback=Fallback)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    call check(error, S%Method, BTS_Method_BlockTri, message="sparse block structure should use block method"); if (allocated(error)) return
+   call check(error, .not. Fallback, message="block method should not report a fallback"); if (allocated(error)) return
    call RandomVector(seed, n, b)
    call DenseReference(A0, b, xRef)
    x = b
@@ -169,17 +175,19 @@ subroutine test_auto_selection(error)
    call check(error, maxval(abs(x - xRef)) <= RelTol*maxval(abs(xRef)), message="auto block solution incorrect"); if (allocated(error)) return
    call check(error, ResidualNorm(A0, x, b) <= RelTol, message="auto block solution residual too large"); if (allocated(error)) return
 
-   ! Fully coupled dense matrix
+   ! Fully coupled dense matrix: dense chosen for performance, not as a fallback
    call RandomMatrix(seed, 100, A)
-   call BTS_Factor(S, A, ErrStat, ErrMsg)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Fallback=Fallback)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    call check(error, S%Method, BTS_Method_Dense, message="dense matrix should use dense method"); if (allocated(error)) return
+   call check(error, .not. Fallback, message="dense selection is not a fallback"); if (allocated(error)) return
 
    ! Sparse but strongly connected matrix (single block): no benefit from the block form
    call SparseCoupledMatrix(seed, 120, A)
-   call BTS_Factor(S, A, ErrStat, ErrMsg)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Fallback=Fallback)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
-   call check(error, S%Method, BTS_Method_Dense, message="single coupled block should use dense method")
+   call check(error, S%Method, BTS_Method_Dense, message="single coupled block should use dense method"); if (allocated(error)) return
+   call check(error, .not. Fallback, message="dense selection is not a fallback")
 end subroutine
 
 subroutine test_diagonal(error)
@@ -204,7 +212,8 @@ subroutine test_diagonal(error)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    call check(error, S%Method, BTS_Method_BlockTri); if (allocated(error)) return
    call check(error, S%NumBlocks, 7, message="diagonal matrix should have one block per unknown"); if (allocated(error)) return
-   call check(error, size(S%Blk), 0, message="diagonal matrix should have no multi-unknown blocks"); if (allocated(error)) return
+   call check(error, all(S%BlkLUStart == 0) .and. size(S%BlkLU) == 0, &
+              message="diagonal matrix should have no multi-unknown blocks"); if (allocated(error)) return
    call BTS_Solve(S, A, x, ErrStat, ErrMsg)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    call check(error, all(x == b/d), message="diagonal solve should be exact division")
@@ -217,24 +226,24 @@ subroutine test_small_pivot_fallback(error)
    integer(IntKi), allocatable                :: Owner(:)
    integer(IntKi)                             :: ErrStat, seed, n, i
    character(ErrMsgLen)                       :: ErrMsg
+   logical                                    :: Fallback
 
    seed = 61
    call BlockTriMatrix(seed, [1, 4, 1, 1, 3, 1], 0.5_R8Ki, A, Owner)
    n = size(A, 1)
 
    ! Make one single-unknown pivot numerically zero relative to its row
-   do i = 1, n
-      if (count(Owner == Owner(i)) == 1 .and. count(A(i, :) /= 0.0_R8Ki) > 1) exit
-   end do
-   call check(error, i <= n, message="test matrix has no coupled single-unknown row"); if (allocated(error)) return
+   i = CoupledSingleRow(A, Owner)
+   call check(error, i > 0, message="test matrix has no coupled single-unknown row"); if (allocated(error)) return
    A(i, i) = 1.0e-20_R8Ki*maxval(abs(A(i, :)))
    A0 = A
 
    call RandomVector(seed, n, b)
    call DenseReference(A0, b, xRef)
-   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri, Fallback=Fallback)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    call check(error, S%Method, BTS_Method_Dense, message="tiny pivot should fall back to dense"); if (allocated(error)) return
+   call check(error, Fallback, message="fallback should be reported"); if (allocated(error)) return
    x = b
    call BTS_Solve(S, A, x, ErrStat, ErrMsg)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
@@ -247,17 +256,77 @@ subroutine test_singular_block_fallback(error)
    real(R8Ki), allocatable                    :: A(:, :)
    integer(IntKi)                             :: ErrStat
    character(ErrMsgLen)                       :: ErrMsg
+   logical                                    :: Fallback
 
    ! 2x2 coupled block that is exactly singular, preceded by a single unknown
    allocate (A(3, 3))
    A = reshape([1.0_R8Ki, 0.5_R8Ki, 0.5_R8Ki, &
                 0.0_R8Ki, 1.0_R8Ki, 2.0_R8Ki, &
                 0.0_R8Ki, 2.0_R8Ki, 4.0_R8Ki], [3, 3])
-   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri, Fallback=Fallback)
 
-   ! Falls back to dense LU, which reports the singular matrix like LAPACK does
+   ! Dense LU of the full matrix is retried and reports the singular matrix like LAPACK does
+   call check(error, Fallback, message="singular block should trigger the dense fallback"); if (allocated(error)) return
    call check(error, ErrStat, ErrID_Fatal, message="singular matrix should return a fatal error"); if (allocated(error)) return
+   call check(error, index(ErrMsg, '3)=0') > 0, message="error should come from the full-system dense LU: "//trim(ErrMsg)); if (allocated(error)) return
+   call check(error, allocated(S%Piv) .and. (.not. allocated(S%BlkLU)), &
+              message="solver data should be from the dense retry"); if (allocated(error)) return
    call check(error, S%Method /= BTS_Method_BlockTri, message="singular block must not use block method")
+end subroutine
+
+subroutine test_zero_diag_coupled(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S
+   real(R8Ki), allocatable                    :: A(:, :), A0(:, :), b(:), x(:), xRef(:)
+   integer(IntKi), allocatable                :: Owner(:)
+   integer(IntKi)                             :: ErrStat, seed, n, i
+   character(ErrMsgLen)                       :: ErrMsg
+   logical                                    :: Fallback
+
+   seed = 63
+   call BlockTriMatrix(seed, [1, 5, 1, 1, 4, 1, 1], 0.4_R8Ki, A, Owner)
+   n = size(A, 1)
+
+   ! Zero the diagonal of one unknown in each multi-unknown block
+   do i = 1, n
+      if (count(Owner == Owner(i)) > 1 .and. all(Owner(1:i - 1) /= Owner(i))) A(i, i) = 0.0_R8Ki
+   end do
+   A0 = A
+
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri, Fallback=Fallback)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, S%Method, BTS_Method_BlockTri, message="zero diagonals inside blocks should not prevent block method"); if (allocated(error)) return
+   call check(error, .not. Fallback, message="no fallback expected"); if (allocated(error)) return
+   call check(error, S%NumBlocks, 7, message="zero diagonals should not change the block structure"); if (allocated(error)) return
+
+   call RandomVector(seed, n, b)
+   call DenseReference(A0, b, xRef)
+   x = b
+   call BTS_Solve(S, A, x, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, maxval(abs(x - xRef)) <= RelTol*maxval(abs(xRef)), message="solution differs from dense solution"); if (allocated(error)) return
+   call check(error, ResidualNorm(A0, x, b) <= RelTol, message="residual too large")
+end subroutine
+
+subroutine test_zero_diag_single(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S
+   real(R8Ki), allocatable                    :: A(:, :)
+   integer(IntKi), allocatable                :: Owner(:)
+   integer(IntKi)                             :: ErrStat, seed, i
+   character(ErrMsgLen)                       :: ErrMsg
+   logical                                    :: Fallback
+
+   ! An exactly zero single-unknown block makes the matrix singular
+   seed = 65
+   call BlockTriMatrix(seed, [1, 3, 1, 1, 2, 1], 0.5_R8Ki, A, Owner)
+   i = CoupledSingleRow(A, Owner)
+   call check(error, i > 0, message="test matrix has no coupled single-unknown row"); if (allocated(error)) return
+   A(i, i) = 0.0_R8Ki
+
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri, Fallback=Fallback)
+   call check(error, Fallback, message="zero single-unknown pivot should trigger the dense fallback"); if (allocated(error)) return
+   call check(error, S%Method /= BTS_Method_BlockTri, message="block method must not be used")
 end subroutine
 
 subroutine test_singular_error(error)
@@ -278,6 +347,58 @@ subroutine test_singular_error(error)
    x = 1.0_R8Ki
    call BTS_Solve(S, A, x, ErrStat, ErrMsg)
    call check(error, ErrStat, ErrID_Fatal, message="solve after failed factorization should fail")
+end subroutine
+
+subroutine test_scaling(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S, Ss
+   real(R8Ki), allocatable                    :: A(:, :), As(:, :), b(:), z(:), x(:), zRef(:), Row(:), Col(:)
+   integer(IntKi), allocatable                :: Owner(:)
+   integer(IntKi), parameter                  :: BlockSizes(9) = [1, 3, 1, 1, 6, 1, 2, 1, 1]
+   integer(IntKi)                             :: ErrStat, seed, n, i, j, nb
+   real(R8Ki), allocatable                    :: BlkRow(:), BlkCol(:)
+   character(ErrMsgLen)                       :: ErrMsg
+
+   ! Scale rows and columns of each block by very different powers of two (up to about 1e+-12 between
+   ! blocks), as for coupled subsystems with very different stiffness or units
+   seed = 75
+   call BlockTriMatrix(seed, BlockSizes, 0.4_R8Ki, A, Owner)
+   n = size(A, 1)
+   nb = size(BlockSizes)
+   allocate (BlkRow(nb), BlkCol(nb), Row(n), Col(n))
+   do i = 1, nb
+      BlkRow(i) = 2.0_R8Ki**nint(40.0_R8Ki*RandUniform(seed))
+      BlkCol(i) = 2.0_R8Ki**nint(20.0_R8Ki*RandUniform(seed))
+   end do
+   Row = BlkRow(Owner)
+   Col = BlkCol(Owner)
+   allocate (As(n, n))
+   do j = 1, n
+      do i = 1, n
+         As(i, j) = Row(i)*A(i, j)*Col(j)
+      end do
+   end do
+
+   ! Reference solutions of the unscaled system
+   call RandomVector(seed, n, b)
+   call DenseReference(A, b, zRef)
+   z = b
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, S%Method, BTS_Method_BlockTri); if (allocated(error)) return
+   call BTS_Solve(S, A, z, ErrStat, ErrMsg)
+
+   ! Scaled system: As*x = Row*b, with solution x = z/Col
+   x = Row*b
+   call BTS_Factor(Ss, As, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, Ss%Method, BTS_Method_BlockTri, message="scaling should not prevent block method"); if (allocated(error)) return
+   call BTS_Solve(Ss, As, x, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+
+   call check(error, maxval(abs(Col*x - z)) <= RelTol*maxval(abs(z)), &
+              message="scaled solve differs from unscaled block solve"); if (allocated(error)) return
+   call check(error, maxval(abs(Col*x - zRef)) <= RelTol*maxval(abs(zRef)), &
+              message="scaled solve differs from unscaled dense solve")
 end subroutine
 
 subroutine test_refactor(error)
@@ -308,7 +429,7 @@ subroutine test_refactor(error)
       call BTS_Factor(S, A2, ErrStat, ErrMsg)
       call check(error, S%Method, BTS_Method_Dense); if (allocated(error)) return
       call check(error, S%N, 9); if (allocated(error)) return
-      call check(error, .not. allocated(S%Blk), message="block data should be cleared"); if (allocated(error)) return
+      call check(error, .not. allocated(S%BlkLU), message="block data should be cleared"); if (allocated(error)) return
       call RandomVector(seed, 9, b)
       call DenseReference(A0, b, xRef)
       x = b
@@ -317,11 +438,48 @@ subroutine test_refactor(error)
    end do
 end subroutine
 
+subroutine test_solve_readonly(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(BlockTriSolveType)                    :: S, S0
+   real(R8Ki), allocatable                    :: A(:, :), b(:), x1(:), x2(:), x3(:), Work(:), Small(:)
+   integer(IntKi), allocatable                :: Owner(:)
+   integer(IntKi)                             :: ErrStat, seed, n
+   character(ErrMsgLen)                       :: ErrMsg
+
+   seed = 85
+   call BlockTriMatrix(seed, [1, 4, 1, 2, 1, 3], 0.4_R8Ki, A, Owner)
+   n = size(A, 1)
+   call BTS_Factor(S, A, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, S%Method, BTS_Method_BlockTri); if (allocated(error)) return
+   call NWTC_Library_CopyBlockTriSolveType(S, S0, MESH_NEWCOPY, ErrStat, ErrMsg)
+   call RandomVector(seed, n, b)
+
+   ! Internal workspace, caller workspace, and too-small caller workspace give identical results
+   allocate (Work(n + 3), Small(1))
+   x1 = b
+   call BTS_Solve(S, A, x1, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   x2 = b
+   call BTS_Solve(S, A, x2, ErrStat, ErrMsg, Work=Work)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   x3 = b
+   call BTS_Solve(S, A, x3, ErrStat, ErrMsg, Work=Small)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, all(x2 == x1) .and. all(x3 == x1), message="workspace choice changes the solution"); if (allocated(error)) return
+
+   ! Solver data unchanged by the solves
+   call check(error, S%Method == S0%Method .and. S%N == S0%N .and. S%NumBlocks == S0%NumBlocks .and. &
+              all(S%Perm == S0%Perm) .and. all(S%BlkStart == S0%BlkStart) .and. all(S%BlkLUStart == S0%BlkLUStart) .and. &
+              all(S%BlkLU == S0%BlkLU) .and. all(S%Diag == S0%Diag) .and. all(S%RowPtr == S0%RowPtr) .and. &
+              all(S%ColInd == S0%ColInd) .and. all(S%Val == S0%Val) .and. all(S%Piv == S0%Piv), &
+              message="solve modified the solver data")
+end subroutine
+
 subroutine test_copy_pack(error)
    type(error_type), allocatable, intent(out) :: error
-   type(BlockTriSolveType)                    :: S, S2, S3
+   type(BlockTriSolveType)                    :: S, S2, S3, S4
    type(RegFile)                              :: RF
-   real(R8Ki), allocatable                    :: A(:, :), b(:), x1(:), x2(:), x3(:)
+   real(R8Ki), allocatable                    :: A(:, :), B4(:, :), b(:), x1(:), x2(:), x3(:), x4(:)
    integer(IntKi), allocatable                :: Owner(:)
    integer(IntKi)                             :: ErrStat, seed, Un
    character(ErrMsgLen)                       :: ErrMsg
@@ -335,12 +493,23 @@ subroutine test_copy_pack(error)
    x1 = b
    call BTS_Solve(S, A, x1, ErrStat, ErrMsg)
 
-   ! Copy (used when duplicating turbine data)
+   ! Copy into a new solver (used when duplicating turbine data)
    call NWTC_Library_CopyBlockTriSolveType(S, S2, MESH_NEWCOPY, ErrStat, ErrMsg)
    call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
    x2 = b
    call BTS_Solve(S2, A, x2, ErrStat, ErrMsg)
    call check(error, all(x2 == x1), message="copied solver gives different result"); if (allocated(error)) return
+
+   ! Copy into a solver that holds a factorization with a different size and block structure
+   call BlockTriMatrix(seed, [2, 1, 6, 1], 0.4_R8Ki, B4, Owner)
+   call BTS_Factor(S4, B4, ErrStat, ErrMsg, Method=BTS_Method_BlockTri)
+   call check(error, S4%Method, BTS_Method_BlockTri); if (allocated(error)) return
+   call NWTC_Library_CopyBlockTriSolveType(S, S4, MESH_NEWCOPY, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   x4 = b
+   call BTS_Solve(S4, A, x4, ErrStat, ErrMsg)
+   call check(error, ErrStat, ErrID_None, message=trim(ErrMsg)); if (allocated(error)) return
+   call check(error, all(x4 == x1), message="solver copied over a different structure gives different result"); if (allocated(error)) return
 
    ! Pack and unpack (used for checkpoint/restart)
    open (newunit=Un, file=FileName, access='stream', form='unformatted', status='replace', action='write')
@@ -418,7 +587,8 @@ end subroutine
 ! Helpers
 !-------------------------------------------------------------------------------
 
-!> Deterministic uniform random number in [-1, 1) (portable across compilers)
+!> Deterministic uniform random number in [-1, 1) (portable across compilers).
+!! Modifies seed, so call at most once per statement.
 function RandUniform(seed) result(r)
    integer(IntKi), intent(inout) :: seed
    real(R8Ki)                    :: r
@@ -482,6 +652,7 @@ subroutine BlockTriMatrix(seed, BlockSizes, Density, A, Owner)
    real(R8Ki), allocatable                   :: T(:, :)
    integer(IntKi), allocatable               :: Start(:), Blk(:), p(:)
    integer(IntKi)                            :: n, nb, b, i, j, m, k, tmp
+   real(R8Ki)                                :: r1, r2, r3
 
    nb = size(BlockSizes)
    n = sum(BlockSizes)
@@ -496,7 +667,9 @@ subroutine BlockTriMatrix(seed, BlockSizes, Density, A, Owner)
    do b = 1, nb
       m = BlockSizes(b)
       if (m == 1) then
-         T(Start(b), Start(b)) = sign(1.0_R8Ki + abs(RandUniform(seed)), RandUniform(seed))
+         r1 = RandUniform(seed)
+         r2 = RandUniform(seed)
+         T(Start(b), Start(b)) = sign(1.0_R8Ki + abs(r1), r2)
       else
          do j = Start(b), Start(b + 1) - 1
             do i = Start(b), Start(b + 1) - 1
@@ -512,7 +685,12 @@ subroutine BlockTriMatrix(seed, BlockSizes, Density, A, Owner)
    ! Coupling to earlier blocks, with a wide range of magnitudes
    do i = 1, n
       do j = 1, Start(Blk(i)) - 1
-         if (0.5_R8Ki*(RandUniform(seed) + 1.0_R8Ki) < Density) T(i, j) = RandUniform(seed)*10.0_R8Ki**int(3.0_R8Ki*RandUniform(seed))
+         r1 = RandUniform(seed)
+         if (0.5_R8Ki*(r1 + 1.0_R8Ki) < Density) then
+            r2 = RandUniform(seed)
+            r3 = RandUniform(seed)
+            T(i, j) = r2*10.0_R8Ki**int(3.0_R8Ki*r3)
+         end if
       end do
    end do
 
@@ -536,6 +714,20 @@ subroutine BlockTriMatrix(seed, BlockSizes, Density, A, Owner)
    A = T(p, p)
    Owner = Blk(p)
 end subroutine
+
+!> First row that is a single-unknown block and has off-diagonal entries (0 if none)
+function CoupledSingleRow(A, Owner) result(iRow)
+   real(R8Ki), intent(in)        :: A(:, :)
+   integer(IntKi), intent(in)    :: Owner(:)
+   integer(IntKi)                :: iRow, i
+   iRow = 0
+   do i = 1, size(A, 1)
+      if (count(Owner == Owner(i)) == 1 .and. count(A(i, :) /= 0.0_R8Ki) > 1) then
+         iRow = i
+         return
+      end if
+   end do
+end function
 
 !> Reference solution with dense LAPACK LU (same calls as the dense method)
 subroutine DenseReference(A, b, x)

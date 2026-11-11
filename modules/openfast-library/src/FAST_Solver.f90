@@ -1919,6 +1919,8 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
    character(ErrMsgLen)                   :: ErrMsg2
    real(R8Ki), allocatable                :: J22(:, :)
    integer(IntKi)                         :: i, j, k, idx, iq1, iq2
+   integer(IntKi)                         :: PrevLinSolveMethod
+   logical                                :: LinSolveFallback
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -2057,8 +2059,15 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
    end if
 
    ! Factor jacobian matrix
-   call BTS_Factor(m%LinSolve, m%Mod%Lin%J, ErrStat2, ErrMsg2, Method=LinSolveMethod)
+   PrevLinSolveMethod = m%LinSolve%Method
+   call BTS_Factor(m%LinSolve, m%Mod%Lin%J, ErrStat2, ErrMsg2, Method=LinSolveMethod, Fallback=LinSolveFallback)
    if (Failed()) return
+
+   ! Report when the block triangular solve cannot be used (once until it succeeds again)
+   if (LinSolveFallback .and. (PrevLinSolveMethod /= BTS_Method_Dense)) then
+      call WrScr('Info: tight coupling Jacobian has a numerically zero pivot or singular diagonal block in '// &
+                 'block triangular form; using dense LU factorization.')
+   end if
 
 contains
    logical function Failed()

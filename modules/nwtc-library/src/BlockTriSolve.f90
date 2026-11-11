@@ -21,17 +21,34 @@
 !!
 !! BTS_Factor uses the exact nonzero pattern of A to find a symmetric permutation P such that
 !! P*A*P^T is block lower triangular. The diagonal blocks are the strongly connected components
-!! of the dependency graph (row i depends on unknown j if A(i,j) /= 0), found with Tarjan's
-!! algorithm, which returns the blocks in a valid forward-substitution order. Diagonal blocks
-!! with more than one unknown are factored with LAPACK getrf; single-unknown blocks are stored
-!! as their diagonal value; entries that couple a block to earlier blocks are stored as exact
-!! nonzeros in compressed sparse row (CSR) form. BTS_Solve then performs block forward
-!! substitution. No entries are dropped, so results differ from a dense LU solve only by
-!! round-off.
+!! of the dependency graph (row i depends on unknown j if A(i,j) /= 0 for i /= j), found with
+!! Tarjan's algorithm, which returns the blocks in a valid forward-substitution order. Diagonal
+!! blocks with more than one unknown are factored with LAPACK getrf (partial pivoting within the
+!! block); single-unknown blocks are stored as their diagonal value; entries that couple a block
+!! to earlier blocks are stored as exact nonzeros in compressed sparse row (CSR) form. BTS_Solve
+!! then performs block forward substitution.
 !!
-!! BTS_Factor falls back to a dense LU factorization of the full matrix (LAPACK getrf in place
-!! on A, as used previously by callers) when the block form is not expected to be faster, when
-!! a single-unknown pivot is numerically zero, or when a diagonal block is singular.
+!! Numerical properties:
+!! - No entries are dropped and no Schur complements are formed: the blocks above the diagonal of
+!!   P*A*P^T are exactly zero by construction, so pivoting across blocks is unnecessary. Block
+!!   forward substitution is backward stable when each diagonal-block solve is, and results differ
+!!   from a dense LU solve only by round-off.
+!! - Diagonal entries do not affect the block structure. Zero diagonal entries inside a
+!!   multi-unknown block are handled by pivoting within the block, and an exactly zero
+!!   single-unknown block means A is singular. No maximum-transversal (zero-free diagonal)
+!!   permutation is applied, so the block structure is the finest possible only when the diagonal
+!!   of A has no zeros, as for the OpenFAST tight-coupling Jacobian. Matrices with zero diagonals
+!!   may yield coarser blocks, which is correct but slower.
+!! - A is not scaled. Scaling the rows and columns of each block by powers of two scales the
+!!   computed solution exactly; callers may equilibrate A beforehand if needed.
+!!
+!! BTS_Factor falls back to a dense LU factorization of the full matrix (LAPACK getrf in place on
+!! A) when, in automatic mode, the block form is not expected to be faster, when a single-unknown
+!! pivot is numerically zero, or when a multi-unknown diagonal block is exactly singular.
+!!
+!! BTS_Solve does not modify the solver data or A, so solves with the same factorization may run
+!! concurrently if each uses its own right-hand side and workspace. BTS_Factor modifies the solver
+!! data and must not run concurrently with other calls that use the same solver data.
 module BlockTriSolve
 
 use NWTC_Base
@@ -49,26 +66,47 @@ integer(IntKi), parameter :: BTS_Method_Auto     = 0 !< Select the method automa
 integer(IntKi), parameter :: BTS_Method_Dense    = 1 !< Dense LU factorization of the full matrix
 integer(IntKi), parameter :: BTS_Method_BlockTri = 2 !< Block triangular form with factored diagonal blocks
 
-integer(IntKi), parameter :: MinSizeAuto  = 64                        !< Smaller systems use dense LU in automatic mode
-real(R8Ki), parameter     :: MaxCostRatio = 0.75_R8Ki                 !< Use BTF only if its estimated solve cost is below this fraction of dense
-real(R8Ki), parameter     :: SparseCost   = 2.0_R8Ki                  !< Relative per-entry cost of indexed (CSR) storage vs dense storage
-real(R8Ki), parameter     :: PivTol       = 100.0_R8Ki*epsilon(1.0_R8Ki) !< Minimum |single-unknown pivot| relative to the largest entry in its row
+integer(IntKi), parameter :: MinSizeAuto  = 64        !< Smaller systems use dense LU in automatic mode
+real(R8Ki), parameter     :: MaxCostRatio = 0.75_R8Ki !< Use BTF only if its estimated solve cost is below this fraction of dense
+real(R8Ki), parameter     :: SparseCost   = 2.0_R8Ki  !< Relative per-entry cost of indexed (CSR) storage vs dense storage
+
+!> Guard against dividing by a numerically zero single-unknown pivot: minimum |pivot| relative to the
+!! largest entry in its row, below which the dense LU fallback is used. This is not a stability
+!! threshold; substitution through single-unknown blocks is backward stable for any nonzero pivot.
+real(R8Ki), parameter     :: PivTol       = 100.0_R8Ki*epsilon(1.0_R8Ki)
+
+!> LAPACK solve using LU factors, called directly so that the factors of each block can be read
+!! from the packed storage array without copying
+interface
+   subroutine DGETRS(TRANS, N, NRHS, A, LDA, IPIV, B, LDB, INFO)
+      use Precision, only: R8Ki
+      character, intent(in)      :: TRANS
+      integer, intent(in)        :: N, NRHS, LDA, LDB
+      real(R8Ki), intent(in)     :: A(LDA, *)
+      integer, intent(in)        :: IPIV(*)
+      real(R8Ki), intent(inout)  :: B(LDB, *)
+      integer, intent(out)       :: INFO
+   end subroutine
+end interface
 
 contains
 
 !> Factor the square matrix A for subsequent calls to BTS_Solve.
 !! A must be passed unchanged to BTS_Solve: if the dense method is used, A is overwritten by its LU factors.
-subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method)
+subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method, Fallback)
    type(BlockTriSolveType), intent(inout)    :: S        !< Solver data
    real(R8Ki), intent(inout)                 :: A(:, :)  !< Matrix to factor (overwritten by LU factors if the dense method is used)
    integer(IntKi), intent(out)               :: ErrStat  !< Error status
    character(*), intent(out)                 :: ErrMsg   !< Error message
    integer(IntKi), optional, intent(in)      :: Method   !< Requested method (default BTS_Method_Auto)
+   logical, optional, intent(out)            :: Fallback !< True if the block triangular form was selected but a numerically
+                                                         !! zero single-unknown pivot or a singular diagonal block required dense LU
 
    character(*), parameter                   :: RoutineName = 'BTS_Factor'
    integer(IntKi)                            :: ErrStat2
    character(ErrMsgLen)                      :: ErrMsg2
-   integer(IntKi)                            :: ReqMethod, n, nnzA, nnzOff, b, i0, i1, m, k, r, e, l
+   integer(IntKi)                            :: ReqMethod, n, nnzOff, b, i0, i1, m, k, r, e, l
+   integer(B8Ki)                             :: nnzA
    integer(IntKi), allocatable               :: rp(:), ci(:), iPerm(:), BlkOf(:)
    real(R8Ki), allocatable                   :: RowMax(:)
    real(R8Ki)                                :: CostBTF, CostDense
@@ -76,6 +114,7 @@ subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method)
 
    ErrStat = ErrID_None
    ErrMsg = ''
+   if (present(Fallback)) Fallback = .false.
 
    ReqMethod = BTS_Method_Auto
    if (present(Method)) ReqMethod = Method
@@ -99,16 +138,17 @@ subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method)
       return
    end if
 
-   ! Nonzero pattern of the off-diagonal entries in CSR form (original ordering)
-   call BuildPattern(A, rp, ci, RowMax, nnzA)
-
-   ! Every nonzero costs at least one dense entry in the block form, so a matrix
-   ! that is nearly full cannot benefit
+   ! Count nonzeros before building the pattern so that a nearly full matrix, which cannot benefit
+   ! (every nonzero costs at least one dense entry in the block form), skips the pattern storage
+   call CountPattern(A, rp, RowMax, nnzA)
    CostDense = real(n, R8Ki)**2
    if ((ReqMethod == BTS_Method_Auto) .and. (real(nnzA, R8Ki) >= MaxCostRatio*CostDense)) then
       call FactorDense()
       return
    end if
+
+   ! Off-diagonal nonzero pattern in CSR form (original ordering)
+   call FillPattern(A, rp, ci)
 
    ! Find the diagonal blocks and their solve order
    call FindBlocks(n, rp, ci, S%Perm, S%BlkStart, S%NumBlocks)
@@ -145,15 +185,17 @@ subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method)
       return
    end if
 
-   ! Factor diagonal blocks; fall back to dense LU if any block is unsuitable
-   call FactorBlocks(Success); if (Failed()) return
+   ! Factor diagonal blocks; use dense LU if a pivot is numerically zero or a block is singular
+   call FactorBlocks(Success)
+   if (ErrStat >= AbortErrLev) return
    if (.not. Success) then
+      if (present(Fallback)) Fallback = .true.
       call FactorDense()
       return
    end if
 
    ! Store entries coupling each row to earlier blocks (CSR, solve ordering)
-   allocate (S%RowPtr(n + 1), S%ColInd(nnzOff), S%Val(nnzOff), S%Work(n), stat=ErrStat2)
+   allocate (S%RowPtr(n + 1), S%ColInd(nnzOff), S%Val(nnzOff), stat=ErrStat2)
    if (ErrStat2 /= 0) then
       call SetErrStat(ErrID_Fatal, 'Error allocating off-diagonal block storage.', ErrStat, ErrMsg, RoutineName)
       return
@@ -171,7 +213,6 @@ subroutine BTS_Factor(S, A, ErrStat, ErrMsg, Method)
          end if
       end do
    end do
-   S%Work = 0.0_R8Ki
 
    S%Method = BTS_Method_BlockTri
 
@@ -197,22 +238,32 @@ contains
       S%Method = BTS_Method_Dense
    end subroutine
 
+   !> Factor the diagonal blocks. Success is false (with no error set) if a single-unknown pivot is
+   !! numerically zero or a multi-unknown block is exactly singular; errors are only set for
+   !! allocation failures.
    subroutine FactorBlocks(Success)
-      logical, intent(out) :: Success
-      integer(IntKi)       :: NumMulti, iBlk, j
+      logical, intent(out)    :: Success
+      real(R8Ki), allocatable :: BlkA(:, :)
+      integer(IntKi)          :: LUSize, p0
 
       Success = .false.
 
-      NumMulti = count((S%BlkStart(2:) - S%BlkStart(:S%NumBlocks)) > 1)
-      allocate (S%BlkIdx(S%NumBlocks), S%Blk(NumMulti), S%Diag(n), stat=ErrStat2)
+      ! Packed storage for the LU factors of all multi-unknown blocks
+      LUSize = 0
+      do b = 1, S%NumBlocks
+         m = S%BlkStart(b + 1) - S%BlkStart(b)
+         if (m > 1) LUSize = LUSize + m*m
+      end do
+      allocate (S%BlkLUStart(S%NumBlocks), S%BlkLU(LUSize), S%Diag(n), S%Piv(n), stat=ErrStat2)
       if (ErrStat2 /= 0) then
          call SetErrStat(ErrID_Fatal, 'Error allocating diagonal block storage.', ErrStat, ErrMsg, RoutineName)
          return
       end if
-      S%BlkIdx = 0
+      S%BlkLUStart = 0
       S%Diag = 0.0_R8Ki
+      S%Piv = 0
 
-      iBlk = 0
+      p0 = 1
       do b = 1, S%NumBlocks
          i0 = S%BlkStart(b)
          i1 = S%BlkStart(b + 1) - 1
@@ -222,18 +273,17 @@ contains
             if (abs(A(r, r)) <= PivTol*RowMax(r)) return
             S%Diag(i0) = A(r, r)
          else
-            iBlk = iBlk + 1
-            S%BlkIdx(b) = iBlk
-            allocate (S%Blk(iBlk)%LU(m, m), S%Blk(iBlk)%Piv(m), stat=ErrStat2)
-            if (ErrStat2 /= 0) then
-               call SetErrStat(ErrID_Fatal, 'Error allocating diagonal block.', ErrStat, ErrMsg, RoutineName)
+            BlkA = A(S%Perm(i0:i1), S%Perm(i0:i1))
+            call LAPACK_getrf(m, m, BlkA, S%Piv(i0:i1), ErrStat2, ErrMsg2)
+            if (ErrStat2 /= ErrID_None) then
+               ! Singular block: the dense LU fallback reports the error for the full system
+               ErrStat2 = ErrID_None
+               ErrMsg2 = ''
                return
             end if
-            do j = 1, m
-               S%Blk(iBlk)%LU(:, j) = A(S%Perm(i0:i1), S%Perm(i0 + j - 1))
-            end do
-            call LAPACK_getrf(m, m, S%Blk(iBlk)%LU, S%Blk(iBlk)%Piv, ErrStat2, ErrMsg2)
-            if (ErrStat2 /= ErrID_None) return
+            S%BlkLUStart(b) = p0
+            S%BlkLU(p0:p0 + m*m - 1) = reshape(BlkA, [m*m])
+            p0 = p0 + m*m
          end if
       end do
 
@@ -248,18 +298,20 @@ end subroutine
 
 !> Solve A*x = b using the factorization from BTS_Factor. On entry x contains b; on exit, the solution.
 !! A must be the matrix that was passed to BTS_Factor (it holds the LU factors if the dense method was used).
-subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg)
-   type(BlockTriSolveType), intent(inout)    :: S        !< Solver data (workspace is updated)
+!! Neither S nor A is modified.
+subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg, Work)
+   type(BlockTriSolveType), intent(in)       :: S        !< Solver data from BTS_Factor
    real(R8Ki), intent(in)                    :: A(:, :)  !< Matrix passed to BTS_Factor
    real(R8Ki), intent(inout)                 :: x(:)     !< Right-hand side on entry, solution on exit
    integer(IntKi), intent(out)               :: ErrStat  !< Error status
    character(*), intent(out)                 :: ErrMsg   !< Error message
+   real(R8Ki), optional, intent(inout)       :: Work(:)  !< Workspace of at least S%N values for the block method
+                                                         !! (allocated internally if absent or too small)
 
    character(*), parameter                   :: RoutineName = 'BTS_Solve'
    integer(IntKi)                            :: ErrStat2
    character(ErrMsgLen)                      :: ErrMsg2
-   integer(IntKi)                            :: b, i0, i1, k, q
-   real(R8Ki)                                :: Sum
+   real(R8Ki), allocatable                   :: y(:)
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -277,86 +329,122 @@ subroutine BTS_Solve(S, A, x, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    case (BTS_Method_BlockTri)
-      associate (y => S%Work, Perm => S%Perm, RowPtr => S%RowPtr, ColInd => S%ColInd, Val => S%Val)
-
-         ! Reorder right-hand side into solve order
-         do k = 1, S%N
-            y(k) = x(Perm(k))
-         end do
-
-         ! Block forward substitution
-         do b = 1, S%NumBlocks
-            i0 = S%BlkStart(b)
-            i1 = S%BlkStart(b + 1) - 1
-
-            ! Subtract contributions of unknowns in earlier blocks
-            do k = i0, i1
-               Sum = y(k)
-               do q = RowPtr(k), RowPtr(k + 1) - 1
-                  Sum = Sum - Val(q)*y(ColInd(q))
-               end do
-               y(k) = Sum
-            end do
-
-            ! Solve the diagonal block
-            if (S%BlkIdx(b) == 0) then
-               y(i0) = y(i0)/S%Diag(i0)
-            else
-               associate (Blk => S%Blk(S%BlkIdx(b)))
-                  call LAPACK_getrs('N', i1 - i0 + 1, Blk%LU, Blk%Piv, y(i0:i1), ErrStat2, ErrMsg2)
-               end associate
-               if (ErrStat2 /= ErrID_None) then
-                  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  if (ErrStat >= AbortErrLev) return
-               end if
-            end if
-         end do
-
-         ! Return solution in original ordering
-         do k = 1, S%N
-            x(Perm(k)) = y(k)
-         end do
-      end associate
+      if (present(Work)) then
+         if (size(Work) >= S%N) then
+            call SolveBlocks(S, S%N, x, Work, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      allocate (y(S%N), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Error allocating solve workspace.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      call SolveBlocks(S, S%N, x, y, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    case default
       call SetErrStat(ErrID_Fatal, 'Matrix has not been factored.', ErrStat, ErrMsg, RoutineName)
    end select
 end subroutine
 
-!> Build the CSR nonzero pattern of the off-diagonal entries of A, the maximum absolute
+!> Block forward substitution for the block triangular method, using workspace y in solve order
+subroutine SolveBlocks(S, n, x, y, ErrStat, ErrMsg)
+   type(BlockTriSolveType), intent(in)       :: S
+   integer(IntKi), intent(in)                :: n
+   real(R8Ki), intent(inout)                 :: x(:)
+   real(R8Ki), intent(inout)                 :: y(n)
+   integer(IntKi), intent(out)               :: ErrStat
+   character(*), intent(out)                 :: ErrMsg
+   integer(IntKi)                            :: b, i0, i1, k, q, m, p0
+   integer                                   :: Info
+   real(R8Ki)                                :: Sum
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Reorder right-hand side into solve order
+   do k = 1, n
+      y(k) = x(S%Perm(k))
+   end do
+
+   do b = 1, S%NumBlocks
+      i0 = S%BlkStart(b)
+      i1 = S%BlkStart(b + 1) - 1
+
+      ! Subtract contributions of unknowns in earlier blocks
+      do k = i0, i1
+         Sum = y(k)
+         do q = S%RowPtr(k), S%RowPtr(k + 1) - 1
+            Sum = Sum - S%Val(q)*y(S%ColInd(q))
+         end do
+         y(k) = Sum
+      end do
+
+      ! Solve the diagonal block
+      if (S%BlkLUStart(b) == 0) then
+         y(i0) = y(i0)/S%Diag(i0)
+      else
+         m = i1 - i0 + 1
+         p0 = S%BlkLUStart(b)
+         call DGETRS('N', m, 1, S%BlkLU(p0:p0 + m*m - 1), m, S%Piv(i0:i1), y(i0:i1), m, Info)
+         if (Info /= 0) then
+            ErrStat = ErrID_Fatal
+            write (ErrMsg, '(A,I0,A)') 'SolveBlocks: LAPACK DGETRS illegal value in argument ', -Info, '.'
+            return
+         end if
+      end if
+   end do
+
+   ! Return solution in original ordering
+   do k = 1, n
+      x(S%Perm(k)) = y(k)
+   end do
+end subroutine
+
+!> Count the off-diagonal nonzeros of each row (returned as CSR row pointers), the maximum absolute
 !! value in each row, and the total number of nonzeros (including the diagonal).
-subroutine BuildPattern(A, rp, ci, RowMax, nnzA)
+subroutine CountPattern(A, rp, RowMax, nnzA)
    real(R8Ki), intent(in)                    :: A(:, :)
-   integer(IntKi), allocatable, intent(out)  :: rp(:), ci(:)
+   integer(IntKi), allocatable, intent(out)  :: rp(:)
    real(R8Ki), allocatable, intent(out)      :: RowMax(:)
-   integer(IntKi), intent(out)               :: nnzA
-   integer(IntKi), allocatable               :: Next(:)
+   integer(B8Ki), intent(out)                :: nnzA
    integer(IntKi)                            :: n, i, j
 
    n = size(A, 1)
-   allocate (rp(n + 1), RowMax(n), Next(n))
-   Next = 0
+   allocate (rp(n + 1), RowMax(n))
+   rp = 0
    RowMax = 0.0_R8Ki
    nnzA = 0
 
-   ! Count nonzeros per row (column-major traversal)
+   ! Column-major traversal; rp(i+1) temporarily holds the count for row i
    do j = 1, n
       do i = 1, n
          if (A(i, j) /= 0.0_R8Ki) then
             nnzA = nnzA + 1
             RowMax(i) = max(RowMax(i), abs(A(i, j)))
-            if (i /= j) Next(i) = Next(i) + 1
+            if (i /= j) rp(i + 1) = rp(i + 1) + 1
          end if
       end do
    end do
 
    rp(1) = 1
    do i = 1, n
-      rp(i + 1) = rp(i) + Next(i)
+      rp(i + 1) = rp(i + 1) + rp(i)
    end do
+end subroutine
 
-   ! Fill column indices; ascending within each row
-   allocate (ci(rp(n + 1) - 1))
+!> Fill the CSR column indices of the off-diagonal nonzeros of A (ascending within each row)
+subroutine FillPattern(A, rp, ci)
+   real(R8Ki), intent(in)                    :: A(:, :)
+   integer(IntKi), intent(in)                :: rp(:)
+   integer(IntKi), allocatable, intent(out)  :: ci(:)
+   integer(IntKi), allocatable               :: Next(:)
+   integer(IntKi)                            :: n, i, j
+
+   n = size(A, 1)
+   allocate (ci(rp(n + 1) - 1), Next(n))
    Next = rp(1:n)
    do j = 1, n
       do i = 1, n
