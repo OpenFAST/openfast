@@ -1004,7 +1004,7 @@ CONTAINS
                      m%BodyList(l)%BodyCdA(6) = m%BodyList(l)%BodyCdA(1)
                   else if (N ==2) then 
                      READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
-                     READ(tempStrings(4), *) m%BodyList(l)%BodyCdA(4)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(4)
                      m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(5) = m%BodyList(l)%BodyCdA(4)
@@ -1024,7 +1024,7 @@ CONTAINS
                      READ(tempStrings(5), *) m%BodyList(l)%BodyCdA(5)
                      READ(tempStrings(6), *) m%BodyList(l)%BodyCdA(6)
                   else
-                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1, 2, 3, or 6 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
                   ! process added mass coefficient
                   CALL SplitByBars(tempString5, N, tempStrings)
