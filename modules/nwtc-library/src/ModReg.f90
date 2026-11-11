@@ -328,11 +328,24 @@ contains
       type(c_ptr), intent(out)      :: Ptr
       integer(B8Ki), intent(out)    :: Idx
 
+      ! Initialize outputs
+      Ptr = c_null_ptr
+      Idx = 0
+
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
-      ! Unpack pointer index
+      ! Unpack pointer index, return if error
       call RegUnpack(RF, Idx)
+      if (RegCheckErr(RF, "RegUnpackPointer")) return
+
+      ! Check that index is within pointer index bounds
+      if (Idx < 1 .or. Idx > size(RF%Pointers, kind=B8Ki)) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "RegUnpackPointer: pointer index", Idx, "out of range 1 to", size(RF%Pointers, kind=B8Ki)
+         Idx = 0
+         return
+      end if
 
       ! Get pointer from index
       Ptr = RF%Pointers(Idx)
@@ -370,12 +383,19 @@ contains
       type(RegFile), intent(inout)  :: RF
       logical                       :: match
       integer(B8Ki)                 :: DataNum
+      integer(IntKi)                :: stat
 
       ! Increment the data number to be read
       RF%NumData = RF%NumData + 1
 
-      ! Read the data number from the file
-      read(RF%Unit) DataNum
+      ! Read the data number from the file, return if error
+      read(RF%Unit, iostat=stat) DataNum
+      if (stat /= 0) then
+         match = .false.
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Error reading data number", RF%NumData, "from file, iostat =", stat
+         return
+      end if
 
       ! If data number from file does not match expected number, set match false
       ! and create error message; otherwise, set match to true
@@ -392,21 +412,32 @@ contains
    subroutine Pack_C1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -414,8 +445,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1(RF, Data)
@@ -538,21 +573,32 @@ contains
    subroutine Pack_C1_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -560,8 +606,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1_Rank1(RF, Data)
@@ -699,21 +749,32 @@ contains
    subroutine Pack_C1_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -721,8 +782,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1_Rank2(RF, Data)
@@ -860,21 +925,32 @@ contains
    subroutine Pack_C1_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -882,8 +958,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1_Rank3(RF, Data)
@@ -1021,21 +1101,32 @@ contains
    subroutine Pack_C1_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1043,8 +1134,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1_Rank4(RF, Data)
@@ -1182,21 +1277,32 @@ contains
    subroutine Pack_C1_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(in)             :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_C1_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_C1_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       character(*), intent(out)            :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1204,8 +1310,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_C1_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_C1_Rank5(RF, Data)
@@ -1343,21 +1453,32 @@ contains
    subroutine Pack_L1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1365,8 +1486,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1(RF, Data)
@@ -1489,21 +1614,32 @@ contains
    subroutine Pack_L1_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1511,8 +1647,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1_Rank1(RF, Data)
@@ -1650,21 +1790,32 @@ contains
    subroutine Pack_L1_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1672,8 +1823,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1_Rank2(RF, Data)
@@ -1811,21 +1966,32 @@ contains
    subroutine Pack_L1_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1833,8 +1999,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1_Rank3(RF, Data)
@@ -1972,21 +2142,32 @@ contains
    subroutine Pack_L1_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1994,8 +2175,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1_Rank4(RF, Data)
@@ -2133,21 +2318,32 @@ contains
    subroutine Pack_L1_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(in)                  :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_L1_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_L1_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       logical, intent(out)                 :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2155,8 +2351,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_L1_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_L1_Rank5(RF, Data)
@@ -2294,21 +2494,32 @@ contains
    subroutine Pack_I4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2316,8 +2527,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4(RF, Data)
@@ -2440,21 +2655,32 @@ contains
    subroutine Pack_I4_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2462,8 +2688,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4_Rank1(RF, Data)
@@ -2601,21 +2831,32 @@ contains
    subroutine Pack_I4_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2623,8 +2864,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4_Rank2(RF, Data)
@@ -2762,21 +3007,32 @@ contains
    subroutine Pack_I4_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2784,8 +3040,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4_Rank3(RF, Data)
@@ -2923,21 +3183,32 @@ contains
    subroutine Pack_I4_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2945,8 +3216,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4_Rank4(RF, Data)
@@ -3084,21 +3359,32 @@ contains
    subroutine Pack_I4_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(in)            :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I4_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I4_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B4Ki), intent(out)           :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3106,8 +3392,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I4_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I4_Rank5(RF, Data)
@@ -3245,21 +3535,32 @@ contains
    subroutine Pack_I8(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3267,8 +3568,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8(RF, Data)
@@ -3391,21 +3696,32 @@ contains
    subroutine Pack_I8_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3413,8 +3729,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8_Rank1(RF, Data)
@@ -3552,21 +3872,32 @@ contains
    subroutine Pack_I8_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3574,8 +3905,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8_Rank2(RF, Data)
@@ -3713,21 +4048,32 @@ contains
    subroutine Pack_I8_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3735,8 +4081,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8_Rank3(RF, Data)
@@ -3874,21 +4224,32 @@ contains
    subroutine Pack_I8_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3896,8 +4257,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8_Rank4(RF, Data)
@@ -4035,21 +4400,32 @@ contains
    subroutine Pack_I8_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(in)            :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_I8_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_I8_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       integer(B8Ki), intent(out)           :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4057,8 +4433,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_I8_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_I8_Rank5(RF, Data)
@@ -4196,21 +4576,32 @@ contains
    subroutine Pack_R4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4218,8 +4609,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4(RF, Data)
@@ -4342,21 +4737,32 @@ contains
    subroutine Pack_R4_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4364,8 +4770,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4_Rank1(RF, Data)
@@ -4503,21 +4913,32 @@ contains
    subroutine Pack_R4_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4525,8 +4946,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4_Rank2(RF, Data)
@@ -4664,21 +5089,32 @@ contains
    subroutine Pack_R4_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4686,8 +5122,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4_Rank3(RF, Data)
@@ -4825,21 +5265,32 @@ contains
    subroutine Pack_R4_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4847,8 +5298,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4_Rank4(RF, Data)
@@ -4986,21 +5441,32 @@ contains
    subroutine Pack_R4_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(in)               :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R4_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R4_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R4Ki), intent(out)              :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5008,8 +5474,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R4_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R4_Rank5(RF, Data)
@@ -5147,21 +5617,32 @@ contains
    subroutine Pack_R8(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5169,8 +5650,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8(RF, Data)
@@ -5293,21 +5778,32 @@ contains
    subroutine Pack_R8_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank1: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank1: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8_Rank1(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data(:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5315,8 +5811,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8_Rank1: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8_Rank1(RF, Data)
@@ -5454,21 +5954,32 @@ contains
    subroutine Pack_R8_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank2: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank2: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8_Rank2(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data(:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5476,8 +5987,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8_Rank2: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8_Rank2(RF, Data)
@@ -5615,21 +6130,32 @@ contains
    subroutine Pack_R8_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank3: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank3: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8_Rank3(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data(:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5637,8 +6163,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8_Rank3: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8_Rank3(RF, Data)
@@ -5776,21 +6306,32 @@ contains
    subroutine Pack_R8_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank4: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank4: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8_Rank4(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data(:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5798,8 +6339,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8_Rank4: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8_Rank4(RF, Data)
@@ -5937,21 +6482,32 @@ contains
    subroutine Pack_R8_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(in)               :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
       ! Increment data number and write to file
       RF%NumData = RF%NumData + 1
-      write(RF%Unit) RF%NumData
+      write(RF%Unit, iostat=stat) RF%NumData
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank5: error writing data number", RF%NumData, "to file, iostat =", stat
+         return
+      end if
 
       ! Write data to file
-      write(RF%Unit) Data
+      write(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Pack_R8_Rank5: error writing data", RF%NumData, "to file, iostat =", stat
+      end if
    end subroutine
 
    subroutine Unpack_R8_Rank5(RF, Data)
       type(RegFile), intent(inout)         :: RF
       real(R8Ki), intent(out)              :: Data(:,:,:,:,:)
+      integer(IntKi)                       :: stat
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5959,8 +6515,12 @@ contains
       ! Read data number, return if invalid
       if (.not. DataNumValid(RF)) return
 
-      ! Read data from file
-      read(RF%Unit) Data
+      ! Read data from file, return if error
+      read(RF%Unit, iostat=stat) Data
+      if (stat /= 0) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Unpack_R8_Rank5: error reading data", RF%NumData, "from file, iostat =", stat
+      end if
    end subroutine
 
    subroutine PackAlloc_R8_Rank5(RF, Data)

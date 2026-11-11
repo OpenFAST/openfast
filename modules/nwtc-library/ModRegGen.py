@@ -261,11 +261,24 @@ contains
       type(c_ptr), intent(out)      :: Ptr
       integer(B8Ki), intent(out)    :: Idx
 
+      ! Initialize outputs
+      Ptr = c_null_ptr
+      Idx = 0
+
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
 
-      ! Unpack pointer index
+      ! Unpack pointer index, return if error
       call RegUnpack(RF, Idx)
+      if (RegCheckErr(RF, "RegUnpackPointer")) return
+
+      ! Check that index is within pointer index bounds
+      if (Idx < 1 .or. Idx > size(RF%Pointers, kind=B8Ki)) then
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "RegUnpackPointer: pointer index", Idx, "out of range 1 to", size(RF%Pointers, kind=B8Ki)
+         Idx = 0
+         return
+      end if
 
       ! Get pointer from index
       Ptr = RF%Pointers(Idx)
@@ -303,12 +316,19 @@ contains
       type(RegFile), intent(inout)  :: RF
       logical                       :: match
       integer(B8Ki)                 :: DataNum
+      integer(IntKi)                :: stat
 
       ! Increment the data number to be read
       RF%NumData = RF%NumData + 1
 
-      ! Read the data number from the file
-      read(RF%Unit) DataNum
+      ! Read the data number from the file, return if error
+      read(RF%Unit, iostat=stat) DataNum
+      if (stat /= 0) then
+         match = .false.
+         RF%ErrStat = ErrID_Fatal
+         write(RF%ErrMsg, *) "Error reading data number", RF%NumData, "from file, iostat =", stat
+         return
+      end if
 
       ! If data number from file does not match expected number, set match false
       ! and create error message; otherwise, set match to true
@@ -329,16 +349,26 @@ def gen_pack(w, dt, decl, rank):
    w.write(f'\n\n   subroutine {name}(RF, Data)')
    w.write(f'\n      type(RegFile), intent(inout)         :: RF')
    w.write(f'\n      {decl+", intent(in)":<35s}  :: Data{dims}')
+   w.write(f'\n      integer(IntKi)                       :: stat')
    w.write(f'\n')
    w.write(f'\n      ! If error, return')
    w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
    w.write(f'\n')
    w.write(f'\n      ! Increment data number and write to file')
    w.write(f'\n      RF%NumData = RF%NumData + 1')
-   w.write(f'\n      write(RF%Unit) RF%NumData')
+   w.write(f'\n      write(RF%Unit, iostat=stat) RF%NumData')
+   w.write(f'\n      if (stat /= 0) then')
+   w.write(f'\n         RF%ErrStat = ErrID_Fatal')
+   w.write(f'\n         write(RF%ErrMsg, *) "{name}: error writing data number", RF%NumData, "to file, iostat =", stat')
+   w.write(f'\n         return')
+   w.write(f'\n      end if')
    w.write(f'\n')
    w.write(f'\n      ! Write data to file')
-   w.write(f'\n      write(RF%Unit) Data')
+   w.write(f'\n      write(RF%Unit, iostat=stat) Data')
+   w.write(f'\n      if (stat /= 0) then')
+   w.write(f'\n         RF%ErrStat = ErrID_Fatal')
+   w.write(f'\n         write(RF%ErrMsg, *) "{name}: error writing data", RF%NumData, "to file, iostat =", stat')
+   w.write(f'\n      end if')
    w.write(f'\n   end subroutine')
 
 
@@ -349,6 +379,7 @@ def gen_unpack(w, dt, decl, rank):
    w.write(f'\n   subroutine {name}(RF, Data)')
    w.write(f'\n      type(RegFile), intent(inout)         :: RF')
    w.write(f'\n      {decl+", intent(out)":<35s}  :: Data{dims}')
+   w.write(f'\n      integer(IntKi)                       :: stat')
    w.write(f'\n')
    w.write(f'\n      ! If error, return')
    w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')
@@ -356,8 +387,12 @@ def gen_unpack(w, dt, decl, rank):
    w.write(f'\n      ! Read data number, return if invalid')
    w.write(f'\n      if (.not. DataNumValid(RF)) return')
    w.write(f'\n')
-   w.write(f'\n      ! Read data from file')
-   w.write(f'\n      read(RF%Unit) Data')
+   w.write(f'\n      ! Read data from file, return if error')
+   w.write(f'\n      read(RF%Unit, iostat=stat) Data')
+   w.write(f'\n      if (stat /= 0) then')
+   w.write(f'\n         RF%ErrStat = ErrID_Fatal')
+   w.write(f'\n         write(RF%ErrMsg, *) "{name}: error reading data", RF%NumData, "from file, iostat =", stat')
+   w.write(f'\n      end if')
    w.write(f'\n   end subroutine')
 
 def gen_pack_alloc(w, dt, decl, rank):

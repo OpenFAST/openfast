@@ -211,9 +211,9 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
    ! Loop through tight-coupling modules
    do i = 1, size(p%iModTC)
-      if (GlueModData(i)%SubSteps > 1) then
-         call WrScr('Info: tightly coupled module "'//trim(GlueModData(i)%Abbr)//'" requested '// &
-                    'time step of '//trim(Num2Lstr(GlueModData(i)%DT))//', which is different than '// &
+      if (GlueModData(p%iModTC(i))%SubSteps > 1) then
+         call WrScr('Info: tightly coupled module "'//trim(GlueModData(p%iModTC(i))%Abbr)//'" requested '// &
+                    'time step of '//trim(Num2Lstr(GlueModData(p%iModTC(i))%DT))//', which is different than '// &
                     'glue-code time step of '//trim(Num2Lstr(p%h))//'. Sub-stepping disabled for this module.')
       end if
    end do
