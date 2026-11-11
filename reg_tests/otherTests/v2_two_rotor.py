@@ -51,7 +51,10 @@ for ch in n1:
     if ch == "Time":
         continue
     x, y = a[sl, idx[ch]], b[sl, idx[ch]]
-    peak = np.abs(x).max()
+    # Both turbines must sit below the floor before the channel is skipped: a
+    # channel quiet on turbine 1 but live on turbine 2 is exactly the one-sided
+    # asymmetry this comparison exists to catch.
+    peak = max(np.abs(x).max(), np.abs(y).max())
     if peak < floor:
         groups.setdefault("negligible", []).append((ch, 0.0))
         continue
