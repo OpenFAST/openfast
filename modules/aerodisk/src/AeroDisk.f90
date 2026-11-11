@@ -402,6 +402,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    real(SiKi)                                      :: x_hatDisk(3)   ! X direction unit vector of rotor disk (global)
    real(SiKi)                                      :: y_hatDisk(3)   ! Y direction unit vector of rotor disk (global)
    real(SiKi)                                      :: z_hatDisk(3)   ! Z direction unit vector of rotor disk (global)
+   real(SiKi)                                      :: z_hat_phys(3)  ! physical (right-handed) skew z axis, before the mirror is applied to the load basis
    real(SiKi)                                      :: VRel_vec(3)    ! relative velocity of wind in moving rotor disk frame
    real(SiKi)                                      :: tmp1,tmp3(3)   ! temporary variables for calculations
    integer(IntKi)                                  :: i              ! generic counter
@@ -518,12 +519,14 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       m%x_hat = x_hatDisk
       m%y_hat = y_hatDisk
       m%z_hat = z_hatDisk
+      z_hat_phys = z_hatDisk
    else
       m%x_hat = x_hatDisk
       m%y_hat = tmp3 / tmp1
+      z_hat_phys = cross_product( VRel_vec, x_hatDisk ) / tmp1
       ! MirrorRotor: a cross product of two true vectors is a pseudovector, so without
       ! this the skew-aligned triad comes out left-handed on a mirrored rotor.
-      m%z_hat = p%RotDir * cross_product( VRel_vec, x_hatDisk ) / tmp1
+      m%z_hat = p%RotDir * z_hat_phys
    endif
 
    !---------------
@@ -533,7 +536,11 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !!          \vec{V}_\textrm{rel}[1] \hat{x}_\textrm{disk}[1] + \vec{V}_\textrm{rel}[2] \hat{x}_\textrm{disk}[2] \right) \f$
    !! - PsiSkew:    \f$ \Psi_\textrm{skew} = \text{ATAN2}\left( \hat{z} \bullet \hat{y}_\textrm{disk}, -\hat{z}\bullet \hat{z}_\textrm{disk} \right) \f$
    y%YawErr  = atan2( VRel_vec(2)*x_hatDisk(1) - VRel_vec(1)*x_hatDisk(2),   VRel_vec(1)*x_hatDisk(1) + VRel_vec(2)*x_hatDisk(2) )
-   y%PsiSkew = atan2( -1.0_ReKi * real( dot_product(m%z_hat,y_hatDisk), ReKi), real( dot_product(m%z_hat, z_hatDisk), ReKi) )
+   ! MirrorRotor: the skew azimuth is pure inflow/disk geometry, identical for either
+   ! rotation sense, so it is taken from the physical skew axis; m%z_hat carries the
+   ! mirror for the load basis only (with m%z_hat here, a mirrored rotor would report
+   ! PsiSkew shifted by pi and FAST.Farm would orient its curled wake 180 deg off).
+   y%PsiSkew = atan2( -1.0_ReKi * real( dot_product(z_hat_phys,y_hatDisk), ReKi), real( dot_product(z_hat_phys, z_hatDisk), ReKi) )
   
 
    !-------------------------------------------
