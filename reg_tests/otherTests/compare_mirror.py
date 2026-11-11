@@ -54,7 +54,10 @@ def load(path):
 
 def classify(x, y, tol, floor):
     """Return (class, residual) for one channel pair."""
-    peak = np.abs(x).max()
+    # Both signals must sit below the floor before the channel is skipped: a channel
+    # that is zero clockwise but wakes up in the mirrored run is exactly the kind of
+    # one-sided sign/frame bug this comparison exists to catch.
+    peak = max(np.abs(x).max(), np.abs(y).max())
     if peak < floor:
         return "negligible", 0.0
     den = max(peak, 1e-12)
