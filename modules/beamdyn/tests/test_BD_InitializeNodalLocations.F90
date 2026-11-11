@@ -44,7 +44,7 @@ subroutine test_BD_InitializeNodalLocations_np5_p6(error)
    integer(IntKi)             :: ErrStat
    character                  :: ErrMsg
    character(1024)            :: testname
-   real(BDKi), parameter      :: tolerance = 1e-13
+   real(BDKi), parameter      :: tolerance = 1e-13_BDKi
 
    ! --------------------------------------------------------------------------
    testname = "test_InitializeNodalLocations_1m_kp5_p6"
@@ -71,40 +71,40 @@ subroutine test_BD_InitializeNodalLocations_np5_p6(error)
 
    call AllocAry(kp_coordinate, kp_member(1), 4, "kp_coordinate", ErrStat, ErrMsg)
 
-   kp_coordinate(1, :) = [0., 0., 0., 0.]
-   kp_coordinate(2, :) = [0.2421875, 0.3125, 1.25, 5.625]
-   kp_coordinate(3, :) = [0.375, 1., 2.5, 22.5]
-   kp_coordinate(4, :) = [0.1171875, 2.0625, 3.75, 50.625]
-   kp_coordinate(5, :) = [-1., 3.5, 5., 90.]
+   kp_coordinate(1, :) = [0._BDKi, 0._BDKi, 0._BDKi, 0._BDKi]
+   kp_coordinate(2, :) = [0.2421875_BDKi, 0.3125_BDKi, 1.25_BDKi, 5.625_BDKi]
+   kp_coordinate(3, :) = [0.375_BDKi, 1._BDKi, 2.5_BDKi, 22.5_BDKi]
+   kp_coordinate(4, :) = [0.1171875_BDKi, 2.0625_BDKi, 3.75_BDKi, 50.625_BDKi]
+   kp_coordinate(5, :) = [-1._BDKi, 3.5_BDKi, 5._BDKi, 90._BDKi]
 
-   gll(:) = [-1., -0.8302238962785669, -0.46884879347071423, 0., 0.46884879347071423, 0.8302238962785669, 1.]
+   gll(:) = [-1._BDKi, -0.8302238962785669_BDKi, -0.46884879347071423_BDKi, 0._BDKi, 0.46884879347071423_BDKi, 0.8302238962785669_BDKi, 1._BDKi]
 
-   baseline_uuN0 = 0.
+   baseline_uuN0 = 0._BDKi
 
    ! following calculated in mathematica
-   baseline_uuN0(1:3, 1, 1) = [0., 0., 0.]
-   baseline_uuN0(1:3, 2, 1) = [0.0847841995263206, 0.06406196997648083, 0.4244402593035813]
-   baseline_uuN0(1:3, 3, 1) = [0.2556265283202704, 0.3443790047804582, 1.327878016323214]
-   baseline_uuN0(1:3, 4, 1) = [0.375, 1., 2.5]
-   baseline_uuN0(1:3, 5, 1) = [0.152564565773068, 1.985349781927959, 3.672121983676785]
-   baseline_uuN0(1:3, 6, 1) = [-0.4874656517463806, 2.969845606951464, 4.575559740696413]
-   baseline_uuN0(1:3, 7, 1) = [-1., 3.5, 5.]
+   baseline_uuN0(1:3, 1, 1) = [0._BDKi, 0._BDKi, 0._BDKi]
+   baseline_uuN0(1:3, 2, 1) = [0.0847841995263206_BDKi, 0.06406196997648083_BDKi, 0.4244402593035813_BDKi]
+   baseline_uuN0(1:3, 3, 1) = [0.2556265283202704_BDKi, 0.3443790047804582_BDKi, 1.327878016323214_BDKi]
+   baseline_uuN0(1:3, 4, 1) = [0.375_BDKi, 1._BDKi, 2.5_BDKi]
+   baseline_uuN0(1:3, 5, 1) = [0.152564565773068_BDKi, 1.985349781927959_BDKi, 3.672121983676785_BDKi]
+   baseline_uuN0(1:3, 6, 1) = [-0.4874656517463806_BDKi, 2.969845606951464_BDKi, 4.575559740696413_BDKi]
+   baseline_uuN0(1:3, 7, 1) = [-1._BDKi, 3.5_BDKi, 5._BDKi]
 
-   baseline_tangent(1:3, 1, 1) = [0.1951800145897074, 0.0975900072948519, 0.975900072948533]
-   baseline_tangent(1:3, 2, 1) = [0.1914764728687931, 0.1942130285347349, 0.962090463462295]
-   baseline_tangent(1:3, 3, 1) = [0.1549438849532919, 0.3815415434641369, 0.911272979477931]
-   baseline_tangent(1:3, 4, 1) = [0., 0.5734623443633284, 0.81923192051904]
-   baseline_tangent(1:3, 5, 1) = [-0.2957782328585355, 0.6690666276575518, 0.6818101529913093]
-   baseline_tangent(1:3, 6, 1) = [-0.5494018213496115, 0.6414840856724742, 0.535402471535834]
-   baseline_tangent(1:3, 7, 1) = [-0.6492344540642337, 0.6028605644882184, 0.4637388957601716]
+   baseline_tangent(1:3, 1, 1) = [0.1951800145897074_BDKi, 0.0975900072948519_BDKi, 0.975900072948533_BDKi]
+   baseline_tangent(1:3, 2, 1) = [0.1914764728687931_BDKi, 0.1942130285347349_BDKi, 0.962090463462295_BDKi]
+   baseline_tangent(1:3, 3, 1) = [0.1549438849532919_BDKi, 0.3815415434641369_BDKi, 0.911272979477931_BDKi]
+   baseline_tangent(1:3, 4, 1) = [0._BDKi, 0.5734623443633284_BDKi, 0.81923192051904_BDKi]
+   baseline_tangent(1:3, 5, 1) = [-0.2957782328585355_BDKi, 0.6690666276575518_BDKi, 0.6818101529913093_BDKi]
+   baseline_tangent(1:3, 6, 1) = [-0.5494018213496115_BDKi, 0.6414840856724742_BDKi, 0.535402471535834_BDKi]
+   baseline_tangent(1:3, 7, 1) = [-0.6492344540642337_BDKi, 0.6028605644882184_BDKi, 0.4637388957601716_BDKi]
 
-   baseline_twist(1, 1) = 0.
-   baseline_twist(2, 1) = 0.6485383213836768
-   baseline_twist(3, 1) = 6.347736094444107
-   baseline_twist(4, 1) = 22.50000000000001
-   baseline_twist(5, 1) = 48.54412750680838
-   baseline_twist(6, 1) = 75.36868898645466
-   baseline_twist(7, 1) = 90.
+   baseline_twist(1, 1) = 0._BDKi
+   baseline_twist(2, 1) = 0.6485383213836768_BDKi
+   baseline_twist(3, 1) = 6.347736094444107_BDKi
+   baseline_twist(4, 1) = 22.50000000000001_BDKi
+   baseline_twist(5, 1) = 48.54412750680838_BDKi
+   baseline_twist(6, 1) = 75.36868898645466_BDKi
+   baseline_twist(7, 1) = 90._BDKi
 
    ! here we're using the BD_ComputeIniNodalCrv to construct the rotation parameters; this is what is used in
    ! BeamDyn; I do not want to rely on this routine and would rather calculate externally

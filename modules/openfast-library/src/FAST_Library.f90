@@ -599,7 +599,7 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
    if (ErrStat .ne. ErrID_None) then
       AbortErrLev_c = AbortErrLev
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
@@ -612,16 +612,16 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
    if ( (CompLoadsType .ne. Module_ExtLd) ) then
       CALL SetErrStat(ErrID_Fatal, "CompAero is not set to 3 for use of the External Loads module. Use a different C++ initialization call for this turbine.", ErrStat, ErrMsg, RoutineName )
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
    call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST)
 
-   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
+   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c, SIZE(OutFileRoot_c) )
 
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
 
 end subroutine FAST_ExtLoads_Init
 !==================================================================================================================================
@@ -705,7 +705,7 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
    if (ErrStat .ne. ErrID_None) then
       AbortErrLev_c = AbortErrLev
       ErrStat_c     = ErrStat
-      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
@@ -727,7 +727,7 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
       !!FAST reassigns CompInflow after reading it to a module number based on an internal list in the FAST_Registry. So 2 in input file becomes 3 inside the code.
       CALL SetErrStat(ErrID_Fatal, "Number of requested actuator points is non-zero when inflow type is not 2. Please set number of actuator points to zero when induction is turned on.", ErrStat, ErrMsg, RoutineName )
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
@@ -760,10 +760,10 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
       NumTwrElem_c = 0
    END IF
 
-   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
+   OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c, SIZE(OutFileRoot_c) )
 
    ErrStat_c = ErrStat
-   ErrMsg_c = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg_c = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
 
  contains
    LOGICAL FUNCTION FAILED()
@@ -812,7 +812,7 @@ subroutine FAST_CFD_Solution0(iTurb_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_
       ! set values for return to ExternalInflow
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
-   ErrMsg_c      = TRANSFER( ErrMsg, ErrMsg_c )
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
 
 end subroutine FAST_CFD_Solution0
 !==================================================================================================================================
@@ -960,7 +960,7 @@ subroutine FAST_ExtLoads_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, d
 
    if (ErrStat .ne. ErrID_None) then
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
@@ -984,7 +984,7 @@ subroutine FAST_ExtLoads_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, d
    if ( (CompLoadsType .ne. Module_ExtLd) ) then
       CALL SetErrStat(ErrID_Fatal, "CompAero is not set to 3 for use of the External Loads module. Use a different initialization call for this turbine.", ErrStat, ErrMsg, RoutineName )
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
       return
    end if
 
@@ -992,7 +992,7 @@ subroutine FAST_ExtLoads_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, d
    call SetExtLoads_pointers(iTurb, ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST)
 
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c, SIZE(ErrMsg_c) )
 
 end subroutine FAST_ExtLoads_Restart
 !==================================================================================================================================

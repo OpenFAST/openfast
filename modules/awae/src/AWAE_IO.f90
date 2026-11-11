@@ -125,7 +125,7 @@ subroutine ReadLowResWindVTK(n, p, Vamb_Low, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
   
-   FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(Num2LStr(n))//".vtk"//c_null_char, FileName)
+   FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(Num2LStr(n))//".vtk"//c_null_char, FileName, size(FileName))
    call ReadVTK_inflow_info(FileName, desc, dims, origin, gridSpacing, vecLabel, Vamb_Low, 1, ErrStat, ErrMsg)
    if (ErrStat /= ErrID_None) ErrMsg = "ReadLowResWindVTK:"//trim(ErrMsg)
 
@@ -152,7 +152,7 @@ subroutine ReadHighResWindVTK(nt, n, p, Vamb_high, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-   FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"//c_null_char, FileName)
+   FileName = transfer(trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"//c_null_char, FileName, size(FileName))
    call ReadVTK_inflow_info(FileName, desc, dims, origin, gridSpacing, vecLabel, Vamb_high, 1, ErrStat, ErrMsg)
    if (ErrStat /= ErrID_None) ErrMsg = "ReadHighResWindVTK:"//trim(ErrMsg)
 

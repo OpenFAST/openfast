@@ -376,6 +376,7 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 of_regression("5MW_Land_BD_DLL_WTurb_MirrorRotor"      "openfast;beamdyn;aerodyn;servodyn;mirrorrotor")
 of_regression("5MW_Land_BD_DLL_WTurb_StC"              "openfast;beamdyn;aerodyn;servodyn;stc")
 of_regression("5MW_Land_BD_Init"                       "openfast;beamdyn;aerodyn;servodyn")
+of_regression("5MW_Land_QuadRotor_DLL_WSt_OLAF"        "openfast;elastodyn;aerodyn;servodyn;subdyn;olaf;multirotor")
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm;offshore")
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn;olaf")

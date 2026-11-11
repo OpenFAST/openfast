@@ -80,19 +80,19 @@ subroutine test_BD_diffmtc_2node(error)
    call AllocAry(test_shapederivative, parametertype%nodes_per_elem, parametertype%nqp, "test_shapederivative", ErrStat, ErrMsg)
 
    call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
-   parametertype%QPtN = [-1.0, 1.0]
+   parametertype%QPtN = [-1.0_BDKi, 1.0_BDKi]
 
    call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
-   gll_nodes = [-1.0, 1.0]
+   gll_nodes = [-1.0_BDKi, 1.0_BDKi]
 
    call BD_diffmtc(parametertype%nodes_per_elem, gll_nodes, parametertype%QPtN, parametertype%nqp, test_shape, test_shapederivative)
 
    call AllocAry(baseline_shape, parametertype%nodes_per_elem, parametertype%nqp, "baseline_shape", ErrStat, ErrMsg)
    call AllocAry(baseline_shapederivative, parametertype%nodes_per_elem, parametertype%nqp, "baseline_shapederivative", ErrStat, ErrMsg)
-   baseline_shape(1, :) = [1.0, 0.0]
-   baseline_shape(2, :) = [0.0, 1.0]
-   baseline_shapederivative(1, :) = [-0.5, -0.5]
-   baseline_shapederivative(2, :) = [0.5, 0.5]
+   baseline_shape(1, :) = [1.0_BDKi, 0.0_BDKi]
+   baseline_shape(2, :) = [0.0_BDKi, 1.0_BDKi]
+   baseline_shapederivative(1, :) = [-0.5_BDKi, -0.5_BDKi]
+   baseline_shapederivative(2, :) = [0.5_BDKi, 0.5_BDKi]
 
    call check_array(error, baseline_shape, test_shape, testname, tolerance); if (allocated(error)) return
    call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance); if (allocated(error)) return
@@ -135,10 +135,10 @@ subroutine test_BD_diffmtc_5node(error)
 
    call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
    ! in following, first five points are the 4th-order GLL locations; last three points are randomly chosen off-node points
-   parametertype%QPtN = [-1.0, -0.6546536707079771, 0.0, 0.6546536707079771, 1.0, -0.8, 0.1, 0.4]
+   parametertype%QPtN = [-1.0_BDKi, -0.6546536707079771_BDKi, 0.0_BDKi, 0.6546536707079771_BDKi, 1.0_BDKi, -0.8_BDKi, 0.1_BDKi, 0.4_BDKi]
 
    call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
-   gll_nodes = [-1.0, -0.6546536707079771, 0.0, 0.6546536707079771, 1.0]
+   gll_nodes = [-1.0_BDKi, -0.6546536707079771_BDKi, 0.0_BDKi, 0.6546536707079771_BDKi, 1.0_BDKi]
 
    call BD_diffmtc(parametertype%nodes_per_elem, gll_nodes, parametertype%QPtN, parametertype%nqp, test_shape, test_shapederivative)
 
@@ -147,16 +147,16 @@ subroutine test_BD_diffmtc_5node(error)
 
    ! baseline_shape and baseline_shapederivative were calculated in Mathematica for fourth order Legendre spectral FE
 
-   baseline_shape(1, :) = [1., 0., 0., 0., 0., 0.266400000000000, 0.0329625, 0.0564]
-   baseline_shape(2, :) = [0., 1., 0., 0., 0., 0.855336358376291, -0.1121093731918499, -0.1746924181056723]
-   baseline_shape(3, :) = [0., 0., 1., 0., 0., -0.1776000000000001, 0.9669, 0.5263999999999998]
-   baseline_shape(4, :) = [0., 0., 0., 1., 0., 0.0854636416237095, 0.1525343731918499, 0.7234924181056726]
-   baseline_shape(5, :) = [0., 0., 0., 0., 1., -0.0296000000000000, -0.0402875, -0.1316]
-   baseline_shapederivative(1, :) = [-5., -1.240990253030983, 0.375, -0.2590097469690172, 0.5, -2.497, 0.27725, -0.1210000000000001]
-   baseline_shapederivative(2, :) = [6.756502488724241, 0., -1.336584577695454, 0.7637626158259736, -1.410164177942427, 2.144324478146486, -0.896320373697923, 0.4156426862650312]
-   baseline_shapederivative(3, :) = [-2.666666666666667, 1.74574312188794, 0., -1.74574312188794, 2.666666666666667, 0.5546666666666656, -0.6573333333333338, -2.069333333333333]
-   baseline_shapederivative(4, :) = [1.410164177942427, -0.7637626158259736, 1.336584577695454, 0., -6.756502488724241, -0.31499114481315, 1.696653707031257, 1.805690647068303]
-   baseline_shapederivative(5, :) = [-0.5, 0.2590097469690172, -0.375, 1.240990253030983, 5., 0.1129999999999999, -0.42025, -0.03099999999999978]
+   baseline_shape(1, :) = [1._BDKi, 0._BDKi, 0._BDKi, 0._BDKi, 0._BDKi, 0.266400000000000_BDKi, 0.0329625_BDKi, 0.0564_BDKi]
+   baseline_shape(2, :) = [0._BDKi, 1._BDKi, 0._BDKi, 0._BDKi, 0._BDKi, 0.855336358376291_BDKi, -0.1121093731918499_BDKi, -0.1746924181056723_BDKi]
+   baseline_shape(3, :) = [0._BDKi, 0._BDKi, 1._BDKi, 0._BDKi, 0._BDKi, -0.1776000000000001_BDKi, 0.9669_BDKi, 0.5263999999999998_BDKi]
+   baseline_shape(4, :) = [0._BDKi, 0._BDKi, 0._BDKi, 1._BDKi, 0._BDKi, 0.0854636416237095_BDKi, 0.1525343731918499_BDKi, 0.7234924181056726_BDKi]
+   baseline_shape(5, :) = [0._BDKi, 0._BDKi, 0._BDKi, 0._BDKi, 1._BDKi, -0.0296000000000000_BDKi, -0.0402875_BDKi, -0.1316_BDKi]
+   baseline_shapederivative(1, :) = [-5._BDKi, -1.240990253030983_BDKi, 0.375_BDKi, -0.2590097469690172_BDKi, 0.5_BDKi, -2.497_BDKi, 0.27725_BDKi, -0.1210000000000001_BDKi]
+   baseline_shapederivative(2, :) = [6.756502488724241_BDKi, 0._BDKi, -1.336584577695454_BDKi, 0.7637626158259736_BDKi, -1.410164177942427_BDKi, 2.144324478146486_BDKi, -0.896320373697923_BDKi, 0.4156426862650312_BDKi]
+   baseline_shapederivative(3, :) = [-2.666666666666667_BDKi, 1.74574312188794_BDKi, 0._BDKi, -1.74574312188794_BDKi, 2.666666666666667_BDKi, 0.5546666666666656_BDKi, -0.6573333333333338_BDKi, -2.069333333333333_BDKi]
+   baseline_shapederivative(4, :) = [1.410164177942427_BDKi, -0.7637626158259736_BDKi, 1.336584577695454_BDKi, 0._BDKi, -6.756502488724241_BDKi, -0.31499114481315_BDKi, 1.696653707031257_BDKi, 1.805690647068303_BDKi]
+   baseline_shapederivative(5, :) = [-0.5_BDKi, 0.2590097469690172_BDKi, -0.375_BDKi, 1.240990253030983_BDKi, 5._BDKi, 0.1129999999999999_BDKi, -0.42025_BDKi, -0.03099999999999978_BDKi]
 
    call check_array(error, baseline_shape, test_shape, testname, tolerance); if (allocated(error)) return
    call check_array(error, baseline_shapederivative, test_shapederivative, testname, tolerance); if (allocated(error)) return
