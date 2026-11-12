@@ -17,8 +17,10 @@ import numpy as np
 REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
+BUILD = os.environ.get("OPENFAST_BUILD") or f"{REPO_ROOT}/build-docker-double"
+BUILD_DEBUG = os.environ.get("OPENFAST_BUILD_DEBUG") or f"{REPO_ROOT}/build-docker-double-debug"
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
-EXE = f"{REPO}/build-docker-double-debug/glue-codes/openfast/openfast"
+EXE = f"{BUILD_DEBUG}/glue-codes/openfast/openfast"
 sys.path.insert(0, f"{REPO}/reg_tests/lib")
 import fast_io  # noqa: E402
 

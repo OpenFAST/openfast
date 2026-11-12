@@ -26,8 +26,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
     os.path.dirname(os.path.dirname(HERE)))
 BASE = os.path.join(os.path.dirname(HERE), "mirror_rotor_sweep_decks")
-DRIVER = os.path.join(REPO_ROOT, "build-docker-double-debug",
-                       "modules", "aerodyn", "aerodyn_driver")
+DRIVER = os.path.join(os.environ.get("OPENFAST_BUILD_DEBUG")
+                      or os.path.join(REPO_ROOT, "build-docker-double-debug"),
+                      "modules", "aerodyn", "aerodyn_driver")
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "mirror_sweep")
 
 # name -> (dvr edits, primary edits, mirrored-deck overrides[, tol])

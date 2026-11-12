@@ -20,8 +20,10 @@ import numpy as np
 REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
+BUILD = os.environ.get("OPENFAST_BUILD") or f"{REPO_ROOT}/build-docker-double"
+BUILD_DEBUG = os.environ.get("OPENFAST_BUILD_DEBUG") or f"{REPO_ROOT}/build-docker-double-debug"
 CASE = f"{REPO}/reg_tests/r-test/modules/simple-elastodyn/sed_test_HSSbrk"
-DRIVER = f"{REPO}/build-docker-double-debug/modules/simple-elastodyn/sed_driver"
+DRIVER = f"{BUILD_DEBUG}/modules/simple-elastodyn/sed_driver"
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "sed_canary")
 
 # RotSpeed and Azimuth are reported in the rotor's own convention, so a mirrored

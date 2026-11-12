@@ -4,10 +4,13 @@
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${OPENFAST_REPO:-$(cd "$HERE/../../.." && pwd)}"
+# Build trees: override when the checkout is built elsewhere.
+BUILD="${OPENFAST_BUILD:-$REPO/build-docker-double}"
+BUILD_DEBUG="${OPENFAST_BUILD_DEBUG:-$REPO/build-docker-double-debug}"
 GC="${GUARDCHECK_DIR:-${TMPDIR:-/tmp}/openfast_guardcheck}"
 mkdir -p "$GC"
 RT=$REPO/reg_tests/r-test/glue-codes/openfast
-OF=$REPO/build-docker-double-debug/glue-codes/openfast/openfast
+OF=$BUILD_DEBUG/glue-codes/openfast/openfast
 SRC=$RT/5MW_Land_noDLL_Steady_MirrorRotor
 
 # The deck refers to ../5MW_Baseline for the inflow and airfoil data.  Without this
@@ -94,8 +97,8 @@ python3 "$HERE/check_rtest_mirror_pair.py"
 #
 # The debug build does not include FAST.Farm, so fall back to the release one.
 FFBIN=""
-for cand in "$REPO/build-docker-double-debug/glue-codes/fast-farm/FAST.Farm" \
-            "$REPO/build-docker-double/glue-codes/fast-farm/FAST.Farm"; do
+for cand in "$BUILD_DEBUG/glue-codes/fast-farm/FAST.Farm" \
+            "$BUILD/glue-codes/fast-farm/FAST.Farm"; do
   [ -x "$cand" ] && FFBIN="$cand" && break
 done
 
@@ -103,7 +106,7 @@ done
 # stored, so they do not exist in the r-test source tree at all, and a deck that
 # cannot load its controller aborts before reaching any guard.
 FRT=$REPO/reg_tests/r-test/glue-codes/fast-farm
-FSTAGE=$REPO/build-docker-double/reg_tests/glue-codes/fast-farm
+FSTAGE=$BUILD/reg_tests/glue-codes/fast-farm
 [ -d "$FSTAGE/5MW_Baseline/ServoData" ] && FSRC=$FSTAGE || FSRC=$FRT
 FG=$GC/farm
 
@@ -191,7 +194,7 @@ runfarm farm_mirror "FAST.Farm terminated normally." yes
 # tooling-level check with their own documented floor and are not written by
 # the registered case). Reads the ctest-staged output, like emit_sign_table;
 # run `ctest -R SteadyInflow_curl_MirrorRotor` first if it is missing.
-FFTWIN=$REPO/build-docker-double/reg_tests/glue-codes/fast-farm/SteadyInflow_curl_MirrorRotor
+FFTWIN=$BUILD/reg_tests/glue-codes/fast-farm/SteadyInflow_curl_MirrorRotor
 if [ -f "$FFTWIN/FAST.Farm.out" ]; then
   if python3 "$REPO/reg_tests/development_testing/mirror_rotor_checks/farm_mirror_pair.py" --twin "$FFTWIN" --tol 2e-3 \
        > "${TMPDIR:-/tmp}/farm_twin_check.log" 2>&1; then

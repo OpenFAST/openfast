@@ -23,10 +23,12 @@ import numpy as np
 REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
+BUILD = os.environ.get("OPENFAST_BUILD") or f"{REPO_ROOT}/build-docker-double"
+BUILD_DEBUG = os.environ.get("OPENFAST_BUILD_DEBUG") or f"{REPO_ROOT}/build-docker-double-debug"
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
 SRC = f"{RTEST}/5MW_Land_BD_DLL_WTurb" if "--beamdyn" in sys.argv else f"{RTEST}/5MW_Land_DLL_WTurb"
 BASE = f"{RTEST}/5MW_Baseline"
-EXE = f"{REPO}/build-docker-double-debug/glue-codes/openfast/openfast"
+EXE = f"{BUILD_DEBUG}/glue-codes/openfast/openfast"
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "of_mirror")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

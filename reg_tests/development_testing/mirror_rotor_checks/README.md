@@ -6,7 +6,10 @@ behaviour that a stored baseline cannot express on its own — most of them exis
 to support the counter-clockwise rotor work described in
 `docs/source/user/glue-code/mirror_rotor.rst`.
 
-Nothing here runs automatically. The scripts are run by hand when a claim needs
+Nothing here runs automatically. The scripts locate the source tree from
+their own position (override with `OPENFAST_REPO`) and default to the
+`build-docker-double` / `build-docker-double-debug` build trees beneath it
+(override with `OPENFAST_BUILD` / `OPENFAST_BUILD_DEBUG`). The scripts are run by hand when a claim needs
 re-establishing, or when a change touches the rotor convention.
 
 Each script locates the repository from its own position on disk, so they work

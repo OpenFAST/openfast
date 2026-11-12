@@ -18,12 +18,14 @@ import numpy as np
 REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
+BUILD = os.environ.get("OPENFAST_BUILD") or f"{REPO_ROOT}/build-docker-double"
+BUILD_DEBUG = os.environ.get("OPENFAST_BUILD_DEBUG") or f"{REPO_ROOT}/build-docker-double-debug"
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
 # Cases with a Bladed-style controller reference a DISCON library that is built, not
 # stored, so it exists only under the build tree. Prefer that copy of a referenced
 # sibling directory when it is there; ctest stages it from the r-test source.
-STAGED = f"{REPO}/build-docker-double/reg_tests/glue-codes/openfast"
-EXE = f"{REPO}/build-docker-double-debug/glue-codes/openfast/openfast"
+STAGED = f"{BUILD}/reg_tests/glue-codes/openfast"
+EXE = f"{BUILD_DEBUG}/glue-codes/openfast/openfast"
 WORK = os.path.join(os.environ.get("TMPDIR", "/tmp"), "of_case_mirror")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

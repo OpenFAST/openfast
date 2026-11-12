@@ -105,7 +105,7 @@ def strip_coords(work, airfoil_src, aero_deck):
 
 def stage(repo, work, tmax, mode):
     """Clone both cases from the staged build tree and turn on surface VTK."""
-    built = os.path.join(repo, "build-docker-double", "reg_tests", "glue-codes", "openfast")
+    built = os.path.join(os.environ.get("OPENFAST_BUILD") or os.path.join(repo, "build-docker-double"), "reg_tests", "glue-codes", "openfast")
     baseline = os.path.join(built, "5MW_Baseline")
     if not os.path.isdir(baseline):
         raise SystemExit(f"no staged 5MW_Baseline in {built}; run ctest once first")
@@ -143,7 +143,7 @@ def stage(repo, work, tmax, mode):
 
 
 def run(repo, work, case):
-    exe = os.path.join(repo, "build-docker-double", "glue-codes", "openfast", "openfast")
+    exe = os.path.join(os.environ.get("OPENFAST_BUILD") or os.path.join(repo, "build-docker-double"), "glue-codes", "openfast", "openfast")
     if not os.path.isfile(exe):
         raise SystemExit(f"no openfast binary at {exe}")
     d = os.path.join(work, case)

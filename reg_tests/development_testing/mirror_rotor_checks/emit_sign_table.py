@@ -20,6 +20,7 @@ REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "reg_tests", "lib"))
+BUILD = os.environ.get("OPENFAST_BUILD") or os.path.join(REPO_ROOT, "build-docker-double")
 from compare_mirror import classify  # noqa: E402
 import pass_fail  # noqa: E402
 
@@ -44,9 +45,9 @@ FILE_PAIRS = [
 # label, single output file, per-rotor channel prefixes
 WITHIN_PAIRS = [
     ("AeroDyn nodal outputs",
-     os.path.join(REPO_ROOT, "build-docker-double", "reg_tests", "modules",
+     os.path.join(BUILD, "reg_tests", "modules",
                    "aerodyn", "ad_MultipleHAWT_MirrorRotor", "ad_driver.T1.outb"),
-     os.path.join(REPO_ROOT, "build-docker-double", "reg_tests", "modules",
+     os.path.join(BUILD, "reg_tests", "modules",
                    "aerodyn", "ad_MultipleHAWT_MirrorRotor", "ad_driver.T2.outb"),
      None),
     ("Twin-rotor semisubmersible",
