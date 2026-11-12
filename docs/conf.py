@@ -283,6 +283,29 @@ def setup(app):
         objname="CMake configuration value",
         indextemplate="pair: %s; CMake configuration"
     )
+
+
+def setup(app):
+    # Register your new custom width override file
+    app.add_css_file('custom.css')
+
+    try:
+        app.add_css_file('css/math_eq.css')
+    except:
+        pass
+    app.add_object_type(
+        "confval",
+        "confval",
+        objname="input file parameter",
+        indextemplate="pair: %s; input file parameter"
+    )
+    app.add_object_type(
+        "cmakeval",
+        "cmakeval",
+        objname="CMake configuration value",
+        indextemplate="pair: %s; CMake configuration"
+    )
+
 # --- Prolog that will be included at the top of every rst file
 # Here: defining the role :red: for html and latex
 rst_prolog = r"""

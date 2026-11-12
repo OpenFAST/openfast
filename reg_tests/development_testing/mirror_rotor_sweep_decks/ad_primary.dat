@@ -1,0 +1,248 @@
+------- AERODYN INPUT FILE --------------------------------------------------------------------------
+NREL 5.0 MW offshore baseline aerodynamic input properties.
+======  General Options  ============================================================================
+False                  Echo        - Echo the input to "<rootname>.AD.ech"? (flag)
+"default"              DTAero      - Time interval for aerodynamic calculations {or "default"} (s)
+1                      Wake_Mod    - Wake/induction model (switch) {0=none, 1=BEMT, 3=OLAF} [Wake_Mod cannot be 2 or 3 when linearizing]
+0                      TwrPotent   - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+0                      TwrShadow   - Calculate tower influence on wind based on downstream tower shadow? (switch) {0=none, 1=Powles model, 2=Eames model}
+False                  TwrAero     - Calculate tower aerodynamic loads? (flag)
+False                  CavitCheck  - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
+False                  NacelleDrag - Include Nacelle Drag effects? (flag)
+False                  CompAA      - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
+"unused"               AA_InputFile - AeroAcoustics input file [used only when CompAA=true]
+======  Environmental Conditions  ===================================================================
+"default"              AirDens     - Air density (kg/m^3)
+"default"              KinVisc     - Kinematic viscosity of working fluid (m^2/s)
+"default"              SpdSound    - Speed of sound in working fluid (m/s)
+"default"              Patm        - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+"default"              Pvap        - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
+======  Blade-Element/Momentum Theory Options  ====================================================== [unused when Wake_Mod=0 or 3, except for BEM_Mod]
+1                      BEM_Mod     - BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]
+--- Skew correction
+0                      Skew_Mod    - Skew model {0=No skew model, -1=Remove non-normal component for linearization, 1=skew model active}
+False                  SkewMomCorr - Turn the skew momentum correction on or off [used only when Skew_Mod=1]
+default                SkewRedistr_Mod - Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, default=1} [used only when Skew_Mod=1]
+"default"              SkewRedistrFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when Skew_Mod=1 and SkewRedistr_Mod=1]
+--- BEM algorithm 
+True                   TipLoss     - Use the Prandtl tip-loss model? (flag) [unused when Wake_Mod=0 or 3]
+True                   HubLoss     - Use the Prandtl hub-loss model? (flag) [unused when Wake_Mod=0 or 3]
+True                   TanInd      - Include tangential induction in BEMT calculations? (flag) [unused when Wake_Mod=0 or 3]
+False                  AIDrag      - Include the drag term in the axial-induction calculation? (flag) [unused when Wake_Mod=0 or 3]
+False                  TIDrag      - Include the drag term in the tangential-induction calculation? (flag) [unused when Wake_Mod=0,3 or TanInd=FALSE]
+"Default"              IndToler    - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when Wake_Mod=0 or 3]
+100                    MaxIter     - Maximum number of iteration steps (-) [unused when Wake_Mod=0]
+--- Shear correction
+False                  SectAvg     - Use sector averaging (flag)
+1                      SectAvgWeighting - Weighting function for sector average {1=Uniform, default=1} within a sector centered on the blade (switch) [used only when SectAvg=True]
+default                SectAvgNPoints - Number of points per sectors (-) {default=5} [used only when SectAvg=True]
+default                SectAvgPsiBwd - Backward azimuth relative to blade where the sector starts (<=0) {default=-60} (deg) [used only when SectAvg=True]
+default                SectAvgPsiFwd - Forward azimuth relative to blade where the sector ends (>=0) {default=60} (deg) [used only when SectAvg=True]
+--- Dynamic wake/inflow
+0                      DBEMT_Mod   - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
+4                      tau1_const  - Time constant for DBEMT (s) [used only when DBEMT_Mod=1 or 3]
+======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when Wake_Mod=3]
+"unused"               OLAFInputFileName - Input file for OLAF [used only when Wake_Mod=3]
+======  Unsteady Airfoil Aerodynamics Options  ====================================================
+False                  AoA34       - Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
+0                      UA_Mod      - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
+True                   FLookup     - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+3               IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+0                      UAStartRad  - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+1                      UAEndRad    - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+======  Airfoil Information =========================================================================
+1                      AFTabMod    - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
+1                      InCol_Alfa  - The column in the airfoil tables that contains the angle of attack (-)
+2                      InCol_Cl    - The column in the airfoil tables that contains the lift coefficient (-)
+3                      InCol_Cd    - The column in the airfoil tables that contains the drag coefficient (-)
+4                      InCol_Cm    - The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-)
+0                      InCol_Cpmin - The column in the airfoil tables that contains the Cpmin coefficient; use zero if there is no Cpmin column (-)
+8                      NumAFfiles  - Number of airfoil files used (-)
+"@RTEST@/5MW_Baseline/Airfoils/Cylinder1.dat" AFNames - Airfoil file names (NumAFfiles lines) (quoted strings)
+"@RTEST@/5MW_Baseline/Airfoils/Cylinder2.dat"
+"@RTEST@/5MW_Baseline/Airfoils/DU40_A17.dat"
+"@RTEST@/5MW_Baseline/Airfoils/DU35_A17.dat"
+"@RTEST@/5MW_Baseline/Airfoils/DU30_A17.dat"
+"@RTEST@/5MW_Baseline/Airfoils/DU25_A17.dat"
+"@RTEST@/5MW_Baseline/Airfoils/DU21_A17.dat"
+"@RTEST@/5MW_Baseline/Airfoils/NACA64_A17.dat"
+======  Rotor/Blade Properties  =====================================================================
+True                   UseBlCm     - Include aerodynamic pitching moment in calculations? (flag)
+"@RTEST@/5MW_Baseline/NRELOffshrBsline5MW_AeroDyn_blade.dat" ADBlFile(1) - Name of file containing distributed aerodynamic properties for Blade #1 (-)
+"@RTEST@/5MW_Baseline/NRELOffshrBsline5MW_AeroDyn_blade.dat" ADBlFile(2) - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
+"@RTEST@/5MW_Baseline/NRELOffshrBsline5MW_AeroDyn_blade.dat" ADBlFile(3) - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
+======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
+0                      VolHub      - Hub volume (m^3)
+0                      HubCenBx    - Hub center of buoyancy x direction offset (m)
+======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
+0                      VolNac      - Nacelle volume (m^3)
+0.0, 0.0, 0.0          NacCenB     - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+0, 0, 0                NacArea     - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+0, 0, 0                NacCd       - Drag coefficient for the nacelle areas defined above (-)
+0, 0, 0                NacDragAC   - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+======  Tail Fin Aerodynamics =======================================================================
+False                  TFinAero    - Calculate tail fin aerodynamics model (flag)
+"unused"               TFinFile    - Input file for tail fin aerodynamics [used only when TFinAero=True]
+======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+12                     NumTwrNds   - Number of tower nodes used in the analysis (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2
+(m)            (m)            (-)            (-)            (-)            (-)            (-)
+0.0000000E+00  6.0000000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+8.5261000E+00  5.7870000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+1.7053000E+01  5.5740000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+2.5579000E+01  5.3610000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+3.4105000E+01  5.1480000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+4.2633000E+01  4.9350000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+5.1158000E+01  4.7220000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+5.9685000E+01  4.5090000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+6.8211000E+01  4.2960000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+7.6738000E+01  4.0830000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+8.5268000E+01  3.8700000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+8.7600000E+01  3.8700000E+00  1.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+======  Outputs  ====================================================================================
+True                   SumPrint    - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"? (flag)
+3                      NBlOuts     - Number of blade node outputs [0 - 9] (-)
+5, 11, 17              BlOutNd     - Blade nodes whose values will be output (-)
+0                      NTwOuts     - Number of tower node outputs [0 - 9] (-)
+1, 2, 6                TwOutNd     - Tower nodes whose values will be output (-)
+                       OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"RtAeroFxh"
+"RtAeroFyh"
+"RtAeroFzh"
+"RtAeroMxh"
+"RtAeroMyh"
+"RtAeroMzh"
+"RtAeroPwr"
+"RtAeroCp"
+"RtAeroCt"
+"RtAeroCq"
+"RtTSR"
+"RtSkew"
+"B1Azimuth"
+"B2Azimuth"
+"B3Azimuth"
+"B1N1Alpha"
+"B1N1Phi"
+"B1N1Vrel"
+"B1N1Cl"
+"B1N1Cd"
+"B1N1Cx"
+"B1N1Cy"
+"B1N1Fn"
+"B1N1Ft"
+"B1N1Vindx"
+"B1N1Vindy"
+"B1N1AxInd"
+"B1N1TnInd"
+"B1N2Alpha"
+"B1N2Phi"
+"B1N2Vrel"
+"B1N2Cl"
+"B1N2Cd"
+"B1N2Cx"
+"B1N2Cy"
+"B1N2Fn"
+"B1N2Ft"
+"B1N2Vindx"
+"B1N2Vindy"
+"B1N2AxInd"
+"B1N2TnInd"
+"B1N3Alpha"
+"B1N3Phi"
+"B1N3Vrel"
+"B1N3Cl"
+"B1N3Cd"
+"B1N3Cx"
+"B1N3Cy"
+"B1N3Fn"
+"B1N3Ft"
+"B1N3Vindx"
+"B1N3Vindy"
+"B1N3AxInd"
+"B1N3TnInd"
+"B2N1Alpha"
+"B2N1Phi"
+"B2N1Vrel"
+"B2N1Cl"
+"B2N1Cd"
+"B2N1Cx"
+"B2N1Cy"
+"B2N1Fn"
+"B2N1Ft"
+"B2N1Vindx"
+"B2N1Vindy"
+"B2N1AxInd"
+"B2N1TnInd"
+"B2N2Alpha"
+"B2N2Phi"
+"B2N2Vrel"
+"B2N2Cl"
+"B2N2Cd"
+"B2N2Cx"
+"B2N2Cy"
+"B2N2Fn"
+"B2N2Ft"
+"B2N2Vindx"
+"B2N2Vindy"
+"B2N2AxInd"
+"B2N2TnInd"
+"B2N3Alpha"
+"B2N3Phi"
+"B2N3Vrel"
+"B2N3Cl"
+"B2N3Cd"
+"B2N3Cx"
+"B2N3Cy"
+"B2N3Fn"
+"B2N3Ft"
+"B2N3Vindx"
+"B2N3Vindy"
+"B2N3AxInd"
+"B2N3TnInd"
+"B3N1Alpha"
+"B3N1Phi"
+"B3N1Vrel"
+"B3N1Cl"
+"B3N1Cd"
+"B3N1Cx"
+"B3N1Cy"
+"B3N1Fn"
+"B3N1Ft"
+"B3N1Vindx"
+"B3N1Vindy"
+"B3N1AxInd"
+"B3N1TnInd"
+"B3N2Alpha"
+"B3N2Phi"
+"B3N2Vrel"
+"B3N2Cl"
+"B3N2Cd"
+"B3N2Cx"
+"B3N2Cy"
+"B3N2Fn"
+"B3N2Ft"
+"B3N2Vindx"
+"B3N2Vindy"
+"B3N2AxInd"
+"B3N2TnInd"
+"B3N3Alpha"
+"B3N3Phi"
+"B3N3Vrel"
+"B3N3Cl"
+"B3N3Cd"
+"B3N3Cx"
+"B3N3Cy"
+"B3N3Fn"
+"B3N3Ft"
+"B3N3Vindx"
+"B3N3Vindy"
+"B3N3AxInd"
+"B3N3TnInd"
+END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)
+---------------------- NODE OUTPUTS --------------------------------------------
+1                      BldNd_BladesOut  - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
+ALL                    BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
+                       OutList_Nodal - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+
+END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+====================================================================================================

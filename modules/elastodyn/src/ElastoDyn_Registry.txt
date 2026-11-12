@@ -26,6 +26,7 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
 typedef ^   InitInputType   ReKi WtrDpth -  -   -    "Water depth" m
+typedef ^   InitInputType   LOGICAL MirrorRotor - .FALSE. - "Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)" -
 typedef	^	InitInputType	LOGICAL	CompAeroMaps	-	.FALSE.	-	"flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef	^	InitInputType	ReKi	RotSpeed	-	-	-	"Rotor speed used when ElastoDyn is computing aero maps"	"rad/s"
 
@@ -748,6 +749,7 @@ typedef	^	ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"
 typedef	^	ParameterType	ReKi	DTTorDmp	-	-	-	"Drivetrain torsional damper"
 typedef	^	ParameterType	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"
 typedef	^	ParameterType	ReKi	GBRatio	-	-	-	"Gearbox ratio"
+typedef	^	ParameterType	ReKi	RotDir	-	1.0	-	"Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW)"
 typedef	^	ParameterType	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"
 typedef	^	ParameterType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"

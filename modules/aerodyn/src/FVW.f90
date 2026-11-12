@@ -395,6 +395,7 @@ subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
       call AllocAry(p%W(iW)%AFindx, size(InitInp%W(iW)%AFindx,1), 1, 'AFindx',ErrStat,ErrMsg)
       p%W(iW)%AFindx = InitInp%W(iW)%AFindx     ! Copying in case AD15 still needs these
       p%W(iW)%iRotor = InitInp%W(iW)%iRotor
+      p%W(iW)%RotDir = InitInp%W(iW)%RotDir
 
       p%W(iW)%nSpan  = size(InitInp%W(iW)%chord)-1
       call move_alloc(InitInp%W(iW)%chord, p%W(iW)%chord_LL)
@@ -1767,11 +1768,13 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, m, Err
          !! ....... compute inputs to UA ...........
          ! NOTE: To be consistent with CalcOutput we take Vwind_LL that was set using m%DisturbedInflow from AeroDyn..
          ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
-         call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), u%WingsMesh(iW)%TranslationVel(1:3,i),  m%W(iW)%Vind_LL(1:3,i), u%W(iW)%Vwnd_LL(1:3,i), &
+         call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), p%W(iW)%RotDir, u%WingsMesh(iW)%TranslationVel(1:3,i),  m%W(iW)%Vind_LL(1:3,i), u%W(iW)%Vwnd_LL(1:3,i), &
                                  p%KinVisc, p%W(iW)%chord_LL(i), u_UA%U, u_UA%alpha, u_UA%Re)
          u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
          u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
-         u_UA%omega    = u%W(iW)%omega_z(i)
+         ! MirrorRotor: the torsion rate is the section-frame z component of a
+         ! pseudovector, which reverses under the reflection, matching BEMT's omega_z.
+         u_UA%omega    = p%W(iW)%RotDir * u%W(iW)%omega_z(i)
          u_UA%UserProp = 0 ! u1%UserProp(i,j) ! TODO
       end do ! i nSpan
    end do ! iW nWings
@@ -1864,7 +1867,10 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
          Gamma_dyn      = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
          Gamma_dyn_avg  = (Gamma_dyn+Gamma_dyn_prev)*0.5_ReKi
          Gamma_dyn_prev = Gamma_dyn
-         z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
+         ! MirrorRotor: Cl above is the clockwise-equivalent value (the UA inputs are
+         ! converted on the way in), so the circulation takes the wing's rotation sense
+         ! here, exactly as the polar-data and prescribed paths do.
+         z%W(iW)%Gamma_LL(j-1) = p%W(iW)%RotDir * Gamma_dyn_avg
       enddo
    enddo ! iW, Loop on wings
    if(.false.) print*,u%W(1)%omega_z(1) ! unused var
