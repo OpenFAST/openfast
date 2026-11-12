@@ -60,8 +60,60 @@ MODULE MoorDyn_Misc
    PUBLIC :: getWaterKin
    PUBLIC :: setupWaterKin
 
+   PUBLIC :: RampFactor
+
 CONTAINS
 
+   ! ::::::::::::::::::::::::::::::::: ramp functions :::::::::::::::::::::::::::::::::::::::::::::::
+
+   ! Evaluate a ramp function. Ramp is 0 before tStart and 1 after tStart + tRamp, rising
+   ! monotonically inbetween.
+   SUBROUTINE RampFactor(ramp, time, tStart, tRamp, coef, r)
+
+      INTEGER(IntKi), INTENT(IN   )  :: ramp     ! ramp function 
+      REAL(DbKi),     INTENT(IN   )  :: time     ! simulation time [s]
+      REAL(DbKi),     INTENT(IN   )  :: tStart   ! time at which the ramp starts [s]
+      REAL(DbKi),     INTENT(IN   )  :: tRamp    ! ramp duration [s]
+      REAL(DbKi),     INTENT(IN   )  :: coef     ! shape coefficient, sigmoid only
+      REAL(DbKi),     INTENT(  OUT)  :: r        ! ramp factor, from [0, 1]
+
+      REAL(DbKi)                     :: tau      ! normalized time, (0,1)
+
+      IF (time < tStart) THEN
+         r = 0.0_DbKi
+         RETURN
+      END IF
+
+      IF ((tRamp <= 0.0_DbKi) .OR. (time >= tStart + tRamp)) THEN
+         r = 1.0_DbKi
+         RETURN
+      END IF
+
+      tau = (time - tStart) / tRamp
+
+      SELECT CASE (ramp)
+
+         CASE (MD_RampLinear)
+            r = tau
+
+         CASE (MD_RampSine)
+            r = 0.5_DbKi * (1.0_DbKi - COS(Pi_D * tau))
+
+         CASE (MD_RampSigmoid)
+            ! A logistic curve written with tanh(x), x from -coef/2 at tau = 0 to +coef/2 at
+            ! tau = 1. Dividing by tanh(coef/2) gives ratio and 0.5*(1 + ratio) maps to 0 and 1.
+            IF (coef < 1.0e-6_DbKi) THEN ! linear for stability when approx linear
+               r = tau
+            ELSE
+               r = 0.5_DbKi * (1.0_DbKi + TANH(0.5_DbKi*coef*(2.0_DbKi*tau - 1.0_DbKi)) / TANH(0.5_DbKi*coef))
+            END IF
+
+         CASE DEFAULT
+            r = 0.0_DbKi
+
+      END SELECT
+
+   END SUBROUTINE RampFactor
 
    ! ::::::::::::::::::::::::::::::::: math convenience functions ::::::::::::::::::::::::::::::::::
    ! should add error checking if I keep these, but hopefully there are existing NWTCLib functions to replace them

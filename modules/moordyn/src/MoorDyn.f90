@@ -76,14 +76,15 @@ CONTAINS
   !    CHARACTER(1024)                              :: priPath        ! The path to the primary MoorDyn input file
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
-      INTEGER(IntKi)                               :: il              ! index
-      INTEGER(IntKi)                               :: iil              ! index
+      INTEGER(IntKi)                               :: il             ! index
+      INTEGER(IntKi)                               :: iil            ! index
       INTEGER(IntKi)                               :: Success        ! flag for checking whether line is attached to failure point
       REAL(DbKi)                                   :: hSeg           ! segment length used to size slip support kernels
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
       INTEGER(IntKi)                               :: Itemp          ! index
+      INTEGER(IntKi)                               :: Itemp2           ! index
       INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
@@ -414,6 +415,19 @@ CONTAINS
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nExtLds = p%nExtLds + 1
+                  Line = NextLine(i)
+               END DO
+
+            else if (INDEX(Line, "ATTACHMENT EVENTS") > 0) then ! if attachment events header
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! find how many elements of this type there are
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nAttachs = p%nAttachs + 1
                   Line = NextLine(i)
                END DO
 
@@ -2145,6 +2159,140 @@ CONTAINS
                         END IF
                      END IF
                      
+                  END IF
+
+               END DO
+
+               ! TODO: write inputs to log file
+
+            !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "ATTACHMENT EVENTS") > 0) then ! if attachment events header
+
+               IF (wordy > 0) print *, "   Reading attachment events";
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! process each attachment event
+               DO l = 1,p%nAttachs
+
+                  !read into a line
+                  Line = NextLine(i)
+
+                  ! count commas to determine how many line IDs are specified for this event
+                  N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+
+                  ! check for correct number of columns (CountWords splits by comma and space, so the
+                  ! 7 columns give N line IDs plus six more entries)
+                  IF ( CountWords( Line ) /= N+6 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! parse out entries:  ID  Point  Line  AttachTime  RampTime  RampFcn  RampCoef
+                  READ(Line,*,IOSTAT=ErrStat2) Itemp, Itemp2, TempIDnums(1:N), tempArray(1), tempArray(2), tempString1, tempString2
+                  IF ( ErrStat2 /= 0 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! The events need to be sequentially numbered
+                  IF ( Itemp .NE. l ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ( (Itemp2 < 1) .OR. (Itemp2 > p%nPoints) ) THEN ! checking valid point numbers
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has invalid point ID '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! read the ramp function, a bare "-" defaults to sigmoid
+                  CALL Conv2UC(tempString1)
+                  SELECT CASE (TRIM(tempString1))
+                     CASE ("LINEAR")
+                        il = MD_RampLinear
+                     CASE ("SIN", "SINE", "COS", "COSINE")
+                        il = MD_RampSine
+                     CASE ("SIGMOID", "LOGISTIC", "-")
+                        il = MD_RampSigmoid
+                     CASE DEFAULT
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has unrecognized ramp function '//trim(tempString1)//'. Must be Linear, Sin, or Sigmoid.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                  END SELECT
+
+                  ! ramp coefficient defaults to 5.0 if "-" is given
+                  IF (trim(tempString2) == "-") THEN
+                     tempArray(3) = 5.0_DbKi
+                  ELSE
+                     READ(tempString2, *, IOSTAT=ErrStat2) tempArray(3)
+                     IF ( ErrStat2 /= 0 ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has an unreadable ramp coefficient '//trim(tempString2)//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                  END IF
+
+                  IF ( (tempArray(1) < 0.0_DbKi) .OR. (tempArray(2) < 0.0_DbKi) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' times cannot be negative.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ( tempArray(3) < 0.0_DbKi ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' ramp coefficient cannot be negative.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  DO J = 1, N
+
+                     IF ( (TempIDnums(J) < 1) .OR. (TempIDnums(J) > p%nLines) ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has invalid line ID '//trim(Num2LStr(TempIDnums(J)))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                     
+                     ! check that line is attached to point
+                     Itemp = 0
+                     DO iil = 1, m%PointList(Itemp2)%nAttached ! loop through attached lines
+                        IF (m%PointList(Itemp2)%Attached(iil) == TempIDnums(J)) Itemp = iil
+                     END DO
+                     IF (Itemp == 0) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': line '//trim(Num2LStr(TempIDnums(J)))//' is not attached to point '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+
+                     ! Check one attachment event per line per point.
+                     IF (m%PointList(Itemp2)%AttachHasEvent(Itemp)) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': line '//trim(Num2LStr(TempIDnums(J)))//' is already attached via point '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+
+                     m%PointList(Itemp2)%AttachHasEvent(Itemp) = .TRUE.
+                     m%PointList(Itemp2)%AttachTime(Itemp)     = tempArray(1)
+                     m%PointList(Itemp2)%AttachRampTime(Itemp) = tempArray(2)
+                     m%PointList(Itemp2)%AttachRampFcn(Itemp)  = il
+                     m%PointList(Itemp2)%AttachRampCoef(Itemp) = tempArray(3)
+
+                  END DO
+
+                  m%PointList(Itemp2)%isAttachment = .TRUE.
+
+                  ! Free points need mass or else NaN's. Attachment lines provide zero mass until
+                  ! activation.
+                  IF ( ALL(m%PointList(Itemp2)%AttachHasEvent(1:m%PointList(Itemp2)%nAttached)) .AND. (m%PointList(Itemp2)%typeNum == 0) .AND. (m%PointList(Itemp2)%pointM < 1.0e-6_DbKi) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': free point '//trim(Num2LStr(Itemp2))//' needs non-attachment line, or a non zero mass.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
                   END IF
 
                END DO

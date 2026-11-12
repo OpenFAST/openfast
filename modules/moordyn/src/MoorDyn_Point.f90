@@ -217,6 +217,7 @@ CONTAINS
       Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
       Real(DbKi)                 :: M_i(3,3)  ! mass from an attached line
       Real(DbKi)                 :: FextTs(3) ! user-defined external force interpolated from a time series
+      Real(DbKi)                 :: AttachR   ! the fraction of an attached line's load and mass which reaches the point, from [0, 1]
 
 
       ! start with the Point's own forces including buoyancy and weight, and its own mass
@@ -246,7 +247,19 @@ CONTAINS
       !   print *, "  attached line ID", m%LineList(Point%attached(l))%IdNum
          
          CALL Line_GetEndStuff(m%LineList(Point%attached(l)), Fnet_i, Moment_dummy, M_i, Point%Top(l))
-         
+
+         ! Restrict force and mass coupling until attachment is triggered, then ramp with time.
+         IF (Point%isAttachment) THEN
+            IF (Point%AttachHasEvent(l)) THEN
+               AttachR = 0.0_DbKi
+               IF (.NOT. m%IC_gen) THEN ! call the ramp function (will be 0 until attachment time)
+                  CALL RampFactor(Point%AttachRampFcn(l), Point%time, Point%AttachTime(l), Point%AttachRampTime(l), Point%AttachRampCoef(l), AttachR)
+               END IF
+               Fnet_i = Fnet_i * AttachR
+               M_i    = M_i    * AttachR
+            END IF
+         END IF
+
          ! sum quantitites
          Point%Fnet = Point%Fnet + Fnet_i
          Point%M    = Point%M    + M_i

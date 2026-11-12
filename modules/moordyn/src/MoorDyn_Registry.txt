@@ -22,6 +22,9 @@ param     MoorDyn/MD  -                IntKi              MD_MaxNCoef     -   30
 param     MoorDyn/MD  -                IntKi              MD_MaxBdAtch    -  100    -   "maximum number of attachments to a body" -
 param     MoorDyn/MD  -                IntKi              MD_MaxPtAtch    -  100    -   "maximum number of attachments to a point" -
 param     MoorDyn/MD  -                IntKi              MD_MaxFailLines -   30    -   "maximum number of line failures that can be simulated" -
+param     MoorDyn/MD  -                IntKi              MD_RampLinear   -    0    -   "ramp function r = tau" -
+param     MoorDyn/MD  -                IntKi              MD_RampSine     -    1    -   "ramp function r = 0.5 * (1 - cos(pi * tau))" -
+param     MoorDyn/MD  -                IntKi              MD_RampSigmoid  -    2    -   "normalized logistic ramp function" -
 
 ## ====== some data read from the input file, but not needed after init ======
 typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    0.5   -   "convergence check time step for IC generation"              "[s]"
@@ -146,6 +149,12 @@ typedef  ^            ^                IntKi              typeNum        -      
 typedef  ^            ^                IntKi              Attached   {MD_MaxPtAtch} - - "list of IdNums of lines attached to this point node"
 typedef  ^            ^                IntKi              Top        {MD_MaxPtAtch} - - "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttached      -       -  -   "number of attached lines"
+typedef  ^            ^                LOGICAL            isAttachment   -    .FALSE. -  "if point contains an attachment or not"
+typedef  ^            ^                LOGICAL            AttachHasEvent {MD_MaxPtAtch} - - "true if line in this slot of Attached is gated by an attachment, indexed like Attached"
+typedef  ^            ^                DbKi               AttachTime    {MD_MaxPtAtch} - - "time at which the attached line starts to couple" "[s]"
+typedef  ^            ^                DbKi               AttachRampTime {MD_MaxPtAtch} - - "duration of coupling, starting at AttachTime" "[s]"
+typedef  ^            ^                IntKi              AttachRampFcn {MD_MaxPtAtch} - - "function type for ramping coupling"
+typedef  ^            ^                DbKi               AttachRampCoef {MD_MaxPtAtch} - - "the shape coefficient of the ramp function (only for sigmoid)"
 typedef  ^            ^                DbKi               pointM         -       -  -   "point mass" "[kg]"
 typedef  ^            ^                DbKi               pointV         -       -  -   "point volume" "[m^3]"
 typedef  ^            ^                DbKi               pointFX        -       -  -   ""
@@ -427,6 +436,7 @@ typedef   ^       ^                    IntKi               nRods          -     
 typedef   ^       ^                    IntKi               nLines         -     0    -   "number of Line objects"                     ""
 typedef   ^       ^                    IntKi               nSyropeLineICs -     0    -   "number of Syrope Line initial conditions"   ""
 typedef   ^       ^                    IntKi               nExtLds        -     0    -   "number of external loads or damping"        ""
+typedef   ^       ^                    IntKi               nAttachs       -     0    -   "number of attachment events"                      ""
 typedef   ^       ^                    IntKi               nCtrlChans     -     0    -   "number of distinct control channels specified for use as inputs"        ""
 typedef   ^       ^                    IntKi               nFails         -     0    -   "number of failure conditions"                     ""
 typedef   ^       ^                    IntKi               nSlips         -     0    -   "number of slip supports"                     ""

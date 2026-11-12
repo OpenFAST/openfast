@@ -38,6 +38,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxBdAtch                     = 100      ! maximum number of attachments to a body [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxPtAtch                     = 100      ! maximum number of attachments to a point [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_MaxFailLines                  = 30      ! maximum number of line failures that can be simulated [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_RampLinear                    = 0      ! ramp function r = tau [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_RampSine                      = 1      ! ramp function r = 0.5 * (1 - cos(pi * tau)) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MD_RampSigmoid                   = 2      ! normalized logistic ramp function [-]
 ! =========  MD_InputFileType  =======
   TYPE, PUBLIC :: MD_InputFileType
     REAL(DbKi)  :: DTIC = 0.5      !< convergence check time step for IC generation [[s]]
@@ -165,6 +168,12 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0_IntKi      !< number of attached lines [-]
+    LOGICAL  :: isAttachment = .FALSE.      !< if point contains an attachment or not [-]
+    LOGICAL , DIMENSION(1:MD_MaxPtAtch)  :: AttachHasEvent = .false.      !< true if line in this slot of Attached is gated by an attachment, indexed like Attached [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachTime = 0.0_R8Ki      !< time at which the attached line starts to couple [[s]]
+    REAL(DbKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachRampTime = 0.0_R8Ki      !< duration of coupling, starting at AttachTime [[s]]
+    INTEGER(IntKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachRampFcn = 0_IntKi      !< function type for ramping coupling [-]
+    REAL(DbKi) , DIMENSION(1:MD_MaxPtAtch)  :: AttachRampCoef = 0.0_R8Ki      !< the shape coefficient of the ramp function (only for sigmoid) [-]
     REAL(DbKi)  :: pointM = 0.0_R8Ki      !< point mass [[kg]]
     REAL(DbKi)  :: pointV = 0.0_R8Ki      !< point volume [[m^3]]
     REAL(DbKi)  :: pointFX = 0.0_R8Ki      !<  [-]
@@ -466,6 +475,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
     INTEGER(IntKi)  :: nSyropeLineICs = 0      !< number of Syrope Line initial conditions []
     INTEGER(IntKi)  :: nExtLds = 0      !< number of external loads or damping []
+    INTEGER(IntKi)  :: nAttachs = 0      !< number of attachment events []
     INTEGER(IntKi)  :: nCtrlChans = 0      !< number of distinct control channels specified for use as inputs []
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
     INTEGER(IntKi)  :: nSlips = 0      !< number of slip supports []
@@ -1244,6 +1254,12 @@ subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
    DstPointData%Attached = SrcPointData%Attached
    DstPointData%Top = SrcPointData%Top
    DstPointData%nAttached = SrcPointData%nAttached
+   DstPointData%isAttachment = SrcPointData%isAttachment
+   DstPointData%AttachHasEvent = SrcPointData%AttachHasEvent
+   DstPointData%AttachTime = SrcPointData%AttachTime
+   DstPointData%AttachRampTime = SrcPointData%AttachRampTime
+   DstPointData%AttachRampFcn = SrcPointData%AttachRampFcn
+   DstPointData%AttachRampCoef = SrcPointData%AttachRampCoef
    DstPointData%pointM = SrcPointData%pointM
    DstPointData%pointV = SrcPointData%pointV
    DstPointData%pointFX = SrcPointData%pointFX
@@ -1331,6 +1347,12 @@ subroutine MD_PackPoint(RF, Indata)
    call RegPack(RF, InData%Attached)
    call RegPack(RF, InData%Top)
    call RegPack(RF, InData%nAttached)
+   call RegPack(RF, InData%isAttachment)
+   call RegPack(RF, InData%AttachHasEvent)
+   call RegPack(RF, InData%AttachTime)
+   call RegPack(RF, InData%AttachRampTime)
+   call RegPack(RF, InData%AttachRampFcn)
+   call RegPack(RF, InData%AttachRampCoef)
    call RegPack(RF, InData%pointM)
    call RegPack(RF, InData%pointV)
    call RegPack(RF, InData%pointFX)
@@ -1371,6 +1393,12 @@ subroutine MD_UnPackPoint(RF, OutData)
    call RegUnpack(RF, OutData%Attached); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Top); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nAttached); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isAttachment); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AttachHasEvent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AttachTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AttachRampTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AttachRampFcn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AttachRampCoef); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pointM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pointV); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pointFX); if (RegCheckErr(RF, RoutineName)) return
@@ -3515,6 +3543,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nLines = SrcParamData%nLines
    DstParamData%nSyropeLineICs = SrcParamData%nSyropeLineICs
    DstParamData%nExtLds = SrcParamData%nExtLds
+   DstParamData%nAttachs = SrcParamData%nAttachs
    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
    DstParamData%nFails = SrcParamData%nFails
    DstParamData%nSlips = SrcParamData%nSlips
@@ -3914,6 +3943,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%nLines)
    call RegPack(RF, InData%nSyropeLineICs)
    call RegPack(RF, InData%nExtLds)
+   call RegPack(RF, InData%nAttachs)
    call RegPack(RF, InData%nCtrlChans)
    call RegPack(RF, InData%nFails)
    call RegPack(RF, InData%nSlips)
@@ -4025,6 +4055,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nLines); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nSyropeLineICs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nExtLds); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nAttachs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCtrlChans); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFails); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nSlips); if (RegCheckErr(RF, RoutineName)) return
