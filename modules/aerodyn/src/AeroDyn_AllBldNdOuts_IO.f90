@@ -800,9 +800,12 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
             else
                DO iB=1,nB
                   iW = W2B(iB)
-                  do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                  do iNdL=1,nNd; iNd=Nd(iNdL);
+                     ! MirrorRotor: PitchAndTwist is the physical section angle while
+                     ! BN_Cx/BN_Cy are clockwise-frame coefficients, so the projection
+                     ! uses the clockwise-equivalent angle, exactly as BldNd_Ct below.
+                     ct=cos(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(p%RotDir*m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
                      y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cx(iNd)*ct + m_AD%FVW%W(iW)%BN_Cy(iNd)*st
                      iOut = iOut + 1
                   END DO
