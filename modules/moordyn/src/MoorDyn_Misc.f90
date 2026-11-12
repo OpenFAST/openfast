@@ -1063,8 +1063,9 @@ CONTAINS
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
+      Real(DbKi)                 :: rampFac               ! ramp factor applied to the water kinematics at the start of a simulation
 
-      ! local 
+      ! local
       CHARACTER(120)             :: RoutineName = 'getWaterKin'   
 
       ErrStat = ErrID_None
@@ -1153,11 +1154,12 @@ CONTAINS
       end select
 
       ! Apply ramp time
-      IF (t < p%waveKin_rampT) THEN 
-         U = U * t / p%waveKin_rampT
-         Ud = Ud * t / p%waveKin_rampT
-         zeta = zeta * t / p%waveKin_rampT
-         PDyn = PDyn * t / p%waveKin_rampT
+      IF (t < p%waveKin_rampT) THEN
+         CALL RampFactor(MD_RampLinear, t, 0.0_DbKi, p%waveKin_rampT, 0.0_DbKi, rampFac)
+         U = U * rampFac
+         Ud = Ud * rampFac
+         zeta = zeta * rampFac
+         PDyn = PDyn * rampFac
       END IF
 
    END SUBROUTINE getWaterKin

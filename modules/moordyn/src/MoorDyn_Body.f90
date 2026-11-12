@@ -578,7 +578,8 @@ CONTAINS
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
       
       Real(DbKi)                            :: F6_iner(6)  ! inertial reaction force
-      
+      Real(DbKi)                            :: rampFac     ! ramp factor applied to the inertial loads at the start of a simulation
+
       ! do calculations of forces and masses on the body
       CALL Body_DoRHS(Body, m, p)
 
@@ -589,7 +590,10 @@ CONTAINS
             F6_iner = -MATMUL(Body%M, Body%a6)     ! unstable in OpenFAST v4 and below becasue of loose coupling with ED and SD. Transients in acceleration can cause issues
          elseif (p%inertialF == 2) then  ! include inertial components, but ramp up load
             F6_iner = -MATMUL(Body%M, Body%a6)
-            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+            if (t < p%inertialF_rampT) then
+               CALL RampFactor(MD_RampLinear, REAL(t,DbKi), 0.0_DbKi, p%inertialF_rampT, 0.0_DbKi, rampFac)
+               F6_iner = F6_iner * rampFac
+            endif
          else
             ! When OpenFAST v5 is released w/ tight coupling, remove this hack and just use the inertial term above 
             F6_iner = 0.0
@@ -605,7 +609,10 @@ CONTAINS
             F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
          elseif (p%inertialF == 2) then
             F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
-            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+            if (t < p%inertialF_rampT) then
+               CALL RampFactor(MD_RampLinear, REAL(t,DbKi), 0.0_DbKi, p%inertialF_rampT, 0.0_DbKi, rampFac)
+               F6_iner = F6_iner * rampFac
+            endif
          else 
             F6_iner(1:3) = 0.0
          endif
