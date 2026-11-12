@@ -15,8 +15,8 @@ from collections import Counter, defaultdict
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "reg_tests", "lib"))
@@ -116,7 +116,7 @@ def emit_map(groups, mooring, origin, conflicts, tol, floor, unresolved_in=None)
     with open(yml, "w") as fh:
         fh.write("# Measured mirror sign map -- GENERATED, do not edit by hand.\n")
         fh.write("# Regenerate with:\n")
-        fh.write("#   python3 reg_tests/otherTests/emit_sign_table.py "
+        fh.write("#   python3 reg_tests/development_testing/mirror_rotor_checks/emit_sign_table.py "
                  f"--tol {tol} --emit-map\n")
         fh.write("#\n")
         fh.write("# Every entry is observed by running a registered clockwise/mirrored\n")

@@ -22,8 +22,8 @@ import bts_io
 if len(sys.argv) == 3:
     orig_path, mir_path = sys.argv[1], sys.argv[2]
 elif len(sys.argv) == 1:
-    REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     BASE = os.path.join(REPO_ROOT, "reg_tests", "r-test", "glue-codes",
                         "openfast", "5MW_Baseline", "Wind")
     orig_path = f"{BASE}/90m_12mps_twr.bts"

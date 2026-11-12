@@ -1,4 +1,4 @@
-# otherTests
+# mirror_rotor_checks
 
 Verification tooling that is not part of the ctest regression suite but is
 needed to justify what the regression suite asserts. These scripts measure

@@ -13,8 +13,8 @@ import sys
 import zipfile
 from xml.etree import ElementTree as ET
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 XLSX = os.path.join(REPO_ROOT, "docs", "OtherSupporting", "OutListParameters.xlsx")
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"

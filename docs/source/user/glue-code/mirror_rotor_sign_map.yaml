@@ -1,6 +1,6 @@
 # Measured mirror sign map -- GENERATED, do not edit by hand.
 # Regenerate with:
-#   python3 reg_tests/otherTests/emit_sign_table.py --tol 0.005 --emit-map
+#   python3 reg_tests/development_testing/mirror_rotor_checks/emit_sign_table.py --tol 0.005 --emit-map
 #
 # Every entry is observed by running a registered clockwise/mirrored
 # pair and comparing the channel against its counterpart.  Nothing here

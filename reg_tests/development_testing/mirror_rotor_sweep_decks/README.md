@@ -1,6 +1,6 @@
-# driver_checks
+# mirror_rotor_sweep_decks
 
-Base decks for `reg_tests/otherTests/sweep_mirror.py`: a steady, uniform-inflow
+Base decks for `reg_tests/development_testing/mirror_rotor_checks/sweep_mirror.py`: a steady, uniform-inflow
 AeroDyn driver case on the NREL 5MW rotor, swept over pitch, wind speed, yaw and
 rotor speed as clockwise/mirrored pairs.
 
@@ -11,4 +11,4 @@ rotor speed as clockwise/mirrored pairs.
   `reg_tests/r-test/glue-codes/openfast` path when it stages a case, so the decks
   work from any checkout.
 
-Nothing here runs automatically; see `reg_tests/otherTests/README.md`.
+Nothing here runs automatically; see `reg_tests/development_testing/mirror_rotor_checks/README.md`.

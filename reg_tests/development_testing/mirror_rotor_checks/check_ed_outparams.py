@@ -20,8 +20,8 @@ import os
 import re
 import sys
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 ED = os.path.join(REPO_ROOT, "modules", "elastodyn", "src", "ElastoDyn.f90")
 IO = os.path.join(REPO_ROOT, "modules", "elastodyn", "src", "ElastoDyn_IO.f90")

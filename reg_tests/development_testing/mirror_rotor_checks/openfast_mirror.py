@@ -20,8 +20,8 @@ import sys
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
 SRC = f"{RTEST}/5MW_Land_BD_DLL_WTurb" if "--beamdyn" in sys.argv else f"{RTEST}/5MW_Land_DLL_WTurb"

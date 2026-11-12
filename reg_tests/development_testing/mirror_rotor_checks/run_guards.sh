@@ -3,7 +3,7 @@
 # Uses the DEBUG build: these runs abort during init, nothing is baselined.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="${OPENFAST_REPO:-$(cd "$HERE/../.." && pwd)}"
+REPO="${OPENFAST_REPO:-$(cd "$HERE/../../.." && pwd)}"
 GC="${GUARDCHECK_DIR:-${TMPDIR:-/tmp}/openfast_guardcheck}"
 mkdir -p "$GC"
 RT=$REPO/reg_tests/r-test/glue-codes/openfast
@@ -193,7 +193,7 @@ runfarm farm_mirror "FAST.Farm terminated normally." yes
 # run `ctest -R SteadyInflow_curl_MirrorRotor` first if it is missing.
 FFTWIN=$REPO/build-docker-double/reg_tests/glue-codes/fast-farm/SteadyInflow_curl_MirrorRotor
 if [ -f "$FFTWIN/FAST.Farm.out" ]; then
-  if python3 "$REPO/reg_tests/otherTests/farm_mirror_pair.py" --twin "$FFTWIN" --tol 2e-3 \
+  if python3 "$REPO/reg_tests/development_testing/mirror_rotor_checks/farm_mirror_pair.py" --twin "$FFTWIN" --tol 2e-3 \
        > "${TMPDIR:-/tmp}/farm_twin_check.log" 2>&1; then
     echo "PASS  farm_twin  (T1/T2 pair under the sign map at 2e-3)"
   else

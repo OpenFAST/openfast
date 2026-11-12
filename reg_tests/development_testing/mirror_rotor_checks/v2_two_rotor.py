@@ -13,8 +13,8 @@ import sys
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 sys.path.insert(0, os.path.join(REPO_ROOT, "reg_tests", "lib"))
 import fast_io  # noqa: E402

@@ -14,8 +14,8 @@ import tempfile
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
 EXE = f"{REPO}/build-docker-double-debug/glue-codes/openfast/openfast"

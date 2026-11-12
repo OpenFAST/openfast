@@ -11,8 +11,8 @@ import sys
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 REPO = REPO_ROOT
 RTEST = f"{REPO}/reg_tests/r-test/glue-codes/openfast"
 # The r-test baselines are .outb, which packs each channel into int16 with a per-channel

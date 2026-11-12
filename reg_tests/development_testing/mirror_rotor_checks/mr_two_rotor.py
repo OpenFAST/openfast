@@ -20,8 +20,8 @@ from collections import Counter
 
 import numpy as np
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 from compare_mirror import classify  # noqa: E402

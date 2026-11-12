@@ -24,8 +24,8 @@ import re
 import shutil
 import sys
 
-REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 RTEST = os.path.join(REPO_ROOT, "reg_tests", "r-test", "glue-codes", "openfast")
 ED_SRC = os.path.join(RTEST, "5MW_Land_DLL_WTurb")
