@@ -73,6 +73,7 @@ PROGRAM SED_Driver
 
       ! Data transfer
    real(ReKi)                                         :: AeroTrq              !< AeroTrq read from table -- must be put onto mesh for passing
+   real(ReKi)                                         :: AeroTrqSign          !< MirrorRotor: the table prescribes the aerodynamic torque in the clockwise convention; this converts it to the physical sign
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    integer(IntKi)                                     :: i                    !< generic loop counter
@@ -280,9 +281,16 @@ PROGRAM SED_Driver
 
    T = TStart
 
+   ! MirrorRotor: the case table's aerodynamic torque is prescribed in the clockwise
+   ! convention, like every other driver input; it is applied to the hub mesh as a
+   ! physical moment, so a mirrored rotor takes the opposite sign (the generator and
+   ! brake torques are converted inside the module and need nothing here).
+   AeroTrqSign = 1.0_ReKi
+   if (Settings%MirrorRotor) AeroTrqSign = -1.0_ReKi
+
    ! Get values from table
    do i = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here
-      AeroTrq           = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      AeroTrq           = AeroTrqSign * InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
       u(i)%HubPtLoad%Moment(1:3,1) = y%HubPtMotion%Orientation(1,1:3,1) * AeroTrq
       u(i)%HSSBrTrqC    = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
       u(i)%GenTrq       = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
@@ -317,7 +325,7 @@ PROGRAM SED_Driver
       uTimes(1) = n*TimeInterval+TStart
 
       ! InterpStpReal( T, Tary, Vary, TmpIdx, size)
-      AeroTrq           = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      AeroTrq           = AeroTrqSign * InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
       u(1)%HubPtLoad%Moment(1:3,1) = y%HubPtMotion%Orientation(1,1:3,1) * AeroTrq
       u(1)%HSSBrTrqC    = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
       u(1)%GenTrq       = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
