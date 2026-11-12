@@ -801,7 +801,9 @@ CONTAINS
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
-                      
+                      CALL CheckError( ErrStat2, ErrMsg2 )
+                      IF (ErrStat >= AbortErrLev) RETURN
+
                       hasSyrope = .false. ! reset hasSyrope flag for later use when processing
 
                    else ! process other visco-elastic or normal cases
@@ -825,6 +827,8 @@ CONTAINS
                                                             m%LineTypeList(l)%nEApoints, &
                                                             m%LineTypeList(l)%stiffXs,   &
                                                             m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
+                     CALL CheckError( ErrStat2, ErrMsg2 )
+                     IF (ErrStat >= AbortErrLev) RETURN
                    end if
 
                    
@@ -847,12 +851,16 @@ CONTAINS
                                                            m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
                                                            m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2, p%PriPath)
-                                                           
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
+
                    ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
                                                            m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2, p%PriPath)
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
@@ -1004,7 +1012,7 @@ CONTAINS
                      m%BodyList(l)%BodyCdA(6) = m%BodyList(l)%BodyCdA(1)
                   else if (N ==2) then 
                      READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
-                     READ(tempStrings(4), *) m%BodyList(l)%BodyCdA(4)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(4)
                      m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(5) = m%BodyList(l)%BodyCdA(4)
@@ -1024,7 +1032,7 @@ CONTAINS
                      READ(tempStrings(5), *) m%BodyList(l)%BodyCdA(5)
                      READ(tempStrings(6), *) m%BodyList(l)%BodyCdA(6)
                   else
-                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1, 2, 3, or 6 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
                   ! process added mass coefficient
                   CALL SplitByBars(tempString5, N, tempStrings)
@@ -1040,6 +1048,11 @@ CONTAINS
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' Ca entry (col 14) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
 
+                  ! catch any fatal errors raised while processing the bar-separated columns above
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely

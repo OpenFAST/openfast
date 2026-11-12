@@ -267,14 +267,21 @@ CONTAINS
       CHARACTER(120)                   :: ErrMsg4         
       CHARACTER(120)                   :: Line2   
       CHARACTER(1024)                  :: FileName
-      
-           
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+
       if (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) then ! "eE" are exluded as they're used for scientific notation!
-      
+
          ! "found NO letter in the line coefficient value so treating it as a number."
          READ(inputString, *, IOSTAT=ErrStat4) LineProp_c  ! convert the entry string into a real number
          LineProp_npoints = 0;
-      
+         IF (ErrStat4 /= 0) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Unable to interpret '"//TRIM(inputString)//"' as a number."
+            RETURN
+         END IF
+
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
          CALL WrScr1(" Found a letter in the line EA coefficient value so will try to load the filename.")
          
@@ -304,16 +311,39 @@ CONTAINS
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2      !read into a line
 
             IF (ErrStat4 > 0) then
-               CALL WrScr("Error while reading lookup table file")
-               EXIT
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = "Error while reading lookup table file "//TRIM(FileName)//"."
+               LineProp_npoints = 0
+               Close (UnCoef)
+               RETURN
             ELSE IF (ErrStat4 < 0) then
                CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
                EXIT
             ELSE
                READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
-            END IF 
+               IF (ErrStat4 > 0) then                     
+                  ErrStat3 = ErrID_Fatal
+                  ErrMsg3  = "Error while reading lookup table file "//TRIM(FileName)//"."
+                  LineProp_npoints = 0
+                  Close (UnCoef)
+                  RETURN
+               ELSE IF (ErrStat4 < 0) then   ! blank or short line: treat as the end of the table
+                  CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
+                  EXIT
+               END IF
+            END IF
          END DO
          
+         if (I > MD_MaxNCoef) then   ! check if file has more lines
+            READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
+            if ((ErrStat4 == 0) .and. (LEN_TRIM(Line2) > 0)) then
+               ErrStat3 = ErrID_Warn
+               ErrMsg3  = TRIM(FileName)//" contains >"// &
+                          trim(Int2LStr(MD_MaxNCoef))//" lines. Only the first "// &
+                          trim(Int2LStr(MD_MaxNCoef))//" were used."
+            end if
+         end if
+
          if (I < 2) then
             ErrStat3 = ErrID_Fatal
             ErrMsg3  = "Less than the minimum of 2 data lines found in file "//TRIM(FileName)//" (first 3 lines are headers)."
