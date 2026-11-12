@@ -13,7 +13,7 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(os.environ.get("OPENFAST_REPO") or
-                     pathlib.Path(__file__).resolve().parents[2])
+                     pathlib.Path(__file__).resolve().parents[3])
 
 OLD = "True: next 7 lines are basic inputs, False:"
 NEW = "True: basic HAWT inputs BaseOriginInit to Twr2Shft, False:"
