@@ -118,6 +118,8 @@ MODULE MoorDyn_IO
   ! PUBLIC :: MDIO_ReadInput
    PUBLIC :: setupBathymetry
    PUBLIC :: getCoefficientOrCurve
+   PUBLIC :: ReadExtLdSeries
+   PUBLIC :: InterpExtLdSeries
    PUBLIC :: SplitByBars
    PUBLIC :: DecomposeString
    PUBLIC :: MDIO_OpenOutput
@@ -358,6 +360,185 @@ CONTAINS
       END IF
    
    END SUBROUTINE getCoefficientOrCurve
+
+
+   ! Read an external load time series from a file.
+   SUBROUTINE ReadExtLdSeries(FileString, nComp, nSteps, ts, fs, ErrStat3, ErrMsg3, PriPath)
+
+      CHARACTER(*),            INTENT(IN   )  :: FileString  ! the file name in the maind MD input file
+      INTEGER(IntKi),          INTENT(IN   )  :: nComp       ! number of force components per time step, 3 or 6
+      INTEGER(IntKi),          INTENT(  OUT)  :: nSteps      ! number of time steps of the time series read
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: ts(:)       ! times of the time series
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: fs(:,:)     ! forces and moments of the time series, (nComp,nSteps)
+      INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat3    ! Error status
+      CHARACTER(*),            INTENT(  OUT)  :: ErrMsg3     ! Error message
+      CHARACTER(*), OPTIONAL,  INTENT(IN   )  :: PriPath    ! path to the main MD input file
+
+      INTEGER(IntKi)                   :: i
+      INTEGER(IntKi)                   :: UnSeries  ! unit number for the time series file
+      INTEGER(IntKi)                   :: ErrStat4
+      CHARACTER(ErrMsgLen)             :: ErrMsg4
+      CHARACTER(1024)                  :: Line2
+      CHARACTER(1024)                  :: FileName
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+      nSteps  = 0
+
+      ! read from directory of main input file if relative path
+      IF ( PRESENT(PriPath) .AND. PathIsRelative( FileString ) ) THEN
+         FileName = TRIM(PriPath)//TRIM(FileString)
+      ELSE
+         FileName = TRIM(FileString)
+      END IF
+
+      ! ---------- first pass: count the data lines so the arrays can be sized ----------
+      CALL GetNewUnit( UnSeries )
+      CALL OpenFInpFile( UnSeries, TRIM(FileName), ErrStat4, ErrMsg4 )
+      IF (ErrStat4 >= AbortErrLev) THEN
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Cannot read the external load time series file "//TRIM(FileName)//": "//TRIM(ErrMsg4)
+         RETURN
+      END IF
+
+      DO i = 1, 3   ! skip the three header lines
+         READ(UnSeries,'(A)',IOSTAT=ErrStat4) Line2
+         IF (ErrStat4 /= 0) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "External loads "//TRIM(FileName)//" needs three header lines and at least one time step."
+            Close ( UnSeries )
+            RETURN
+         END IF
+      END DO
+
+      DO
+         READ(UnSeries,'(A)',IOSTAT=ErrStat4) Line2
+         IF (ErrStat4 < 0) EXIT     ! end of file (0 means more lines to read)
+         IF (ErrStat4 > 0) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Error while reading external loads "//TRIM(FileName)//"."
+            Close ( UnSeries )
+            RETURN
+         END IF
+         IF (LEN_TRIM(Line2) == 0) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "External loads "//TRIM(FileName)//" has a blank line in the time series data."
+            Close ( UnSeries )
+            RETURN
+         END IF
+         nSteps = nSteps + 1
+      END DO
+
+      Close ( UnSeries )
+
+      IF (nSteps < 1) THEN
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "No data lines found in external loads "//TRIM(FileName)
+         RETURN
+      END IF
+
+      ! ---------- second pass: read the time series ----------
+      CALL AllocAry( ts, nSteps,        'external load time series times',   ErrStat4, ErrMsg4 )
+      IF (ErrStat4 >= AbortErrLev) THEN
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = TRIM(ErrMsg4)
+         RETURN
+      END IF
+      CALL AllocAry( fs, nComp, nSteps, 'external load time series forces', ErrStat4, ErrMsg4 )
+      IF (ErrStat4 >= AbortErrLev) THEN
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = TRIM(ErrMsg4)
+         RETURN
+      END IF
+      ts = 0.0_DbKi
+      fs = 0.0_DbKi
+
+      CALL GetNewUnit( UnSeries )
+      CALL OpenFInpFile( UnSeries, TRIM(FileName), ErrStat4, ErrMsg4 )
+      IF (ErrStat4 >= AbortErrLev) THEN
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Cannot read the external load time series file "//TRIM(FileName)//": "//TRIM(ErrMsg4)
+         RETURN
+      END IF
+
+      DO i = 1, 3   ! skip the three header lines again
+         READ(UnSeries,'(A)',IOSTAT=ErrStat4) Line2
+      END DO
+
+      i = 0
+      DO WHILE (i < nSteps)
+         READ(UnSeries,'(A)',IOSTAT=ErrStat4) Line2
+         IF (ErrStat4 /= 0) EXIT
+         IF (LEN_TRIM(Line2) == 0) CYCLE
+         i = i + 1
+
+         READ(Line2,*,IOSTAT=ErrStat4) ts(i), fs(1:nComp,i)
+         IF (ErrStat4 /= 0) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Unable to read line "// trim(Int2LStr(i))//" of external loads file "//TRIM(FileName)//": '"//TRIM(Line2)//"'."
+            Close ( UnSeries )
+            RETURN
+         END IF
+
+         IF (i > 1) THEN
+            IF (ts(i) <= ts(i-1)) THEN
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = "The times in external loads file "//TRIM(FileName)// " must increase monotonically."
+               Close ( UnSeries )
+               RETURN
+            END IF
+         END IF
+      END DO
+
+      Close ( UnSeries )
+
+      ! warn if data rows are less than file rows (indicates blank lines at the end)
+      IF (i < nSteps) THEN
+         ErrStat3 = ErrID_Warn
+         ErrMsg3  = trim(Int2LStr(i))//" of the "//trim(Int2LStr(nSteps))// &
+                    " lines in external loads file "//TRIM(FileName)//" read."
+         RETURN
+      END IF
+
+   END SUBROUTINE ReadExtLdSeries
+
+   ! Interpolate an external load time series to a given time
+   SUBROUTINE InterpExtLdSeries(ts, fs, t, f)
+
+      REAL(DbKi),     INTENT(IN   )  :: ts(:)        ! times of the time series
+      REAL(DbKi),     INTENT(IN   )  :: fs(:,:)      ! forces and moments of the time series, (nComp,nSteps)
+      REAL(DbKi),     INTENT(IN   )  :: t            ! time to evaluate at
+      REAL(DbKi),     INTENT(  OUT)  :: f(:)         ! the interpolated force (and moment)
+
+      INTEGER(IntKi)                 :: i
+      INTEGER(IntKi)                 :: nSteps      ! number of time steps of the time series
+      REAL(DbKi)                     :: frac         ! fraction through the bracketing interval
+
+      nSteps = SIZE(ts)
+
+      f = 0.0_DbKi
+
+      IF (nSteps < 1) RETURN
+
+      IF ((nSteps == 1) .OR. (t <= ts(1))) THEN   ! clamp to first step
+         f = fs(:,1)
+         RETURN
+      END IF
+
+      IF (t >= ts(nSteps)) THEN                   ! clamp to last step
+         f = fs(:,nSteps)
+         RETURN
+      END IF
+
+      DO i = 2, nSteps
+         IF (t <= ts(i)) THEN
+            frac = (t - ts(i-1)) / (ts(i) - ts(i-1))
+            f = fs(:,i-1) + frac * (fs(:,i) - fs(:,i-1))
+            RETURN
+         END IF
+      END DO
+
+   END SUBROUTINE InterpExtLdSeries
    
    
    ! Split a string into separate strings by the bar (|) symbol

@@ -216,6 +216,7 @@ CONTAINS
       Real(DbKi)                 :: Fnet_i(3) ! force from an attached line
       Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
       Real(DbKi)                 :: M_i(3,3)  ! mass from an attached line
+      Real(DbKi)                 :: FextTs(3) ! user-defined external force interpolated from a time series
 
 
       ! start with the Point's own forces including buoyancy and weight, and its own mass
@@ -282,6 +283,10 @@ CONTAINS
 
       ! Added user-defined external force and damping on point
       Point%Fnet = Point%Fnet + Point%Fext
+      IF ((Point%nFextTsGsteps > 0) .AND. (.NOT. m%IC_gen)) THEN   ! add the external load time series if not icgen
+         CALL InterpExtLdSeries(Point%FextTsGts, Point%FextTsGfs, Point%time, FextTs)
+         Point%Fnet = Point%Fnet + FextTs
+      END IF
       DO J = 1, 3
          Point%Fnet(J) = Point%Fnet(J) - Point%Blin(J) * Point%rd(J) - Point%Bquad(J) * ABS(Point%rd(J)) * Point%rd(J)
       END DO

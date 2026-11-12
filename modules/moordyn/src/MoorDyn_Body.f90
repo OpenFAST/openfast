@@ -455,6 +455,7 @@ CONTAINS
       Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment     
       Real(DbKi)                 :: v3L(3)             ! Body translational velocity in the local body-fixed coordinate system
       Real(DbKi)                 :: FDL(3)             ! Part of user-defined damping force defined in the local body-fixed coordinate system
+      Real(DbKi)                 :: FextTs(6)          ! User-defined external force and moment interpolated from a time series
 
 
       ! Initialize variables
@@ -474,13 +475,24 @@ CONTAINS
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
       ! Add user-defined external force and damping on body defined in the global earth-fixed coordinate system (assumed to be applied at the body ref point)
-      Body%F6net(1:3) = Body%F6net(1:3) + Body%FextG
+      Body%F6net(1:6) = Body%F6net(1:6) + Body%FextG ! constant
+      if ((Body%nFextTsGsteps > 0) .AND. (.NOT. m%IC_gen)) then ! time series if not icgen
+         CALL InterpExtLdSeries(Body%FextTsGts, Body%FextTsGfs, Body%time, FextTs)
+         Body%F6net(1:6) = Body%F6net(1:6) + FextTs
+      end if
       do i = 1,3
          Body%F6net(i) = Body%F6net(i) - Body%BlinG(i) * Body%v6(i) - Body%BquadG(i) * ABS(Body%v6(i)) * Body%v6(i)
       end do
 
       ! Add user-defined external force and damping on body defined in the local body-fixed coordinate system (assumed to be applied at the body ref point)
-      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL)
+      ! forces and moments rotated separately
+      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL(1:3)) ! constant
+      Body%F6net(4:6) = Body%F6net(4:6) + MATMUL( Body%OrMat, Body%FextL(4:6)) ! constant
+      if ((Body%nFextTsLsteps > 0) .AND. (.NOT. m%IC_gen)) then   ! time series if not icgen, rotated into the global frame
+         CALL InterpExtLdSeries(Body%FextTsLts, Body%FextTsLfs, Body%time, FextTs)
+         Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, FextTs(1:3) )
+         Body%F6net(4:6) = Body%F6net(4:6) + MATMUL( Body%OrMat, FextTs(4:6) )
+      end if
       v3L = MATMUL( TRANSPOSE(Body%OrMat), Body%v6(1:3) )
       do i = 1,3
          FDL(i) = - Body%BlinL(i) * v3L(i) - Body%BquadL(i) * ABS(v3L(i)) * v3L(i)

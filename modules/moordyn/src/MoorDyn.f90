@@ -88,6 +88,7 @@ CONTAINS
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
       INTEGER(IntKi)                               :: CurrentTemp    ! temporary store of p%Current to disable currents during IC gen when wave-kinematic ramping is active
+      INTEGER(IntKi)                               :: nComp          ! number of force components per point of an external force time series (3, or 6 for bodies)
 !      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(ReKi)                                   :: OrMat2(3,3)
@@ -1911,7 +1912,7 @@ CONTAINS
 
                      ! read in object type
                      CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
-                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3) 
+                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3)
 
                      ! Read in CSys local or global
                      CALL Conv2UC(tempString5) ! convert to uppercase so that matching is not case-sensitive
@@ -1945,12 +1946,29 @@ CONTAINS
 
                      ! process translational force
                      CALL SplitByBars(tempString2, N, tempStrings)
-                     if (N==1) then ! one force provided; must be zero.
+                     if (SCAN(tempStrings(1), "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") > 0) then
+                        ! non E letter in force entry means time series file
+                        if (N /= 1) then ! if bar-separated entries
+                           CALL SetErrStat( ErrID_Fatal, 'External load '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry can only have a file or numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
+                        if (let1 == "BODY") then
+                           nComp = 6   ! bodies are 6 DOF
+                        else
+                           nComp = 3   ! rods and points are 3 DOF
+                        end if
+                        CALL ReadExtLdSeries( tempStrings(1), nComp, m%ExtLdList(l)%nFextTsSteps, &
+                                              m%ExtLdList(l)%FextTsts, m%ExtLdList(l)%FextTsfs,         &
+                                              ErrStat2, ErrMsg2, p%PriPath )
+                        CALL CheckError( ErrStat2, ErrMsg2 )
+                        IF (ErrStat >= AbortErrLev) RETURN
+                     else if (N==1) then ! one force provided; must be zero.
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(2) = m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(3) = m%ExtLdList(l)%Fext(1)
                         if (m%ExtLdList(l)%Fext(1) /= 0.0) then
-                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0, have 3 numbers, or (for BODY only) have 6 numbers (3 forces and 3 moments)' , ErrStat, ErrMsg, RoutineName )
                            CALL CleanUp()
                            RETURN
                         end if
@@ -1958,8 +1976,12 @@ CONTAINS
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Fext(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Fext(3)
+                     elseif ((N==6) .and. (let1 == "BODY")) then ! three forces and three moments provided, bodies only
+                        DO J = 1,6
+                           READ(tempStrings(J), *) m%ExtLdList(l)%Fext(J)
+                        END DO
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be filename, 0, have 3 numbers, or (for BODY only) have 6 numbers (3 forces and 3 moments)' , ErrStat, ErrMsg, RoutineName )
                         CALL CleanUp()
                         RETURN
                      end if
@@ -2004,8 +2026,7 @@ CONTAINS
                         RETURN
                      end if
 
-                     IF ( (m%ExtLdList(l)%Blin(1)<0.0) .OR. (m%ExtLdList(l)%Blin(2)<0.0) .OR. (m%ExtLdList(l)%Blin(3)<0.0) .OR. &
-                          (m%ExtLdList(l)%Bquad(1)<0.0) .OR. (m%ExtLdList(l)%Bquad(2)<0.0) .OR. (m%ExtLdList(l)%Bquad(3)<0.0) ) THEN
+                     IF ( ANY(m%ExtLdList(l)%Blin<0.0) .OR. ANY(m%ExtLdList(l)%Bquad<0.0) ) THEN
                          CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Damping coefficients must be non-negative.', ErrStat, ErrMsg, RoutineName )
                          CALL CleanUp()
                          RETURN
@@ -2019,11 +2040,37 @@ CONTAINS
                                   m%BodyList(J)%FextG  = m%BodyList(J)%FextG  + m%ExtLdList(l)%Fext
                                   m%BodyList(J)%BlinG  = m%BodyList(J)%BlinG  + m%ExtLdList(l)%Blin
                                   m%BodyList(J)%BquadG = m%BodyList(J)%BquadG + m%ExtLdList(l)%Bquad
+                                  IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                     IF (m%BodyList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                        CALL SetErrStat( ErrID_Fatal, 'Only one force time series on body '//trim(Num2LStr(J))//' in the global frame.', ErrStat, ErrMsg, RoutineName )
+                                        CALL CleanUp()
+                                        RETURN
+                                     END IF
+                                     m%BodyList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                     CALL AllocAry(m%BodyList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                     CALL AllocAry(m%BodyList(J)%FextTsGfs, 6, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                     m%BodyList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                     m%BodyList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                                  END IF
                                ELSE
                                   m%BodyList(J)%FextL  = m%BodyList(J)%FextL  + m%ExtLdList(l)%Fext
                                   m%BodyList(J)%BlinL  = m%BodyList(J)%BlinL  + m%ExtLdList(l)%Blin
                                   m%BodyList(J)%BquadL = m%BodyList(J)%BquadL + m%ExtLdList(l)%Bquad
+                                  IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                     IF (m%BodyList(J)%nFextTsLsteps > 0) THEN ! check if a time series has already be assigned
+                                        CALL SetErrStat( ErrID_Fatal, 'Only one force time series on body '//trim(Num2LStr(J))//' in the local frame.', ErrStat, ErrMsg, RoutineName )
+                                        CALL CleanUp()
+                                        RETURN
+                                     END IF
+                                     m%BodyList(J)%nFextTsLsteps = m%ExtLdList(l)%nFextTsSteps
+                                     CALL AllocAry(m%BodyList(J)%FextTsLts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsLts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsLts")) return
+                                     CALL AllocAry(m%BodyList(J)%FextTsLfs, 6, m%ExtLdList(l)%nFextTsSteps, 'FextTsLfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsLfs")) return
+                                     m%BodyList(J)%FextTsLts = m%ExtLdList(l)%FextTsts
+                                     m%BodyList(J)%FextTsLfs = m%ExtLdList(l)%FextTsfs
+                                  END IF
                                END IF
+                               CALL CheckError( ErrStat2, ErrMsg2 )
+                               IF (ErrStat >= AbortErrLev) RETURN
                             ELSE
                                CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                                CALL CleanUp()
@@ -2038,9 +2085,23 @@ CONTAINS
                         IF (len_trim(num1) > 0) THEN
                            READ(num1, *) J   ! convert to int, representing parent point index
                            IF ((J <= p%nPoints) .and. (J > 0)) THEN
-                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext
+                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext(1:3)
                               m%PointList(J)%Blin = m%PointList(J)%Blin + m%ExtLdList(l)%Blin
                               m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
+                              IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                 IF (m%PointList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                    CALL SetErrStat( ErrID_Fatal, 'Only one force time series on point '//trim(Num2LStr(J))//'.', ErrStat, ErrMsg, RoutineName )
+                                    CALL CleanUp()
+                                    RETURN
+                                 END IF
+                                 m%PointList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                 CALL AllocAry(m%PointList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                 CALL AllocAry(m%PointList(J)%FextTsGfs, 3, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                 m%PointList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                 m%PointList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                              END IF
+                              CALL CheckError( ErrStat2, ErrMsg2 )
+                              IF (ErrStat >= AbortErrLev) RETURN
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Point ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                               CALL CleanUp()
@@ -2055,9 +2116,23 @@ CONTAINS
                         IF (len_trim(num1) > 0) THEN
                            READ(num1, *) J   ! convert to int, representing parent rod index
                            IF ((J <= p%nRods) .and. (J > 0)) THEN
-                              m%RodList(J)%FextU = m%RodList(J)%FextU + m%ExtLdList(l)%Fext
+                              m%RodList(J)%FextU = m%RodList(J)%FextU + m%ExtLdList(l)%Fext(1:3)
                               m%RodList(J)%Blin = m%RodList(J)%Blin(1:2) + m%ExtLdList(l)%Blin(1:2) ! rods only have axial and transverse
                               m%RodList(J)%Bquad = m%RodList(J)%Bquad(1:2) + m%ExtLdList(l)%Bquad(1:2) ! rods only have axial and transverse
+                              IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                 IF (m%RodList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                    CALL SetErrStat( ErrID_Fatal, 'Only one force time series on rod '//trim(Num2LStr(J))//'.', ErrStat, ErrMsg, RoutineName )
+                                    CALL CleanUp()
+                                    RETURN
+                                 END IF
+                                 m%RodList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                 CALL AllocAry(m%RodList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                 CALL AllocAry(m%RodList(J)%FextTsGfs, 3, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                 m%RodList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                 m%RodList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                              END IF
+                              CALL CheckError( ErrStat2, ErrMsg2 )
+                              IF (ErrStat >= AbortErrLev) RETURN
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Rod ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                               CALL CleanUp()

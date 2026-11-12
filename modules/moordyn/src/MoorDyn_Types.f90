@@ -143,12 +143,18 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M0 = 0.0_R8Ki      !< body 6-dof mass and inertia matrix in its own frame [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     REAL(DbKi) , DIMENSION(1:3)  :: rCG = 0.0_R8Ki      !< vector in body frame from ref point to CG (before rods etc..) [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: FextG = 0.0_R8Ki      !< vector of user-defined external force on the body in the global frame [[N]]
-    REAL(DbKi) , DIMENSION(1:3)  :: BlinG = 0.0_R8Ki      !< user-defined linear translational damping on the body in the global frame [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:3)  :: BquadG = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the global frame [[N/(m/s)^2]]
-    REAL(DbKi) , DIMENSION(1:3)  :: FextL = 0.0_R8Ki      !< vector of user-defined external force on the body in the local body-fixed frame [[N]]
-    REAL(DbKi) , DIMENSION(1:3)  :: BlinL = 0.0_R8Ki      !< user-defined linear translational damping on the body in the local body-fixed frame [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:3)  :: BquadL = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the local body-fixed frame [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: FextG = 0.0_R8Ki      !< constant external force and moment in the global earth fixed frame, from the EXTERNAL LOADS section [[N,]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinG = 0.0_R8Ki      !< external linear damping coefficients on the global frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadG = 0.0_R8Ki      !< external quadratic damping coefficients on the global frame [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: FextL = 0.0_R8Ki      !< constant external force and moment on the local body fixed frame [[N,]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinL = 0.0_R8Ki      !< external linear damping coefficients on the local frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadL = 0.0_R8Ki      !< external quadratic damping coefficients on the local frame [[N/(m/s)^2]]
+    INTEGER(IntKi)  :: nFextTsGsteps = 0      !< number of steps of the external force time series in the global frame, 0 if no file was provided [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FextTsGts      !< times of the external force time series in the global frame [[s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: FextTsGfs      !< forces and moments of the external force time series in the global frame, (6,nFextTsGsteps) [[N, N-m]]
+    INTEGER(IntKi)  :: nFextTsLsteps = 0      !< number of steps of the external force time series on the local frame, 0 if no file was provided [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FextTsLts      !< times of the external force time series on the local frame [[s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: FextTsLfs      !< forces and moments of the external force time series on the local frame, (6,nFextTsLsteps) [[N, N-m]]
   END TYPE MD_Body
 ! =======================
 ! =========  MD_Point  =======
@@ -179,6 +185,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the point always in the global frame [[N]]
     REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the point always in the global frame [[N/(m/s)]]
     REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the point always in the global frame [[N/(m/s)^2]]
+    INTEGER(IntKi)  :: nFextTsGsteps = 0      !< number of steps of the external force time series in the global frame, 0 if no file was provided [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FextTsGts      !< times of the external force time series in the global frame [[s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: FextTsGfs      !< forces of the external force time series in the global frame, (3,nFextTsGsteps) [[N]]
   END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
@@ -244,7 +253,10 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     INTEGER(IntKi)  :: RodUnOut = 0_IntKi      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A always in the local body-fixed frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force applied at the rod end A, always in the global earth-fixed frame [[N]]
+    INTEGER(IntKi)  :: nFextTsGsteps = 0      !< number of steps of the external force time series in the global frame, also applied on the end point A, 0 if no file was provided [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FextTsGts      !< times of the external force time series in the global frame [[s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: FextTsGfs      !< forces of the external force time series in the global frame, (3,nFextTsGsteps) [[N]]
     REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)]]
     REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)^2]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: VOF      !< Node-based volume-of-fluid for submergence [-]
@@ -345,9 +357,12 @@ IMPLICIT NONE
 ! =========  MD_ExtLd  =======
   TYPE, PUBLIC :: MD_ExtLd
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this external load entry [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< user-defined external force on the object [[N]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the object [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the object [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: Fext = 0.0_R8Ki      !< constant external force and moment. Only bodies use the moment components. For rods this is applied on the end point A [[N,]
+    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< linear damping coefficients. For rods only the first two components are used for transverse and axial  [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< quadratic damping coefficients. For rods only the first two components are used for transverse and axial [[N/(m/s)^2]]
+    INTEGER(IntKi)  :: nFextTsSteps = 0      !< number of steps of the external force time series, 0 if no file was provided [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FextTsts      !< times of the force time series, monotonically increasing [[s]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: FextTsfs      !< forces and moments of the force time series. Only bodies use moments, (6,nFextTsSteps) [[N, N-m]]
     LOGICAL  :: isGlobal = .false.      !< external forces and damping to be applied in the global frame of reference [-]
   END TYPE MD_ExtLd
 ! =======================
@@ -1008,6 +1023,8 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MD_CopyBody'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1043,6 +1060,56 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%FextL = SrcBodyData%FextL
    DstBodyData%BlinL = SrcBodyData%BlinL
    DstBodyData%BquadL = SrcBodyData%BquadL
+   DstBodyData%nFextTsGsteps = SrcBodyData%nFextTsGsteps
+   if (allocated(SrcBodyData%FextTsGts)) then
+      LB(1:1) = lbound(SrcBodyData%FextTsGts)
+      UB(1:1) = ubound(SrcBodyData%FextTsGts)
+      if (.not. allocated(DstBodyData%FextTsGts)) then
+         allocate(DstBodyData%FextTsGts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBodyData%FextTsGts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBodyData%FextTsGts = SrcBodyData%FextTsGts
+   end if
+   if (allocated(SrcBodyData%FextTsGfs)) then
+      LB(1:2) = lbound(SrcBodyData%FextTsGfs)
+      UB(1:2) = ubound(SrcBodyData%FextTsGfs)
+      if (.not. allocated(DstBodyData%FextTsGfs)) then
+         allocate(DstBodyData%FextTsGfs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBodyData%FextTsGfs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBodyData%FextTsGfs = SrcBodyData%FextTsGfs
+   end if
+   DstBodyData%nFextTsLsteps = SrcBodyData%nFextTsLsteps
+   if (allocated(SrcBodyData%FextTsLts)) then
+      LB(1:1) = lbound(SrcBodyData%FextTsLts)
+      UB(1:1) = ubound(SrcBodyData%FextTsLts)
+      if (.not. allocated(DstBodyData%FextTsLts)) then
+         allocate(DstBodyData%FextTsLts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBodyData%FextTsLts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBodyData%FextTsLts = SrcBodyData%FextTsLts
+   end if
+   if (allocated(SrcBodyData%FextTsLfs)) then
+      LB(1:2) = lbound(SrcBodyData%FextTsLfs)
+      UB(1:2) = ubound(SrcBodyData%FextTsLfs)
+      if (.not. allocated(DstBodyData%FextTsLfs)) then
+         allocate(DstBodyData%FextTsLfs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBodyData%FextTsLfs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBodyData%FextTsLfs = SrcBodyData%FextTsLfs
+   end if
 end subroutine
 
 subroutine MD_DestroyBody(BodyData, ErrStat, ErrMsg)
@@ -1052,6 +1119,18 @@ subroutine MD_DestroyBody(BodyData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_DestroyBody'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(BodyData%FextTsGts)) then
+      deallocate(BodyData%FextTsGts)
+   end if
+   if (allocated(BodyData%FextTsGfs)) then
+      deallocate(BodyData%FextTsGfs)
+   end if
+   if (allocated(BodyData%FextTsLts)) then
+      deallocate(BodyData%FextTsLts)
+   end if
+   if (allocated(BodyData%FextTsLfs)) then
+      deallocate(BodyData%FextTsLfs)
+   end if
 end subroutine
 
 subroutine MD_PackBody(RF, Indata)
@@ -1091,6 +1170,12 @@ subroutine MD_PackBody(RF, Indata)
    call RegPack(RF, InData%FextL)
    call RegPack(RF, InData%BlinL)
    call RegPack(RF, InData%BquadL)
+   call RegPack(RF, InData%nFextTsGsteps)
+   call RegPackAlloc(RF, InData%FextTsGts)
+   call RegPackAlloc(RF, InData%FextTsGfs)
+   call RegPack(RF, InData%nFextTsLsteps)
+   call RegPackAlloc(RF, InData%FextTsLts)
+   call RegPackAlloc(RF, InData%FextTsLfs)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1098,6 +1183,9 @@ subroutine MD_UnPackBody(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MD_Body), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackBody'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%typeNum); if (RegCheckErr(RF, RoutineName)) return
@@ -1131,6 +1219,12 @@ subroutine MD_UnPackBody(RF, OutData)
    call RegUnpack(RF, OutData%FextL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BlinL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BquadL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nFextTsGsteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGfs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nFextTsLsteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsLts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsLfs); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
@@ -1181,6 +1275,31 @@ subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
    DstPointData%Fext = SrcPointData%Fext
    DstPointData%Blin = SrcPointData%Blin
    DstPointData%Bquad = SrcPointData%Bquad
+   DstPointData%nFextTsGsteps = SrcPointData%nFextTsGsteps
+   if (allocated(SrcPointData%FextTsGts)) then
+      LB(1:1) = lbound(SrcPointData%FextTsGts)
+      UB(1:1) = ubound(SrcPointData%FextTsGts)
+      if (.not. allocated(DstPointData%FextTsGts)) then
+         allocate(DstPointData%FextTsGts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPointData%FextTsGts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstPointData%FextTsGts = SrcPointData%FextTsGts
+   end if
+   if (allocated(SrcPointData%FextTsGfs)) then
+      LB(1:2) = lbound(SrcPointData%FextTsGfs)
+      UB(1:2) = ubound(SrcPointData%FextTsGfs)
+      if (.not. allocated(DstPointData%FextTsGfs)) then
+         allocate(DstPointData%FextTsGfs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPointData%FextTsGfs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstPointData%FextTsGfs = SrcPointData%FextTsGfs
+   end if
 end subroutine
 
 subroutine MD_DestroyPoint(PointData, ErrStat, ErrMsg)
@@ -1192,6 +1311,12 @@ subroutine MD_DestroyPoint(PointData, ErrStat, ErrMsg)
    ErrMsg  = ''
    if (allocated(PointData%PDyn)) then
       deallocate(PointData%PDyn)
+   end if
+   if (allocated(PointData%FextTsGts)) then
+      deallocate(PointData%FextTsGts)
+   end if
+   if (allocated(PointData%FextTsGfs)) then
+      deallocate(PointData%FextTsGfs)
    end if
 end subroutine
 
@@ -1226,6 +1351,9 @@ subroutine MD_PackPoint(RF, Indata)
    call RegPack(RF, InData%Fext)
    call RegPack(RF, InData%Blin)
    call RegPack(RF, InData%Bquad)
+   call RegPack(RF, InData%nFextTsGsteps)
+   call RegPackAlloc(RF, InData%FextTsGts)
+   call RegPackAlloc(RF, InData%FextTsGfs)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1263,6 +1391,9 @@ subroutine MD_UnPackPoint(RF, OutData)
    call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nFextTsGsteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGfs); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
@@ -1569,6 +1700,31 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
       DstRodData%RodWrOutput = SrcRodData%RodWrOutput
    end if
    DstRodData%FextU = SrcRodData%FextU
+   DstRodData%nFextTsGsteps = SrcRodData%nFextTsGsteps
+   if (allocated(SrcRodData%FextTsGts)) then
+      LB(1:1) = lbound(SrcRodData%FextTsGts)
+      UB(1:1) = ubound(SrcRodData%FextTsGts)
+      if (.not. allocated(DstRodData%FextTsGts)) then
+         allocate(DstRodData%FextTsGts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%FextTsGts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%FextTsGts = SrcRodData%FextTsGts
+   end if
+   if (allocated(SrcRodData%FextTsGfs)) then
+      LB(1:2) = lbound(SrcRodData%FextTsGfs)
+      UB(1:2) = ubound(SrcRodData%FextTsGfs)
+      if (.not. allocated(DstRodData%FextTsGfs)) then
+         allocate(DstRodData%FextTsGfs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%FextTsGfs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%FextTsGfs = SrcRodData%FextTsGfs
+   end if
    DstRodData%Blin = SrcRodData%Blin
    DstRodData%Bquad = SrcRodData%Bquad
    if (allocated(SrcRodData%VOF)) then
@@ -1655,6 +1811,12 @@ subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
    if (allocated(RodData%RodWrOutput)) then
       deallocate(RodData%RodWrOutput)
    end if
+   if (allocated(RodData%FextTsGts)) then
+      deallocate(RodData%FextTsGts)
+   end if
+   if (allocated(RodData%FextTsGfs)) then
+      deallocate(RodData%FextTsGfs)
+   end if
    if (allocated(RodData%VOF)) then
       deallocate(RodData%VOF)
    end if
@@ -1727,6 +1889,9 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%RodUnOut)
    call RegPackAlloc(RF, InData%RodWrOutput)
    call RegPack(RF, InData%FextU)
+   call RegPack(RF, InData%nFextTsGsteps)
+   call RegPackAlloc(RF, InData%FextTsGts)
+   call RegPackAlloc(RF, InData%FextTsGfs)
    call RegPack(RF, InData%Blin)
    call RegPack(RF, InData%Bquad)
    call RegPackAlloc(RF, InData%VOF)
@@ -1803,6 +1968,9 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%RodUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RodWrOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FextU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nFextTsGsteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsGfs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%VOF); if (RegCheckErr(RF, RoutineName)) return
@@ -2636,6 +2804,8 @@ subroutine MD_CopyExtLd(SrcExtLdData, DstExtLdData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MD_CopyExtLd'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2643,6 +2813,31 @@ subroutine MD_CopyExtLd(SrcExtLdData, DstExtLdData, CtrlCode, ErrStat, ErrMsg)
    DstExtLdData%Fext = SrcExtLdData%Fext
    DstExtLdData%Blin = SrcExtLdData%Blin
    DstExtLdData%Bquad = SrcExtLdData%Bquad
+   DstExtLdData%nFextTsSteps = SrcExtLdData%nFextTsSteps
+   if (allocated(SrcExtLdData%FextTsts)) then
+      LB(1:1) = lbound(SrcExtLdData%FextTsts)
+      UB(1:1) = ubound(SrcExtLdData%FextTsts)
+      if (.not. allocated(DstExtLdData%FextTsts)) then
+         allocate(DstExtLdData%FextTsts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstExtLdData%FextTsts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstExtLdData%FextTsts = SrcExtLdData%FextTsts
+   end if
+   if (allocated(SrcExtLdData%FextTsfs)) then
+      LB(1:2) = lbound(SrcExtLdData%FextTsfs)
+      UB(1:2) = ubound(SrcExtLdData%FextTsfs)
+      if (.not. allocated(DstExtLdData%FextTsfs)) then
+         allocate(DstExtLdData%FextTsfs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstExtLdData%FextTsfs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstExtLdData%FextTsfs = SrcExtLdData%FextTsfs
+   end if
    DstExtLdData%isGlobal = SrcExtLdData%isGlobal
 end subroutine
 
@@ -2653,6 +2848,12 @@ subroutine MD_DestroyExtLd(ExtLdData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MD_DestroyExtLd'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ExtLdData%FextTsts)) then
+      deallocate(ExtLdData%FextTsts)
+   end if
+   if (allocated(ExtLdData%FextTsfs)) then
+      deallocate(ExtLdData%FextTsfs)
+   end if
 end subroutine
 
 subroutine MD_PackExtLd(RF, Indata)
@@ -2664,6 +2865,9 @@ subroutine MD_PackExtLd(RF, Indata)
    call RegPack(RF, InData%Fext)
    call RegPack(RF, InData%Blin)
    call RegPack(RF, InData%Bquad)
+   call RegPack(RF, InData%nFextTsSteps)
+   call RegPackAlloc(RF, InData%FextTsts)
+   call RegPackAlloc(RF, InData%FextTsfs)
    call RegPack(RF, InData%isGlobal)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -2672,11 +2876,17 @@ subroutine MD_UnPackExtLd(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MD_ExtLd), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackExtLd'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nFextTsSteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FextTsfs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%isGlobal); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
