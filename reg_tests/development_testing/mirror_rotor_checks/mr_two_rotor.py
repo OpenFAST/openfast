@@ -24,7 +24,7 @@ REPO_ROOT = os.environ.get("OPENFAST_REPO") or os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
-from compare_mirror import classify  # noqa: E402
+from compare_mirror import classify, expected_class  # noqa: E402
 
 sys.path.insert(0, os.path.join(REPO_ROOT, "reg_tests", "lib"))
 import pass_fail  # noqa: E402
@@ -77,7 +77,7 @@ def main():
               f"(R1 channels: {len(r1)}, R2 channels: {len(r2)})")
         return 1
 
-    counts, unresolved, rows = Counter(), [], []
+    counts, unresolved, rows, wrong = Counter(), [], [], []
     for base in sorted(r1):
         if base not in r2:
             counts["missing"] += 1
@@ -85,6 +85,11 @@ def main():
         cls, res = classify(col[r1[base]], col[r2[base]], a.tol, a.floor)
         counts[cls] += 1
         rows.append((base, cls, res))
+        # Channels with a known expected class must land in it: equal nonzero
+        # physical torques on the two rotors are a sign regression, not a pass.
+        exp = expected_class(base)
+        if exp is not None and cls not in ("negligible", exp):
+            wrong.append((base, exp, cls))
         if cls == "?":
             unresolved.append((base, res,
                                np.abs(col[r1[base]]).max(),
@@ -136,7 +141,10 @@ def main():
               "counterpart; the comparison is incomplete")
     if not rows:
         print("\nERROR: no channel pair was actually compared")
-    return 1 if (unresolved or counts["missing"] or not rows or sym_bad) else 0
+    if wrong:
+        print("\nERROR: wrong class: "
+              + " ".join(f"{c}(expected {e}, got {g})" for c, e, g in wrong))
+    return 1 if (unresolved or counts["missing"] or not rows or sym_bad or wrong) else 0
 
 
 if __name__ == "__main__":
