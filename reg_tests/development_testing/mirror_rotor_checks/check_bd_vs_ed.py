@@ -42,12 +42,16 @@ def discrepancy(ed_case, bd_case):
     scale = np.abs(a[keep][:, 1:]).max()
 
     out = {}
+    floor = 1e-9 * scale
     for c in shared:
         x = a[keep, i1[c]]
         y = np.interp(t1[keep], t2, b[:, i2[c]])
-        den = max(np.abs(x).max(), 1e-12)
-        if den < 1e-9 * scale:
+        # A channel is dropped only when BOTH models hold it at the floor: a
+        # response present in one model alone must stay in the comparison, and
+        # the floor then serves as the normalisation for the quiet side.
+        if max(np.abs(x).max(), np.abs(y).max()) < floor:
             continue
+        den = max(np.abs(x).max(), floor)
         out[c] = np.abs(y - x).max() / den
     return out
 
