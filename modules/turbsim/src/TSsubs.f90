@@ -41,10 +41,9 @@ CONTAINS
 !! values FOR ONLY the velocity components that use the IEC method for
 !! computing spatial coherence; i.e., for i where SCMod(i) == CohMod_IEC
 !!
-!! OpenMP:  This makes a copy of the TRH array for each thread to use, which
-!!          is a little inefficient, but the speedup from parallelization
-!!          should outweigh the memory overhead. In the single threaded case,
-!!          a single copy is made, which is relatively negligible.
+!! OpenMP:  Each thread allocates its own TRH work array inside the parallel
+!!          region and frees it at the end of the region.  The passed-in TRH
+!!          array is not used here.
 SUBROUTINE CalcFourierCoeffs_IEC( p, U, PhaseAngles, S, V, TRH_in, ErrStat, ErrMsg )
 
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
@@ -52,12 +51,11 @@ REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< T
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-REAL(ReKi),                  INTENT(INOUT)  :: TRH_in(:)                       !< The transfer function matrix.  just used as a work array
+REAL(ReKi),                  INTENT(INOUT)  :: TRH_in(:)                       !< The transfer function matrix.  Not used in this routine (each thread allocates its own work array)
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
-REAL(ReKi), allocatable, save :: TRH(:)         ! Each OMP thread gets its own copy of this array
-!$OMP THREADPRIVATE(TRH)
+REAL(ReKi), ALLOCATABLE       :: TRH(:)         ! The transfer function matrix work array.  Each OMP thread allocates its own copy
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
    
@@ -67,11 +65,15 @@ INTEGER                       :: IFreq
 INTEGER                       :: Indx
 INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
                               
+LOGICAL                       :: Failed         ! set when any thread has a fatal error, so the other threads can skip the rest of their work
+LOGICAL                       :: SkipFreq       ! thread local copy of Failed
+
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
     
    ErrStat = ErrID_None
    ErrMsg  = ""
+   Failed  = .FALSE.
    
    IF (.NOT. ANY(p%met%SCMod == CohMod_IEC)) RETURN
 
@@ -83,8 +85,6 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
    CALL AllocAry( DistU, p%grid%NPacked, 'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
    IF (ErrStat >= AbortErrLev) RETURN
 
-   TRH = TRH_in  ! point the PRIVATE array to the passed in array for single thread case
-      
    !--------------------------------------------------------------------------------
    ! Calculate the distances and other parameters that don't change with frequency
    !---------------------------------------------------------------------------------
@@ -117,12 +117,30 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
       ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
       !---------------------------------------------------------------------------------
 
-      !$OMP PARALLEL DO &
+      ! NOTE: TRH is PRIVATE and allocated by each thread inside the parallel region.  Do not use THREADPRIVATE + COPYIN
+      !       for this: not all compilers give each thread its own copy of an allocatable array that way (issue #3273).
+
+      !$OMP PARALLEL &
       !$OMP DEFAULT(None) &
-      !$OMP SHARED(p, PhaseAngles, S, V, Dist, DistU, IVec, ErrStat, ErrMsg, AbortErrLev) &
-      !$OMP PRIVATE(Indx, I, J, ErrStat2, ErrMsg2) &
-      !$OMP COPYIN(TRH)
+      !$OMP SHARED(p, PhaseAngles, S, V, Dist, DistU, IVec, ErrStat, ErrMsg, AbortErrLev, Failed) &
+      !$OMP PRIVATE(TRH, IFreq, Indx, I, J, ErrStat2, ErrMsg2, SkipFreq)
+
+      CALL AllocAry( TRH, p%grid%NPacked, 'TRH coherence array', ErrStat2, ErrMsg2 )
+      if (ErrStat2 >= AbortErrLev) then
+         !$OMP CRITICAL(CalcFourierCoeffs_IEC_Err)
+         IF (.NOT. Failed) CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')  ! report only the first failure
+         !$OMP ATOMIC WRITE
+         Failed = .TRUE.
+         !$OMP END CRITICAL(CalcFourierCoeffs_IEC_Err)
+      end if
+
+      !$OMP DO
       DO IFREQ = 1, p%grid%NumFreq
+
+         ! We can't exit an OpenMP loop early, so skip the remaining frequencies once any thread has failed
+         !$OMP ATOMIC READ
+         SkipFreq = Failed
+         IF (SkipFreq) CYCLE
 
          ! -----------------------------------------------
          ! Create the coherence matrix for this frequency
@@ -159,14 +177,24 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
          
          CALL Coh2H(p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2)
          if (ErrStat2 >= AbortErrLev) then
-            !$OMP CRITICAL 
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
-            !$OMP END CRITICAL
+            !$OMP CRITICAL(CalcFourierCoeffs_IEC_Err)
+            IF (.NOT. Failed) CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')  ! report only the first failure
+            !$OMP ATOMIC WRITE
+            Failed = .TRUE.
+            !$OMP END CRITICAL(CalcFourierCoeffs_IEC_Err)
          else
             CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
          endif
 
       END DO !IFreq
+      !$OMP END DO
+
+      IF (ALLOCATED(TRH)) DEALLOCATE(TRH)
+
+      !$OMP END PARALLEL
+
+      IF (ErrStat >= AbortErrLev) RETURN
+
    END DO !IVec   
                
 !............................................   
@@ -757,7 +785,7 @@ integer                          :: old_max_levels    ! maximum nesting levels f
       ! -------------------------------------------------------------      
    IF ( p%usr%NPoints > 0 ) THEN
       J = p%usr%NPoints
-      Indx = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      Indx = INT( INT(p%grid%NPoints,B8Ki)*(J-1) - INT(J,B8Ki)*(J-1)/2 + J, IntKi ) !Index of H(J,J); (64-bit integers because NPoints*(J-1) can overflow)
       NPts = p%grid%NPoints - p%usr%NPoints + 1
    ELSE
       Indx = 1
@@ -855,7 +883,7 @@ integer                          :: Indx, J, I
       CPh   = COS( PhaseAngles(J,IFreq,IVec) )
       SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
 
-      Indx = NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      Indx = INT( INT(NPoints,B8Ki)*(J-1) - INT(J,B8Ki)*(J-1)/2 + J, IntKi ) !Index of H(J,J); (64-bit integers because NPoints*(J-1) can overflow)
       DO I=J,NPoints
 
          V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
@@ -1225,6 +1253,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    INTEGER(IntKi)                                 :: IY, IZ, IFreq                   ! loop counters 
    INTEGER(IntKi)                                 :: NTwrPts                         ! number of extra tower points
    INTEGER(IntKi)                                 :: NTwrIndx                        ! number of tower points to be placed in output file
+   INTEGER(B8Ki)                                  :: NPacked8                        ! NPacked, as a 64-bit integer
    
    INTEGER(IntKi)                                 :: TmpIndex                        ! temporary index
       
@@ -1447,7 +1476,15 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
    IF (GenerateExtraHubPoint) p_grid%NPoints = p_grid%NPoints + 1  
 
-   p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
+      ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
+      ! (calculated with 64-bit integers because NPoints*(NPoints+1) overflows before NPacked does)
+   NPacked8 = INT(p_grid%NPoints,B8Ki)*( INT(p_grid%NPoints,B8Ki) + 1_B8Ki )/2_B8Ki
+   IF ( NPacked8 > INT(HUGE(p_grid%NPacked),B8Ki) ) THEN
+      CALL SetErrStat(ErrID_Fatal, 'There are too many points ('//TRIM(Num2LStr(p_grid%NPoints))// &
+                      ') for the coherence matrix to be stored. Reduce the number of grid points.', ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   p_grid%NPacked   = INT( NPacked8, IntKi )
 
    
    ! we now know how many points there are going to be, so let's create the arrays that contains their locations and finish updating our index arrays

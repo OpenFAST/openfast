@@ -16,6 +16,10 @@
 ! Calling sequences for RanLux:
 ! call RanLux (RVec)
 !   Returns a vector RVec of Len(RVec) 32-bit random floating point numbers X, such that 0.0 < X < 1.0 .
+! call RanLux (RVec, ContinueSeq=.true.)
+!   Same, but RVec continues the vector that was returned by the previous call to RanLux: filling an array with one call, or in
+!   pieces with ContinueSeq=.true. on every call after the first, gives identical numbers. (Without ContinueSeq the value used to
+!   "pad" small numbers is reset at the start of each call, so the pieces would differ from the single call in a few numbers.)
 ! call RLuxGo (Lux, Int, K1, K2)
 !   Initializes the generator from one 32-bit integer INT and sets Luxury Level LUX which is integer between zero and MaxLev, or
 !   if Lux > 24, it sets p = Lux directly. K1 and K2 should be set to zero unless restarting at a break point given by output of
@@ -53,6 +57,7 @@
   logical, save :: NotYet = .TRUE.
 
   real(ReKi) :: Uni
+  real(ReKi), save :: PadSeed = 0.0 ! value added to "pad" small numbers; set at the start of a call to RanLux, unless that call continues the previous one
 
 !bjj
   character(300) :: RanLux_str
@@ -62,12 +67,14 @@
 
 contains
 !============================================================================
-  subroutine RanLux (RVec)
+  subroutine RanLux (RVec, ContinueSeq)
     ! Default Initialization by Multiplicative Congruential
     real(ReKi), intent(out) :: RVec(:)
+    logical, optional, intent(in) :: ContinueSeq ! if .true., RVec continues the vector returned by the previous call (see the top of this module)
     integer :: ISeeds(NSeeds - 1), I, IVec, JSeed, K, LEnv, LP
 
     real(ReKi) :: tmpTwoM24, tmpTwoM24Seed
+    logical :: NewSeq
 
 ! start subroutine RanLux
     LEnv = Size (RVec)
@@ -98,7 +105,10 @@ contains
     end if
 
       !bjj added to speed up later calculations (b/c I had to fix the "where" statement)
-    tmpTwoM24Seed = TwoM24 * Seeds(J24)
+    NewSeq = .true.
+    if (present(ContinueSeq)) NewSeq = .not. ContinueSeq
+    if (NewSeq) PadSeed = TwoM24 * Seeds(J24)
+    tmpTwoM24Seed = PadSeed
     tmpTwoM24 = TwoM24 * TwoM24
       !bjj end of modifications
 
@@ -109,6 +119,10 @@ contains
       if (In24 == NSeeds - 1) then
         In24 = 0
         Kount = Kount + NSkip
+        if (Kount >= IGiga) then   ! keep Kount below 1E9 here, so that it cannot overflow while a long RVec is filled
+          MKount = MKount + 1
+          Kount = Kount - IGiga
+        end if
         Uni = RCarry (NSkip)
       end if
 
@@ -119,7 +133,8 @@ contains
 
    end do
 
-    Kount = Kount + LEnv
+    MKount = MKount + LEnv / IGiga     ! LEnv may be larger than 1E9, so add it in two parts to keep Kount from overflowing
+    Kount = Kount + Mod (LEnv, IGiga)
     if (Kount >= IGiga) then
       MKount = MKount + 1
       Kount = Kount - IGiga
