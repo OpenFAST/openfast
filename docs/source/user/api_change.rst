@@ -95,6 +95,10 @@ rather than via a separate flag for each.
 Superposition of wave and current velocities between InflowWind and SeaState was enabled,
 which requires a "SeaState Data" section in the AeroDyn driver input file.
 
+The Simplified-ElastoDyn shaft-acceleration outputs ``RotAcc`` and ``GenAcc`` (and
+their aliases) are now reported in deg/s^2, as their registered units have always
+stated; previous versions wrote them as rpm/s, a factor of six smaller.
+
 Changes to the OpenFAST input file support multiple rotors in one turbine. Line 16, NRotors,
 is required to specify the number of rotors in the turbine. Lines 50-56 specify the 
 ElastoDyn, BeamDyn, and ServoDyn input files for the second rotor; all other modules use 

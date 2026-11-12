@@ -319,9 +319,10 @@ subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutp
    m%AllOuts( RotSpeed ) = p%RotDir * x%QDT(DOF_Az) * RPS2RPM
    m%AllOuts( GenSpeed ) = p%RotDir * x%QDT(DOF_Az) * RPS2RPM    * p%GBoxRatio
 
-   ! accel
-   m%AllOuts( RotAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * RPS2RPM
-   m%AllOuts( GenAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio
+   ! accel -- registered in deg/s^2, as in ElastoDyn (these were written as rpm/s,
+   ! a factor of six smaller than the declared unit, through OpenFAST 5.0)
+   m%AllOuts( RotAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * R2D
+   m%AllOuts( GenAcc   ) = p%RotDir * dxdt%QDT(DOF_Az) * R2D * p%GBoxRatio
 
    ! MirrorRotor: physical components about the shaft x axis, which do change sign.
    ! The speed is registered in rpm and the acceleration in deg/s^2, as in ElastoDyn.
