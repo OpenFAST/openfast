@@ -287,9 +287,13 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
                m%W(iW)%iRoot=-1
             endif
             ! NOTE: on the first pass, m%iTip and m%iRoot are computed
-            call PlaceTipRoot(p%W(iW)%nSpan, x%W(iW)%Gamma_NW(:,m%nNW), x%W(iW)%r_NW(1:3,:,m%nNW), x%W(iW)%Eps_NW(1:3,:,m%nNW),& ! inputs
+            ! MirrorRotor: the reduction inside PlaceTipRoot takes maxval of the panel
+            ! circulation, which on a mirrored wing's all-negative distribution would pick
+            ! the weakest panel instead of the strongest; reduce in the clockwise
+            ! convention and restore the wing's sign, leaving a clockwise rotor untouched.
+            call PlaceTipRoot(p%W(iW)%nSpan, p%W(iW)%RotDir*x%W(iW)%Gamma_NW(:,m%nNW), x%W(iW)%r_NW(1:3,:,m%nNW), x%W(iW)%Eps_NW(1:3,:,m%nNW),& ! inputs
                m%W(iW)%iRoot, m%W(iW)%iTip, FWGamma(iW), FWEpsTip, FWEpsRoot) ! outputs
-            x%W(iW)%Gamma_FW(1:FWnSpan,iAgeFW) = FWGamma(iW)
+            x%W(iW)%Gamma_FW(1:FWnSpan,iAgeFW) = p%W(iW)%RotDir*FWGamma(iW)
             x%W(iW)%Eps_FW(3,1:FWnSpan,iAgeFW) = FWEpsTip  ! HACK tip put in third
             x%W(iW)%Eps_FW(2,1:FWnSpan,iAgeFW) = FWEpsRoot ! HACK root put in second
             x%W(iW)%Eps_FW(1,1:FWnSpan,iAgeFW) = FWEpsTip  ! For shed vorticity..
