@@ -874,12 +874,12 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions from and output loads to
    real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
    real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   integer(c_int),            intent(in   )  :: DynamicOnly_C                !< if nonzero, NodeAdm_C excludes the potential-flow (WAMIT) contribution
    real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
    real(c_float),             intent(  out)  :: NodeAdm_C((6*NumNodePts_C)*(6*NumNodePts_C))  !< A (6xNumNodePts_C)x(6xNumNodePts_C) array containing the added mass matrix in column-major order -- added mass matrix (global)
    real(c_float),             intent(  out)  :: OutputChannelValues_C(SeaSt%p%NumOuts+HD%p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
-   integer(c_int),            intent(in   ), optional :: DynamicOnly_C       !< if present and nonzero, NodeAdm_C excludes the potential-flow (WAMIT) contribution
 
    ! Local variables
    logical                                   :: DynamicOnly
