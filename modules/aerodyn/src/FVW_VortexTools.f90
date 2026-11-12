@@ -179,6 +179,9 @@ contains
       else
          iTip =n+1
          iRoot=1
+         ! Gamma_max was left unassigned on this branch, so a wing of one or two
+         ! panels shed a far wake of undefined (in practice zero) circulation.
+         Gamma_max = maxval(Gamma_b,1)
          EpsTip   = Eps(1,iTip-1)
          EpsRoot  = Eps(1,iRoot)
       endif
