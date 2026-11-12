@@ -567,6 +567,33 @@ This flag can be set with the following command:
 
     cmake .. -DCMAKE_INSTALL_PREFIX="/usr/local/"
 
+OPENMP
+******
+This flag enables OpenMP so that some modules and TurbSim can run on more than
+one thread. The number of threads is set at run time with the
+``OMP_NUM_THREADS`` environment variable.
+
+.. code-block:: bash
+
+    cmake .. -DOPENMP=ON
+
+With OpenMP, LAPACK routines are called from several threads at once, so the
+BLAS/LAPACK library must allow that. When the library found is OpenBLAS, CMake
+checks how it was built and prints a warning in these two cases:
+
+- A pthreads build of OpenBLAS: set the environment variable
+  ``OPENBLAS_NUM_THREADS=1`` when running. Otherwise OpenBLAS starts its own
+  threads inside each OpenMP thread, which can be much slower and makes results
+  differ slightly with the number of threads.
+- A single-threaded build of OpenBLAS: this is safe only if OpenBLAS was built
+  with ``USE_LOCKING=1``, which CMake cannot detect. Without it, results can be
+  wrong and TurbSim can fail at random with errors such as ``LAPACK_SPOTRF:
+  Leading minor of order N of A is not positive definite``. Use a pthreads or
+  OpenMP build of OpenBLAS, or another BLAS/LAPACK library.
+
+The check applies to the library found when CMake runs. A different library
+loaded at run time is not checked.
+
 Setting the build tool
 ++++++++++++++++++++++
 CMake can target a variety of build tools or *generators*. To obtain a list
