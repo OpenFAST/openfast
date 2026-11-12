@@ -20,6 +20,10 @@ OLAF now selects the regularization function for the vortex particles separately
 
 MoorDyn now includes slip supports that only constrain motion in the line normal direction, like a hoop the line goes through, and apply only friction in the line tangent direction. Slip supports can be added in the input file under an optional new section called ``Slip Supports``. See :ref:`MD-SlipSupport` for details.
 
+Mirrored (counter-clockwise) rotors are supported through the ``MirrorRotor`` flag of the main OpenFAST input file; see :numref:`glue-code-mirror-rotor` for what the flag does and does not do. Two driver input files gained a matching line, which is required even for clockwise rotors: ``MirrorRotor(i)`` after each ``BasicHAWTFormat(i)`` entry in the AeroDyn driver, and ``MirrorRotor`` after ``WrVTK`` in the Simplified-ElastoDyn driver. Existing driver decks without these lines are rejected at initialization.
+
+The Simplified-ElastoDyn shaft-acceleration outputs ``RotAcc`` and ``GenAcc`` (and their aliases) are now reported in deg/s^2, as their registered units have always stated; previous versions wrote them as rpm/s, a factor of six smaller.
+
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Added in OpenFAST `5.1.0`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -41,6 +45,8 @@ AeroDyn                                       \*       NumGSMembers         0   
 AeroDyn                                       \*                            GSMemberID  GSMJointID1  GSMJointID2     GSMDia1       GSMDia2     GSMCd1        GSMCd2        GSMTI1       GSMTI2       GSMDiv
 AeroDyn                                       \*                            (-)            (-)          (-)           (m)           (m)          (-)           (-)          (-)          (-)           (m)
 OLAF                                          26       RegFunctionPart      default  RegFunctionPart - Particle regularization function {0: None, 1: Exponential, 2: Compact, "default": 2} [only if VelocityMethod=2,3] (switch)
+AeroDyn driver                                30       MirrorRotor(1)       False           MirrorRotor(1) - Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [one line per turbine, after BasicHAWTFormat(i)]
+SED driver                                    10       MirrorRotor          False                            MirrorRotor    - Rotor rotation direction is mirrored (counter-clockwise viewed from upwind) (flag)
 MoorDyn                                       \*                            ---------------------- SLIP SUPPORTS ------------------------------------------------
 MoorDyn                                       \*                              ID   Point   Line   Width     K     Zeta    MuS    MuK    VTol      VS    StickDisp
 MoorDyn                                       \*                              (-)   (-)    (-)     (h)    (N/m)    (-)    (-)    (-)    (m/s)    (m/s)     (m)
@@ -94,10 +100,6 @@ rather than via a separate flag for each.
 
 Superposition of wave and current velocities between InflowWind and SeaState was enabled,
 which requires a "SeaState Data" section in the AeroDyn driver input file.
-
-The Simplified-ElastoDyn shaft-acceleration outputs ``RotAcc`` and ``GenAcc`` (and
-their aliases) are now reported in deg/s^2, as their registered units have always
-stated; previous versions wrote them as rpm/s, a factor of six smaller.
 
 Changes to the OpenFAST input file support multiple rotors in one turbine. Line 16, NRotors,
 is required to specify the number of rotors in the turbine. Lines 50-56 specify the 
