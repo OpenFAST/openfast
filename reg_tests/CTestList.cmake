@@ -368,7 +368,7 @@ of_regression("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  "openfast;elastodyn;aerod
 of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore")
 of_regression("5MW_OC4Semi_WSt_WavesWN_MirrorRotor"   "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore;mirrorrotor")
-of_regression("5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor" "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;moordyn;offshore;mirrorrotor")
+of_regression("5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor" "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;moordyn;offshore;olaf;multirotor;mirrorrotor")
 of_regression("MHK_RM1_Floating_Steady_CW"           "openfast;elastodyn;aerodyn;hydrodyn;moordyn;offshore;mhk;mirrorrotor")
 of_regression("MHK_RM1_Floating_Steady_MirrorRotor"  "openfast;elastodyn;aerodyn;hydrodyn;moordyn;offshore;mhk;mirrorrotor")
 of_regression("5MW_MRSemi_DLL_WSt_WavesIrr"            "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore;subdyn;olaf;multirotor")
