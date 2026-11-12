@@ -54,9 +54,14 @@ by the input files:
   direction of rotation, so blade 2 of a mirrored three-bladed rotor is found
   120° *behind* blade 1 in the clockwise sense — the mirror image of its
   clockwise position.
-- **Aerodynamic performance is identical.**  Power, thrust, angle of attack and
-  the lift and drag coefficients match the clockwise machine; lateral forces
-  and in-plane moments act in the mirrored directions.
+- **Aerodynamic performance is identical under mirror-symmetric conditions.**
+  Compared in steady symmetric inflow, or against a correspondingly reflected
+  reference run, power, thrust, angle of attack and the lift and drag
+  coefficients match the clockwise machine, while lateral forces and in-plane
+  moments act in the mirrored directions.  In your real, asymmetric conditions
+  — an unmodified turbulence box, a yawed nacelle — the response is the
+  mirrored machine's own: a mirrored blade sweeps the wind field along the
+  opposite path, so individual channels need not match a clockwise run.
 - **The controller needs no change** — see :ref:`glue-code-mirror-rotor-control`.
 - **The wake rotates the other way**, in OLAF and in FAST.Farm, and the VTK
   visualisation draws the blade sections as mirror images.
