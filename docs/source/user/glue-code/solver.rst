@@ -275,7 +275,7 @@ The right-hand side (XB) contains the residuals:
   from mesh mappings (``FAST_InputSolve``) and the current iterate.
 
 The loads portion (rows ``iJL``) is pre-divided by ``UJacSclFact`` before the
-factorisation to improve conditioning.
+factorization to improve conditioning.
 
 Jacobian update strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -317,10 +317,281 @@ differences are extracted as rotation vectors (``MV_ComputeDiff``).
 Linear solve
 ~~~~~~~~~~~~
 
-The LU factorisation of **J** is computed with ``LAPACK_getrf`` and the system
-is solved with ``LAPACK_getrs`` (packed in ``NWTC_LAPACK``).  The same
-factored matrix is reused across convergence iterations until the update
-strategy triggers a rebuild.
+Each convergence iteration solves the linear system
+
+.. math::
+
+   \mathbf{J}\,\Delta\mathbf{z} = \mathbf{r}
+
+for the update :math:`\Delta\mathbf{z}` of the states and inputs, where
+:math:`\mathbf{r}` is the residual (``XB``).  **J** is factored once, when it is
+built in ``BuildJacobianTC``.  The factors are reused in every convergence
+iteration until the update strategy triggers a rebuild, so the cost of each
+iteration is the cost of applying the factors.
+
+The factorization and solve are performed by the ``BlockTriSolve`` module of the
+NWTC Library (``modules/nwtc-library/src/BlockTriSolve.f90``):
+
+* ``BTS_Factor`` is called in ``BuildJacobianTC``;
+* ``BTS_Solve`` is called in ``FAST_SolverStep``.
+
+The method is a direct solver that exploits the structure of **J**: most solver
+variables depend directly on only a few others, and much of the coupling runs in
+one direction.  The solution agrees with a dense LU solve to round-off.  The
+linear solver has no user inputs.  The IO Jacobian (``BuildJacobianIO``), used
+for the initial and linearization input-output solve, is still factored and
+solved with dense ``LAPACK_getrf``/``LAPACK_getrs``.
+
+Block triangular ordering
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Unknown *j* is a dependency of equation *i* when :math:`J_{ij} \neq 0` for
+:math:`i \neq j`.  ``BTS_Factor`` builds this dependency graph from the exact
+nonzero pattern of **J** and finds its strongly connected components with
+Tarjan's algorithm.  Ordering the components so that each one comes after the
+components it depends on gives a symmetric permutation **P** such that
+:math:`\mathbf{P}\mathbf{J}\mathbf{P}^T` is **block lower triangular**.  Here
+:math:`n = N_J` is the number of unknowns and *K* is the number of diagonal
+blocks, one per strongly connected component:
+
+.. code-block:: none
+
+               block 1   block 2   block 3            block K
+             +---------+---------+---------+-------+---------+
+     block 1 |  J_11   |    0    |    0    |  ...  |    0    |
+             +---------+---------+---------+-------+---------+
+     block 2 |  J_21   |  J_22   |    0    |  ...  |    0    |
+             +---------+---------+---------+-------+---------+
+     block 3 |  J_31   |  J_32   |  J_33   |  ...  |    0    |
+             +---------+---------+---------+-------+---------+
+       ...   |  ...    |  ...    |  ...    |  ...  |   ...   |
+             +---------+---------+---------+-------+---------+
+     block K |  J_K1   |  J_K2   |  J_K3   |  ...  |  J_KK   |
+             +---------+---------+---------+-------+---------+
+
+* **Diagonal blocks** :math:`J_{bb}` are either:
+
+  * a single unknown, whose diagonal entry can have any nonzero value; or
+  * a group of unknowns that are mutually coupled, i.e. each depends directly or
+    indirectly on all the others.  Such a group cannot be split further by
+    reordering.
+
+* **Blocks below the diagonal**, :math:`J_{bc}` with :math:`c < b`, contain
+  arbitrary coupling to earlier blocks.  They are often sparse and may be
+  empty.
+* **Blocks above the diagonal** are exactly zero.  No entries are dropped.
+
+Every square matrix has such an ordering, because the strongly connected
+components always form an acyclic dependency graph.  The two extremes are:
+
+* *K* = *n*: every block is a single unknown, the reordered matrix is lower
+  triangular, and the solve is pure forward substitution;
+* *K* = 1: all unknowns are coupled, and the method reduces to a dense LU
+  factorization.
+
+The load scaling by ``UJacSclFact`` is applied to matching rows and columns and
+does not change the nonzero pattern, so it does not affect the block structure.
+
+Structure of the TC Jacobian
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The reordered TC Jacobian typically has three regions:
+
+.. code-block:: none
+
+            upstream U    core C                   downstream D
+          +------------+------------------------+--------------+
+          | \          |                        |              |
+      U   |   \  J_UU  |           0            |       0      |
+          |     \      |                        |              |
+          +------------+------------------------+--------------+
+          |            | [C1]                   |              |
+          |            |  *   [C2]              |              |
+      C   |    J_CU    |  *    *   ...          |       0      |
+          |            |  *    *    *   [Cm]    |              |
+          +------------+------------------------+--------------+
+          |                                     | \            |
+      D   |          [ J_DU    J_DC ]           |   \  J_DD    |
+          |                                     |     \        |
+          +-------------------------------------+--------------+
+
+The diagonal ``\`` marks the lower-triangular regions, ``[Ck]`` the coupled
+diagonal blocks, and ``*`` the coupling between them.  The regions are:
+
+* **Upstream (U):** unknowns that do not depend on any core or downstream
+  unknown.  Each is a single-unknown diagonal block, so :math:`J_{UU}` is lower
+  triangular; it may be diagonal, or even the identity.
+* **Core (C):** one or more coupled diagonal blocks :math:`[C_1], \dots, [C_m]`,
+  separated by any single unknowns that fall between them, with coupling
+  ``*`` between them.  The core typically contains the structural states of the
+  TC modules together with the interface loads and motions that couple them.
+  It is the only part of **J** that needs an LU factorization.
+* **Downstream (D):** unknowns that depend on upstream or core unknowns, but on
+  which no upstream or core unknown depends.  Each is a single-unknown diagonal
+  block, so :math:`J_{DD}` is lower triangular; it is diagonal when the
+  downstream unknowns do not depend on each other.
+
+The sizes of the regions depend on the model.  The structure is detected
+automatically from the nonzero pattern; nothing in the solver is specific to a
+module or configuration.
+
+Factorization
+^^^^^^^^^^^^^
+
+Once per Jacobian update, ``BTS_Factor``:
+
+* factors each coupled block (:math:`[C_1], \dots, [C_m]`) with LAPACK
+  ``getrf``, using partial pivoting within the block;
+* stores each single unknown's diagonal value;
+* stores the coupling of each row to earlier blocks.  It is kept either as exact
+  nonzeros in compressed sparse row (CSR) form or, for large coupling panels,
+  in compressed low-rank form (see :ref:`below <glue-code-solver-lowrank>`).
+
+Solve: block forward substitution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With the residual :math:`\mathbf{r}` permuted into the same order, ``BTS_Solve``
+computes, for :math:`b = 1, \dots, K`:
+
+.. math::
+
+   \mathbf{x}_b = J_{bb}^{-1}\Big(\mathbf{r}_b - \sum_{c < b} J_{bc}\,\mathbf{x}_c\Big)
+
+No inverse is formed; :math:`J_{bb}^{-1}` denotes a solve with the diagonal
+block.  The solve works at two levels:
+
+* **Across blocks:** a single forward sweep from block 1 to block *K*.  Each
+  block uses only the solutions of earlier blocks, because the blocks above the
+  diagonal are exactly zero.  No backward sweep across blocks is needed.
+* **Within a diagonal block:**
+
+  * for a single unknown, a division by its diagonal entry;
+  * for a coupled block, a solve with the block's LU factors (LAPACK
+    ``getrs``).  This is a forward substitution through *L* followed by a
+    backward substitution through *U*, both limited to the unknowns of that
+    block.
+
+In terms of the three regions above, the sweep is:
+
+.. math::
+
+   \mathbf{x}_U &= J_{UU}^{-1}\,\mathbf{r}_U \\
+   \mathbf{x}_C &= J_{CC}^{-1}\big(\mathbf{r}_C - J_{CU}\,\mathbf{x}_U\big) \\
+   \mathbf{x}_D &= J_{DD}^{-1}\big(\mathbf{r}_D - J_{DU}\,\mathbf{x}_U
+                   - J_{DC}\,\mathbf{x}_C\big)
+
+* :math:`J_{UU}` and :math:`J_{DD}` consist only of single-unknown blocks, so
+  applying :math:`J_{UU}^{-1}` and :math:`J_{DD}^{-1}` is ordinary forward
+  substitution, one unknown at a time.
+* Applying :math:`J_{CC}^{-1}` continues the same forward sweep through the
+  blocks of the core.  For each coupled block :math:`[C_k]`, the coupling ``*``
+  to earlier core blocks is subtracted and the block is then solved with its LU
+  factors, forward and backward.  Any single unknowns between coupled blocks
+  are divisions.
+
+Backward substitution therefore occurs only inside coupled blocks, never across
+blocks.  The solution is finally permuted back to the original order.
+
+Numerical properties:
+
+* The blocks above the diagonal are exactly zero, so no pivoting across blocks
+  is needed and no Schur complement is formed.  Block forward substitution is
+  backward stable when each diagonal-block solve is.
+* The upstream and downstream unknowns never enter an LU factorization.  If the
+  coupled blocks :math:`[C_1], \dots, [C_m]` contain :math:`n_1, \dots, n_m`
+  unknowns, the factorization cost is proportional to
+  :math:`\sum_k n_k^3`, instead of :math:`n^3` for a dense factorization of all
+  :math:`n` unknowns.  Likewise, the cost of the LU solves in each iteration is
+  proportional to :math:`\sum_k n_k^2` instead of :math:`n^2`.
+* Diagonal entries do not affect the block structure.  A zero diagonal entry
+  inside a coupled block is handled by pivoting within the block.  The finest
+  block structure is obtained when the diagonal of **J** has no zeros, as is the
+  case for the TC Jacobian.
+* ``BTS_Solve`` does not modify the factorization.
+
+.. _glue-code-solver-lowrank:
+
+Coupling panels and low-rank compression
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Once the LU factorization is limited to the coupled blocks, most of the
+remaining work in each solve is applying the coupling to earlier unknowns:
+:math:`J_{CU}`, the ``*`` entries in the core, and :math:`[J_{DU}\; J_{DC}]`.
+This coupling is applied panel by panel:
+
+* **Run:** a sequence of consecutive single-unknown blocks, in solve order,
+  whose rows do not reference each other.  Every row in a run depends only on
+  unknowns solved before the run starts.
+* **Panel:** a group of rows whose coupling to earlier unknowns is applied
+  together, as one matrix-vector product, before their diagonal blocks are
+  solved.  A panel is either a run or the rows of one coupled block.  The
+  coupling inside a coupled block belongs to its diagonal block and is handled
+  by its LU factors.
+* **Panel coupling matrix:** the horizontal strip of the matrix to the left
+  of the panel's diagonal block(s).  It contains the panel's rows and only the
+  earlier columns those rows reference.  It can be applied in one step because
+  every unknown it references is solved before any row of the panel.
+
+In the matrix above:
+
+* each coupled block :math:`[C_k]` is a panel.  Its coupling matrix is its rows
+  of :math:`J_{CU}` together with the ``*`` entries to the left of
+  :math:`[C_k]`;
+* the downstream region forms one or more runs.  When the downstream unknowns do
+  not depend on each other (:math:`J_{DD}` diagonal), the entire region is a
+  single run, with panel coupling matrix :math:`[J_{DU}\; J_{DC}]`.  Otherwise a
+  new run starts at each row that references an earlier row of the current run.
+
+Coupling matrices between modules are often nearly full but of low numerical
+rank.  The coupling between the substructure and the hydrodynamic mesh
+variables is one example.  Each panel coupling matrix :math:`\mathbf{G}` that
+meets all of the following:
+
+* at least 4096 nonzeros;
+* at least 16 rows;
+* at least 16 columns
+
+is gathered into a dense matrix.  It is compressed with a truncated QR
+factorization with column pivoting, :math:`\mathbf{G} \approx \mathbf{Q}\mathbf{W}`:
+
+* **Q** has orthonormal columns (rows × rank);
+* **W** is rank × columns;
+* the factorization stops at the smallest rank whose discarded part meets the
+  tolerance.
+
+The panel is then applied with two matrix-vector products (BLAS ``gemv``):
+first :math:`\mathbf{W}\mathbf{x}`, then the product with **Q**.  The compressed
+form is used only if all of the following hold:
+
+* :math:`\|\mathbf{G} - \mathbf{Q}\mathbf{W}\|_F \le 10^{-13}\,\|\mathbf{G}\|_F`,
+  verified after compression by rebuilding **G** from **Q** and **W**;
+* the rank is at most one eighth of the smaller dimension of **G**;
+* the estimated solve cost is at least halved.
+
+Otherwise the exact nonzeros are kept.  The tolerance is a fixed internal
+constant.  It is several orders of magnitude below the accuracy of the
+finite-difference Jacobian entries, and below the rounding error that a dense LU
+factorization introduces for systems of this size.  Compression is therefore not
+expected to affect convergence behavior.
+
+Fallback to dense LU
+^^^^^^^^^^^^^^^^^^^^
+
+``BTS_Factor`` uses a dense LU factorization of the full **J**
+(``LAPACK_getrf``/``LAPACK_getrs``) in the following cases:
+
+* the system is small (fewer than 64 unknowns);
+* the block form is not expected to be at least 25% cheaper per solve, e.g.
+  when **J** is nearly full or consists of a single coupled block;
+* a single-unknown diagonal entry is numerically zero relative to the largest
+  entry in its row;
+* a coupled diagonal block is exactly singular.
+
+A singular **J** is reported by the dense factorization.  When the fallback is
+triggered by a numerically zero pivot or a singular block, a one-time ``Info``
+message is printed.  The parameter ``LinSolveMethod`` in ``FAST_Solver.f90`` can
+be set to ``BTS_Method_Dense`` at compile time to always use the dense
+factorization, for example for comparison.
 
 Convergence check
 ~~~~~~~~~~~~~~~~~

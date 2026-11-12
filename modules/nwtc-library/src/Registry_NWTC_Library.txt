@@ -152,6 +152,25 @@ typedef     ^       ^           ReKi            Nodes               ::  0   -   
 typedef     ^       ^           IntKi           OriginalIndices     :   0   -   "Array of original node indices"  -
 typedef     ^       ^           IntKi           Dimensions          :   0   -   "The splitting dimension (1 for x, 2 for y) for each node."  -
 
+typedef     ^       BlockTriSolveType IntKi     N                   -   0   -   "Number of equations/unknowns"  -
+typedef     ^       ^              IntKi        Method              -   0   -   "Factorization method in use {0=not factored, 1=dense LU, 2=block triangular}"  -
+typedef     ^       ^              IntKi        NumBlocks           -   0   -   "Number of diagonal blocks in the block triangular form"  -
+typedef     ^       ^              IntKi        Perm                :   -   -   "Solve order: Perm(k) is the original index of the k-th unknown/equation"  -
+typedef     ^       ^              IntKi        BlkStart            :   -   -   "Start position (in solve order) of each diagonal block, size NumBlocks+1"  -
+typedef     ^       ^              IntKi        BlkLUStart          :   -   -   "Start index in BlkLU of the factors of each multi-unknown block, 0 for single-unknown blocks"  -
+typedef     ^       ^              R8Ki         BlkLU               :   -   -   "LU factors (getrf, column-major) of all multi-unknown diagonal blocks, stored consecutively"  -
+typedef     ^       ^              R8Ki         Diag                :   -   -   "Diagonal values of single-unknown blocks (solve order)"  -
+typedef     ^       ^              IntKi        RowPtr              :   -   -   "Row pointers of off-diagonal-block entries (CSR, solve order)"  -
+typedef     ^       ^              IntKi        ColInd              :   -   -   "Column indices of off-diagonal-block entries (CSR, solve order)"  -
+typedef     ^       ^              R8Ki         Val                 :   -   -   "Values of off-diagonal-block entries (CSR)"  -
+typedef     ^       ^              IntKi        Piv                 :   -   -   "Pivot indices: full system for dense LU; block-local pivots at each block's positions for block triangular"  -
+typedef     ^       ^              IntKi        NWork               -   0   -   "Workspace size required by BTS_Solve for the block triangular method"  -
+typedef     ^       ^              IntKi        NumLR               -   0   -   "Number of coupling panels stored in low-rank form"  -
+typedef     ^       ^              IntKi        LRInfo              ::  -   -   "Low-rank panel data (7 x NumLR): first row position, rows, columns, rank, start in LRCols, start in LRU, start in LRW"  -
+typedef     ^       ^              IntKi        LRCols              :   -   -   "Column positions (solve order) referenced by each low-rank panel"  -
+typedef     ^       ^              R8Ki         LRU                 :   -   -   "Left factors (rows x rank, column-major) of the low-rank panels"  -
+typedef     ^       ^              R8Ki         LRW                 :   -   -   "Right factors (rank x columns, column-major) of the low-rank panels"  -
+
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
 # the "usefrom" keyword defines the types for the registry without generating
