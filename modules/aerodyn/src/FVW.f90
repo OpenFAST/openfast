@@ -1867,7 +1867,10 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
          Gamma_dyn      = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
          Gamma_dyn_avg  = (Gamma_dyn+Gamma_dyn_prev)*0.5_ReKi
          Gamma_dyn_prev = Gamma_dyn
-         z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
+         ! MirrorRotor: Cl above is the clockwise-equivalent value (the UA inputs are
+         ! converted on the way in), so the circulation takes the wing's rotation sense
+         ! here, exactly as the polar-data and prescribed paths do.
+         z%W(iW)%Gamma_LL(j-1) = p%W(iW)%RotDir * Gamma_dyn_avg
       enddo
    enddo ! iW, Loop on wings
    if(.false.) print*,u%W(1)%omega_z(1) ! unused var
