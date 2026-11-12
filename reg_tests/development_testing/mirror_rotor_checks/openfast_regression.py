@@ -93,7 +93,9 @@ def main():
     fails = 0
     for case in args:
         name, status, detail = run_case(case)
-        if status in ("FAIL", "RUNFAIL"):
+        # An explicitly requested case that cannot be compared certifies
+        # nothing; counting it as a match let an unchecked baseline pass.
+        if status in ("FAIL", "RUNFAIL", "SKIP"):
             fails += 1
         print(f"  {name:34s} {status:10s} {detail}", flush=True)
     print(f"\n{len(args) - fails}/{len(args)} cases match")
