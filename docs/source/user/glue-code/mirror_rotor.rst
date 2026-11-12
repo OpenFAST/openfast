@@ -13,6 +13,10 @@ The reflection is applied internally to the rotor and to the drivetrain
 quantities attached to it.  The tower, nacelle, support structure, mooring and
 the environment are left alone, and are described exactly as they really are.
 
+This page covers everything needed to **use** the flag.  How the mirror is
+implemented inside the code, and how it is verified, is documented separately in
+:numref:`glue-code-mirror-rotor-implementation`.
+
 .. contents::
    :local:
    :depth: 2
@@ -30,278 +34,36 @@ main OpenFAST input file (``*.fst``) and holds one flag per rotor:
           1   NRotors         - Number of rotors in turbine (-)
           F   MirrorRotor     - Flag to reverse rotor rotation direction [1 to NRotors] {F=Normal, T=Mirror}
 
-Nothing else changes.  The ElastoDyn, AeroDyn and blade input files, the airfoil
-polars and the controller are all supplied exactly as they would be for the
-clockwise machine, and the turbine described by those files is mirrored
+Nothing else changes.  The ElastoDyn, BeamDyn, AeroDyn and blade input files,
+the airfoil polars and the controller are all supplied exactly as they would be
+for the clockwise machine, and the turbine described by those files is mirrored
 internally.
 
 Airfoil tables in particular are used **verbatim** — there is no polar
 transformation, and the airfoil coordinate files are not modified.
 
-.. _glue-code-mirror-rotor-concept:
+.. _glue-code-mirror-rotor-summary:
 
-What the flag does
-------------------
-
-Mirroring is the reflection :math:`S = \mathrm{diag}(1, -1, 1)` about the rotor
-:math:`xz` plane.  Under that reflection
-
-.. math::
-
-   \mathbf{p}' = S\,\mathbf{p}, \qquad
-   \mathbf{v}' = S\,\mathbf{v}, \qquad
-   \boldsymbol{\omega}' = -S\,\boldsymbol{\omega}, \qquad
-   R' = S\,R\,S
-
-for positions, true vectors such as force and velocity, pseudovectors such as
-moment and angular velocity, and direction cosine matrices respectively.
-
-The reflection is applied **at module boundaries**, with one exception noted
-below for the BeamDyn blade description.  The physics kernels —
-the blade-element momentum solver, the unsteady aerodynamics and dynamic wake
-models, the airfoil interpolation, and the structural finite elements — are
-never told the rotor is mirrored.  They continue to solve the equivalent
-clockwise problem, which is why the polars are used unchanged and why the
-angle of attack, inflow angle and lift and drag coefficients come out
-numerically identical to the clockwise machine.
-
-Quantities crossing a boundary are converted on the way in and back on the way
-out.  Inside ElastoDyn the azimuth and rotor speed states are the **physical**
-ones, so a mirrored rotor really does have a negative shaft speed about the
-:math:`+x` axis.
-
-The flow of the flag through the code, and what changes where:
-
-.. mermaid::
-
-   %%{init: {"theme": "base", "flowchart": {"rankSpacing": 110, "nodeSpacing": 45}, "themeVariables": {"fontSize": "18px", "primaryColor": "#d8e9f7", "primaryTextColor": "#000000", "primaryBorderColor": "#5b8db8", "lineColor": "#5b8db8"}}}%%
-   flowchart LR
-       FST["OpenFAST primary input<br/>MirrorRotor = T (per rotor)"] --> GLUE["Glue code<br/>hands the flag to each module at Init"]
-
-       GLUE --> ED["ElastoDyn /<br/>Simplified-ElastoDyn"]
-       GLUE --> AD["AeroDyn"]
-       GLUE --> BD["BeamDyn"]
-       GLUE --> SRV["ServoDyn + DLL"]
-       GLUE --> X["Refused combinations"]
-       GLUE -.-> K["Physics kernels unchanged:<br/>BEMT, UA, DBEMT, AirfoilInfo,<br/>BD finite elements, HydroDyn, MoorDyn;<br/>airfoil polars used verbatim"]
-
-       ED --> ED1["Azimuth, rotor speed and<br/>acceleration reversed"]
-       ED --> ED2["Blade spacing carries the rotation<br/>sense: blades numbered in the<br/>direction of rotation"]
-       ED --> ED3["Rotor-convention channels and pitch<br/>presented in the clockwise convention<br/>at the boundary"]
-
-       AD --> AD1["Per-blade azimuth taken from<br/>the mirrored root meshes"]
-       AD --> AD2["Angle of attack in the clockwise-<br/>equivalent airfoil frame"]
-       AD --> AD3["OLAF: bound circulation sign and<br/>lifting-line LE/TE mirrored per wing —<br/>mixed CW/mirrored rotors share one wake"]
-       AD --> AD4["AeroDisk: lateral force and<br/>moment components signed"]
-       AD --> AD5["VTK blade surfaces: airfoil section<br/>drawn as its mirror image"]
-
-       BD --> BD1["Blade mass/stiffness transformed on<br/>read: M' = T M T', T = diag(1,-1,1,-1,1,-1)<br/>root motion follows ElastoDyn"]
-
-       SRV --> SRV1["Sees the clockwise convention —<br/>no controller change; yaw untouched<br/>(inertial-frame quantity)"]
-
-       X --> X1["Linearization · aero-map solver ·<br/>ExtLoads · AeroAcoustics:<br/>fatal error at Init"]
-
-.. _glue-code-mirror-rotor-where:
-
-Where the mirror is applied
----------------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 22 12 66
-
-   * - Module
-     - Changed
-     - Where the transformation happens
-   * - Glue code
-     - yes
-     - Reads ``MirrorRotor`` and distributes it to ElastoDyn, AeroDyn and
-       BeamDyn; holds the restrictions listed below; and carries the whole
-       ElastoDyn-to-ServoDyn presentation layer
-   * - ServoDyn
-     - **no**
-     - Nothing internal.  Signals are converted in the glue code, and the
-       generator and brake torque signs are applied inside ElastoDyn.  A
-       Bladed-style controller is likewise untouched
-   * - AeroDyn
-     - yes
-     - Four places, all at the edges — see the table below
-   * - BeamDyn
-     - yes
-     - The blade **input data**, not the boundary.  See
-       :ref:`glue-code-mirror-rotor-beamdyn`
-   * - ElastoDyn
-     - yes
-     - Initial states, blade-pitch geometry, the gearbox, and the outputs
-   * - SimplifiedElastoDyn
-     - yes
-     - The same pattern as ElastoDyn
-   * - AeroDisk
-     - yes
-     - The rotor speed and tip-speed ratio going into the coefficient table,
-       the skew-aligned disk triad, and the moment components coming out.  The
-       triad is built so that all three basis vectors mirror as true vectors,
-       which makes the disk-frame force components invariant and every
-       disk-frame moment component change sign
-   * - InflowWind
-     - **no**
-     - The flag mirrors the turbine, not the environment; a reflected
-       turbulence box is supplied by the user
-   * - BEMT, UnsteadyAero, DBEMT, AirfoilInfo
-     - **no**
-     - The physics kernels solve the equivalent clockwise problem
-   * - OLAF free vortex wake
-     - yes
-     - The circulation, the angle of attack and the lifting-line geometry, per
-       wing.  The wake itself is left in the physical frame; see
-       :ref:`glue-code-mirror-rotor-olaf`
-   * - AeroDyn driver
-     - yes
-     - Per-turbine flag; mirrors the prescribed hub kinematics and pitch
-   * - SimplifiedElastoDyn driver
-     - yes
-     - Flag pass-through only
-   * - FAST.Farm
-     - **no**
-     - Nothing crosses the FASTWrapper boundary in a rotor-fixed frame: every
-       quantity exchanged is an inertial-frame vector, a scalar, or an
-       inflow-versus-shaft angle, and the rotation sense reaches the farm
-       through the sign of the azimuthally averaged torque coefficient alone.
-       WakeDynamics is linear in that coefficient, so a mirrored rotor's wake
-       swirl reverses with no farm-side change — measured, per plane, by the
-       counter-rotating regression case below
-
-Within AeroDyn:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 34 46 20
-
-   * - What
-     - Where
-     - Direction
-   * - Blade twist and sweep
-     - On read, after the cant angle is derived from the twist
-     - In
-   * - Rotor speed, blade pitch, toe angle, in-plane inflow, blade angular rate
-     - ``SetInputsForBEMT``
-     - In
-   * - Skew-aligned disk frame
-     - ``DiskAvgValues`` — the disk normal is a pseudovector and needs an
-       explicit flip
-     - In
-   * - Hub and airfoil loads
-     - Load conversion out of the blade-element solver
-     - Out
-   * - Output channels
-     - Aerodynamic power, tangential force, and the lateral force, moment and
-       induction coefficients
-     - Out
-
-.. _glue-code-mirror-rotor-olaf:
-
-The free wake
--------------
-
-OLAF holds the wings of **every** rotor in one shared wake and one Biot-Savart
-solve, so a mirrored rotor cannot be handled by reflecting the world the wake
-solver sees: a farm may mix the two directions, and both must coexist in the
-same frame.  The rotation direction is therefore carried per wing, and the wake
-stays in the physical frame.  This keeps the wake visualisation, the ambient
-wind sampled along the filaments, and any circulation written to a checkpoint in
-the frame the user expects.
-
-Three things change for a mirrored wing.  The angle of attack is taken in the
-clockwise-equivalent frame, so the airfoil tables are used verbatim as they are
-everywhere else.  The bound circulation reverses, because it is a pseudovector
-along a span axis that is itself a true vector.  And the lifting line's leading
-and trailing edges are placed on the other side of the reference point, because
-the section is used as the mirror image of the tabulated one; without that the
-bound vortex and the shed sheet sit on the wrong side of the chord and the wake
-is not the mirror image, an error of order chord over span.
-
-One detail is worth stating because it looks wrong.  The sign factor sits on the
-**chordwise** term where the angle is taken from the airfoil direction cosine
-matrix, and on the **normal** term where it is taken from the lifting-line panel.
-Both describe the same angle.  The panel normal is a cross product of two true
-vectors and so is a pseudovector, while the rows of a direction cosine matrix
-are not; the two carry opposite signs under the reflection.
-
-.. _glue-code-mirror-rotor-vtk:
-
-Visualisation surfaces
-----------------------
-
-The blade surface written for ``VTK_type = 1`` is built from the airfoil
-coordinate files rather than from the mesh, so it carries its own sign.
-``MeshWrVTK_Ln2Surface`` places each vertex at
-``Position + TranslationDisp + matmul(xyz, Orientation)``, which puts
-``AirfoilCoords`` component 1 along row 1 of the node's direction cosine matrix
-and component 2 along row 2.  Under :math:`R' = S R S` the rows do not transform
-alike: row 1 becomes :math:`S\,r_1` while row 2 becomes :math:`-S\,r_2`.  The
-coordinates therefore carry ``RotDir`` on **component 2 alone**, so that the two
-negations cancel and the leading edge remains the leading edge while the section
-is drawn as the mirror image of the tabulated aerofoil, which is how it is being
-used.  Putting the factor on component 1, or on both, was measured and is wrong.
-
-This is visualisation only — these coordinates never reach the loads — but it is
-worth recording, because it is the one part of the mirrored geometry that no
-output channel and no node comparison can police.  It was found by looking at a
-rendered case, not by any tolerance: the aerofoils were drawn 2.33 m from where
-they belonged while every channel and every node position agreed exactly.
-
-The surface is drawn three different ways, and each carries the sign separately.
-When the airfoil files supply coordinates, ``AD_SetInitOut`` builds the section.
-When they do not, ``BladeShape`` is left unallocated and a generic section is
-synthesised instead — an S809 by ``SetVTKDefaultBladeParams`` when AeroDyn is in
-use, or a rectangle when the blades come from BeamDyn or ElastoDyn without it.
-A surface is written either way; it is never skipped.  Note that the fallback is
-reached not only when ``NumCoords = 0`` but also when the airfoil files merely
-disagree on how many coordinates they have, a check the code itself describes as
-overly restrictive, so a blade mixing airfoil families can land there without the
-user intending it.  The rotation direction reaches the fallback through ``RotDir``
-in AeroDyn's initialisation output, and through ``p_FAST%MirrorRotor`` in the glue
-code.
-
-The generic shapes are not exempt.  Before the sign was applied the S809 fallback
-was drawn 1.611 m out and the rectangle 0.615 m; the rectangle is nearly immune,
-being symmetric about its own chord line, but only nearly, because its closing
-vertex sits at the midpoint of one long edge and its mirror lies on the opposite
-edge, displacing exactly one vertex per node.  Simplified ElastoDyn is the one
-configuration that writes no blade surface at all, having no blade mesh.
-
-``reg_tests/otherTests/check_vtk_surface_mirror.py`` guards all three paths, and
-has been shown to fail on each when the sign is removed.
-
-.. _glue-code-mirror-rotor-beamdyn:
-
-BeamDyn blades
+What to expect
 --------------
 
-BeamDyn is the one place where the mirror is **not** confined to a module
-boundary.  A BeamDyn blade is described by a reference line and by full
-:math:`6 \times 6` stiffness and mass matrices that couple bending, extension,
-shear and torsion, and those cross-couplings carry a handedness of their own.
-Presenting mirrored motion to an unmirrored blade would not give the mirrored
-result.
+A mirrored rotor is the exact mirror image of the clockwise machine described
+by the input files:
 
-The blade data is therefore transformed once, as it is read.  The key-point
-:math:`y` coordinates and the structural twist are negated, and each matrix is
-transformed by :math:`T\,M\,T` with
-
-.. math::
-
-   T = \mathrm{diag}(1, -1, 1, -1, 1, -1)
-
-which is the reflection written in BeamDyn's ordering of three translational
-followed by three rotational degrees of freedom.  In practice an entry changes
-sign if exactly one of its two indices is a :math:`y` translation, an :math:`x`
-rotation or a :math:`z` rotation.  The transform is its own inverse, and it
-preserves the polar-inertia constraint that BeamDyn validates on input.
-
-The blade input file itself still describes the **clockwise** blade and is
-supplied unchanged, exactly as for ElastoDyn.  The finite-element solver is
-still never told the rotor is mirrored.
+- **The rotor turns the other way**, and the blades are numbered in the
+  direction of rotation, so blade 2 of a mirrored three-bladed rotor is found
+  120° *behind* blade 1 in the clockwise sense — the mirror image of its
+  clockwise position.
+- **Aerodynamic performance is identical.**  Power, thrust, angle of attack and
+  the lift and drag coefficients match the clockwise machine; lateral forces
+  and in-plane moments act in the mirrored directions.
+- **The controller needs no change** — see :ref:`glue-code-mirror-rotor-control`.
+- **The wake rotates the other way**, in OLAF and in FAST.Farm, and the VTK
+  visualisation draws the blade sections as mirror images.
+- **Everything outside the rotor behaves as described in its own input files.**
+  The inflow, waves, support structure and mooring are not mirrored, so the
+  turbine responds as the real machine would: a counter-clockwise rotor in the
+  conditions you actually have.
 
 .. _glue-code-mirror-rotor-conventions:
 
@@ -351,95 +113,10 @@ during normal operation regardless of rotation direction.  ``RotPwr`` and
 ``RotThrust`` are unchanged by the mirror: power is a product of two quantities
 that both flip, and thrust is along the mirror axis.
 
-.. _glue-code-mirror-rotor-signs:
-
-Measured sign table
--------------------
-
-The table below is **measured**, not asserted.  It is generated by running every
-registered mirrored case and comparing each channel against its clockwise
-counterpart, so it records behaviour that is actually observed rather than
-behaviour that is expected from reading the code.  The cases contributing to it
-are the ElastoDyn + AeroDyn pair, the BeamDyn pair, the marine-turbine pair, the
-yawed AeroDisk pair, the free-wake pair, the two-rotor aerodynamic driver case
-and the twin-rotor semisubmersible.
-
-The blade azimuth spacing carries the rotation sense, so the blades are
-numbered in the direction of rotation for either convention: blade k of the
-mirrored rotor occupies the mirror image of blade k of the clockwise one, the
-blades pass a fixed azimuth in numeric order either way, and every per-blade
-channel compares directly against the channel of the same number.  Mooring
-lines are different: the platform layout mirrors as geometry, so which line
-pairs with which depends on the layout — on the OC4 semisubmersible, lines 1
-and 3 exchange.
-
-It records how the two runs of a **symmetric** comparison relate to each other,
-which is how the implementation is verified.  It is not a claim that these
-channels change sign whenever the flag is set: in an ordinary simulation the
-tower, support structure and inflow are not mirrored, so a quantity such as
-``TwrBsMxt`` is simply the response of an unchanged structure to a
-counter-clockwise rotor.
-
-The table lists only what **changes** between the two runs of the symmetric
-comparison, grouped by the physical rule that flips each family.  Every channel
-not listed here measures **identical**; the complete per-channel classification
-of all 1206 channels, identical ones included, is generated as
-:download:`mirror_rotor_sign_map.yaml <mirror_rotor_sign_map.yaml>`.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
-
-   * - Sign-flipped family
-     - Representative channels
-   * - Lateral (:math:`y`) structural forces, deflections, velocities and
-       accelerations — the mirrored axis itself
-     - ``LSShftFya``, ``YawBrFyp``, ``TwrBsFyt``, ``TTDspSS``, ``TwrTpTDyi``,
-       ``NcIMUTAys``, ``PtfmSway``, ``HydroFyi``, ``IPDefl*``, ``TipDyc*``,
-       ``RootFyc*``, ``RootFyb*``, BeamDyn ``B*RootFyr`` and ``B*TipTDyr``
-   * - Moments and rotations about the :math:`x`- and :math:`z`-axes —
-       pseudovector components in the mirror plane
-     - ``TwrBsMxt``, ``TwrBsMzt``, ``YawBrMxp``, ``YawBrMzp``, ``PtfmRoll``,
-       ``PtfmYaw``, ``RootMxc*``, ``RootMzc*``, ``RootMxb*``, ``RootMzb*``,
-       BeamDyn ``B*RootMxr``, ``B*RootMzr``, ``B*TipRDxr``, ``B*TipRDzr``
-   * - Shaft quantities in the physical ``xa``/``xs`` frames (the
-       rotor-convention twins ``RotSpeed``, ``RotTorq`` etc. stay identical)
-     - ``LSSTipVxa``, ``LSSTipAxa``, ``LSShftMxa``, ``LSShftFya``,
-       ``LSSTipMza``, ``LSSGagMxa``, ``LSSGagMza``
-   * - Aerodynamic tangential and in-plane families, in both the module
-       (``B1N001Ft``) and nodal (``AB1N001Ft``) forms
-     - ``*Ft``, ``*Fy``, ``*Cy``, ``*Cm``, ``*Ct``, ``*Mm``, ``*Vindy``,
-       ``*STVy``, ``*VUndy``, ``*VDisy``
-   * - Rotor-aggregate lateral loads and inflow
-     - ``RtAeroFyh``, ``RtAeroMxh``, ``RtAeroMzh``, ``RtAeroCq``,
-       ``RtVAvgyh``, ``RtFldFyh``, ``RtFldMxh``, ``RtFldMzh``
-   * - AeroDisk lateral loads and speed
-     - ``ADFyi``, ``ADMx``, ``ADMy``, ``ADMz``, ``ADMxi``, ``ADMzi``,
-       ``ADSpeed``
-   * - Marine-turbine buoyancy, tangential and moment components
-     - ``*Fbt``, ``*Mbn``, ``*Mbs``, ``HbFby``, ``HbMbx``, ``HbMbz``
-   * - **Mirrored angle** (:math:`v' = -v`, wrapped)
-     - ``LSSTipPxa``, ``LSSGagPxa``
-
-Every channel that carries a mirror sign in the code is now requested by at
-least one registered case, so no entry in this table is inferred from reading
-the source.  The coefficient families in particular are measured together with
-their mirror-invariant partners — ``*Cy``, ``*Cm`` and ``*Ct`` alongside
-``*Cl``, ``*Cd``, ``*Cx`` and ``*Cn`` — so that a sign applied to a whole group
-by mistake cannot pass unnoticed.
-
-Across the seven pairs, 1018 channels resolve: 689 identical, 328 sign-flipped
-and one mirrored angle, with a further 55 below the noise floor in every case and
-133 mooring channels set aside because their pairing is layout-specific.  No
-channel is unresolved.
-
-The grouped form above is the one to read.  The complete per-channel map,
-listing all 1206 channels alphabetically with the pairs each was measured in,
-is generated by the same measurement as
-:download:`mirror_rotor_sign_map.yaml <mirror_rotor_sign_map.yaml>` — run
-``reg_tests/otherTests/emit_sign_table.py --tol 0.005 --emit-map`` to
-regenerate it; it should never be edited by hand.
-
+A complete, measured classification of every output channel — which are
+identical between a clockwise rotor and its mirror image, and which change
+sign — is maintained with the implementation documentation
+(:ref:`glue-code-mirror-rotor-signs`).
 
 .. _glue-code-mirror-rotor-control:
 
@@ -454,53 +131,13 @@ pitch, generator and brake torque, shaft azimuth and the blade root moments are
 all converted; the controller needs no mirrored copy and no new input.
 
 Assumptions of even blade spacing *in the direction of rotation* also hold,
-because the blades are numbered that way for either convention: ServoDyn's
-built-in cosine flap schedule and the per-blade azimuth offsets a Bladed-style
-DLL computes for itself from the rotor azimuth are correct for a mirrored rotor
-with no controller-side change.
+because the blades are numbered that way for either convention.
 
 Yaw is the exception, and it is deliberate.  Yaw acts about the vertical axis in
 the inertial frame, so it is **not** a rotor-convention quantity and is left
 alone.  The yaw angle, the wind direction and hence the yaw error all stay
 physically correct, which means a yaw controller still points the nacelle into
 the real wind rather than into its mirror image.
-
-.. _glue-code-mirror-rotor-asymmetric:
-
-Nothing outside the rotor is mirrored
--------------------------------------
-
-The flag reverses the **rotor**.  It does not touch the environment, the control
-setpoints, the support structure, or anything else that happens to be one-sided.
-For ordinary use that is exactly what is wanted: a counter-clockwise rotor, on
-the turbine and in the conditions you actually have.  A real mooring spread, a
-real wind field and a real yaw setpoint should all be left as they are.
-
-The list below matters only when **verifying** the implementation.  That check
-compares a clockwise run against a mirrored one and expects the two to be
-reflections of each other, which requires the whole problem — not just the rotor
-— to be symmetric about the rotor ``xz`` plane.  For that comparison, and only
-for it, these have to be mirrored by hand:
-
-- initial or fixed nacelle yaw (``NacYaw``) and the neutral yaw position
-  (``YawNeut``);
-- wind direction and horizontal shear in a uniform wind file — vertical shear is
-  symmetric about the mirror plane and needs no change;
-- a full-field turbulence box, which has to be reflected in :math:`y`;
-- prescribed force and moment time series for a structural control, where the
-  lateral force and the roll and yaw moments change sign;
-- lateral geometry such as ``NacCMyn``;
-- the furl geometry of a furling turbine — the tail boom, tail fin and the
-  rotor- and tail-furl axes are all offset to one side.  Setting
-  ``MirrorRotor`` with ``Furling = True`` raises a warning and continues: the
-  tail is modelled as a drag force applying a moment about the yaw axis, and
-  that calculation does not depend on which way the rotor turns, since tail
-  interaction with the wake is not modelled.  The combination has not been
-  verified against a mirror pair, however, because doing so requires mirroring
-  the furl input file as well.
-
-Leaving one of these unmirrored during a verification run looks exactly like a
-sign error in the code, which is the only reason the list is written down.
 
 .. _glue-code-mirror-rotor-limits:
 
@@ -526,115 +163,19 @@ through.
    * - AeroAcoustics
      - ``CompAA = True`` in the AeroDyn input file
 
-FAST.Farm is supported: each turbine in a farm is its own single-rotor
-OpenFAST instance, and the wake coupling was verified by measurement in 2026
-— a mirrored single-turbine farm reproduces its clockwise twin under a
-reflected turbulence box (every farm channel, turbine channel and wake-plane
-field resolving to the mirror operator's class, with the swirl reversing),
-a mirrored tandem farm reproduces the waked downstream turbine's response,
-and the registered ``SteadyInflow_curl_MirrorRotor`` case holds a clockwise
-and a mirrored turbine in one farm that must map onto itself under
-reflection.  The restriction that only one rotor per OpenFAST instance is
-supported with FAST.Farm is unrelated to the mirror and remains.
+FAST.Farm is supported: a farm may mix clockwise and mirrored turbines, and a
+mirrored turbine's wake swirl reverses.  The restriction that only one rotor
+per OpenFAST instance is supported with FAST.Farm is unrelated to the mirror
+and remains.  Setting ``MirrorRotor`` on a furling turbine raises a warning:
+the tail-furl drag model does not depend on the rotation direction, but the
+combination has not been verified.
 
-.. _glue-code-mirror-rotor-verification:
+.. _glue-code-mirror-rotor-further:
 
-Verification
-------------
+Implementation and verification
+-------------------------------
 
-The mirror is verified by running a model twice, once clockwise and once
-mirrored, and requiring **every** output channel to resolve to one of: identical,
-exactly sign-flipped, a mirrored angle, or below the numerical noise floor.
-Anything else indicates that two quantities have been combined while expressed in
-different frames.
-
-The check is repeated across a matrix of conditions, since any single condition
-leaves most of the sign map untested — rigid and flexible blades, ElastoDyn and
-BeamDyn blades, fixed and free drivetrain, vertical shear, positive and negative
-nacelle yaw, fixed and free yaw, and combinations of those.  At the AeroDyn
-module level the same comparison is run over blade pitch, wind speed, tip-speed
-ratio, the propeller-brake state, shaft tilt, precone, both BEM models, dynamic
-wake, and four unsteady-aerodynamic models.
-
-Some of those comparisons are kept as regression cases, each paired with the
-clockwise model it mirrors — either a case that already existed, or a ``_CW``
-case registered alongside it.  They all carry the ctest label ``mirrorrotor``,
-so ``ctest -R mirrorrotor`` runs the set:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 45 55
-
-   * - Case
-     - What it covers
-   * - ``5MW_Land_noDLL_Steady_MirrorRotor``
-     - Steady wind, no controller, ElastoDyn blades.  The baseline pair, pinned
-       against ``5MW_Land_noDLL_Steady_CW``
-   * - ``5MW_Land_BD_noDLL_Steady_MirrorRotor``
-     - The same with BeamDyn blades, against ``5MW_Land_BD_noDLL_Steady_CW``
-   * - ``AWT_WSt_StartUp_HighSpShutDown_MirrorRotor``
-     - The high-speed-shaft brake taking the rotor down through zero speed,
-       which is the one torque signed by the direction of rotation.  Also a
-       two-bladed teetering rotor, for which the reversed blade spacing places
-       blade 2 at the same opposing azimuth either way
-   * - ``5MW_Land_DLL_WTurb_MirrorRotor``
-     - Turbulence and a Bladed-style controller, ElastoDyn blades
-   * - ``5MW_Land_BD_DLL_WTurb_MirrorRotor``
-     - The same with BeamDyn blades
-   * - ``5MW_OC4Semi_WSt_WavesWN_MirrorRotor``
-     - A floating platform, exercising HydroDyn, SeaState and MoorDyn beneath a
-       mirrored rotor
-   * - ``5MW_Land_DLL_WTurb_ADsk_SED_MirrorRotor``
-     - SimplifiedElastoDyn and AeroDisk in place of ElastoDyn and AeroDyn
-   * - ``5MW_MRSemi_DLL_WSt_WavesIrr_MirrorRotor``
-     - A twin-rotor floating machine, with the whole stack solved together, so
-       one rotor is mirrored and the other is not.  It runs OLAF, so the two
-       rotation directions also share a single wake
-   * - ``MHK_RM1_Floating_Steady_MirrorRotor``
-     - A marine turbine, where the blade buoyancy and centre-of-buoyancy offset
-       are mirrored too.  Paired with ``MHK_RM1_Floating_Steady_CW``
-   * - ``SteadyInflow_curl_MirrorRotor``
-     - A FAST.Farm counter-rotating farm: a clockwise and a mirrored turbine
-       side by side under steady symmetric inflow, with opposite fixed yaws so
-       the curled wake and its swirl are energised.  The farm maps onto itself
-       under reflection, and ``run_guards.sh`` asserts the turbine-to-turbine
-       pairing under the sign map
-   * - ``ad_MultipleHAWT_MirrorRotor``
-     - The AeroDyn driver rather than the glue code, covering the **nodal**
-       output path with two rotors in a single run
-   * - ``ad_B1n2_OLAF_MirrorRotor``
-     - The free wake, paired with ``ad_B1n2_OLAF_CW``.  A single blade of two
-       aerodynamic sections, which is the cheapest case that is still a rotor
-   * - ``5MW_Land_ADsk_SED_Yaw_MirrorRotor``
-     - A yawed AeroDisk rotor, paired with ``5MW_Land_ADsk_SED_Yaw_CW``.  The
-       nacelle yaw is reversed between the two, since yaw acts about the
-       inertial vertical and is not mirrored.  It uses a coefficient table with
-       the lateral coefficients filled in, because the shipped 5MW table has
-       them identically zero and so cannot reach the lateral sign factors at all
-
-The two turbulent cases are the ones that demonstrate the controller claim.  The
-DISCON library is used completely unchanged, and blade pitch, generator torque,
-generator power, generator speed and rotor speed all come out identical between
-the clockwise and mirrored runs.  They read a ``y``-reflected copy of the
-turbulence box, for the reason given above.
-
-For a clockwise rotor every mirror-related expression reduces to a multiplication
-by ``+1``, so existing regression baselines reproduce bit-for-bit.
-
-Two further checks live in ``reg_tests/otherTests/``.
-``check_rtest_mirror_pair.py`` compares the committed baselines of every pair
-against each other and carries a **sweep-order assertion** on the ``BAzimuth``
-channels: the blade spacing from blade 1 must read +120° and +240° in the
-rotor's own convention for the clockwise *and* the mirrored half, which guards
-the blade-numbering convention directly — under the reversed numbering the
-mirrored half reads 240° and 120°, a full blade spacing of discrimination.
-``run_guards.sh`` proves every restriction in the table above actually
-**fires** when its combination is requested, and stays silent for a clockwise
-rotor — and, against the real FAST.Farm executable, that the one-rotor-per-
-instance refusal still fires while a mirrored turbine in a farm now runs to
-a normal termination.  It also asserts the counter-rotating farm's symmetry:
-inside the ``SteadyInflow_curl_MirrorRotor`` case, every turbine-2 channel
-must be the mirror image of its turbine-1 partner under the measured sign map
-(``farm_mirror_pair.py --twin``).  A guard that is never reached looks
-exactly like a guard that stayed silent, which is why the firing is tested
-rather than assumed.
+Where each sign lives in the code, the BeamDyn blade-matrix transformation, the
+free-wake and visualisation details, the measured per-channel sign map, and the
+regression cases and guard scripts that verify all of it are documented in
+:numref:`glue-code-mirror-rotor-implementation`.
