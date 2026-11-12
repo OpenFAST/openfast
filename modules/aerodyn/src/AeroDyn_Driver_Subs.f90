@@ -2221,7 +2221,12 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
 
    ! --- Rotor torque
    !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
+   ! MirrorRotor: RtAeroMxh is the physical torque about +x, which reverses on a mirrored
+   ! rotor, while this routine integrates the speed in the rotor's own convention; convert
+   ! the aerodynamic torque to that convention so the balance against the generator torque
+   ! holds for either rotation sense.
    rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
+   if (dvr%WT(iWT)%MirrorRotor) rotTorque = -rotTorque
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev
 
