@@ -859,9 +859,11 @@ END SUBROUTINE HydroDyn_C_CalcOutput
 !-------------------------------------- HydroDyn CalcOutput_and_AddedMass --------------------------------------
 !> This routine is similar to the HydroDyn_C_CalcOutput, but splits the forces returned from HydroDyn_CalcOutput
 !! into the hydrodynamic forces without added mass, and a separate added mass matrix.
+!! If the optional DynamicOnly_C is passed and nonzero, the matrix holds only the strip-theory (Morison)
+!! contribution; the potential-flow (WAMIT) contribution is omitted. Otherwise the full matrix is returned.
 !===============================================================================================================
 
-SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, &
+SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, DynamicOnly_C, &
                NodeFrc_C, NodeAdm_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_CalcOutput_and_AddedMass')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -877,8 +879,10 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    real(c_float),             intent(  out)  :: OutputChannelValues_C(SeaSt%p%NumOuts+HD%p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   integer(c_int),            intent(in   ), optional :: DynamicOnly_C       !< if present and nonzero, NodeAdm_C excludes the potential-flow (WAMIT) contribution
 
    ! Local variables
+   logical                                   :: DynamicOnly
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iNode,i,j,k,m
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
@@ -890,6 +894,9 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   DynamicOnly = .false.
+   if (present(DynamicOnly_C)) DynamicOnly = DynamicOnly_C /= 0_c_int
 
    ! Sanity check -- number of node points cannot change
    if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
@@ -933,7 +940,8 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    Perturbed  = .false.
 
    ! Contributions from potential-flow bodies - need to perturb the acceleration of one node at a time, but only need to consider nodes with motion mapping to WAMIT mesh
-   if ( HD%u(1)%WAMITMesh%Committed ) then
+   ! (skipped when only the dynamic, strip-theory part is requested)
+   if ( HD%u(1)%WAMITMesh%Committed .and. .not. DynamicOnly ) then
 
       ! Map the potential-flow loads without added-mass contributions and strip-theory contributions to HD_LoadMesh as a baseline
       call Transfer_Point_to_Point( HD%y%WAMITMesh, HD_LoadMesh, Map_HD_WB_P_2_Load, ErrStat2, ErrMsg2, HD%u(1)%WAMITMesh, HD_MotionMesh )

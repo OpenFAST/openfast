@@ -192,7 +192,8 @@ class HydroDynLib(OpenFASTInterfaceType):
             POINTER(c_float),                   # nodeAdm -- node added mass matrix in flat array of 6*numNodePts*6*numNodePts
             POINTER(c_float),                   # Output Channel Values
             POINTER(c_int),                     # ErrStat_C
-            POINTER(c_char)                     # ErrMsg_C
+            POINTER(c_char),                    # ErrMsg_C
+            POINTER(c_int)                      # DynamicOnly_C -- optional (NULL = full added mass; nonzero = strip-theory part only)
         ]
         self.HydroDyn_C_CalcOutput_and_AddedMass.restype = c_int
 
@@ -359,7 +360,7 @@ class HydroDynLib(OpenFASTInterfaceType):
             outputChannelValues[k] = float(outputChannelValues_c[k])
 
     # hydrodyn_calcOutput_and_addedMass ------------------------------------------------------------------------------------------------------
-    def hydrodyn_calcOutput_and_addedMass(self, time, nodePos, nodeVel, nodeFrcMom, nodeAdm, outputChannelValues):
+    def hydrodyn_calcOutput_and_addedMass(self, time, nodePos, nodeVel, nodeFrcMom, nodeAdm, outputChannelValues, dynamicOnly=None):
 
         # Check input motion info
         self.check_input_motions_noAcc(time,nodePos,nodeVel)
@@ -396,7 +397,8 @@ class HydroDynLib(OpenFASTInterfaceType):
             nodeAdm_flat_c,                         # OUT: resulting forces/moments array
             outputChannelValues_c,                  # OUT: output channel values as described in input file
             byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
+            self.error_message_c,                   # OUT: ErrMsg_C
+            None if dynamicOnly is None else byref(c_int(int(bool(dynamicOnly))))   # IN (optional): nonzero returns only the strip-theory added mass
         )
 
         self.check_error()
