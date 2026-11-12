@@ -33,6 +33,11 @@ MATRIX = [
 
 def main():
     wanted = sys.argv[1:]
+    # A typo must not shrink the selection silently into a 0/0 pass.
+    unknown = sorted(set(wanted) - {r[0] for r in MATRIX})
+    if unknown:
+        sys.exit(f"unknown variant name(s): {', '.join(unknown)}\n"
+                 f"known: {', '.join(r[0] for r in MATRIX)}")
     rows = [r for r in MATRIX if not wanted or r[0] in wanted]
     fails = 0
     for name, args in rows:
