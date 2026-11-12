@@ -98,6 +98,24 @@ subroutine test_BD_Mirror_signs(error)
    end do
 
    call check_array(error, expected, bld%InpBl%stiff0(:, :, 1), testname, tol)
+   if (allocated(error)) return
+
+   ! The mass matrix must carry the same sign pattern: without this assertion a
+   ! no-op mass transform would pass the involution and inertia-constraint tests.
+   testname = "mass entries flip when exactly one index is in {2,4,6}:"
+   do j = 1, 6
+      do i = 1, 6
+         flip_i = (i == 2 .or. i == 4 .or. i == 6)
+         flip_j = (j == 2 .or. j == 4 .or. j == 6)
+         if (flip_i .neqv. flip_j) then
+            expected(i, j) = -ref%InpBl%mass0(i, j, 1)
+         else
+            expected(i, j) = ref%InpBl%mass0(i, j, 1)
+         end if
+      end do
+   end do
+
+   call check_array(error, expected, bld%InpBl%mass0(:, :, 1), testname, tol)
 end subroutine
 
 !> The polar-inertia check in BD_ValidateInputData must survive the mirror.
