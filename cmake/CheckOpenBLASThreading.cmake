@@ -35,7 +35,12 @@ function(check_openblas_threading)
 
   # openblas_get_parallel() exists only in OpenBLAS and returns how the library
   # was built: 0 = sequential, 1 = pthreads, 2 = OpenMP.
-  # The result is cached, so the test program is built and run only once.
+  # The result is cached together with the libraries it was obtained for, so the
+  # test program is built and run again only when the BLAS/LAPACK selection changes.
+  if(NOT "${OPENBLAS_PARALLEL_CHECKED_LIBS}" STREQUAL "${LAPACK_LIBRARIES}")
+    unset(OPENBLAS_PARALLEL_COMPILES CACHE)
+    unset(OPENBLAS_PARALLEL_RUN CACHE)
+  endif()
   if(NOT DEFINED OPENBLAS_PARALLEL_COMPILES)
     set(_src "${CMAKE_BINARY_DIR}/CMakeFiles/CheckOpenBLASThreading/openblas_parallel.f90")
     file(WRITE "${_src}" "
@@ -60,6 +65,7 @@ end program openblas_parallel
       "${_src}"
       LINK_LIBRARIES ${LAPACK_LIBRARIES}
     )
+    set(OPENBLAS_PARALLEL_CHECKED_LIBS "${LAPACK_LIBRARIES}" CACHE INTERNAL "BLAS/LAPACK libraries the OpenBLAS threading check was run for")
   endif()
 
   if(NOT OPENBLAS_PARALLEL_COMPILES)
