@@ -46,10 +46,13 @@ def discrepancy(ed_case, bd_case):
     for c in shared:
         x = a[keep, i1[c]]
         y = np.interp(t1[keep], t2, b[:, i2[c]])
-        # A channel is dropped only when BOTH models hold it at the floor: a
-        # response present in one model alone must stay in the comparison, and
-        # the floor then serves as the normalisation for the quiet side.
+        # A channel both models hold at the floor is recorded as a zero-valued
+        # entry rather than dropped: main() intersects the clockwise and
+        # mirrored dictionaries, and a channel silent clockwise but live
+        # mirrored must survive that intersection to reach the acceptance
+        # ratio. The floor serves as the normalisation for a quiet side.
         if max(np.abs(x).max(), np.abs(y).max()) < floor:
+            out[c] = 0.0
             continue
         den = max(np.abs(x).max(), floor)
         out[c] = np.abs(y - x).max() / den
