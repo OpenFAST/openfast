@@ -55,7 +55,7 @@ PAIRS.append(("5MW_OC4Semi_WSt_WavesWN", "5MW_OC4Semi_WSt_WavesWN_MirrorRotor", 
 sys.path.insert(0, f"{REPO}/reg_tests/lib")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fast_io  # noqa: E402
-from compare_mirror import classify  # noqa: E402
+from compare_mirror import classify, expected_class  # noqa: E402
 
 DIAG = {"Time", "ConvError", "ConvIter", "NumUJac"}
 
@@ -112,6 +112,9 @@ def check_pair(cw, mir, tol, start):
     floor = 1e-9 * np.abs(a[sl][:, phys]).max()
 
     groups = {}
+    # A channel with a known expected class must land in that class: without this
+    # a mirrored baseline replaced by its clockwise twin still resolved cleanly.
+    mism = []
     for ch in n1:
         if ch in DIAG:
             continue
@@ -120,6 +123,9 @@ def check_pair(cw, mir, tol, start):
             mate = ch
         got, rel = classify(a[sl, idx[ch]], b[sl, idx[mate]], tol, floor)
         groups.setdefault(got, []).append(ch)
+        exp = expected_class(ch)
+        if exp is not None and got not in ("negligible", exp):
+            mism.append((ch, exp, got))
 
     for k in ("S", "F", "A", "negligible", "?"):
         if groups.get(k):
@@ -137,6 +143,10 @@ def check_pair(cw, mir, tol, start):
         return 1
     if sweep_bad:
         print(f"  FAIL: blade sweep order wrong in {sweep_bad} spacing(s)")
+        return 1
+    if mism:
+        print("  FAIL: wrong class: "
+              + " ".join(f"{c}(expected {e}, got {g})" for c, e, g in mism))
         return 1
     print("  PASS: clean mirror pair")
     return 0
