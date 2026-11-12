@@ -36,6 +36,12 @@ for _b in range(1, 4):
                    "Vdisy", "Vundy"):
             EXPECT[f"B{_b}N{_n}{_q}"] = "F"
 
+# Per-blade azimuth must read identical under the blades-numbered-in-the-
+# direction-of-rotation convention; without an explicit expectation a
+# physical-azimuth regression could still classify as a wrapped angle.
+for _b in range(1, 4):
+    EXPECT[f"B{_b}Azimuth"] = "S"
+
 # OpenFAST channel names are case-insensitive and the shipped headers mix case
 # (B1N1VIndx, B1N1VDisx), so the table is keyed upper-case and looked up through
 # expected_class(); a case mismatch used to silently skip the assertion.
@@ -50,7 +56,7 @@ def expected_class(ch):
 # mirror reference depended on blade index and rotor tilt, so B*Azimuth sat here.
 # With the blades numbered in the direction of rotation it measures as identical
 # (class S) across every registered pair -- 2026-09-30, emit_sign_table at
-# tol 5e-3 -- so it is asserted like any other channel and this list is empty.
+# tol 5e-3 -- so it carries an explicit S expectation above and this list is empty.
 INFORMATIONAL = []
 
 
