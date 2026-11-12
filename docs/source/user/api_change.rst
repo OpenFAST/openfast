@@ -24,6 +24,8 @@ Mirrored (counter-clockwise) rotors are supported through the ``MirrorRotor`` fl
 
 The Simplified-ElastoDyn shaft-acceleration outputs ``RotAcc`` and ``GenAcc`` (and their aliases) are now reported in deg/s^2, as their registered units have always stated; previous versions wrote them as rpm/s, a factor of six smaller.
 
+Several AeroDisk output channels are corrected for every rotor, clockwise included: the disk-frame wind and structural-velocity channels (``ADVWindx/y/z``, ``ADSTVx/y/z``) were previously rotated with the transpose of the intended transformation, the inertial-frame force channels (``ADFxi``, ``ADFyi``, ``ADFzi``) likewise, and the inertial-frame moment channels (``ADMxi``, ``ADMyi``, ``ADMzi``) were computed from the force vector rather than the moment. Comparisons against AeroDisk outputs from earlier versions may differ on these channels.
+
 ============================================= ======== ==================== ==========================================================================================================================================================================================================================================================================================================
 Added in OpenFAST `5.1.0`
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
