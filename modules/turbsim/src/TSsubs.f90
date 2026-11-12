@@ -785,7 +785,7 @@ integer                          :: old_max_levels    ! maximum nesting levels f
       ! -------------------------------------------------------------      
    IF ( p%usr%NPoints > 0 ) THEN
       J = p%usr%NPoints
-      Indx = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      Indx = INT( INT(p%grid%NPoints,B8Ki)*(J-1) - INT(J,B8Ki)*(J-1)/2 + J, IntKi ) !Index of H(J,J); (64-bit integers because NPoints*(J-1) can overflow)
       NPts = p%grid%NPoints - p%usr%NPoints + 1
    ELSE
       Indx = 1
@@ -883,7 +883,7 @@ integer                          :: Indx, J, I
       CPh   = COS( PhaseAngles(J,IFreq,IVec) )
       SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
 
-      Indx = NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      Indx = INT( INT(NPoints,B8Ki)*(J-1) - INT(J,B8Ki)*(J-1)/2 + J, IntKi ) !Index of H(J,J); (64-bit integers because NPoints*(J-1) can overflow)
       DO I=J,NPoints
 
          V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
@@ -1253,6 +1253,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    INTEGER(IntKi)                                 :: IY, IZ, IFreq                   ! loop counters 
    INTEGER(IntKi)                                 :: NTwrPts                         ! number of extra tower points
    INTEGER(IntKi)                                 :: NTwrIndx                        ! number of tower points to be placed in output file
+   INTEGER(B8Ki)                                  :: NPacked8                        ! NPacked, as a 64-bit integer
    
    INTEGER(IntKi)                                 :: TmpIndex                        ! temporary index
       
@@ -1475,7 +1476,15 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
    IF (GenerateExtraHubPoint) p_grid%NPoints = p_grid%NPoints + 1  
 
-   p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
+      ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
+      ! (calculated with 64-bit integers because NPoints*(NPoints+1) overflows before NPacked does)
+   NPacked8 = INT(p_grid%NPoints,B8Ki)*( INT(p_grid%NPoints,B8Ki) + 1_B8Ki )/2_B8Ki
+   IF ( NPacked8 > INT(HUGE(p_grid%NPacked),B8Ki) ) THEN
+      CALL SetErrStat(ErrID_Fatal, 'There are too many points ('//TRIM(Num2LStr(p_grid%NPoints))// &
+                      ') for the coherence matrix to be stored. Reduce the number of grid points.', ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   p_grid%NPacked   = INT( NPacked8, IntKi )
 
    
    ! we now know how many points there are going to be, so let's create the arrays that contains their locations and finish updating our index arrays
