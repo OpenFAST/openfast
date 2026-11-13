@@ -109,7 +109,7 @@ SUBROUTINE Morison_DirCosMtrx( pos0, pos1, spin, DirCos )
       DirCos(3, 3) =  dz/Le
    END IF
 
-   IF ( .not. EqualRealNos(spin, 0.0) ) THEN
+   IF ( .not. EqualRealNos(spin, 0.0_ReKi) ) THEN
       ! Spin the member about its axis first
       Rspin(1,1) =  cos(spin)
       Rspin(2,2) =  Rspin(1,1)
@@ -3855,6 +3855,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!   
         ! Rotate member properties to the free-surface-crossing element (its starting node is representative)
         call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(FSElem)), ErrStat2, ErrMsg2); if (Failed()) return
+        ! Without stretching, forceNodeInWater is ignored, so keep round-off from putting FSInt above the SWL
+        IF ( p%WaveField%WaveStMod == 0_IntKi ) FSInt(3) = MIN( FSInt(3), 0.0_ReKi )
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
         CALL WaveField_GetNodeWaveKin( p%WaveField, m%WaveField_m, Time, FSInt, .TRUE., .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           if (Failed()) return
@@ -6316,6 +6318,8 @@ END SUBROUTINE Morison_CalcOutput
 
             ! Positions of face center
             posFC = pos + rToFC(1:3,fNo)
+            ! Without stretching, forceNodeInWater is ignored, so keep the face center at or below the SWL
+            IF ( p%WaveField%WaveStMod == 0_IntKi ) posFC(3) = MIN( posFC(3), 0.0_ReKi )
 
             ! Compute structure velocity at face center
             SVFC  = STV + cross_product( SRV, rToFC(1:3,fNo) )
@@ -6467,8 +6471,10 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
               call RotateMemberNode(p, im, mem, u%PtfmRefY, u%Mesh%Orientation(:,:,mem%NodeIndx(i)), ErrStat2, ErrMsg2); if (Failed()) return
 
               ! Note: We force each face center to also be wetted if the center node is wetted. Otherwise, the load-smoothing procedure might not work
+              ! Without stretching, forceNodeInWater is ignored, so keep the face centers at or below the SWL
               ! Side B - +x_hat side
               posFC = pos + mem%x_hat * 0.5 * mem%SaMG(i)
+              IF ( p%WaveField%WaveStMod == 0_IntKi ) posFC(3) = MIN( posFC(3), 0.0_ReKi )
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%x_hat * 0.5 * mem%SaMG(i) )
               call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC,  mem%x_hat )
@@ -6477,6 +6483,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
               ! Side B - -x_hat side
               posFC = pos - mem%x_hat * 0.5 * mem%SaMG(i)
+              IF ( p%WaveField%WaveStMod == 0_IntKi ) posFC(3) = MIN( posFC(3), 0.0_ReKi )
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%x_hat * 0.5 * mem%SaMG(i) )
               call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC, -mem%x_hat )
@@ -6485,6 +6492,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
               ! Side A - +y_hat side
               posFC = pos + mem%y_hat * 0.5 * mem%SbMG(i)
+              IF ( p%WaveField%WaveStMod == 0_IntKi ) posFC(3) = MIN( posFC(3), 0.0_ReKi )
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)),  mem%y_hat * 0.5 * mem%SbMG(i) )
               call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC,  mem%y_hat )
@@ -6493,6 +6501,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
 
               ! Side A - -y_hat side
               posFC = pos - mem%y_hat * 0.5 * mem%SbMG(i)
+              IF ( p%WaveField%WaveStMod == 0_IntKi ) posFC(3) = MIN( posFC(3), 0.0_ReKi )
               SVFC  = u%Mesh%TranslationVel(:,mem%NodeIndx(i)) + cross_product( u%Mesh%RotationVel(:,mem%NodeIndx(i)), -mem%y_hat * 0.5 * mem%SbMG(i) )
               call WaveField_GetNodeWaveVel( p%WaveField, m%WaveField_m, Time, posFC, .TRUE., .TRUE., tmpInt, FVTmp, ErrStat2, ErrMsg2 ); if (Failed()) return
               vrelFC = dot_product( REAL(FVTmp,ReKi) - SVFC, -mem%y_hat )
