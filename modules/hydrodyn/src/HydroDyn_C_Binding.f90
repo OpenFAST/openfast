@@ -859,9 +859,14 @@ END SUBROUTINE HydroDyn_C_CalcOutput
 !-------------------------------------- HydroDyn CalcOutput_and_AddedMass --------------------------------------
 !> This routine is similar to the HydroDyn_C_CalcOutput, but splits the forces returned from HydroDyn_CalcOutput
 !! into the hydrodynamic forces without added mass, and a separate added mass matrix.
+!! AddedMassFlag_C selects which contributions are included in the returned added-mass matrix:
+!!    1 -- potential-flow (WAMIT) contribution only
+!!    2 -- strip-theory (Morison) contribution only
+!!    3 -- both potential-flow and strip-theory contributions
+!! Any other value is a fatal error. Skipping a contribution avoids the associated HydroDyn_CalcOutput perturbation calls.
 !===============================================================================================================
 
-SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, &
+SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, AddedMassFlag_C, &
                NodeFrc_C, NodeAdm_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_CalcOutput_and_AddedMass')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -872,6 +877,7 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions from and output loads to
    real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
    real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   integer(c_int),            intent(in   )  :: AddedMassFlag_C              !< added mass contributions to include in NodeAdm_C: 1 = potential flow only, 2 = strip theory only, 3 = both
    real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
    real(c_float),             intent(  out)  :: NodeAdm_C((6*NumNodePts_C)*(6*NumNodePts_C))  !< A (6xNumNodePts_C)x(6xNumNodePts_C) array containing the added mass matrix in column-major order -- added mass matrix (global)
    real(c_float),             intent(  out)  :: OutputChannelValues_C(SeaSt%p%NumOuts+HD%p%NumOuts)
@@ -879,6 +885,8 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
+   logical                                   :: IncludePotFlow                !< include potential-flow (WAMIT) added mass
+   logical                                   :: IncludeStrip                  !< include strip-theory (Morison) added mass
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iNode,i,j,k,m
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
@@ -890,6 +898,23 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   ! Determine which added-mass contributions were requested
+   select case (AddedMassFlag_C)
+   case (1_c_int)
+      IncludePotFlow = .true.
+      IncludeStrip   = .false.
+   case (2_c_int)
+      IncludePotFlow = .false.
+      IncludeStrip   = .true.
+   case (3_c_int)
+      IncludePotFlow = .true.
+      IncludeStrip   = .true.
+   case default
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "AddedMassFlag_C must be 1 (potential flow only), 2 (strip theory only), or 3 (both), but was "//trim(Num2LStr(int(AddedMassFlag_C, IntKi)))//"."
+      if (Failed())  return
+   end select
 
    ! Sanity check -- number of node points cannot change
    if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
@@ -933,7 +958,7 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    Perturbed  = .false.
 
    ! Contributions from potential-flow bodies - need to perturb the acceleration of one node at a time, but only need to consider nodes with motion mapping to WAMIT mesh
-   if ( HD%u(1)%WAMITMesh%Committed ) then
+   if ( HD%u(1)%WAMITMesh%Committed .and. IncludePotFlow ) then
 
       ! Map the potential-flow loads without added-mass contributions and strip-theory contributions to HD_LoadMesh as a baseline
       call Transfer_Point_to_Point( HD%y%WAMITMesh, HD_LoadMesh, Map_HD_WB_P_2_Load, ErrStat2, ErrMsg2, HD%u(1)%WAMITMesh, HD_MotionMesh )
@@ -987,7 +1012,7 @@ SUBROUTINE HydroDyn_C_CalcOutput_and_AddedMass(Time_C, NumNodePts_C, NodePos_C, 
    endif
 
    ! Contributions from strip-theory members - can perturb the acceleration of all nodes at once
-   if ( HD%u(1)%Morison%Mesh%Committed ) then
+   if ( HD%u(1)%Morison%Mesh%Committed .and. IncludeStrip ) then
 
       ! Map the strip-theory loads without added-mass contributions and potential-flow contributions as a baseline
       ! No need to call HydroDyn_CalcOutput here again because the Morison mesh loads have not been modified
