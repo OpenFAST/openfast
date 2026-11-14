@@ -60,8 +60,60 @@ MODULE MoorDyn_Misc
    PUBLIC :: getWaterKin
    PUBLIC :: setupWaterKin
 
+   PUBLIC :: RampFactor
+
 CONTAINS
 
+   ! ::::::::::::::::::::::::::::::::: ramp functions :::::::::::::::::::::::::::::::::::::::::::::::
+
+   ! Evaluate a ramp function. Ramp is 0 before tStart and 1 after tStart + tRamp, rising
+   ! monotonically inbetween.
+   SUBROUTINE RampFactor(ramp, time, tStart, tRamp, coef, r)
+
+      INTEGER(IntKi), INTENT(IN   )  :: ramp     ! ramp function 
+      REAL(DbKi),     INTENT(IN   )  :: time     ! simulation time [s]
+      REAL(DbKi),     INTENT(IN   )  :: tStart   ! time at which the ramp starts [s]
+      REAL(DbKi),     INTENT(IN   )  :: tRamp    ! ramp duration [s]
+      REAL(DbKi),     INTENT(IN   )  :: coef     ! shape coefficient, sigmoid only
+      REAL(DbKi),     INTENT(  OUT)  :: r        ! ramp factor, from [0, 1]
+
+      REAL(DbKi)                     :: tau      ! normalized time, (0,1)
+
+      IF (time < tStart) THEN
+         r = 0.0_DbKi
+         RETURN
+      END IF
+
+      IF ((tRamp <= 0.0_DbKi) .OR. (time >= tStart + tRamp)) THEN
+         r = 1.0_DbKi
+         RETURN
+      END IF
+
+      tau = (time - tStart) / tRamp
+
+      SELECT CASE (ramp)
+
+         CASE (MD_RampLinear)
+            r = tau
+
+         CASE (MD_RampSine)
+            r = 0.5_DbKi * (1.0_DbKi - COS(Pi_D * tau))
+
+         CASE (MD_RampSigmoid)
+            ! A logistic curve written with tanh(x), x from -coef/2 at tau = 0 to +coef/2 at
+            ! tau = 1. Dividing by tanh(coef/2) gives ratio and 0.5*(1 + ratio) maps to 0 and 1.
+            IF (coef < 1.0e-6_DbKi) THEN ! linear for stability when approx linear
+               r = tau
+            ELSE
+               r = 0.5_DbKi * (1.0_DbKi + TANH(0.5_DbKi*coef*(2.0_DbKi*tau - 1.0_DbKi)) / TANH(0.5_DbKi*coef))
+            END IF
+
+         CASE DEFAULT
+            r = 0.0_DbKi
+
+      END SELECT
+
+   END SUBROUTINE RampFactor
 
    ! ::::::::::::::::::::::::::::::::: math convenience functions ::::::::::::::::::::::::::::::::::
    ! should add error checking if I keep these, but hopefully there are existing NWTCLib functions to replace them
@@ -1011,8 +1063,9 @@ CONTAINS
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
+      Real(DbKi)                 :: rampFac               ! ramp factor applied to the water kinematics at the start of a simulation
 
-      ! local 
+      ! local
       CHARACTER(120)             :: RoutineName = 'getWaterKin'   
 
       ErrStat = ErrID_None
@@ -1023,6 +1076,10 @@ CONTAINS
       Ud = 0.0_DbKi
       zeta = 0.0_DbKi
       PDyn = 0.0_DbKi
+
+      ! If wave-kinematic ramping is active, generate the initial conditions in still water. Returning covers currents 
+      ! as well as waves across all WaterKin modes.
+      IF (m%IC_gen .AND. (p%waveKin_rampT > 0.0_DbKi)) RETURN
 
       select case (p%WaterKin)
       ! no wave kinematics, do nothing (already initialized to zero above)
@@ -1101,11 +1158,12 @@ CONTAINS
       end select
 
       ! Apply ramp time
-      IF (t < p%waveKin_rampT) THEN 
-         U = U * t / p%waveKin_rampT
-         Ud = Ud * t / p%waveKin_rampT
-         zeta = zeta * t / p%waveKin_rampT
-         PDyn = PDyn * t / p%waveKin_rampT
+      IF (t < p%waveKin_rampT) THEN
+         CALL RampFactor(MD_RampLinear, t, 0.0_DbKi, p%waveKin_rampT, 0.0_DbKi, rampFac)
+         U = U * rampFac
+         Ud = Ud * rampFac
+         zeta = zeta * rampFac
+         PDyn = PDyn * rampFac
       END IF
 
    END SUBROUTINE getWaterKin

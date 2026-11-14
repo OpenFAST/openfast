@@ -455,6 +455,7 @@ CONTAINS
       Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment     
       Real(DbKi)                 :: v3L(3)             ! Body translational velocity in the local body-fixed coordinate system
       Real(DbKi)                 :: FDL(3)             ! Part of user-defined damping force defined in the local body-fixed coordinate system
+      Real(DbKi)                 :: FextTs(6)          ! User-defined external force and moment interpolated from a time series
 
 
       ! Initialize variables
@@ -474,13 +475,24 @@ CONTAINS
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
       ! Add user-defined external force and damping on body defined in the global earth-fixed coordinate system (assumed to be applied at the body ref point)
-      Body%F6net(1:3) = Body%F6net(1:3) + Body%FextG
+      Body%F6net(1:6) = Body%F6net(1:6) + Body%FextG ! constant
+      if ((Body%nFextTsGsteps > 0) .AND. (.NOT. m%IC_gen)) then ! time series if not icgen
+         CALL InterpExtLdSeries(Body%FextTsGts, Body%FextTsGfs, Body%time, FextTs)
+         Body%F6net(1:6) = Body%F6net(1:6) + FextTs
+      end if
       do i = 1,3
          Body%F6net(i) = Body%F6net(i) - Body%BlinG(i) * Body%v6(i) - Body%BquadG(i) * ABS(Body%v6(i)) * Body%v6(i)
       end do
 
       ! Add user-defined external force and damping on body defined in the local body-fixed coordinate system (assumed to be applied at the body ref point)
-      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL)
+      ! forces and moments rotated separately
+      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL(1:3)) ! constant
+      Body%F6net(4:6) = Body%F6net(4:6) + MATMUL( Body%OrMat, Body%FextL(4:6)) ! constant
+      if ((Body%nFextTsLsteps > 0) .AND. (.NOT. m%IC_gen)) then   ! time series if not icgen, rotated into the global frame
+         CALL InterpExtLdSeries(Body%FextTsLts, Body%FextTsLfs, Body%time, FextTs)
+         Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, FextTs(1:3) )
+         Body%F6net(4:6) = Body%F6net(4:6) + MATMUL( Body%OrMat, FextTs(4:6) )
+      end if
       v3L = MATMUL( TRANSPOSE(Body%OrMat), Body%v6(1:3) )
       do i = 1,3
          FDL(i) = - Body%BlinL(i) * v3L(i) - Body%BquadL(i) * ABS(v3L(i)) * v3L(i)
@@ -566,7 +578,8 @@ CONTAINS
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
       
       Real(DbKi)                            :: F6_iner(6)  ! inertial reaction force
-      
+      Real(DbKi)                            :: rampFac     ! ramp factor applied to the inertial loads at the start of a simulation
+
       ! do calculations of forces and masses on the body
       CALL Body_DoRHS(Body, m, p)
 
@@ -577,7 +590,10 @@ CONTAINS
             F6_iner = -MATMUL(Body%M, Body%a6)     ! unstable in OpenFAST v4 and below becasue of loose coupling with ED and SD. Transients in acceleration can cause issues
          elseif (p%inertialF == 2) then  ! include inertial components, but ramp up load
             F6_iner = -MATMUL(Body%M, Body%a6)
-            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+            if (t < p%inertialF_rampT) then
+               CALL RampFactor(MD_RampLinear, REAL(t,DbKi), 0.0_DbKi, p%inertialF_rampT, 0.0_DbKi, rampFac)
+               F6_iner = F6_iner * rampFac
+            endif
          else
             ! When OpenFAST v5 is released w/ tight coupling, remove this hack and just use the inertial term above 
             F6_iner = 0.0
@@ -593,7 +609,10 @@ CONTAINS
             F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
          elseif (p%inertialF == 2) then
             F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
-            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+            if (t < p%inertialF_rampT) then
+               CALL RampFactor(MD_RampLinear, REAL(t,DbKi), 0.0_DbKi, p%inertialF_rampT, 0.0_DbKi, rampFac)
+               F6_iner = F6_iner * rampFac
+            endif
          else 
             F6_iner(1:3) = 0.0
          endif
