@@ -88,7 +88,6 @@ CONTAINS
       INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
-      INTEGER(IntKi)                               :: CurrentTemp    ! temporary store of p%Current to disable currents during IC gen when wave-kinematic ramping is active
       INTEGER(IntKi)                               :: nComp          ! number of force components per point of an external force time series (3, or 6 for bodies)
 !      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
@@ -102,9 +101,11 @@ CONTAINS
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
 !      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
-      LOGICAL                                       :: compVIV = .FALSE.     ! flag to check if simulating VIV
-      LOGICAL                                       :: compVisco = .FALSE.   ! flag to check if simulating viscoelastic line
-      
+      LOGICAL                                       :: compVIV     ! flag to check if simulating VIV
+      LOGICAL                                       :: compVisco   ! flag to check if simulating viscoelastic line
+      LOGICAL                                       :: compExtLdTs ! flag to check if an external load is given as a time series
+      LOGICAL                                       :: compAttach  ! flag to check if any attachment events are specified
+
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
       TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
@@ -178,6 +179,12 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
       m%zeros6 = 0.0_DbKi
+
+      ! Initialize the linearization error checking flags
+      compVIV     = .FALSE.
+      compVisco   = .FALSE.
+      compExtLdTs = .FALSE.
+      compAttach  = .FALSE.
 
       ! Initialize the NWTC Subroutine Library
       CALL NWTC_Init( )
@@ -876,6 +883,8 @@ CONTAINS
                                                            m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2, p%PriPath)
                    CALL CheckError( ErrStat2, ErrMsg2 )
                    IF (ErrStat >= AbortErrLev) RETURN
+                   ErrStat2 = ErrID_None   ! clear all warnings (check at end will throw fatal if not none)
+                   ErrMsg2 = ''
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
@@ -1858,8 +1867,14 @@ CONTAINS
                   ! count commas to determine how many line IDs specified for this IC
                   N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
 
+                  IF ( N > SIZE(TempIDnums) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Cannot list more than '//trim(Num2LStr(SIZE(TempIDnums)))//' lines in one row.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
                   ! check for correct number of columns in current line
-                  IF ( CountWords( Line ) /= N+2 ) THEN 
+                  IF ( CountWords( Line ) /= N+2 ) THEN
                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be '//trim(Num2LStr(N+2))//' columns (<lineIDs>, Tmax, Tmean).', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
@@ -1977,6 +1992,7 @@ CONTAINS
                                               ErrStat2, ErrMsg2, p%PriPath )
                         CALL CheckError( ErrStat2, ErrMsg2 )
                         IF (ErrStat >= AbortErrLev) RETURN
+                        compExtLdTs = .TRUE. ! turn on flag for linearization error checking
                      else if (N==1) then ! one force provided; must be zero.
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(2) = m%ExtLdList(l)%Fext(1)
@@ -2174,6 +2190,8 @@ CONTAINS
                Line = NextLine(i)
                Line = NextLine(i)
 
+               if (p%nAttachs > 0) compAttach = .TRUE. ! turn of flag for linearization error checking
+
                ! process each attachment event
                DO l = 1,p%nAttachs
 
@@ -2182,6 +2200,12 @@ CONTAINS
 
                   ! count commas to determine how many line IDs are specified for this event
                   N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+
+                  IF ( N > SIZE(TempIDnums) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Cannot list more than '//trim(Num2LStr(SIZE(TempIDnums)))//' lines in one event.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
                   ! check for correct number of columns (CountWords splits by comma and space, so the
                   ! 7 columns give N line IDs plus six more entries)
@@ -2286,14 +2310,6 @@ CONTAINS
                   END DO
 
                   m%PointList(Itemp2)%isAttachment = .TRUE.
-
-                  ! Free points need mass or else NaN's. Attachment lines provide zero mass until
-                  ! activation.
-                  IF ( ALL(m%PointList(Itemp2)%AttachHasEvent(1:m%PointList(Itemp2)%nAttached)) .AND. (m%PointList(Itemp2)%typeNum == 0) .AND. (m%PointList(Itemp2)%pointM < 1.0e-6_DbKi) ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': free point '//trim(Num2LStr(Itemp2))//' needs non-attachment line, or a non zero mass.', ErrStat, ErrMsg, RoutineName )
-                     CALL CleanUp()
-                     RETURN
-                  END IF
 
                END DO
 
@@ -3159,7 +3175,9 @@ CONTAINS
 
       ! Go through independent points (Points) and write the coordinates to the state vector and set positions of attached line ends
       DO l = 1, p%nFreePoints
-         CALL Point_Initialize(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l) : m%pointStateIsN(l)), m)
+         CALL Point_Initialize(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l) : m%pointStateIsN(l)), m, p, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
       END DO
 
 
@@ -3280,12 +3298,8 @@ CONTAINS
          end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
-         m%IC_gen = .True. ! turn on IC_gen flag
-
-         ! If wave-kinematic ramping is active, disable currents during IC gen;
-         ! they will be applied at runtime alongside the wave grid.
-         CurrentTemp = p%Current
-         IF (p%waveKin_rampT > 0.0_DbKi) p%Current = 0_IntKi
+         m%IC_gen = .True. ! turn on IC_gen flag. getWaterKin uses this to hold the water still
+                           ! during IC gen when wave-kinematic ramping is active
 
          DO I = 1, p%nLines
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
@@ -3447,7 +3461,6 @@ CONTAINS
 
          ! Unboost drag coefficient of each line type   <<<
          m%IC_gen = .False. ! turn off IC_gen flag
-         p%Current = CurrentTemp  ! restore currents (may have been disabled during IC gen if wave-kinematic ramping was active)
          DO I = 1, p%nSlips
             IF (m%SlipList(I)%stateIs > 0) x%states(m%SlipList(I)%stateIs) = 0.0_DbKi
          END DO
@@ -3481,9 +3494,9 @@ CONTAINS
       IF (p%nSlips > 0) other%slipKSeg   = m%SlipList(:)%kSeg
       IF (p%nSlips > 0) other%slipStatus = m%SlipList(:)%status
       
-      if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco))) then
+      if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco) .OR. (compExtLdTs) .OR. (compAttach))) then
          ErrStat2 = ErrID_Fatal
-         ErrMsg2 = "Linearization cannot be used with the VIV or Viscoelastic model in MoorDyn"
+         ErrMsg2 = "Linearization cannot be used with the VIV, Viscoelastic, external load time series, or attachment events in MoorDyn"
          CALL CheckError( ErrStat2, ErrMsg2 )
       endif
 
@@ -4197,7 +4210,8 @@ CONTAINS
          m%PointList(p%nPoints)%pointFX = 0.0_DbKi 
          m%PointList(p%nPoints)%pointFY = 0.0_DbKi
          m%PointList(p%nPoints)%pointFZ = 0.0_DbKi
-         CALL Point_Initialize(m%PointList(p%nPoints), x%states(m%PointStateIs1(p%nFreePoints) : m%pointStateIsN(p%nFreePoints)), m)
+         CALL Point_Initialize(m%PointList(p%nPoints), x%states(m%PointStateIs1(p%nFreePoints) : m%pointStateIsN(p%nFreePoints)), m, p, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
 
          ! detach lines from old Rod or Point, and get kinematics of the old attachment point
 

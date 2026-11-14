@@ -1077,6 +1077,10 @@ CONTAINS
       zeta = 0.0_DbKi
       PDyn = 0.0_DbKi
 
+      ! If wave-kinematic ramping is active, generate the initial conditions in still water. Returning covers currents 
+      ! as well as waves across all WaterKin modes.
+      IF (m%IC_gen .AND. (p%waveKin_rampT > 0.0_DbKi)) RETURN
+
       select case (p%WaterKin)
       ! no wave kinematics, do nothing (already initialized to zero above)
       case (0)  

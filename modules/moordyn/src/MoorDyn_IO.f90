@@ -329,9 +329,17 @@ CONTAINS
                   LineProp_npoints = 0
                   Close (UnCoef)
                   RETURN
-               ELSE IF (ErrStat4 < 0) then   ! blank or short line: treat as the end of the table
-                  CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
-                  EXIT
+               ELSE IF (ErrStat4 < 0) then   ! end of record reached before both values were read
+                  IF (LEN_TRIM(Line2) == 0) then   ! blank line: treat as the end of the table
+                     CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
+                     EXIT
+                  ELSE                             ! nonblank row with too few values: the table is malformed
+                     ErrStat3 = ErrID_Fatal
+                     ErrMsg3  = "Error while reading lookup table file "//TRIM(FileName)//". Data row "//trim(Int2LStr(I))//" has fewer than two values."
+                     LineProp_npoints = 0
+                     Close (UnCoef)
+                     RETURN
+                  END IF
                END IF
             END IF
          END DO
@@ -511,6 +519,7 @@ CONTAINS
       REAL(DbKi),     INTENT(  OUT)  :: f(:)         ! the interpolated force (and moment)
 
       INTEGER(IntKi)                 :: i
+      INTEGER(IntKi)                 :: iL, iU       ! lower and upper step of the bracketing interval
       INTEGER(IntKi)                 :: nSteps      ! number of time steps of the time series
       REAL(DbKi)                     :: frac         ! fraction through the bracketing interval
 
@@ -530,13 +539,20 @@ CONTAINS
          RETURN
       END IF
 
-      DO i = 2, nSteps
-         IF (t <= ts(i)) THEN
-            frac = (t - ts(i-1)) / (ts(i) - ts(i-1))
-            f = fs(:,i-1) + frac * (fs(:,i) - fs(:,i-1))
-            RETURN
+      ! find the bracketing interval
+      iL = 1
+      iU = nSteps
+      DO WHILE (iU - iL > 1)
+         i = (iL + iU) / 2
+         IF (t < ts(i)) THEN
+            iU = i
+         ELSE
+            iL = i
          END IF
       END DO
+
+      frac = (t - ts(iL)) / (ts(iU) - ts(iL))
+      f = fs(:,iL) + frac * (fs(:,iU) - fs(:,iL))
 
    END SUBROUTINE InterpExtLdSeries
    
