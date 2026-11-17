@@ -1136,7 +1136,9 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          if (p%nNWMax>1) then
             write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
          endif
-         write(*,'(A,2F8.4)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+         if (p%WakeRegMethod==idRegAge) then
+            write(*,'(A,F9.6)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+         endif
       endif
    enddo ! Loop on wings
 

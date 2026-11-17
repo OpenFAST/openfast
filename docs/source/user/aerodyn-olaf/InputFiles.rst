@@ -187,7 +187,7 @@ The default option is *[3]*.
 
 **WakeRegMethod** [switch] specifies the method of determining viscous core
 radius (i.e., the regularization parameter). There are three options: 1)
-constant *[1]*, 2) stretching *[2]*, and 3) age *[3]*. The methods are
+constant *[1]*, 2) stretching *[2]* (not yet implemented), and 3) age *[3]*. The methods are
 described in :numref:`sec:corerad`. 
 The default option is *[3]*.
 
