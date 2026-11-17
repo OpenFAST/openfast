@@ -2427,7 +2427,7 @@ END SUBROUTINE CheckR8Var
 
 
       ! Open output file.  Make sure it worked.
-   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=ErrStat, ACTION='WRITE' )
+   OPEN( Un, FILE=TRIM( OutFile ), STATUS='REPLACE', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=ErrStat, ACTION='WRITE' )
 
    IF ( ErrStat /= 0 ) THEN
       ErrMsg  = 'OpenBOutFile:Cannot open file "'//TRIM( OutFile )//'". Another program may have locked it for writing.' &
