@@ -1443,7 +1443,12 @@ MODULE NWTC_LAPACK
    
          IF (N <= 0) RETURN
    
-         ALLOCATE(A(N,N))
+         ALLOCATE(A(N,N), STAT=INFO)
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "LAPACK_DPOTRF: Error allocating memory for the full-storage matrix A."
+            RETURN
+         END IF
          A = 0.0_R8Ki
    
          IF (UPLO == 'U') THEN
@@ -1535,7 +1540,12 @@ MODULE NWTC_LAPACK
    
          IF (N <= 0) RETURN
    
-         ALLOCATE(A(N,N))
+         ALLOCATE(A(N,N), STAT=INFO)
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "LAPACK_SPOTRF: Error allocating memory for the full-storage matrix A."
+            RETURN
+         END IF
          A = 0.0_SiKi
    
          IF (UPLO == 'U') THEN
