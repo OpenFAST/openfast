@@ -457,6 +457,11 @@ computes, for :math:`b = 1, \dots, K`:
 
    \mathbf{x}_b = J_{bb}^{-1}\Big(\mathbf{r}_b - \sum_{c < b} J_{bc}\,\mathbf{x}_c\Big)
 
+Here, :math:`\mathbf{x} = \mathbf{P}\,\Delta\mathbf{z}` and :math:`\mathbf{P}\,\mathbf{r}`
+are partitioned conformally with the blocks: :math:`\mathbf{x}_b` and
+:math:`\mathbf{r}_b` are their entries for block :math:`b`, and :math:`J_{bc}`
+denotes block :math:`(b, c)` of :math:`\mathbf{P}\mathbf{J}\mathbf{P}^T`.
+
 No inverse is formed; :math:`J_{bb}^{-1}` denotes a solve with the diagonal
 block.  The solve works at two levels:
 
