@@ -37,6 +37,7 @@ subroutine test_NWTC_RandomNumber_suite(testsuite)
    type(unittest_type), allocatable, intent(out) :: testsuite(:)
    testsuite = [ &
                new_unittest("test_RANLUX", test_RANLUX), &
+               new_unittest("test_RANLUX_ContinueSeq", test_RANLUX_ContinueSeq), &
                new_unittest("test_INTRINSIC", test_INTRINSIC) &
                ]
 end subroutine
@@ -59,6 +60,41 @@ subroutine test_RANLUX(error)
    call UniformRandomNumbers(p%pRNG, random_numbers)
    call check(error, 0.94589489698410034_ReKi, random_numbers(1))
    call check(error,  0.47347849607467651_ReKi, random_numbers(2))
+
+end subroutine
+
+subroutine test_RANLUX_ContinueSeq(error)
+   ! Filling an array in pieces, with ContinueSeq=.true. on every call after the first,
+   ! must give the same numbers as filling it with one call.
+   type(error_type), allocatable, intent(out) :: error
+
+   type(NWTC_RandomNumber_ParameterType)  :: p              ! Paramters for random number generation
+   integer(IntKi)               :: error_status
+   character(ErrMsgLen)         :: error_message
+
+   integer, parameter           :: n = 100000          ! enough numbers that some of them are small enough to be padded
+   integer, parameter           :: chunk = 1009        ! not a factor of n or of the 24 numbers RanLux makes at a time
+   real(ReKi), allocatable      :: all_at_once(:)
+   real(ReKi), allocatable      :: in_pieces(:)
+   integer                      :: i, m
+
+   allocate(all_at_once(n), in_pieces(n))
+
+   p%pRNG = pRNG_RANLUX
+   p%RandSeed(1) = 1
+
+   call RandNum_Init(p, error_status, error_message)
+   call check(error, error_status, ErrID_None); if (allocated(error)) return
+   call RanLux(all_at_once)
+
+   call RandNum_Init(p, error_status, error_message)
+   call check(error, error_status, ErrID_None); if (allocated(error)) return
+   do i = 0, n-1, chunk
+      m = min(chunk, n-i)
+      call RanLux(in_pieces(i+1:i+m), ContinueSeq = i > 0)
+   end do
+
+   call check(error, count(all_at_once /= in_pieces), 0)
 
 end subroutine
 

@@ -939,22 +939,32 @@ REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(NPoints,NumFreq,3)   
 
 ! local variables
 
-REAL(ReKi), ALLOCATABLE                     :: RandNum(:)                       ! contains the uniformly-distributed random numbers for all the points and frequencies
+REAL(ReKi), ALLOCATABLE                     :: RandNum(:)                       ! buffer of uniformly-distributed random numbers: all frequencies for a few points of one wind component
 
-INTEGER(IntKi)                              :: Indx                             ! holds the next index in the RandNum array for the SNLWnd3d generator
+INTEGER(IntKi), PARAMETER                   :: MaxBufSize = 262144              ! number of random numbers to get at a time (unless NumFreq is larger)
+INTEGER(IntKi)                              :: Indx                             ! index into the RandNum array
 INTEGER(IntKi)                              :: IVec                             ! loop counter (=number of wind components = 3)
 INTEGER(IntKi)                              :: IFreq                            ! loop counter (=number of frequencies)
-INTEGER(IntKi)                              :: J                                ! loop counter (=number of points on grid)
-INTEGER(IntKi)                              :: NumPointsFreq                    ! number of points * number of frequency, or 1/3 the size of RandNum
+INTEGER(IntKi)                              :: J                                ! loop counter (=number of points in the buffer; number of seeds)
+INTEGER(IntKi)                              :: J0                               ! number of points on the grid that are already done for this wind component
+INTEGER(IntKi)                              :: NumPts                           ! number of points in the buffer
+INTEGER(IntKi)                              :: NumPtsBuf                        ! maximum number of points in the buffer
+INTEGER(IntKi)                              :: NumRand                          ! number of random numbers in the buffer = NumPts * NumFreq
+LOGICAL                                     :: FirstBuf                         ! whether this is the first buffer of random numbers
 
 INTEGER                                     :: LuxLevelOut, InitSeed
 CHARACTER(20)                               :: NextSeedText
 
 
-! get the uniformly distributed random numbers:
+      ! The random numbers are generated in this order: all frequencies of the first point, all frequencies
+      ! of the second point, ..., for each of the 3 wind components. The total, NPoints*NumFreq*3, can be
+      ! larger than a default integer holds, so we get the numbers for only a few points at a time
+      ! instead of getting them all at once. The numbers are the same either way.
 
+   NumPtsBuf = MAX( 1_IntKi, MIN( NPoints, MaxBufSize / MAX(NumFreq,1_IntKi) ) )
 
-   CALL AllocAry( RandNum, SIZE(PhaseAngles), 'RandNum', ErrStat, ErrMsg )
+   CALL AllocAry( RandNum, NumPtsBuf*NumFreq, 'RandNum', ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
 
 
       ! Reinitialize the random number generator ( it was initialized when the
@@ -967,64 +977,77 @@ CHARACTER(20)                               :: NextSeedText
       RETURN
    END IF
 
-   
-      ! Let's go ahead and get all the random numbers we will need for the entire
-      ! run.  This (hopefully) will be faster than getting them one at a time,
-      ! but it will use more memory.
-      ! These pRNGs have been initialized in the GetInput() subroutine
+
+   FirstBuf = .TRUE.
+
+   DO IVec = 1,3  ! 3 wind components
+      DO J0 = 0,NPoints-1,NumPtsBuf
+
+         NumPts  = MIN( NumPtsBuf, NPoints - J0 )
+         NumRand = NumPts*NumFreq
+
+            ! get the uniformly distributed random numbers for these points:
+
+         IF ( p%pRNG == pRNG_INTRINSIC ) THEN  ! RNG_type == 'NORMAL'
+
+            CALL RANDOM_NUMBER ( RandNum(1:NumRand) )
+
+         ELSEIF ( p%pRNG == pRNG_RANLUX ) THEN ! RNG_type == 'RANLUX'
+
+               ! ContinueSeq makes this the same as getting all of the numbers with one call
+            CALL RanLux ( RandNum(1:NumRand), ContinueSeq = .NOT. FirstBuf )
+
+         ELSE
+
+               ! each wind component has its own seed
+            CALL ARand( OtherSt%nextSeed(IVec), RandNum, NumRand, 1 )
+
+         ENDIF
+
+         FirstBuf = .FALSE.
+
+            ! set them to the range 0-2pi and
+            ! sort them so we get the same random numbers as previous versions of TurbSim
+
+         DO IFreq = 1,NumFreq
+            DO J = 1,NumPts
+               Indx = IFreq + (J-1)*NumFreq
+
+               PhaseAngles(J0+J,IFreq,IVec) = TwoPi*RandNum(Indx)
+            ENDDO ! J
+         ENDDO !IFreq
+
+      ENDDO ! J0
+   ENDDO !IVec
+
+   call cleanup()
+
+
+      ! Let's harvest the random seeds so that they can be used for the next run if desired.
+      ! Write them to the summary file.
 
    IF ( p%pRNG == pRNG_INTRINSIC ) THEN  ! RNG_type == 'NORMAL'
 
          !The first two real numbers in the RandSeed array are used as seeds
          !The number of seeds needed are compiler specific, thus we can't assume only 2 seeds anymore
 
-      CALL RANDOM_NUMBER ( RandNum )
-
-      ! Let's harvest the random seeds so that they can be used for the next run if desired.
-      ! Write them to the summary file.
-
       CALL RANDOM_SEED ( GET = OtherSt%nextSeed(:) )  ! bjj: 16-jul-2014: without the (:), I get an "internal compiler error" here using Intel(R) Visual Fortran Compiler XE 12.1.3.300 [Intel(R) 64]
 
       NextSeedText = ' Harvested seed #'
-      
+
    ELSEIF ( p%pRNG == pRNG_RANLUX ) THEN ! RNG_type == 'RANLUX'
 
-      CALL RanLux ( RandNum )
-
       CALL RLuxAT ( LuxLevelOut, InitSeed, OtherSt%nextSeed(1), OtherSt%nextSeed(2) ) !luxury level, seed, nextSeed
-      
+
       !InitSeed = p%RandSeed(1)????
       NextSeedText = ' K'
 
    ELSE
- 
-      NumPointsFreq = NPoints*NumFreq
-
-      Indx = 1
-      DO IVec = 1,3  ! 3 wind components
-         CALL ARand( OtherSt%nextSeed(IVec), RandNum, NumPointsFreq,  Indx) 
-         Indx = Indx + NumPointsFreq
-      ENDDO
 
       NextSeedText = ' Next seed #'
-      
-   ENDIF
-         
-! set them to the range 0-2pi and   
-! sort them so we get the same random numbers as previous versions of TurbSim   
-                                       
-   DO IVec = 1,3
-      DO IFreq = 1,NumFreq
-         DO J=1,NPoints
-            Indx = IFreq + (J-1)*NumFreq + (IVec-1)*NPoints*NumFreq  ! This sorts the random numbers as they were done previously
 
-            PhaseAngles(J,IFreq,IVec)  = TwoPi*RandNum(Indx)
-         ENDDO ! J
-      ENDDO !IFreq
-   ENDDO !IVec         
-                           
-   call cleanup()
-   
+   ENDIF
+
    IF ( US > 0 ) THEN
    
       WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
