@@ -58,6 +58,7 @@ set(CTEST_UADRIVER_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/unsteadyaero_
 
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
+set(CTEST_BEAMDYN_C_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_c_binding_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the BeamDyn C-bindings driver executable to use in testing.")
 
 # Set the HydroDyn executable configuration option and default
 set(CTEST_HYDRODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/hydrodyn/hydrodyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the HydroDyn driver executable to use in testing.")
@@ -166,6 +167,7 @@ add_custom_target(
   DEPENDS
     aerodyn_driver
     beamdyn_driver
+    beamdyn_c_binding_driver
     hydrodyn_driver
     inflowwind_driver
     moordyn_driver

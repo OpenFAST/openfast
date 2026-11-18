@@ -545,6 +545,10 @@ SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrS
          RETURN
       END IF
 
+      ! Close the echo file: all input files have been read.  Leaving it open prevents initializing BeamDyn again
+      ! with the same root name in the same process (for example when restarting through the C-bindings interface).
+   IF (UnEcho > 0) CLOSE (UnEcho)
+
 END SUBROUTINE BD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary BeamDyn input file and places the values it reads
