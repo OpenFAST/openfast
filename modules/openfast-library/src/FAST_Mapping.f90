@@ -3329,7 +3329,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       ! ExtInfw updates the flow field used by InflowWind and AeroDyn so consider that an
       ! input to InflowWind and perform the update during InflowWind's input solve
       call ExtInfw_UpdateFlowField(T%p_FAST, T%ExtInfw, ErrStat2, ErrMsg2)
-      if (ErrStat >= AbortErrLev) return
+      if (Failed()) return
 
    case (Custom_SrvD_to_AD)
 
@@ -3447,7 +3447,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    case (Custom_AD_to_ExtInfw)
 
       call ExtInfw_SetInputs(T%p_FAST, T%AD%Input(iInput), T%AD%y, T%SrvD%y(ModDst%Ins), T%ExtInfw, ErrStat2, ErrMsg2)
-      if (ErrStat >= AbortErrLev) return
+      if (Failed()) return
       call ExtInfw_SetWriteOutput(T%ExtInfw)
 
 !-------------------------------------------------------------------------------
