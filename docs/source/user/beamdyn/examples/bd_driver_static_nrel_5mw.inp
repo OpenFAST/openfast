@@ -41,4 +41,6 @@ Non-dim blade-span eta   Fx          Fy            Fz           Mx           My 
 (-)                      (N)         (N)           (N)          (N-m)        (N-m)        (N-m)
 ---------------------- PRIMARY INPUT FILE --------------------------------------
 "bd_primary_nrel_5mw.inp"    InputFile - Name of the primary BeamDyn input file
-
+---------------------- OUTPUTS -------------------------------------------------
+          0   WrVTK         - VTK visualization data output: (switch) {0=none; 1=init; 2=animation}
+          1   VTK_fps       - Frame rate for VTK output (frames per second) {will use closest integer multiple of DT} [used only if WrVTK=2]
