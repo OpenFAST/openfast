@@ -2368,6 +2368,9 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
 
          WaveS2Sdd = 0.5_SiKi*WaveS1SddArr(I)
 
+         ! Flush subnormals: optimized ifx SQRT (rsqrtps) returns Inf for them when FTZ is off
+         IF ( TwoPi_R4 * WaveS2Sdd / REAL(InitInp%WaveDT,SiKi) < TINY(WaveS2Sdd) ) WaveS2Sdd = 0.0_SiKi
+
             ! Compute the discrete Fourier transform of the instantaneous elevation of
             !   incident waves at the WAMIT reference point:
          tmpComplex                   = SQRTNStepWave2 * WGNC(I) *SQRT( TwoPi_R4 * WaveS2Sdd / REAL(InitInp%WaveDT,SiKi) )
