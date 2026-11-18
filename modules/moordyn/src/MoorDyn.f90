@@ -76,17 +76,19 @@ CONTAINS
   !    CHARACTER(1024)                              :: priPath        ! The path to the primary MoorDyn input file
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
-      INTEGER(IntKi)                               :: il              ! index
-      INTEGER(IntKi)                               :: iil              ! index
+      INTEGER(IntKi)                               :: il             ! index
+      INTEGER(IntKi)                               :: iil            ! index
       INTEGER(IntKi)                               :: Success        ! flag for checking whether line is attached to failure point
       REAL(DbKi)                                   :: hSeg           ! segment length used to size slip support kernels
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
       INTEGER(IntKi)                               :: Itemp          ! index
+      INTEGER(IntKi)                               :: Itemp2           ! index
       INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
+      INTEGER(IntKi)                               :: nComp          ! number of force components per point of an external force time series (3, or 6 for bodies)
 !      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(ReKi)                                   :: OrMat2(3,3)
@@ -99,9 +101,11 @@ CONTAINS
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
 !      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
-      LOGICAL                                       :: compVIV = .FALSE.     ! flag to check if simulating VIV
-      LOGICAL                                       :: compVisco = .FALSE.   ! flag to check if simulating viscoelastic line
-      
+      LOGICAL                                       :: compVIV     ! flag to check if simulating VIV
+      LOGICAL                                       :: compVisco   ! flag to check if simulating viscoelastic line
+      LOGICAL                                       :: compExtLdTs ! flag to check if an external load is given as a time series
+      LOGICAL                                       :: compAttach  ! flag to check if any attachment events are specified
+
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
       TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
@@ -175,6 +179,12 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
       m%zeros6 = 0.0_DbKi
+
+      ! Initialize the linearization error checking flags
+      compVIV     = .FALSE.
+      compVisco   = .FALSE.
+      compExtLdTs = .FALSE.
+      compAttach  = .FALSE.
 
       ! Initialize the NWTC Subroutine Library
       CALL NWTC_Init( )
@@ -412,6 +422,19 @@ CONTAINS
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nExtLds = p%nExtLds + 1
+                  Line = NextLine(i)
+               END DO
+
+            else if (INDEX(Line, "ATTACHMENT EVENTS") > 0) then ! if attachment events header
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! find how many elements of this type there are
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nAttachs = p%nAttachs + 1
                   Line = NextLine(i)
                END DO
 
@@ -800,7 +823,9 @@ CONTAINS
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
-                      
+                      CALL CheckError( ErrStat2, ErrMsg2 )
+                      IF (ErrStat >= AbortErrLev) RETURN
+
                       hasSyrope = .false. ! reset hasSyrope flag for later use when processing
 
                    else ! process other visco-elastic or normal cases
@@ -824,6 +849,8 @@ CONTAINS
                                                             m%LineTypeList(l)%nEApoints, &
                                                             m%LineTypeList(l)%stiffXs,   &
                                                             m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2, p%PriPath)
+                     CALL CheckError( ErrStat2, ErrMsg2 )
+                     IF (ErrStat >= AbortErrLev) RETURN
                    end if
 
                    
@@ -846,12 +873,18 @@ CONTAINS
                                                            m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
                                                            m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2, p%PriPath)
-                                                           
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
+
                    ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
                                                            m%LineTypeList(l)%bstiffYs, ErrStat2, ErrMsg2, p%PriPath)
+                   CALL CheckError( ErrStat2, ErrMsg2 )
+                   IF (ErrStat >= AbortErrLev) RETURN
+                   ErrStat2 = ErrID_None   ! clear all warnings (check at end will throw fatal if not none)
+                   ErrMsg2 = ''
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
@@ -1003,7 +1036,7 @@ CONTAINS
                      m%BodyList(l)%BodyCdA(6) = m%BodyList(l)%BodyCdA(1)
                   else if (N ==2) then 
                      READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
-                     READ(tempStrings(4), *) m%BodyList(l)%BodyCdA(4)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(4)
                      m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
                      m%BodyList(l)%BodyCdA(5) = m%BodyList(l)%BodyCdA(4)
@@ -1023,7 +1056,7 @@ CONTAINS
                      READ(tempStrings(5), *) m%BodyList(l)%BodyCdA(5)
                      READ(tempStrings(6), *) m%BodyList(l)%BodyCdA(6)
                   else
-                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1, 2, 3, or 6 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
                   ! process added mass coefficient
                   CALL SplitByBars(tempString5, N, tempStrings)
@@ -1039,6 +1072,11 @@ CONTAINS
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' Ca entry (col 14) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
 
+                  ! catch any fatal errors raised while processing the bar-separated columns above
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
@@ -1829,8 +1867,14 @@ CONTAINS
                   ! count commas to determine how many line IDs specified for this IC
                   N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
 
+                  IF ( N > SIZE(TempIDnums) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Cannot list more than '//trim(Num2LStr(SIZE(TempIDnums)))//' lines in one row.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
                   ! check for correct number of columns in current line
-                  IF ( CountWords( Line ) /= N+2 ) THEN 
+                  IF ( CountWords( Line ) /= N+2 ) THEN
                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Syrope line initial conditions '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be '//trim(Num2LStr(N+2))//' columns (<lineIDs>, Tmax, Tmean).', ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
@@ -1897,7 +1941,7 @@ CONTAINS
 
                      ! read in object type
                      CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
-                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3) 
+                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3)
 
                      ! Read in CSys local or global
                      CALL Conv2UC(tempString5) ! convert to uppercase so that matching is not case-sensitive
@@ -1931,12 +1975,30 @@ CONTAINS
 
                      ! process translational force
                      CALL SplitByBars(tempString2, N, tempStrings)
-                     if (N==1) then ! one force provided; must be zero.
+                     if (SCAN(tempStrings(1), "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") > 0) then
+                        ! non E letter in force entry means time series file
+                        if (N /= 1) then ! if bar-separated entries
+                           CALL SetErrStat( ErrID_Fatal, 'External load '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry can only have a file or numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
+                        if (let1 == "BODY") then
+                           nComp = 6   ! bodies are 6 DOF
+                        else
+                           nComp = 3   ! rods and points are 3 DOF
+                        end if
+                        CALL ReadExtLdSeries( tempStrings(1), nComp, m%ExtLdList(l)%nFextTsSteps, &
+                                              m%ExtLdList(l)%FextTsts, m%ExtLdList(l)%FextTsfs,         &
+                                              ErrStat2, ErrMsg2, p%PriPath )
+                        CALL CheckError( ErrStat2, ErrMsg2 )
+                        IF (ErrStat >= AbortErrLev) RETURN
+                        compExtLdTs = .TRUE. ! turn on flag for linearization error checking
+                     else if (N==1) then ! one force provided; must be zero.
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(2) = m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(3) = m%ExtLdList(l)%Fext(1)
                         if (m%ExtLdList(l)%Fext(1) /= 0.0) then
-                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0, have 3 numbers, or (for BODY only) have 6 numbers (3 forces and 3 moments)' , ErrStat, ErrMsg, RoutineName )
                            CALL CleanUp()
                            RETURN
                         end if
@@ -1944,8 +2006,12 @@ CONTAINS
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Fext(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Fext(3)
+                     elseif ((N==6) .and. (let1 == "BODY")) then ! three forces and three moments provided, bodies only
+                        DO J = 1,6
+                           READ(tempStrings(J), *) m%ExtLdList(l)%Fext(J)
+                        END DO
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be filename, 0, have 3 numbers, or (for BODY only) have 6 numbers (3 forces and 3 moments)' , ErrStat, ErrMsg, RoutineName )
                         CALL CleanUp()
                         RETURN
                      end if
@@ -1953,7 +2019,7 @@ CONTAINS
                      ! process linear damping coefficient
                      CALL SplitByBars(tempString3, N, tempStrings)
                      if (N==1) then                                                                                 ! if only one entry, use it for all directions
-                        READ(tempString4, *) m%ExtLdList(l)%Blin(1)
+                        READ(tempString3, *) m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(3) = m%ExtLdList(l)%Blin(1)
                      else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                               ! two directions provided, this is for rods
@@ -1990,8 +2056,7 @@ CONTAINS
                         RETURN
                      end if
 
-                     IF ( (m%ExtLdList(l)%Blin(1)<0.0) .OR. (m%ExtLdList(l)%Blin(2)<0.0) .OR. (m%ExtLdList(l)%Blin(3)<0.0) .OR. &
-                          (m%ExtLdList(l)%Bquad(1)<0.0) .OR. (m%ExtLdList(l)%Bquad(2)<0.0) .OR. (m%ExtLdList(l)%Bquad(3)<0.0) ) THEN
+                     IF ( ANY(m%ExtLdList(l)%Blin<0.0) .OR. ANY(m%ExtLdList(l)%Bquad<0.0) ) THEN
                          CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Damping coefficients must be non-negative.', ErrStat, ErrMsg, RoutineName )
                          CALL CleanUp()
                          RETURN
@@ -2005,11 +2070,37 @@ CONTAINS
                                   m%BodyList(J)%FextG  = m%BodyList(J)%FextG  + m%ExtLdList(l)%Fext
                                   m%BodyList(J)%BlinG  = m%BodyList(J)%BlinG  + m%ExtLdList(l)%Blin
                                   m%BodyList(J)%BquadG = m%BodyList(J)%BquadG + m%ExtLdList(l)%Bquad
+                                  IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                     IF (m%BodyList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                        CALL SetErrStat( ErrID_Fatal, 'Only one force time series on body '//trim(Num2LStr(J))//' in the global frame.', ErrStat, ErrMsg, RoutineName )
+                                        CALL CleanUp()
+                                        RETURN
+                                     END IF
+                                     m%BodyList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                     CALL AllocAry(m%BodyList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                     CALL AllocAry(m%BodyList(J)%FextTsGfs, 6, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                     m%BodyList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                     m%BodyList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                                  END IF
                                ELSE
                                   m%BodyList(J)%FextL  = m%BodyList(J)%FextL  + m%ExtLdList(l)%Fext
                                   m%BodyList(J)%BlinL  = m%BodyList(J)%BlinL  + m%ExtLdList(l)%Blin
                                   m%BodyList(J)%BquadL = m%BodyList(J)%BquadL + m%ExtLdList(l)%Bquad
+                                  IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                     IF (m%BodyList(J)%nFextTsLsteps > 0) THEN ! check if a time series has already be assigned
+                                        CALL SetErrStat( ErrID_Fatal, 'Only one force time series on body '//trim(Num2LStr(J))//' in the local frame.', ErrStat, ErrMsg, RoutineName )
+                                        CALL CleanUp()
+                                        RETURN
+                                     END IF
+                                     m%BodyList(J)%nFextTsLsteps = m%ExtLdList(l)%nFextTsSteps
+                                     CALL AllocAry(m%BodyList(J)%FextTsLts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsLts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsLts")) return
+                                     CALL AllocAry(m%BodyList(J)%FextTsLfs, 6, m%ExtLdList(l)%nFextTsSteps, 'FextTsLfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsLfs")) return
+                                     m%BodyList(J)%FextTsLts = m%ExtLdList(l)%FextTsts
+                                     m%BodyList(J)%FextTsLfs = m%ExtLdList(l)%FextTsfs
+                                  END IF
                                END IF
+                               CALL CheckError( ErrStat2, ErrMsg2 )
+                               IF (ErrStat >= AbortErrLev) RETURN
                             ELSE
                                CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                                CALL CleanUp()
@@ -2024,9 +2115,23 @@ CONTAINS
                         IF (len_trim(num1) > 0) THEN
                            READ(num1, *) J   ! convert to int, representing parent point index
                            IF ((J <= p%nPoints) .and. (J > 0)) THEN
-                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext
+                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext(1:3)
                               m%PointList(J)%Blin = m%PointList(J)%Blin + m%ExtLdList(l)%Blin
                               m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
+                              IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                 IF (m%PointList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                    CALL SetErrStat( ErrID_Fatal, 'Only one force time series on point '//trim(Num2LStr(J))//'.', ErrStat, ErrMsg, RoutineName )
+                                    CALL CleanUp()
+                                    RETURN
+                                 END IF
+                                 m%PointList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                 CALL AllocAry(m%PointList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                 CALL AllocAry(m%PointList(J)%FextTsGfs, 3, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                 m%PointList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                 m%PointList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                              END IF
+                              CALL CheckError( ErrStat2, ErrMsg2 )
+                              IF (ErrStat >= AbortErrLev) RETURN
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Point ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                               CALL CleanUp()
@@ -2041,9 +2146,23 @@ CONTAINS
                         IF (len_trim(num1) > 0) THEN
                            READ(num1, *) J   ! convert to int, representing parent rod index
                            IF ((J <= p%nRods) .and. (J > 0)) THEN
-                              m%RodList(J)%FextU = m%RodList(J)%FextU + m%ExtLdList(l)%Fext
+                              m%RodList(J)%FextU = m%RodList(J)%FextU + m%ExtLdList(l)%Fext(1:3)
                               m%RodList(J)%Blin = m%RodList(J)%Blin(1:2) + m%ExtLdList(l)%Blin(1:2) ! rods only have axial and transverse
                               m%RodList(J)%Bquad = m%RodList(J)%Bquad(1:2) + m%ExtLdList(l)%Bquad(1:2) ! rods only have axial and transverse
+                              IF (m%ExtLdList(l)%nFextTsSteps > 0) THEN
+                                 IF (m%RodList(J)%nFextTsGsteps > 0) THEN ! check if a time series has already be assigned
+                                    CALL SetErrStat( ErrID_Fatal, 'Only one force time series on rod '//trim(Num2LStr(J))//'.', ErrStat, ErrMsg, RoutineName )
+                                    CALL CleanUp()
+                                    RETURN
+                                 END IF
+                                 m%RodList(J)%nFextTsGsteps = m%ExtLdList(l)%nFextTsSteps
+                                 CALL AllocAry(m%RodList(J)%FextTsGts,    m%ExtLdList(l)%nFextTsSteps, 'FextTsGts', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGts")) return
+                                 CALL AllocAry(m%RodList(J)%FextTsGfs, 3, m%ExtLdList(l)%nFextTsSteps, 'FextTsGfs', ErrStat2, ErrMsg2); if(AllocateFailed("FextTsGfs")) return
+                                 m%RodList(J)%FextTsGts = m%ExtLdList(l)%FextTsts
+                                 m%RodList(J)%FextTsGfs = m%ExtLdList(l)%FextTsfs
+                              END IF
+                              CALL CheckError( ErrStat2, ErrMsg2 )
+                              IF (ErrStat >= AbortErrLev) RETURN
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Rod ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                               CALL CleanUp()
@@ -2057,6 +2176,140 @@ CONTAINS
                      END IF
                      
                   END IF
+
+               END DO
+
+               ! TODO: write inputs to log file
+
+            !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "ATTACHMENT EVENTS") > 0) then ! if attachment events header
+
+               IF (wordy > 0) print *, "   Reading attachment events";
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               if (p%nAttachs > 0) compAttach = .TRUE. ! turn of flag for linearization error checking
+
+               ! process each attachment event
+               DO l = 1,p%nAttachs
+
+                  !read into a line
+                  Line = NextLine(i)
+
+                  ! count commas to determine how many line IDs are specified for this event
+                  N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
+
+                  IF ( N > SIZE(TempIDnums) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Cannot list more than '//trim(Num2LStr(SIZE(TempIDnums)))//' lines in one event.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! check for correct number of columns (CountWords splits by comma and space, so the
+                  ! 7 columns give N line IDs plus six more entries)
+                  IF ( CountWords( Line ) /= N+6 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! parse out entries:  ID  Point  Line  AttachTime  RampTime  RampFcn  RampCoef
+                  READ(Line,*,IOSTAT=ErrStat2) Itemp, Itemp2, TempIDnums(1:N), tempArray(1), tempArray(2), tempString1, tempString2
+                  IF ( ErrStat2 /= 0 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Attachment Event '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! The events need to be sequentially numbered
+                  IF ( Itemp .NE. l ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ( (Itemp2 < 1) .OR. (Itemp2 > p%nPoints) ) THEN ! checking valid point numbers
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has invalid point ID '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  ! read the ramp function, a bare "-" defaults to sigmoid
+                  CALL Conv2UC(tempString1)
+                  SELECT CASE (TRIM(tempString1))
+                     CASE ("LINEAR")
+                        il = MD_RampLinear
+                     CASE ("SIN", "SINE", "COS", "COSINE")
+                        il = MD_RampSine
+                     CASE ("SIGMOID", "LOGISTIC", "-")
+                        il = MD_RampSigmoid
+                     CASE DEFAULT
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has unrecognized ramp function '//trim(tempString1)//'. Must be Linear, Sin, or Sigmoid.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                  END SELECT
+
+                  ! ramp coefficient defaults to 5.0 if "-" is given
+                  IF (trim(tempString2) == "-") THEN
+                     tempArray(3) = 5.0_DbKi
+                  ELSE
+                     READ(tempString2, *, IOSTAT=ErrStat2) tempArray(3)
+                     IF ( ErrStat2 /= 0 ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has an unreadable ramp coefficient '//trim(tempString2)//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                  END IF
+
+                  IF ( (tempArray(1) < 0.0_DbKi) .OR. (tempArray(2) < 0.0_DbKi) ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' times cannot be negative.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  IF ( tempArray(3) < 0.0_DbKi ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' ramp coefficient cannot be negative.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
+                  DO J = 1, N
+
+                     IF ( (TempIDnums(J) < 1) .OR. (TempIDnums(J) > p%nLines) ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//' has invalid line ID '//trim(Num2LStr(TempIDnums(J)))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+                     
+                     ! check that line is attached to point
+                     Itemp = 0
+                     DO iil = 1, m%PointList(Itemp2)%nAttached ! loop through attached lines
+                        IF (m%PointList(Itemp2)%Attached(iil) == TempIDnums(J)) Itemp = iil
+                     END DO
+                     IF (Itemp == 0) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': line '//trim(Num2LStr(TempIDnums(J)))//' is not attached to point '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+
+                     ! Check one attachment event per line per point.
+                     IF (m%PointList(Itemp2)%AttachHasEvent(Itemp)) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Attachment event '//trim(Num2LStr(l))//': line '//trim(Num2LStr(TempIDnums(J)))//' is already attached via point '//trim(Num2LStr(Itemp2))//'.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+
+                     m%PointList(Itemp2)%AttachHasEvent(Itemp) = .TRUE.
+                     m%PointList(Itemp2)%AttachTime(Itemp)     = tempArray(1)
+                     m%PointList(Itemp2)%AttachRampTime(Itemp) = tempArray(2)
+                     m%PointList(Itemp2)%AttachRampFcn(Itemp)  = il
+                     m%PointList(Itemp2)%AttachRampCoef(Itemp) = tempArray(3)
+
+                  END DO
+
+                  m%PointList(Itemp2)%isAttachment = .TRUE.
 
                END DO
 
@@ -2922,7 +3175,9 @@ CONTAINS
 
       ! Go through independent points (Points) and write the coordinates to the state vector and set positions of attached line ends
       DO l = 1, p%nFreePoints
-         CALL Point_Initialize(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l) : m%pointStateIsN(l)), m)
+         CALL Point_Initialize(m%PointList(m%FreePointIs(l)), x%states(m%PointStateIs1(l) : m%pointStateIsN(l)), m, p, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
       END DO
 
 
@@ -3043,7 +3298,9 @@ CONTAINS
          end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
-         m%IC_gen = .True. ! turn on IC_gen flag
+         m%IC_gen = .True. ! turn on IC_gen flag. getWaterKin uses this to hold the water still
+                           ! during IC gen when wave-kinematic ramping is active
+
          DO I = 1, p%nLines
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
@@ -3237,9 +3494,9 @@ CONTAINS
       IF (p%nSlips > 0) other%slipKSeg   = m%SlipList(:)%kSeg
       IF (p%nSlips > 0) other%slipStatus = m%SlipList(:)%status
       
-      if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco))) then
+      if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco) .OR. (compExtLdTs) .OR. (compAttach))) then
          ErrStat2 = ErrID_Fatal
-         ErrMsg2 = "Linearization cannot be used with the VIV or Viscoelastic model in MoorDyn"
+         ErrMsg2 = "Linearization cannot be used with the VIV, Viscoelastic, external load time series, or attachment events in MoorDyn"
          CALL CheckError( ErrStat2, ErrMsg2 )
       endif
 
@@ -3953,7 +4210,8 @@ CONTAINS
          m%PointList(p%nPoints)%pointFX = 0.0_DbKi 
          m%PointList(p%nPoints)%pointFY = 0.0_DbKi
          m%PointList(p%nPoints)%pointFZ = 0.0_DbKi
-         CALL Point_Initialize(m%PointList(p%nPoints), x%states(m%PointStateIs1(p%nFreePoints) : m%pointStateIsN(p%nFreePoints)), m)
+         CALL Point_Initialize(m%PointList(p%nPoints), x%states(m%PointStateIs1(p%nFreePoints) : m%pointStateIsN(p%nFreePoints)), m, p, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
 
          ! detach lines from old Rod or Point, and get kinematics of the old attachment point
 

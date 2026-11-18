@@ -543,6 +543,7 @@ CONTAINS
       Real(DbKi)                 :: k_hat(3)     ! unit vector (redundant, not used) <<<<
       Real(DbKi)                 :: Ftemp        ! temporary force component
       Real(DbKi)                 :: Mtemp        ! temporary moment component
+      Real(DbKi)                 :: FextTs(3)    ! user-defined external force interpolated from a time series
 
       Real(DbKi)                 :: m_i, v_i     ! 
       Real(DbKi)                 :: zeta         ! wave elevation above/below a given node
@@ -1027,6 +1028,10 @@ CONTAINS
 
       ! add in user defined external forces to end A
       Rod%F6net(1:3) = Rod%F6net(1:3) + Rod%FextU
+      IF ((Rod%nFextTsGsteps > 0) .AND. (.NOT. m%IC_gen)) THEN   ! add the external load time series if not icgen
+         CALL InterpExtLdSeries(Rod%FextTsGts, Rod%FextTsGfs, Rod%time, FextTs)
+         Rod%F6net(1:3) = Rod%F6net(1:3) + FextTs
+      END IF
       DO J=1,3
          IF (Is_NaN(Rod%F6net(J)) .AND. wordy>1) THEN
             CALL WrScr("NaN detected in Rod%F6net("//trim(num2lstr(J))//") after adding Rod%FextU")
