@@ -167,7 +167,7 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       ! to add ExternalInflow integrations in the rest fo the code).
       !............................................................................................
    ! Allocate space for mapping data structures
-   ! (the loads go through ExtInfw_LineLoadsToPoints, which needs the motion mappings only: Line2_to_Point_Loads stays unallocated)
+   ! (the loads go through ExtInfw_LineLoadsToPoints, which needs the motion mappings only)
    ALLOCATE( ExtInfw%m%ActForceLoadsPoints(ExtInfw%p%NMappings), ExtInfw%m%Line2_to_Point_Motions(ExtInfw%p%NMappings),STAT=ErrStat2);   if (Failed2()) return;
 
    do k=1,ExtInfw%p%NMappings

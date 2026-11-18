@@ -38,7 +38,6 @@ typedef   ^                        InitOutputType   ModVarsType          Vars   
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   ModJacType    Jac                      -  - -  "Jacobian matrices and arrays corresponding to module variables"
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshType      ActForceMotionsPoints   {:} - -  "point mesh for transferring AeroDyn motions to ExternalInflow  (includes hub+blades+nacelle+tower+tailfin)"   -
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshType      ActForceLoadsPoints     {:} - -  "point mesh for transferring AeroDyn distributed loads to ExternalInflow (includes hub+blades+nacelle+tower+tailfin)"   -
-typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshMapType   Line2_to_Point_Loads    {:} - -  "mapping data structure to convert line2 loads to point loads"   -
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshMapType   Line2_to_Point_Motions  {:} - -  "mapping data structure to convert line2 loads to point motions"   -
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   FlowFieldType   &FlowField             -  - -  "Flow field data type"   - 
 
