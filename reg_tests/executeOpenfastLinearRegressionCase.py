@@ -392,17 +392,22 @@ def compareLin(f,file_freq_ref,file_freq_new):
             else:
                 M_tol = rtol * Mabs + atol
                 M_floor = np.zeros_like(Mabs)
-            M_diff = np.abs(Mloc - Mbas)
+            with np.errstate(invalid='ignore'):
+                M_diff = np.abs(Mloc - Mbas)
 
-            # Get matrix of which M elements are in/not in tolerance
-            # (written so that NaN or Inf never pass unless both are identical)
-            M_diff_in_tol = (M_diff <= M_tol) | (Mloc == Mbas)
+            # Get matrix of which M elements are in/not in tolerance.
+            # The tolerance applies only where both values are finite. A non-finite
+            # value passes only if it matches the baseline (same-signed Inf, or NaN
+            # in both), which is how these were treated before the round-off floor.
+            M_finite = np.isfinite(Mloc) & np.isfinite(Mbas)
+            M_same_nonfinite = (Mloc == Mbas) | (np.isnan(Mloc) & np.isnan(Mbas))
+            M_diff_in_tol = np.where(M_finite, M_diff <= M_tol, M_same_nonfinite)
 
             # Report how much the round-off floor was needed
-            nFloor = int(np.count_nonzero(M_diff_in_tol & (M_diff > rtol * Mabs + atol)))
+            nFloor = int(np.count_nonzero(M_finite & M_diff_in_tol & (M_diff > rtol * Mabs + atol)))
             if nFloor > 0 or verbose:
                 with np.errstate(divide='ignore', invalid='ignore'):
-                    maxUse = np.nanmax(np.where(M_tol > 0, M_diff / M_tol, 0.0)) if M_diff.size > 0 else 0.0
+                    maxUse = np.max(np.where(M_finite & (M_tol > 0), M_diff / M_tol, 0.0)) if M_diff.size > 0 else 0.0
                 print(errPrefix + f'`{k}`: {nFloor} of {M_diff.size} elements differ by more than rtol={rtol}, atol={atol} '
                       f'but are within the round-off floor ({noiseFloor:g} of row/column scale); largest use of tolerance in this matrix: {100*maxUse:.0f}%')
 
