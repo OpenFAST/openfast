@@ -88,6 +88,46 @@ def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarr
     passing_channels = np.all(where_close & where_not_nan & where_not_inf, axis=1)
     return passing_channels
 
+def lin_matrix_tolerance(baseline, rtol, atol, noise_floor):
+    """
+    Element-wise tolerance used to compare a linearization matrix to its baseline.
+
+    The matrices written to the .lin files are the result of sums, products and
+    linear solves on terms that can be many orders of magnitude larger than the
+    element itself. The round-off error left in an element is therefore set by the
+    size of the terms in its row and column, not by the size of the element. Such
+    round-off changes with the compiler, the math libraries and even the CPU model,
+    so it must not be treated as a regression.
+
+    The tolerance for element [i,j] is
+
+        tol[i,j] = rtol * |baseline[i,j]| + max(atol, noise_floor * scale[i,j])
+
+    with
+
+        scale[i,j] = max|baseline[i,:]| * max|baseline[:,j]| / max|baseline|
+
+    `scale` is the size the element would have if the matrix were the outer product
+    of its row and column magnitudes. It equals the largest element of the matrix
+    for an element in the largest row and column, and is small for an element in a
+    row or column that holds only small values, so such elements are still compared
+    with the plain `atol`.
+
+    Returns (tol, floor) where floor = noise_floor * scale.
+    """
+    a = np.abs(np.atleast_2d(np.asarray(baseline, dtype=float)))
+    if a.size == 0:
+        return np.zeros_like(a), np.zeros_like(a)
+    a = np.where(np.isfinite(a), a, 0.0)
+    matmax = a.max()
+    if matmax > 0.0:
+        scale = a.max(axis=1, keepdims=True) * (a.max(axis=0, keepdims=True) / matmax)
+    else:
+        scale = np.zeros_like(a)
+    floor = noise_floor * scale
+    tol = rtol * a + np.maximum(atol, floor)
+    return tol, floor
+
 def maxnorm(data, axis=0):
     return LA.norm(data, np.inf, axis=axis)
     
