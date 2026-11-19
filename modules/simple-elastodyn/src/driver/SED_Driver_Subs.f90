@@ -448,6 +448,10 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
       ! WrVTK     -- writing VTK visualization files must be [0: none, 1: init only, 2: animation]
    call ParseVar( DvrFileInfo, CurLine, "WrVTK", DvrSettings%WrVTK, ErrStatTmp, ErrMsgTmp, UnEc )
  
+      ! MirrorRotor  -- run the rotor counter-clockwise viewed from upwind
+   call ParseVar( DvrFileInfo, CurLine, "MirrorRotor", DvrSettings%MirrorRotor, ErrStatTmp, ErrMsgTmp, UnEc )
+   if (Failed()) return
+
 
    !======  Case analysis  ===============================================================================
    if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)    ! Write section break to echo

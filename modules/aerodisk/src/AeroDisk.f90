@@ -402,6 +402,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    real(SiKi)                                      :: x_hatDisk(3)   ! X direction unit vector of rotor disk (global)
    real(SiKi)                                      :: y_hatDisk(3)   ! Y direction unit vector of rotor disk (global)
    real(SiKi)                                      :: z_hatDisk(3)   ! Z direction unit vector of rotor disk (global)
+   real(SiKi)                                      :: z_hat_phys(3)  ! physical (right-handed) skew z axis, before the mirror is applied to the load basis
    real(SiKi)                                      :: VRel_vec(3)    ! relative velocity of wind in moving rotor disk frame
    real(SiKi)                                      :: tmp1,tmp3(3)   ! temporary variables for calculations
    integer(IntKi)                                  :: i              ! generic counter
@@ -488,7 +489,10 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    if (EqualRealNos(m%VRel_xd,0.0_SiKi)) then
       m%lambda = 0.0_SiKi
    else
-      m%lambda = real((u%RotSpeed * p%RotorRad),SiKi) / abs(m%VRel_xd)
+      ! MirrorRotor: the rotor speed arrives physical, and the table is defined in the
+      ! clockwise convention, so feed it the clockwise value to keep the tip-speed ratio
+      ! positive and inside the tabulated range.
+      m%lambda = real((p%RotDir * u%RotSpeed * p%RotorRad),SiKi) / abs(m%VRel_xd)
    endif
    if (EqualRealNos(m%VRel,0.0_SiKi)) then
       m%Chi = 0.0_SiKi
@@ -513,12 +517,23 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    tmp1 = TwoNorm(tmp3)
    if (EqualRealNos(tmp1, 0.0_SiKi))  then
       m%x_hat = x_hatDisk
-      m%y_hat = y_hatDisk
+      ! MirrorRotor: with the inflow along the shaft there is no skew direction to build
+      ! the triad from, so the disk axes are used, and the mirror must be carried by
+      ! reflecting the lateral axis instead of the cross-product axis. Left unreflected,
+      ! a mirrored rotor kept its lateral force and reversed its tilt moment, each the
+      ! opposite of the reflection.
+      m%y_hat = p%RotDir * y_hatDisk
       m%z_hat = z_hatDisk
+      z_hat_phys = z_hatDisk
    else
       m%x_hat = x_hatDisk
       m%y_hat = tmp3 / tmp1
-      m%z_hat = cross_product( VRel_vec, x_hatDisk ) / tmp1
+      z_hat_phys = cross_product( VRel_vec, x_hatDisk ) / tmp1
+      ! MirrorRotor: reflecting the cross-product axis makes this triad deliberately
+      ! left-handed on a mirrored rotor; components against it then reflect a true
+      ! vector (force), and, with the RotDir applied to the moment components below,
+      ! reverse a pseudovector (moment), exactly as the mirror requires.
+      m%z_hat = p%RotDir * z_hat_phys
    endif
 
    !---------------
@@ -528,12 +543,16 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !!          \vec{V}_\textrm{rel}[1] \hat{x}_\textrm{disk}[1] + \vec{V}_\textrm{rel}[2] \hat{x}_\textrm{disk}[2] \right) \f$
    !! - PsiSkew:    \f$ \Psi_\textrm{skew} = \text{ATAN2}\left( \hat{z} \bullet \hat{y}_\textrm{disk}, -\hat{z}\bullet \hat{z}_\textrm{disk} \right) \f$
    y%YawErr  = atan2( VRel_vec(2)*x_hatDisk(1) - VRel_vec(1)*x_hatDisk(2),   VRel_vec(1)*x_hatDisk(1) + VRel_vec(2)*x_hatDisk(2) )
-   y%PsiSkew = atan2( -1.0_ReKi * real( dot_product(m%z_hat,y_hatDisk), ReKi), real( dot_product(m%z_hat, z_hatDisk), ReKi) )
+   ! MirrorRotor: the skew azimuth is pure inflow/disk geometry, identical for either
+   ! rotation sense, so it is taken from the physical skew axis; m%z_hat carries the
+   ! mirror for the load basis only (with m%z_hat here, a mirrored rotor would report
+   ! PsiSkew shifted by pi and FAST.Farm would orient its curled wake 180 deg off).
+   y%PsiSkew = atan2( -1.0_ReKi * real( dot_product(z_hat_phys,y_hatDisk), ReKi), real( dot_product(z_hat_phys, z_hatDisk), ReKi) )
   
 
    !-------------------------------------------
    !> Interpolate Force and Moment coefficients
-   call ADskTableInterp(p%AeroTable, p%UseTSR, m%lambda, real(u%RotSpeed,SiKi), m%VRel_xd, real(u%BlPitch,SiKi), m%Chi, m%idx_last, m%C_F, m%C_M, ErrStat2, ErrMsg2)
+   call ADskTableInterp(p%AeroTable, p%UseTSR, m%lambda, real(p%RotDir*u%RotSpeed,SiKi), m%VRel_xd, real(u%BlPitch,SiKi), m%Chi, m%idx_last, m%C_F, m%C_M, ErrStat2, ErrMsg2)
       if (Failed()) return
 
    !> Apply skew if not in table
@@ -553,9 +572,21 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ M_x = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,x}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    !! - \f$ M_y = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,y}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    !! - \f$ M_z = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,z}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
+   ! MirrorRotor: the coefficients come out of the table in the clockwise convention and
+   ! are reflected here as they become physical loads. The skew-aligned triad above is
+   ! built so that all three basis vectors mirror as true vectors, which is what the
+   ! RotDir on z_hat achieves. Taking components against that triad, a true vector such
+   ! as force keeps every component, since both the vector and the basis vector reflect
+   ! together, while a pseudovector such as moment reverses every one. C_F and C_M are
+   ! left alone, so the ADCt and ADCq file channels report the rotor's own convention;
+   ! the y%Cq boundary output below is signed physically for FAST.Farm.
    tmp1 = real(p%halfRhoA,SiKi) * m%VRel_xd * m%VRel_xd
-   m%Force(1:3)  = tmp1 * m%C_F(1:3)
-   m%Moment(1:3) = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1:3)
+   m%Force(1)    = tmp1 * m%C_F(1)
+   m%Force(2)    = tmp1 * m%C_F(2)
+   m%Force(3)    = tmp1 * m%C_F(3)
+   m%Moment(1)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1) * real(p%RotDir,SiKi)
+   m%Moment(2)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(2) * real(p%RotDir,SiKi)
+   m%Moment(3)   = tmp1 * real(p%RotorRad,SiKi) * m%C_M(3) * real(p%RotDir,SiKi)
 
 
 
@@ -566,7 +597,12 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ \vec{F} = F_\textrm{x,disk} \hat{x} + F_\textrm{y,disk} \hat{y} + F_\textrm{z,disk} \hat{z} \f$ 
    !! - \f$ \vec{M} = M_\textrm{x,disk} \hat{x} + M_\textrm{y,disk} \hat{y} + M_\textrm{z,disk} \hat{z} \f$ 
    y%Ct = m%C_F(1)    ! Fx in disk reference frame
-   y%Cq = m%C_M(1)    ! Mx in disk reference frame
+   ! MirrorRotor: Cq crosses the FAST.Farm boundary (FASTWrapper builds AzimAvg_Cq from
+   ! it, and is its only consumer), where the AeroDyn path delivers a physically signed
+   ! torque coefficient, so the mirrored disk reports the physical sign too; without it
+   ! a mirrored AeroDisk turbine's wake swirl would not reverse. The ADCq file channel
+   ! reads m%C_M(1) directly and keeps the rotor's own convention.
+   y%Cq = real(p%RotDir,SiKi) * m%C_M(1)    ! Mx in disk reference frame, physical sign
 
    ! AeroLoads in global coordinates
    y%AeroLoads%Force( 1:3,1) = m%Force( 1)*m%x_hat + m%Force( 2)*m%y_hat + m%Force( 3)*m%z_hat

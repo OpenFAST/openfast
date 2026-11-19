@@ -6,6 +6,7 @@ program beamdyn_utest
    use test_BD_diffmtc, only: test_BD_diffmtc_suite
    use test_BD_InitializeNodalLocations, only: test_BD_InitializeNodalLocations_suite
    use test_BD_MemberEta, only: test_BD_MemberEta_suite
+   use test_BD_MirrorBladeData, only: test_BD_MirrorBladeData_suite
    use test_BD_Misc, only: test_BD_Misc_suite
    use test_BD_QuadraturePointData, only: test_BD_QuadraturePointData_suite
    use test_BD_ShapeFuncs, only: test_BD_ShapeFuncs_suite
@@ -26,6 +27,7 @@ program beamdyn_utest
                 new_testsuite("diffmtc", test_BD_diffmtc_suite), &
                 new_testsuite("InitializeNodalLocations", test_BD_InitializeNodalLocations_suite), &
                 new_testsuite("MemberEta", test_BD_MemberEta_suite), &
+                new_testsuite("MirrorBladeData", test_BD_MirrorBladeData_suite), &
                 new_testsuite("Misc", test_BD_Misc_suite), &
                 new_testsuite("QuadraturePointData", test_BD_QuadraturePointData_suite), &
                 new_testsuite("ShapeFuncs", test_BD_ShapeFuncs_suite), &

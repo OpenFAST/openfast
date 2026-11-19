@@ -114,6 +114,7 @@ typedef   ^                         ^            NacData                 nac    
 typedef   ^                         ^            TwrData                 twr              -      -     -   "" -
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
 typedef   ^                         ^            logical                 basicHAWTFormat  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
+typedef   ^                         ^            logical                 MirrorRotor      -   .FALSE.  -   "Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind)" -
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
 typedef   ^                         ^            IntKi                   projMod          -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            IntKi                   BEM_Mod          -      -     -   "Switch for different BEM implementations" -

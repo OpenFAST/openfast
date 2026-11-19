@@ -745,6 +745,8 @@ subroutine ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat
    p%RotorRad  = InputFileData%RotorRad
    p%AirDens   = InputFileData%AirDens
    p%UseTSR    = .false.      ! Reset below if N_TSR>1
+   p%RotDir    = 1.0_ReKi
+   if (InitInp%MirrorRotor)   p%RotDir = -1.0_ReKi
 
       ! Derived parameter
    p%halfRhoA  = 0.5_ReKi * p%AirDens * Pi * p%RotorRad*p%RotorRad
@@ -902,8 +904,10 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    m%AllOuts( ADVRel    ) = real(m%VRel, ReKi)        ! magnitude of VRel vector (m/s)
    m%AllOuts( ADSkew    ) = real(m%Chi * 180.0_ReKi / Pi, ReKi)
 
-   ! Wind in local frame, inertial frame
-   Tmp3 = matmul(Rxyz(1:3,1:3), m%DiskAvgVel)
+   ! Wind in local frame, inertial frame.  DiskAvgVel is inertial, so this is a
+   ! projection onto the disk axes: Rxyz holds them as columns, so v is the left
+   ! operand.  With z_hat perpendicular to VRel by construction, ADVWindz is zero.
+   Tmp3 = matmul(m%DiskAvgVel, Rxyz(1:3,1:3))
    m%AllOuts( ADVWindx  ) = Tmp3(1)
    m%AllOuts( ADVWindy  ) = Tmp3(2)
    m%AllOuts( ADVWindz  ) = Tmp3(3)
@@ -911,8 +915,8 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    m%AllOuts( ADVWindyi ) = m%DiskAvgVel(2)
    m%AllOuts( ADVWindzi ) = m%DiskAvgVel(3)
 
-   ! Rotor velocity in local frame, inertial frame
-   Tmp3 = matmul(Rxyz(1:3,1:3), u%HubMotion%TranslationVel(1:3,1))
+   ! Rotor velocity in local frame, inertial frame.  Projection, as for the wind.
+   Tmp3 = matmul(u%HubMotion%TranslationVel(1:3,1), Rxyz(1:3,1:3))
    m%AllOuts( ADSTVx    ) = Tmp3(1)
    m%AllOuts( ADSTVy    ) = Tmp3(2)
    m%AllOuts( ADSTVz    ) = Tmp3(3)
@@ -939,13 +943,14 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    m%AllOuts( ADMx      ) = real(m%Moment(1),ReKi)
    m%AllOuts( ADMy      ) = real(m%Moment(2),ReKi)
    m%AllOuts( ADMz      ) = real(m%Moment(3),ReKi)
-   !Tmp3 = m%Force( 1)*m%x_hat + m%Force( 2)*m%y_hat + m%Force( 3)*m%z_hat
-   Tmp3 = matmul(real(m%Force(1:3),ReKi), Rxyz(1:3,1:3))
+   ! Force is held in disk components, so this rebuilds the inertial vector
+   ! m%Force(1)*x_hat + m%Force(2)*y_hat + m%Force(3)*z_hat; Rxyz is the left operand.
+   Tmp3 = matmul(Rxyz(1:3,1:3), real(m%Force(1:3),ReKi))
    m%AllOuts( ADFxi     ) = Tmp3(1)
    m%AllOuts( ADFyi     ) = Tmp3(2)
    m%AllOuts( ADFzi     ) = Tmp3(3)
-   !Tmp3 = m%Moment(1)*m%x_hat + m%Moment(2)*m%y_hat + m%Moment(3)*m%z_hat
-   Tmp3 = matmul(real(m%Force(1:3),ReKi), Rxyz(1:3,1:3))
+   ! Likewise for the moment, from the moment components.
+   Tmp3 = matmul(Rxyz(1:3,1:3), real(m%Moment(1:3),ReKi))
    m%AllOuts( ADMxi     ) = Tmp3(1)
    m%AllOuts( ADMyi     ) = Tmp3(2)
    m%AllOuts( ADMzi     ) = Tmp3(3)

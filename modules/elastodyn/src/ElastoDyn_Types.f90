@@ -45,6 +45,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+    LOGICAL  :: MirrorRotor = .FALSE.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false) [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed used when ElastoDyn is computing aero maps [rad/s]
   END TYPE ED_InitInputType
@@ -753,6 +754,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: DTTorDmp = 0.0_ReKi      !< Drivetrain torsional damper [-]
     REAL(ReKi)  :: DTTorSpr = 0.0_ReKi      !< Drivetrain torsional spring [-]
     REAL(ReKi)  :: GBRatio = 0.0_ReKi      !< Gearbox ratio [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW) [-]
     REAL(ReKi)  :: GBoxEff = 0.0_ReKi      !< Gearbox efficiency [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Initial or fixed rotor speed [rad/s]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -933,6 +935,7 @@ subroutine ED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   DstInitInputData%MirrorRotor = SrcInitInputData%MirrorRotor
    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
    DstInitInputData%RotSpeed = SrcInitInputData%RotSpeed
 end subroutine
@@ -959,6 +962,7 @@ subroutine ED_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%WtrDpth)
+   call RegPack(RF, InData%MirrorRotor)
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%RotSpeed)
    if (RegCheckErr(RF, RoutineName)) return
@@ -977,6 +981,7 @@ subroutine ED_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -5599,6 +5604,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%DTTorDmp = SrcParamData%DTTorDmp
    DstParamData%DTTorSpr = SrcParamData%DTTorSpr
    DstParamData%GBRatio = SrcParamData%GBRatio
+   DstParamData%RotDir = SrcParamData%RotDir
    DstParamData%GBoxEff = SrcParamData%GBoxEff
    DstParamData%RotSpeed = SrcParamData%RotSpeed
    DstParamData%RootName = SrcParamData%RootName
@@ -6069,6 +6075,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%DTTorDmp)
    call RegPack(RF, InData%DTTorSpr)
    call RegPack(RF, InData%GBRatio)
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, InData%GBoxEff)
    call RegPack(RF, InData%RotSpeed)
    call RegPack(RF, InData%RootName)
@@ -6331,6 +6338,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%DTTorDmp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DTTorSpr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GBRatio); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GBoxEff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return

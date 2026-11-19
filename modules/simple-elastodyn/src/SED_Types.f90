@@ -69,6 +69,7 @@ IMPLICIT NONE
     LOGICAL  :: Linearize = .false.      !< this module cannot be linearized at present [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    LOGICAL  :: MirrorRotor = .FALSE.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
   END TYPE SED_InitInputType
 ! =======================
 ! =========  SED_InitOutputType  =======
@@ -158,6 +159,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: RotIner = 0.0_ReKi      !< Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) [kg m^2]
     REAL(ReKi)  :: GenIner = 0.0_ReKi      !< Generator inertia about HSS [kg m^2]
     REAL(ReKi)  :: GBoxRatio = 0.0_ReKi      !< Gearbox ratio [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW) [-]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades on the turbine [-]
     REAL(ReKi)  :: TipRad = 0.0_ReKi      !< Preconed blade-tip radius (distance from the rotor apex to the blade tip) [m]
     REAL(ReKi)  :: HubRad = 0.0_ReKi      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
@@ -355,6 +357,7 @@ subroutine SED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitInputData%MirrorRotor = SrcInitInputData%MirrorRotor
 end subroutine
 
 subroutine SED_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -380,6 +383,7 @@ subroutine SED_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Linearize)
    call RegPack(RF, InData%UseInputFile)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileData) 
+   call RegPack(RF, InData%MirrorRotor)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -393,6 +397,7 @@ subroutine SED_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileData) ! PassedFileData 
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1049,6 +1054,7 @@ subroutine SED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%RotIner = SrcParamData%RotIner
    DstParamData%GenIner = SrcParamData%GenIner
    DstParamData%GBoxRatio = SrcParamData%GBoxRatio
+   DstParamData%RotDir = SrcParamData%RotDir
    DstParamData%NumBl = SrcParamData%NumBl
    DstParamData%TipRad = SrcParamData%TipRad
    DstParamData%HubRad = SrcParamData%HubRad
@@ -1120,6 +1126,7 @@ subroutine SED_PackParam(RF, Indata)
    call RegPack(RF, InData%RotIner)
    call RegPack(RF, InData%GenIner)
    call RegPack(RF, InData%GBoxRatio)
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, InData%NumBl)
    call RegPack(RF, InData%TipRad)
    call RegPack(RF, InData%HubRad)
@@ -1165,6 +1172,7 @@ subroutine SED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%RotIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GenIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GBoxRatio); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TipRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubRad); if (RegCheckErr(RF, RoutineName)) return

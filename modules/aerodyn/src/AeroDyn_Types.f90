@@ -158,6 +158,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation = 0.0_R8Ki      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed used when AeroDyn is computing aero maps [rad/s]
+    LOGICAL  :: MirrorRotor = .FALSE.      !< Flag indicating the rotor rotation direction is mirrored (counter-clockwise viewed from upwind) [-]
   END TYPE RotInitInputType
 ! =======================
 ! =========  AD_InitInputType  =======
@@ -215,6 +216,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(AD_BladeShape) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< airfoil coordinates for each blade [m]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW). Needed alongside BladeShape so the VTK surface fallback can mirror the generic section. [-]
     TYPE(AD_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrElev      !< Elevation at tower node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrDiam      !< Diameter of tower at node [m]
@@ -460,6 +462,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: BEM_Mod = -1      !< Flag to switch between different BEM Model [-]
+    REAL(ReKi)  :: RotDir = 1.0      !< Rotor rotation direction: +1 normal (CW viewed from upwind), -1 mirrored (CCW) [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -1249,6 +1252,7 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
    DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
    DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
    DstRotInitInputTypeData%RotSpeed = SrcRotInitInputTypeData%RotSpeed
+   DstRotInitInputTypeData%MirrorRotor = SrcRotInitInputTypeData%MirrorRotor
 end subroutine
 
 subroutine AD_DestroyRotInitInputType(RotInitInputTypeData, ErrStat, ErrMsg)
@@ -1281,6 +1285,7 @@ subroutine AD_PackRotInitInputType(RF, Indata)
    call RegPack(RF, InData%NacelleOrientation)
    call RegPack(RF, InData%AeroProjMod)
    call RegPack(RF, InData%RotSpeed)
+   call RegPack(RF, InData%MirrorRotor)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1302,6 +1307,7 @@ subroutine AD_UnPackRotInitInputType(RF, OutData)
    call RegUnpack(RF, OutData%NacelleOrientation); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AeroProjMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MirrorRotor); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1911,6 +1917,7 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstRotInitOutputTypeData%RotDir = SrcRotInitOutputTypeData%RotDir
    if (allocated(SrcRotInitOutputTypeData%BladeProps)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%BladeProps)
       UB(1:1) = ubound(SrcRotInitOutputTypeData%BladeProps)
@@ -2018,6 +2025,7 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
          call AD_PackBladeShape(RF, InData%BladeShape(i1)) 
       end do
    end if
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, allocated(InData%BladeProps))
    if (allocated(InData%BladeProps)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeProps), ubound(InData%BladeProps))
@@ -2058,6 +2066,7 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
          call AD_UnpackBladeShape(RF, OutData%BladeShape(i1)) ! BladeShape 
       end do
    end if
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BladeProps)) deallocate(OutData%BladeProps)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -4234,6 +4243,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%MSL2SWL = SrcRotParameterTypeData%MSL2SWL
    DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
    DstRotParameterTypeData%BEM_Mod = SrcRotParameterTypeData%BEM_Mod
+   DstRotParameterTypeData%RotDir = SrcRotParameterTypeData%RotDir
    DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
    DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
    if (allocated(SrcRotParameterTypeData%OutParam)) then
@@ -4484,6 +4494,7 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPack(RF, InData%MSL2SWL)
    call RegPack(RF, InData%AeroProjMod)
    call RegPack(RF, InData%BEM_Mod)
+   call RegPack(RF, InData%RotDir)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, allocated(InData%OutParam))
@@ -4592,6 +4603,7 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AeroProjMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
