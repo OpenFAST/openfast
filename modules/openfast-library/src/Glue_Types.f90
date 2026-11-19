@@ -231,6 +231,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J21      !< Jacobian lower left quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J22      !< Jacobian lower right quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Tan      !< State tangent matrix [-]
+    TYPE(BlockTriSolveType)  :: LinSolve      !< Linear solver for the tight coupling Jacobian [-]
   END TYPE Glue_TCMisc
 ! =======================
 ! =========  Glue_LinMisc  =======
@@ -2012,6 +2013,9 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       end if
       DstTCMiscData%Tan = SrcTCMiscData%Tan
    end if
+   call NWTC_Library_CopyBlockTriSolveType(SrcTCMiscData%LinSolve, DstTCMiscData%LinSolve, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
@@ -2062,6 +2066,8 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%Tan)) then
       deallocate(TCMiscData%Tan)
    end if
+   call NWTC_Library_DestroyBlockTriSolveType(TCMiscData%LinSolve, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Glue_PackTCMisc(RF, Indata)
@@ -2087,6 +2093,7 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call RegPackAlloc(RF, InData%J21)
    call RegPackAlloc(RF, InData%J22)
    call RegPackAlloc(RF, InData%Tan)
+   call NWTC_Library_PackBlockTriSolveType(RF, InData%LinSolve) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2116,6 +2123,7 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%J21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J22); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Tan); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackBlockTriSolveType(RF, OutData%LinSolve) ! LinSolve 
 end subroutine
 
 subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)

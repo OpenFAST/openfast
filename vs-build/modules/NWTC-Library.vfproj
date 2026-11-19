@@ -181,6 +181,7 @@
 			<Filter Name="ranlux">
 				<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
 			</Filter>
+			<File RelativePath="..\..\modules\nwtc-library\src\BlockTriSolve.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\GridInterp_Types.f90"/>
 			<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
