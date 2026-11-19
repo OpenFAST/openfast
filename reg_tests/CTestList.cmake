@@ -533,6 +533,7 @@ sd_regression("SD_2Beam_Cantilever"                           "subdyn;offshore")
 sd_regression("SD_2Beam_MixedDiscretization"                  "subdyn;offshore")
 sd_regression("SD_CantileverBeam_Rectangular"                 "subdyn;offshore")
 sd_regression("SD_SelfWeight_FloatingSystem"                  "subdyn;offshore")
+sd_regression("SD_YFrame_NoTP"                                "subdyn;offshore")
 # TODO test below are bugs, should be added when fixed
 # sd_regression("SD_Force"                                      "subdyn;offshore")
 # sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")
