@@ -123,6 +123,19 @@ endforeach()
 # add the tests
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
 
+add_test(
+  NAME openfast_compinflow0_linearization
+  COMMAND "${Python_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/test_compinflow0_linearization.py"
+    "${CTEST_OPENFAST_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast"
+)
+set_tests_properties(openfast_compinflow0_linearization PROPERTIES
+  TIMEOUT 300
+  WORKING_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast"
+  LABELS "openfast;linear;aerodyn"
+)
+
 # Copy the DISCON controllers to the 5MW turbine directories
 set(of_dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
 set(ofpy_dest "${CTEST_BINARY_DIR}/glue-codes/python/5MW_Baseline/ServoData/")
