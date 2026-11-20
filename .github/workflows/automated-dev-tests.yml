@@ -34,7 +34,7 @@ env:
   # memory also doubles (md_waterkin3 alone is ~8.7 GB of the runner's 16 GB). The module test
   # actions in .github/actions/tests-module-* inherit this value; don't hard-code -j there.
   # Measurements and the procedure to redo them:
-  # https://github.com/OpenFAST/openfast/pull/<this PR> (to be linked)
+  # https://github.com/OpenFAST/openfast/pull/3544
   CTEST_PARALLEL_LEVEL: 2
   OMP_NUM_THREADS: 1
 
