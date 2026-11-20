@@ -69,6 +69,7 @@ parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool 
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
 parser.add_argument("-highpass", dest='highpass', metavar="LowPass-Filter", type=float, nargs='?', default=0.0, help="high pass filter on linearization frequencies to compare")
+parser.add_argument("-noise-floor", dest='noiseFloor', metavar="Noise-Floor", type=float, default=1e-8, help="relative round-off floor for the lin matrices: differences below this fraction of the row/column scale of an element are not compared (0 disables it)")
 
 args = parser.parse_args()
 
@@ -82,6 +83,7 @@ plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
 highpass = args.highpass
+noiseFloor = args.noiseFloor
 
 # --- Tolerances for matrix comparison
 # Outputs of lin matrices have 3 decimal digits leading to minimum error of 0.001  
@@ -90,6 +92,19 @@ highpass = args.highpass
 # Lin matrices have a lot of small values, so atol is quite important
 rtol = 2e-3
 atol = 5e-4
+
+# --- Round-off floor for matrix comparison
+# The lin matrices are built from sums, products and linear solves of terms that
+# can be many orders of magnitude larger than the resulting element. The round-off
+# left in such an element scales with its row and column, not with its own value,
+# and changes with compiler, math library and CPU model (e.g. Intel vs AMD).
+# For the matrices in MATRIX_KEYS, the absolute tolerance of element [i,j] is
+#       max(atol, noiseFloor * rowmax[i] * colmax[j] / matmax)
+# (see lin_matrix_tolerance in lib/pass_fail.py). Round-off of up to 3e-10 of this
+# scale was measured between valid results of the same code, so the default of
+# 1e-8 leaves a margin of about 30. The floor can only relax the comparison.
+# Set per case with the `-noise-floor` flag (0 disables it).
+MATRIX_KEYS = ['A','B','C','D','dUdu','dUdy']
 
 # --- Tolerances for frequencies 
 # Low frequencies are hard to match, so we use a high atol
@@ -368,30 +383,52 @@ def compareLin(f,file_freq_ref,file_freq_new):
                 # We don't compare elements if shapes are different
                 continue
             
-            # Get matrix of which M elements are in/not in tolerance
-            M_diff_in_tol = np.isclose(Mloc, Mbas, rtol=rtol, atol=atol)
+            # Element-wise tolerance. Matrices get a round-off floor scaled by the
+            # size of the row and column of each element; operating-point vectors
+            # (x, y, u, xdot) mix units in a single row, so they keep the plain atol.
+            Mabs = np.abs(Mbas)
+            if k in MATRIX_KEYS and noiseFloor > 0:
+                M_tol, M_floor = pass_fail.lin_matrix_tolerance(Mbas, rtol, atol, noiseFloor)
+            else:
+                M_tol = rtol * Mabs + atol
+                M_floor = np.zeros_like(Mabs)
+            with np.errstate(invalid='ignore'):
+                M_diff = np.abs(Mloc - Mbas)
+
+            # Get matrix of which M elements are in/not in tolerance.
+            # The tolerance applies only where both values are finite. A non-finite
+            # value passes only if it matches the baseline (same-signed Inf, or NaN
+            # in both), which is how these were treated before the round-off floor.
+            M_finite = np.isfinite(Mloc) & np.isfinite(Mbas)
+            M_same_nonfinite = (Mloc == Mbas) | (np.isnan(Mloc) & np.isnan(Mbas))
+            M_diff_in_tol = np.where(M_finite, M_diff <= M_tol, M_same_nonfinite)
+
+            # Report how much the round-off floor was needed
+            nFloor = int(np.count_nonzero(M_finite & M_diff_in_tol & (M_diff > rtol * Mabs + atol)))
+            if nFloor > 0 or verbose:
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    maxUse = np.max(np.where(M_finite & (M_tol > 0), M_diff / M_tol, 0.0)) if M_diff.size > 0 else 0.0
+                print(errPrefix + f'`{k}`: {nFloor} of {M_diff.size} elements differ by more than rtol={rtol}, atol={atol} '
+                      f'but are within the round-off floor ({noiseFloor:g} of row/column scale); largest use of tolerance in this matrix: {100*maxUse:.0f}%')
 
             # Loop through indices of elements not in tolerance
             for (i,j) in zip(*np.where(M_diff_in_tol == False)):
-                try:
-                    # Redo compare to get error message
-                    np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
-                except Exception as e:
-                    sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
-                    if k in ['dXdx', 'A', 'dXdu', 'B']:
-                        sElem += '\n\t\t  row: ' + fbas['x_info']['Description'][i]
-                    if k in ['dYdx', 'C', 'dYdu', 'D']:
-                        sElem += '\n\t\t  row: ' + fbas['y_info']['Description'][i]
-                    if k in ['dUdu', 'dUdy']:
-                        sElem += '\n\t\t  row: ' + fbas['u_info']['Description'][i]
-                    if k in ['dXdx', 'A', 'dYdx', 'C']:
-                        sElem += '\n\t\t  col: ' + fbas['x_info']['Description'][j]
-                    if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
-                        sElem += '\n\t\t  col: ' + fbas['u_info']['Description'][j]
-                    if k in ['dUdy']:
-                        sElem += '\n\t\t  col: ' + fbas['y_info']['Description'][j]
-                    Err = errPrefix + f'Failed to compare variable `{k}`, {sElem} \n\tLinfile: {local_file2}.\n\tException: {indent(e.args[0])}'
-                    ElemErrors.append(Err)
+                sElem = f'Element [{i+1},{j+1}], new: {Mloc[i,j]}, baseline: {Mbas[i,j]}'
+                sTol  = f'difference: {M_diff[i,j]:.6g}, tolerance: {M_tol[i,j]:.6g} (rtol={rtol}, atol={atol}, round-off floor={M_floor[i,j]:.6g})'
+                if k in ['dXdx', 'A', 'dXdu', 'B']:
+                    sElem += '\n\t\t  row: ' + fbas['x_info']['Description'][i]
+                if k in ['dYdx', 'C', 'dYdu', 'D']:
+                    sElem += '\n\t\t  row: ' + fbas['y_info']['Description'][i]
+                if k in ['dUdu', 'dUdy']:
+                    sElem += '\n\t\t  row: ' + fbas['u_info']['Description'][i]
+                if k in ['dXdx', 'A', 'dYdx', 'C']:
+                    sElem += '\n\t\t  col: ' + fbas['x_info']['Description'][j]
+                if k in ['dXdu', 'B', 'dYdu', 'D', 'dUdu']:
+                    sElem += '\n\t\t  col: ' + fbas['u_info']['Description'][j]
+                if k in ['dUdy']:
+                    sElem += '\n\t\t  col: ' + fbas['y_info']['Description'][j]
+                Err = errPrefix + f'Failed to compare variable `{k}`, {sElem} \n\tLinfile: {local_file2}.\n\t{sTol}'
+                ElemErrors.append(Err)
     return Errors, ElemErrors
 
 
