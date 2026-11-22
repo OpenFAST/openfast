@@ -482,6 +482,9 @@ IMPLICIT NONE
 ! =========  Morison_InitOutputType  =======
   TYPE, PUBLIC :: Morison_InitOutputType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of node (for FAST visualization) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisSa       !< side A of rectangular node (for FAST visualization) [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisSb       !< side B of rectangular node (for FAST visualization) [(m)]
+    INTEGER(IntKi), DIMENSION(:), ALLOCATABLE :: MorisonVisGeom   !< section geometry: 1=Cylindrical, 2=Rectangular [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< User-requested Output channel names [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
   END TYPE Morison_InitOutputType
@@ -4177,6 +4180,42 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       end if
       DstInitOutputData%MorisonVisRad = SrcInitOutputData%MorisonVisRad
    end if
+   if (allocated(SrcInitOutputData%MorisonVisSa)) then
+      LB(1:1) = lbound(SrcInitOutputData%MorisonVisSa)
+      UB(1:1) = ubound(SrcInitOutputData%MorisonVisSa)
+      if (.not. allocated(DstInitOutputData%MorisonVisSa)) then
+         allocate(DstInitOutputData%MorisonVisSa(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%MorisonVisSa.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%MorisonVisSa = SrcInitOutputData%MorisonVisSa
+   end if
+   if (allocated(SrcInitOutputData%MorisonVisSb)) then
+      LB(1:1) = lbound(SrcInitOutputData%MorisonVisSb)
+      UB(1:1) = ubound(SrcInitOutputData%MorisonVisSb)
+      if (.not. allocated(DstInitOutputData%MorisonVisSb)) then
+         allocate(DstInitOutputData%MorisonVisSb(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%MorisonVisSb.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%MorisonVisSb = SrcInitOutputData%MorisonVisSb
+   end if
+   if (allocated(SrcInitOutputData%MorisonVisGeom)) then
+      LB(1:1) = lbound(SrcInitOutputData%MorisonVisGeom)
+      UB(1:1) = ubound(SrcInitOutputData%MorisonVisGeom)
+      if (.not. allocated(DstInitOutputData%MorisonVisGeom)) then
+         allocate(DstInitOutputData%MorisonVisGeom(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%MorisonVisGeom.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%MorisonVisGeom = SrcInitOutputData%MorisonVisGeom
+   end if
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
       UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
@@ -4213,6 +4252,15 @@ subroutine Morison_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%MorisonVisRad)) then
       deallocate(InitOutputData%MorisonVisRad)
    end if
+   if (allocated(InitOutputData%MorisonVisSa)) then
+      deallocate(InitOutputData%MorisonVisSa)
+   end if
+   if (allocated(InitOutputData%MorisonVisSb)) then
+      deallocate(InitOutputData%MorisonVisSb)
+   end if
+   if (allocated(InitOutputData%MorisonVisGeom)) then
+      deallocate(InitOutputData%MorisonVisGeom)
+   end if
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
@@ -4227,6 +4275,9 @@ subroutine Morison_PackInitOutput(RF, Indata)
    character(*), parameter         :: RoutineName = 'Morison_PackInitOutput'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%MorisonVisRad)
+   call RegPackAlloc(RF, InData%MorisonVisSa)
+   call RegPackAlloc(RF, InData%MorisonVisSb)
+   call RegPackAlloc(RF, InData%MorisonVisGeom)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    if (RegCheckErr(RF, RoutineName)) return
@@ -4241,6 +4292,9 @@ subroutine Morison_UnPackInitOutput(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%MorisonVisRad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisSa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisSb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisGeom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine

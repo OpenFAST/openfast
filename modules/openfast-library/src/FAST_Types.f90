@@ -107,6 +107,9 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< wave elevation at WaveElevVis{XY}; first dimension is time step; second/third dimensions are grid of elevations [m,-]
     TYPE(FAST_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [m]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of each Morison node [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisSa       !< side A of each Morison node [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisSb       !< side B of each Morison node [m]
+    INTEGER(IntKi), DIMENSION(:), ALLOCATABLE :: MorisonVisGeom   !< section geometry of each Morison node (1=Cyl, 2=Rec) [-]
   END TYPE FAST_VTK_SurfaceType
 ! =======================
 ! =========  FAST_VTK_ModeShapeType  =======
@@ -824,6 +827,42 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
       end if
       DstVTK_SurfaceTypeData%MorisonVisRad = SrcVTK_SurfaceTypeData%MorisonVisRad
    end if
+   if (allocated(SrcVTK_SurfaceTypeData%MorisonVisSa)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonVisSa)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%MorisonVisSa)
+      if (.not. allocated(DstVTK_SurfaceTypeData%MorisonVisSa)) then
+         allocate(DstVTK_SurfaceTypeData%MorisonVisSa(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonVisSa.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVTK_SurfaceTypeData%MorisonVisSa = SrcVTK_SurfaceTypeData%MorisonVisSa
+   end if
+   if (allocated(SrcVTK_SurfaceTypeData%MorisonVisSb)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonVisSb)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%MorisonVisSb)
+      if (.not. allocated(DstVTK_SurfaceTypeData%MorisonVisSb)) then
+         allocate(DstVTK_SurfaceTypeData%MorisonVisSb(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonVisSb.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVTK_SurfaceTypeData%MorisonVisSb = SrcVTK_SurfaceTypeData%MorisonVisSb
+   end if
+   if (allocated(SrcVTK_SurfaceTypeData%MorisonVisGeom)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonVisGeom)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%MorisonVisGeom)
+      if (.not. allocated(DstVTK_SurfaceTypeData%MorisonVisGeom)) then
+         allocate(DstVTK_SurfaceTypeData%MorisonVisGeom(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonVisGeom.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstVTK_SurfaceTypeData%MorisonVisGeom = SrcVTK_SurfaceTypeData%MorisonVisGeom
+   end if
 end subroutine
 
 subroutine FAST_DestroyVTK_SurfaceType(VTK_SurfaceTypeData, ErrStat, ErrMsg)
@@ -861,6 +900,15 @@ subroutine FAST_DestroyVTK_SurfaceType(VTK_SurfaceTypeData, ErrStat, ErrMsg)
    if (allocated(VTK_SurfaceTypeData%MorisonVisRad)) then
       deallocate(VTK_SurfaceTypeData%MorisonVisRad)
    end if
+   if (allocated(VTK_SurfaceTypeData%MorisonVisSa)) then
+      deallocate(VTK_SurfaceTypeData%MorisonVisSa)
+   end if
+   if (allocated(VTK_SurfaceTypeData%MorisonVisSb)) then
+      deallocate(VTK_SurfaceTypeData%MorisonVisSb)
+   end if
+   if (allocated(VTK_SurfaceTypeData%MorisonVisGeom)) then
+      deallocate(VTK_SurfaceTypeData%MorisonVisGeom)
+   end if
 end subroutine
 
 subroutine FAST_PackVTK_SurfaceType(RF, Indata)
@@ -889,6 +937,9 @@ subroutine FAST_PackVTK_SurfaceType(RF, Indata)
       end do
    end if
    call RegPackAlloc(RF, InData%MorisonVisRad)
+   call RegPackAlloc(RF, InData%MorisonVisSa)
+   call RegPackAlloc(RF, InData%MorisonVisSb)
+   call RegPackAlloc(RF, InData%MorisonVisGeom)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -924,6 +975,9 @@ subroutine FAST_UnPackVTK_SurfaceType(RF, OutData)
       end do
    end if
    call RegUnpackAlloc(RF, OutData%MorisonVisRad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisSa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisSb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MorisonVisGeom); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShapeTypeData, CtrlCode, ErrStat, ErrMsg)

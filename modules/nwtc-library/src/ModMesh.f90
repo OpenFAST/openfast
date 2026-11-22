@@ -515,7 +515,8 @@ END SUBROUTINE MeshWrVTKfields
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes line2 mesh surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Twidth, NumSegments, Radius, verts, Sib )
+SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Twidth, &
+                                  NumSegments, Radius, verts, Sib, SideA, SideB, SecGeom )
       
    REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference location, normally (0,0,0)
    TYPE(MeshType),  INTENT(IN)           :: M               !< mesh to be written
@@ -527,6 +528,9 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    REAL(SiKi),      INTENT(IN), OPTIONAL :: Radius(:)       !< Radius of each node
    REAL(SiKi),      INTENT(IN), OPTIONAL :: verts(:,:,:)    !< X-Y verticies (2x{NumSegs}xNNodes) of points that define a shape around each node
    TYPE(MeshType),  INTENT(IN), OPTIONAL :: Sib             !< Sibling of M that contains more field information (used only if OutputFieldData is true, to minimize number of files being written)
+   REAL(SiKi),      INTENT(IN), OPTIONAL :: SideA(:)        !< Side A dimension for rectangular cross-section [m]
+   REAL(SiKi),      INTENT(IN), OPTIONAL :: SideB(:)        !< Side B dimension for rectangular cross-section [m]
+   INTEGER(IntKi),  INTENT(IN), OPTIONAL :: SecGeom(:)      !< Section geometry: 1=Cylindrical, 2=Rectangular
    
    INTEGER(IntKi),  INTENT(OUT)          :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
    CHARACTER(*),    INTENT(OUT)          :: ErrMsg          !< Error message associated with the ErrStat
@@ -539,6 +543,8 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    CHARACTER(1024)                       :: FileName
    REAL(SiKi)                            :: angle
    REAL(SiKi)                            :: xyz(3)
+   REAL(SiKi)                            :: halfA, halfB
+   INTEGER(IntKi)                        :: n1, n2, n3, n4, k_side
    CHARACTER(Twidth)                     :: Tstr          ! string for current write-out step (padded with zeros)
 
    INTEGER(IntKi)                        :: firstPntEnd, firstPntStart, secondPntStart, secondPntEnd  ! node indices for forming rectangle 
@@ -608,8 +614,39 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
          DO i=1,M%Nnodes
             DO j=1,NumSegments1
                angle = TwoPi*(j-1.0_ReKi)/NumSegments1
-               xyz(1) = radius(i)*COS(angle)
-               xyz(2) = radius(i)*SIN(angle)
+               if (present(SecGeom) .and. present(SideA) .and. present(SideB)) then
+                  if (SecGeom(i) == 2) then ! MSecGeom_Rec (Exact rectangular cross-section with sharp corners)
+                     halfA = 0.5_SiKi * SideA(i)
+                     halfB = 0.5_SiKi * SideB(i)
+                     n1    = NumSegments1 / 4
+                     n2    = NumSegments1 / 4
+                     n3    = NumSegments1 / 4
+                     n4    = NumSegments1 - (n1 + n2 + n3)
+                     if (j <= n1) then
+                        k_side = j - 1
+                        xyz(1) = halfA
+                        xyz(2) = -halfB + (2.0_SiKi * halfB * real(k_side, SiKi)) / real(n1, SiKi)
+                     else if (j <= n1 + n2) then
+                        k_side = j - (n1 + 1)
+                        xyz(1) = halfA - (2.0_SiKi * halfA * real(k_side, SiKi)) / real(n2, SiKi)
+                        xyz(2) = halfB
+                     else if (j <= n1 + n2 + n3) then
+                        k_side = j - (n1 + n2 + 1)
+                        xyz(1) = -halfA
+                        xyz(2) = halfB - (2.0_SiKi * halfB * real(k_side, SiKi)) / real(n3, SiKi)
+                     else
+                        k_side = j - (n1 + n2 + n3 + 1)
+                        xyz(1) = -halfA + (2.0_SiKi * halfA * real(k_side, SiKi)) / real(n4, SiKi)
+                        xyz(2) = -halfB
+                     end if
+                  else
+                     xyz(1) = radius(i)*COS(angle)
+                     xyz(2) = radius(i)*SIN(angle)
+                  end if
+               else
+                  xyz(1) = radius(i)*COS(angle)
+                  xyz(2) = radius(i)*SIN(angle)
+               end if
                WRITE(Un,VTK_AryFmt) RefPoint + M%Position(:,i) + M%TranslationDisp(:,i) + matmul(xyz,M%Orientation(:,:,i))
             END DO
          END DO

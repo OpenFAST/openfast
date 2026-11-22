@@ -3826,7 +3826,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
    endif
 
    ! initialize the vtk data
-   p_FAST%VTK_Surface%NumSectors = 25
+   p_FAST%VTK_Surface%NumSectors = 24
 
    ! Get radius for ground (blade length + hub radius):
    if ( p_FAST%CompElast == Module_BD ) then
@@ -4013,6 +4013,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_SED, InitOutData
 
    IF ( HD%y%Morison%VisMesh%Committed ) THEN
       call move_alloc(InitOutData_HD%Morison%MorisonVisRad, p_FAST%VTK_Surface%MorisonVisRad)
+      call move_alloc(InitOutData_HD%Morison%MorisonVisSa,  p_FAST%VTK_Surface%MorisonVisSa)
+      call move_alloc(InitOutData_HD%Morison%MorisonVisSb,  p_FAST%VTK_Surface%MorisonVisSb)
+      call move_alloc(InitOutData_HD%Morison%MorisonVisGeom,p_FAST%VTK_Surface%MorisonVisGeom)
    END IF
 
 END SUBROUTINE SetVTKParameters
@@ -6326,7 +6329,9 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInf
    IF ( HD%y%Morison%VisMesh%Committed ) THEN
       call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, HD%y%Morison%VisMesh, trim(p_FAST%VTK_OutFileRoot)//'.MorisonSurface', &
                                 y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface%NumSectors, &
-                                p_FAST%VTK_Surface%MorisonVisRad)
+                                p_FAST%VTK_Surface%MorisonVisRad, &
+                                SideA=p_FAST%VTK_Surface%MorisonVisSa, SideB=p_FAST%VTK_Surface%MorisonVisSb, &
+                                SecGeom=p_FAST%VTK_Surface%MorisonVisGeom)
    END IF
 
 

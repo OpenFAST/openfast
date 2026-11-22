@@ -2805,11 +2805,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !-------------------------------------------------------------------------------------------------
 
 
-      ! OutAll - output all member and joint data
+      ! OutAll - output all user-specified member and joint loads (only at each member end, not interior locations)
 
-   IF ( InputFileData%OutAll ) THEN    !TODO: Alter this check once OutAll is supported
-         CALL SetErrStat( ErrID_Fatal,'OutAll must be FALSE. Future versions of HydroDyn will once again support values of either TRUE or FALSE.',ErrStat,ErrMsg,RoutineName)
-         RETURN
+   IF ( InputFileData%OutAll ) THEN
+      CALL HydroDyn_ProcessOutAll( InputFileData, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
 
@@ -2886,5 +2887,113 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
 
 END SUBROUTINE HydroDynInput_ProcessInitData
+
+!====================================================================================================
+SUBROUTINE HydroDyn_ProcessOutAll( InputFileData, ErrStat, ErrMsg )
+!  This subroutine auto-generates all member and joint load outputs at member ends (not interior
+!  locations) when OutAll is set to TRUE.
+!----------------------------------------------------------------------------------------------------
+   TYPE(HydroDyn_InputFile), INTENT(INOUT) :: InputFileData
+   INTEGER(IntKi),           INTENT(OUT)   :: ErrStat
+   CHARACTER(*),             INTENT(OUT)   :: ErrMsg
+
+   INTEGER(IntKi)                          :: I, K, L
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(ChanLen)                      :: chanName
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'HydroDyn_ProcessOutAll'
+
+   CHARACTER(6), PARAMETER                 :: MemLoadSuf(39) = (/ &
+      'FDXI  ', 'FDYI  ', 'FDZI  ', &
+      'FIXI  ', 'FIYI  ', 'FIZI  ', &
+      'FBXI  ', 'FBYI  ', 'FBZI  ', &
+      'FAMXI ', 'FAMYI ', 'FAMZI ', &
+      'FBFXI ', 'FBFYI ', 'FBFZI ', &
+      'FAFXI ', 'FAFYI ', 'FAFZI ', &
+      'FMGXI ', 'FMGYI ', 'FMGZI ', &
+      'FAGXI ', 'FAGYI ', 'FAGZI ', &
+      'MBXI  ', 'MBYI  ', 'MBZI  ', &
+      'MBFXI ', 'MBFYI ', 'MBFZI ', &
+      'MMGXI ', 'MMGYI ', 'MMGZI ', &
+      'MAGXI ', 'MAGYI ', 'MAGZI ', &
+      'MAFXI ', 'MAFYI ', 'MAFZI ' /)
+
+   CHARACTER(6), PARAMETER                 :: JointLoadSuf(30) = (/ &
+      'FDXI  ', 'FDYI  ', 'FDZI  ', &
+      'FIXI  ', 'FIYI  ', 'FIZI  ', &
+      'FBXI  ', 'FBYI  ', 'FBZI  ', &
+      'FAMXI ', 'FAMYI ', 'FAMZI ', &
+      'FBFXI ', 'FBFYI ', 'FBFZI ', &
+      'FMGXI ', 'FMGYI ', 'FMGZI ', &
+      'FAGXI ', 'FAGYI ', 'FAGZI ', &
+      'MBXI  ', 'MBYI  ', 'MBZI  ', &
+      'MBFXI ', 'MBFYI ', 'MBFZI ', &
+      'MAGXI ', 'MAGYI ', 'MAGZI ' /)
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! 1. Auto-populate MOutLst for all members if NMOutputs == 0
+   IF ( InputFileData%Morison%NMOutputs == 0 .AND. InputFileData%Morison%NMembers > 0 ) THEN
+      InputFileData%Morison%NMOutputs = min(InputFileData%Morison%NMembers, 9_IntKi)
+      ALLOCATE ( InputFileData%Morison%MOutLst(InputFileData%Morison%NMOutputs), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for MOutLst in OutAll.', ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      DO I = 1, InputFileData%Morison%NMOutputs
+         InputFileData%Morison%MOutLst(I)%MemberID     = InputFileData%Morison%InpMembers(I)%MemberID
+         InputFileData%Morison%MOutLst(I)%MemberIDIndx = I
+         InputFileData%Morison%MOutLst(I)%NOutLoc      = 2
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%NodeLocs(2),    STAT = ErrStat2 )
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx1(2),   STAT = ErrStat2 )
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx1(2), STAT = ErrStat2 )
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx2(2),   STAT = ErrStat2 )
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx2(2), STAT = ErrStat2 )
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%s(2),           STAT = ErrStat2 )
+         InputFileData%Morison%MOutLst(I)%NodeLocs(1)  = 0.0_ReKi
+         InputFileData%Morison%MOutLst(I)%NodeLocs(2)  = 1.0_ReKi
+      END DO
+   END IF
+
+   ! 2. Auto-populate JOutLst for all joints if NJOutputs == 0
+   IF ( InputFileData%Morison%NJOutputs == 0 .AND. InputFileData%Morison%NJoints > 0 ) THEN
+      InputFileData%Morison%NJOutputs = min(InputFileData%Morison%NJoints, 9_IntKi)
+      ALLOCATE ( InputFileData%Morison%JOutLst(InputFileData%Morison%NJOutputs), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for JOutLst in OutAll.', ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      DO I = 1, InputFileData%Morison%NJOutputs
+         InputFileData%Morison%JOutLst(I)%JointID     = InputFileData%Morison%InpJoints(I)%JointID
+         InputFileData%Morison%JOutLst(I)%JointIDIndx = I
+      END DO
+   END IF
+
+   ! 3. Append member end loads (node 1 and node 2) for each user-specified member
+   DO I = 1, min(InputFileData%Morison%NMOutputs, 9_IntKi)
+      DO K = 1, min(InputFileData%Morison%MOutLst(I)%NOutLoc, 2_IntKi)
+         DO L = 1, 39
+            chanName = 'M'//TRIM(Int2LStr(I))//'N'//TRIM(Int2LStr(K))//TRIM(MemLoadSuf(L))
+            IF ( InputFileData%NUserOutputs < MaxUserOutputs ) THEN
+               InputFileData%NUserOutputs = InputFileData%NUserOutputs + 1
+               InputFileData%UserOutputs(InputFileData%NUserOutputs) = chanName
+            END IF
+         END DO
+      END DO
+   END DO
+
+   ! 4. Append joint loads for each user-specified joint
+   DO I = 1, min(InputFileData%Morison%NJOutputs, 9_IntKi)
+      DO L = 1, 30
+         chanName = 'J'//TRIM(Int2LStr(I))//TRIM(JointLoadSuf(L))
+         IF ( InputFileData%NUserOutputs < MaxUserOutputs ) THEN
+            InputFileData%NUserOutputs = InputFileData%NUserOutputs + 1
+            InputFileData%UserOutputs(InputFileData%NUserOutputs) = chanName
+         END IF
+      END DO
+   END DO
+
+END SUBROUTINE HydroDyn_ProcessOutAll
 
 END MODULE HydroDyn_Input
