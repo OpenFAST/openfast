@@ -212,7 +212,7 @@ macro(set_fast_intel_fortran_windows)
   # Turn off specific warnings
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp /heap-arrays:4096")
 
   # If double precision, make constants double precision
   if (DOUBLE_PRECISION)
@@ -223,9 +223,9 @@ macro(set_fast_intel_fortran_windows)
     endif()
   endif()
 
-  # increase the default 2MB stack size to 16 MB
-  MATH(EXPR stack_size "16 * 1024 * 1024")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:${stack_size}")
+  # increase the default stack size to 256 MB
+  MATH(EXPR stack_size "256 * 1024 * 1024")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:${stack_size},${stack_size}" CACHE STRING "Linker flags" FORCE)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)

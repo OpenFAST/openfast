@@ -3231,8 +3231,14 @@ subroutine VisMeshSetup(u,p,y,m,InitOut,ErrStat,ErrMsg)
       TotNodes = TotNodes + size(p%Members(iMem)%NodeIndx)
    enddo
 
-   ! Storage for the radius associated with each node
+   ! Storage for the cross-section geometry associated with each node
    call AllocAry( InitOut%MorisonVisRad, TotNodes, 'MorisonVisRad', ErrStat2, ErrMsg2)
+   if (Failed())  return
+   call AllocAry( InitOut%MorisonVisSa, TotNodes, 'MorisonVisSa', ErrStat2, ErrMsg2)
+   if (Failed())  return
+   call AllocAry( InitOut%MorisonVisSb, TotNodes, 'MorisonVisSb', ErrStat2, ErrMsg2)
+   if (Failed())  return
+   call AllocAry( InitOut%MorisonVisGeom, TotNodes, 'MorisonVisGeom', ErrStat2, ErrMsg2)
    if (Failed())  return
 
    call MeshCreate( BlankMesh    = y%VisMesh,         &
@@ -3248,23 +3254,44 @@ subroutine VisMeshSetup(u,p,y,m,InitOut,ErrStat,ErrMsg)
    NdNum=0   ! node number in y%VisMesh
    do iMem=1,size(p%Members)
 
-!FIXME:MemberOrient This is not correct for non-circular or curved members
-      ! calculate an orientation using yaw-pitch-roll sequence with roll defined as zero (insufficient info)
       Pos1=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(1))                              ! start node position of member
       Pos2=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(size(p%Members(iMem)%NodeIndx))) ! end   node position of member
-      Theta(1) = 0.0_R8Ki                                                        ! roll (assumed since insufficient info)
-      Theta(2) = acos(real((Pos2(3)-Pos1(3))/TwoNorm(Pos2-Pos1),R8Ki))           ! pitch
-      Theta(3) = atan2(real(Pos2(2)-Pos1(2),R8Ki),real(Pos2(1)-Pos1(1),R8Ki))    ! yaw
-      MemberOrient=EulerConstructZYX(Theta)  ! yaw-pitch-roll sequence
 
-      ! Set mesh postion, orientation, and radius
+      if (p%Members(iMem)%MSecGeom == MSecGeom_Rec) then
+         ! Calculate exact orientation using direction cosine matrix with member spin orientation (matching QBlade)
+         call Morison_DirCosMtrx(Pos1, Pos2, p%Members(iMem)%MSpinOrient, MemberOrient)
+         MemberOrient = transpose(MemberOrient) ! Convert local-to-global DirCos to global-to-local for MeshPositionNode
+      else
+         ! calculate an orientation using yaw-pitch-roll sequence with roll defined as zero
+         Theta(1) = 0.0_R8Ki                                                        ! roll (assumed since insufficient info)
+         Theta(2) = acos(real((Pos2(3)-Pos1(3))/TwoNorm(Pos2-Pos1),R8Ki))           ! pitch
+         Theta(3) = atan2(real(Pos2(2)-Pos1(2),R8Ki),real(Pos2(1)-Pos1(1),R8Ki))    ! yaw
+         MemberOrient=EulerConstructZYX(Theta)  ! yaw-pitch-roll sequence
+      end if
+
+      ! Set mesh postion, orientation, and radius/section properties
       do iNd=1,size(p%Members(iMem)%NodeIndx)
          NdNum=NdNum+1                             ! node number in y%VisMesh
          NdIdx = p%Members(iMem)%NodeIndx(iNd)     ! node number in u%Mesh
          NdPos = u%Mesh%Position(:,NdIdx)          ! node position
          call MeshPositionNode (y%VisMesh, NdNum, u%Mesh%Position(:,NdIdx), ErrStat2,  ErrMsg2, Orient=MemberOrient)
          if (Failed())  return
-         InitOut%MorisonVisRad(NdNum) = p%Members(iMem)%RMG(iNd)   ! radius (including marine growth) for visualization
+         if (p%Members(iMem)%MSecGeom == MSecGeom_Cyl) then
+            InitOut%MorisonVisGeom(NdNum) = MSecGeom_Cyl
+            InitOut%MorisonVisRad(NdNum)  = p%Members(iMem)%RMG(iNd)   ! radius (including marine growth) for visualization
+            InitOut%MorisonVisSa(NdNum)   = 2.0_ReKi * p%Members(iMem)%RMG(iNd)
+            InitOut%MorisonVisSb(NdNum)   = 2.0_ReKi * p%Members(iMem)%RMG(iNd)
+         else if (p%Members(iMem)%MSecGeom == MSecGeom_Rec) then
+            InitOut%MorisonVisGeom(NdNum) = MSecGeom_Rec
+            InitOut%MorisonVisRad(NdNum)  = 0.5_ReKi * p%Members(iMem)%SaMG(iNd)   ! equivalent radius for visualization
+            InitOut%MorisonVisSa(NdNum)   = p%Members(iMem)%SaMG(iNd)             ! side A (including marine growth)
+            InitOut%MorisonVisSb(NdNum)   = p%Members(iMem)%SbMG(iNd)             ! side B (including marine growth)
+         else
+            InitOut%MorisonVisGeom(NdNum) = 0
+            InitOut%MorisonVisRad(NdNum)  = 0.0_ReKi
+            InitOut%MorisonVisSa(NdNum)   = 0.0_ReKi
+            InitOut%MorisonVisSb(NdNum)   = 0.0_ReKi
+         end if
       enddo
    enddo
 
