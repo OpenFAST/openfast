@@ -281,7 +281,7 @@ jobs:
   #  -j2 (CTEST_PARALLEL_LEVEL above), without adding jobs: all workflow runs in the OpenFAST
   #  org share one pool of concurrent runners, so every extra job slows other PRs down.
   #  Measured cost per job (sum of each test's time when run alone):
-  #    offshore-moored ~1120 s, offshore-fixed ~985 s, linearization ~1060 s, interfaces ~720 s,
+  #    offshore-mhk-md ~1120 s, offshore ~985 s, linearization ~1060 s, interfaces ~720 s,
   #    OF ~700 s, module-drivers ~520 s, multirotor ~410 s, FF ~100 s.
   #  If you add a slow r-test, check it doesn't make one job much longer than the others.
   #-----------------------------------------------------------------------------
@@ -322,6 +322,10 @@ jobs:
         uses: ./.github/actions/tests-module-seastate
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
+      - name: Run AeroDisk tests
+        uses: ./.github/actions/tests-module-aerodisk
+      - name: Run SimplifiedElastoDyn tests
+        uses: ./.github/actions/tests-module-simple-elastodyn
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -424,7 +428,7 @@ jobs:
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-  rtest-OF-offshore-moored:
+  rtest-OF-offshore-mhk-md:
     runs-on: ubuntu-24.04
     needs: build-all-release
     steps:
@@ -451,7 +455,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF-offshore-moored
+          name: rtest-OF-offshore-mhk-md
           path: |
             ${{github.workspace}}/build/reg_tests/glue-codes/openfast
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
@@ -461,7 +465,7 @@ jobs:
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-  rtest-OF-offshore-fixed:
+  rtest-OF-offshore:
     runs-on: ubuntu-24.04
     needs: build-all-release
     steps:
@@ -480,7 +484,7 @@ jobs:
       - name: Run remaining offshore tests
         working-directory: ${{github.workspace}}/build
         run: |
-          # OC3Mnpl*, OC3Trpd, OC4Jckt*, OC3Spar, ITIBarge, TLP, OC6 (everything offshore not in rtest-OF-offshore-moored)
+          # OC3Mnpl*, OC3Trpd, OC4Jckt*, OC3Spar, ITIBarge, TLP, OC6 (all offshore cases without MoorDyn or MHK)
           ctest -VV \
           -L openfast -L offshore \
           -LE "cpp|linear|python|fastlib|multirotor|moordyn|mhk"
@@ -488,7 +492,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF-offshore-fixed
+          name: rtest-OF-offshore
           path: |
             ${{github.workspace}}/build/reg_tests/glue-codes/openfast
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
