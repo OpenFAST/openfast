@@ -82,7 +82,8 @@ pieces in the global coordinate system. Each line should contain exactly
 input file, while still allowing for different substructure orientations about 
 the vertical, the user can set **SubRotateZ** to a prescribed angle in degrees 
 with respect to the global *Z*-axis. The entire substructure will be rotated
-by that angle. (This feature is only available in standalone mode.)
+by that angle, including the local axes of spring elements. (This feature is
+only available in standalone mode.)
 
 
 Input motion 
@@ -498,8 +499,8 @@ specifies the ending joint, corresponding to an identifier
 **MPropSetID1** corresponds to the identifier **PropSetID** from the
 MEMBER X-SECTION PROPERTY table (discussed next) for starting
 cross-section properties and **MPropSetID2** specifies the identifier
-for ending cross-section properties, allowing for tapered members. 
-Note that tapering is not allowed with user-defined generic beams (*MType=4*) below. 
+for ending cross-section properties, allowing for tapered members.
+Note that tapering is not allowed with user-defined generic beams (*MType=4*) below.
 Therefore, **MPropSetID1** and **MPropSetID2** must be the same for this beam type.
 The sixth column specify the member type  **MType**.
 A member is one of the four following types (see :numref:`SD_FEM`):
@@ -516,7 +517,7 @@ A member is one of the four following types (see :numref:`SD_FEM`):
 
 - Spring element (*MType=5*)
 
-The required input for **MSpin/COSMID** depends on the member type. For all beam types (*MType=1c*, *1r*, or *4*), users can specify a spin angle **MSpin** in degrees. This is a rotation of the beam member about its axis (pointing from the starting joint to the ending joint) following the right-hand convention. When **MSpin** = 0, the default SubDyn member orientation is used with the element local *x_e* axis parallel to the global *XY* plane. (If the beam is perfectly vertical, the element local *x_e* axis is parallel to the global *X* axis.) A nonzero **MSpin** effectively rotates the element local coordinate system about the member axis. For a beam with a rectangular cross section, Side A of the rectangular section is always parallel to the *x_e* axis, and setting **MSpin** allows the rectangular section to be reoriented as needed. Note that this convention is consistent with how HydroDyn defines rectangular members. Using the same member spin angle in SubDyn and HydroDyn ensures consistency across the two modules. With *MType=4*, the user-defined cross-section properties are also about the element local axes. Again, setting **MSpin** allows the cross section to be reoriented as needed. Finally, for beams with cylindrical cross sections, **MSpin** has no physical effect, but it does influence output channels based on the element local coordinate system. Setting **MSpin** allows these outputs to be given in a more convenient coordinate system orientation. For spring elements (*MType=5*), users can provide the IDs of user-defined member cosine matrices (**COSMID**\ ); the current release uses SubDyn's default direction cosine convention if **COSMID** is -1. Spring elements are defined between joints that are coincident in space and the direction cosine must be provided.
+The required input for **MSpin/COSMID** depends on the member type. For all beam types (*MType=1c*, *1r*, or *4*), users can specify a spin angle **MSpin** in degrees. This is a rotation of the beam member about its axis (pointing from the starting joint to the ending joint) following the right-hand convention. When **MSpin** = 0, the default SubDyn member orientation is used with the element local *x_e* axis parallel to the global *XY* plane. (If the beam is perfectly vertical, the element local *x_e* axis is parallel to the global *X* axis.) A nonzero **MSpin** effectively rotates the element local coordinate system about the member axis. For a beam with a rectangular cross section, Side A of the rectangular section is always parallel to the *x_e* axis, and setting **MSpin** allows the rectangular section to be reoriented as needed. Note that this convention is consistent with how HydroDyn defines rectangular members. Using the same member spin angle in SubDyn and HydroDyn ensures consistency across the two modules. With *MType=4*, the user-defined cross-section properties are also about the element local axes. Again, setting **MSpin** allows the cross section to be reoriented as needed. Finally, for beams with cylindrical cross sections, **MSpin** has no physical effect, but it does influence output channels based on the element local coordinate system. Setting **MSpin** allows these outputs to be given in a more convenient coordinate system orientation. For spring elements (*MType=5*), **COSMID** identifies a user-defined member cosine matrix. Setting **COSMID** to -1 aligns the spring's local axes with the global axes before any **SubRotateZ** rotation is applied. Because a spring is defined between coincident joints, its orientation cannot be derived from its joint coordinates and is instead defined by either **COSMID** or this -1 convention.
 
 An example of member table is given below
 
@@ -651,12 +652,14 @@ Member Cosine Matrices COSM (i,j)
 **NCOSMs** rows, one for each unique member orientation set, will need
 to be provided. Each row of the table will list the nine entries of the
 direction cosine matrices (COSM11, COSM12,…COSM33) for matrix elements.
-Each row is a vector in the global coordinate system for principal axes 
-in the x (COSM11, COSM12, COSM13), y (COSM21, COSM22, COSM23) and 
-z (COSM31, COSM32, COSM33) directions respectively. Internally, SubDyn 
-transposes this provided matrix to make it consistent with the definition 
-of direction cosine matrix :math:`[ \mathbf{D_c} ]` used in SubDyn (Eq. :eq:`Dc`). 
-The vectors provided need to be specified with an extremely high level of 
+Spring elements may reference one of these rows by **COSMID**, or use
+**COSMID=-1** to align their local axes with the global axes.
+Each row is a vector in the global coordinate system for principal axes
+in the x (COSM11, COSM12, COSM13), y (COSM21, COSM22, COSM23) and
+z (COSM31, COSM32, COSM33) directions respectively. Internally, SubDyn
+transposes this provided matrix to make it consistent with the definition
+of direction cosine matrix :math:`[ \mathbf{D_c} ]` used in SubDyn (Eq. :eq:`Dc`).
+The vectors provided need to be specified with an extremely high level of
 precision for results to be equivalent to an internal calculation.
 
 Joint Additional Concentrated Masses

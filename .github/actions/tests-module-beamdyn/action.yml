@@ -17,7 +17,7 @@ runs:
         fi
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -j7 -R bd_
+          ctest -VV -R bd_   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
         fi
 
       working-directory: ${{runner.workspace}}/openfast/build

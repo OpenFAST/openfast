@@ -1,8 +1,27 @@
+!*********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2019-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
+!
+!    This file is part of AeroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!*********************************************************************************************************************************
 module FVW_Wings 
 
    use NWTC_Library
    use FVW_Types
-   use FVW_BiotSavart, only: ui_quad_n1
+   use FVW_BiotSavart, only: ui_seg_11
    use FVW_VortexTools, only: tic, toc
    use FVW_Subs, only: DEV_VERSION, OLAF_PROFILING
    use FVW_Subs, only: idCircPrescribed, idCircPolarData, idCircNoFlowThrough
@@ -333,9 +352,9 @@ contains
       logical                                 :: bConverged    !< 
       integer(IntKi)                          :: iIter         !< iteration step number
       real(ReKi)                              :: MeanGamma
-      integer(IntKi) :: iW, iSpan, iDepth, iWCP, nCPs, nCP_tot, kCP, kCP2
-      real(ReKi), dimension(3) :: P1, P2, P3, P4
-      real(ReKi) :: Gamm
+      integer(IntKi) :: iW, iSpan, iDepth, nSpan, nCP_tot, kCP, kOff, iE1, iE2
+      real(ReKi) :: Gamm, GammPrev, GammNext, EpsLeg, GammKnown, EpsKnown
+      logical :: bKnownRow     !< A known near-wake row (iNWStart+1) exists
       ! Error handling
       integer(IntKi)           :: ErrStat2
       character(ErrMsgLen)     :: ErrMsg2
@@ -344,6 +363,7 @@ contains
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
+      bKnownRow = m%nNW >= p%iNWStart+1
 
       ! --- Flattening circulation onto one vector
       ! Count total number of CP
@@ -384,7 +404,7 @@ contains
       call AllocAry(Vcst,  3, nCP_tot, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
       !--- Induction on the lifting line control point or nodes
-      ! Set induced velocity from Known wake only (after iNWStart+1)
+      ! Set induced velocity from Known wake only (after iNWStart+1) (closing-line core corrected below)
       ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
       ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
       if (OLAF_PROFILING) call tic('LLUI')
@@ -398,6 +418,20 @@ contains
            Vcst(1:3,kCP) = m%W(iW)%Vind_CP(1:3,iSpan) + m%W(iW)%Vwnd_CP(1:3,iSpan) - m%W(iW)%Vstr_CP(1:3,iSpan)
          enddo
       enddo
+
+      ! Closing shed line of the known row (iNWStart+1): Vcst already holds +Gamma_known with the core of row iNWStart+1.
+      ! The final induction uses the mean core of rows iNWStart and iNWStart+1, so we add +Gamma_known with the mean core
+      ! and remove the original contribution (-Gamma_known with the row iNWStart+1 core).
+      if (bKnownRow) then
+         do iW=1,p%nWings
+            do iSpan=1,p%W(iW)%nSpan
+               GammKnown = x%W(iW)%Gamma_NW(iSpan,p%iNWStart+1)
+               EpsKnown  = x%W(iW)%Eps_NW(1,iSpan,p%iNWStart+1)
+               call AddSegmentToVelocity(Vcst, x%W(iW)%r_NW(1:3,iSpan,p%iNWStart+1), x%W(iW)%r_NW(1:3,iSpan+1,p%iNWStart+1),  GammKnown, ClosingCore(iW,iSpan))
+               call AddSegmentToVelocity(Vcst, x%W(iW)%r_NW(1:3,iSpan,p%iNWStart+1), x%W(iW)%r_NW(1:3,iSpan+1,p%iNWStart+1), -GammKnown, EpsKnown)
+            enddo
+         enddo
+      endif ! known closing row
 
       ! --- DEBUG checks
       if (DEV_VERSION) then
@@ -421,28 +455,33 @@ contains
       do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
           !print*,'------- ITERATION',iIter
           ! --- The induced velocity from the profiles is different at each iteration:
+          ! The first iNWStart near-wake rows share Gamma. They are packed as in LatticeToSegments (iDepthStart=1), used for the final induction:
+          ! the shed lines between rows cancel, the trailing lines carry the net circulation with the mean eps,
+          ! and the closing line uses the mean core of rows iNWStart and iNWStart+1 (see ClosingCore).
           Vvar=0.0_ReKi
-          kCP=0
+          kOff=0
           do iW=1,p%nWings
-             do iSpan=1,p%W(iW)%nSpan
-                kCP=kCP+1
-                Gamm=GammaLastIter(kCP) 
-                do iDepth=1,p%iNWStart ! Two first panels
-                   ! --- Defining a ring
-                   P1=x%W(iW)%r_NW(1:3,iSpan  ,iDepth  )
-                   P4=x%W(iW)%r_NW(1:3,iSpan  ,iDepth+1)
-                   P2=x%W(iW)%r_NW(1:3,iSpan+1,iDepth  )
-                   P3=x%W(iW)%r_NW(1:3,iSpan+1,iDepth+1)
-                   ! --- Induced velocity from ring, on all other control points (have to loop on rotors and wings and span again)
-                   kCP2=1
-                   do iWCP=1,p%nWings
-                      nCPs=p%W(iWCP)%nSpan
-                      !call ui_quad_n1(m%W(iWCP)%CP(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3,1:nCPs,iWCP))
-                      call ui_quad_n1(m%W(iWCP)%CP(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3, kCP2:kCP2+nCPs-1))
-                      kCP2=kCP2+nCPs
-                   enddo  ! Wings CP
-                enddo  ! Depth
-             enddo  ! Span
+             nSpan=p%W(iW)%nSpan
+             do iSpan=1,nSpan
+                Gamm=GammaLastIter(kOff+iSpan)
+                ! Bound vortex (first row) and shed line closing the iNWStart rows
+                call AddSegmentToVelocity(Vvar, x%W(iW)%r_NW(1:3,iSpan,1), x%W(iW)%r_NW(1:3,iSpan+1,1), Gamm, x%W(iW)%Eps_NW(1,iSpan,1))
+                call AddSegmentToVelocity(Vvar, x%W(iW)%r_NW(1:3,iSpan,p%iNWStart+1), x%W(iW)%r_NW(1:3,iSpan+1,p%iNWStart+1), -Gamm, ClosingCore(iW,iSpan))
+             enddo
+             ! Trailing lines, at the span nodes
+             do iDepth=1,p%iNWStart
+                do iSpan=1,nSpan+1
+                   GammPrev=0.0_ReKi
+                   GammNext=0.0_ReKi
+                   if (iSpan>1)      GammPrev=GammaLastIter(kOff+iSpan-1)
+                   if (iSpan<=nSpan) GammNext=GammaLastIter(kOff+iSpan)
+                   iE1=max(iSpan-1,1)
+                   iE2=min(iSpan,nSpan)
+                   EpsLeg=0.5_ReKi*(x%W(iW)%Eps_NW(3,iE1,iDepth)+x%W(iW)%Eps_NW(3,iE2,iDepth))
+                   call AddSegmentToVelocity(Vvar, x%W(iW)%r_NW(1:3,iSpan,iDepth), x%W(iW)%r_NW(1:3,iSpan,iDepth+1), GammPrev-GammNext, EpsLeg)
+                enddo
+             enddo
+             kOff=kOff+nSpan
           enddo ! Wings
 
           ! Total velocity on the lifting line
@@ -521,6 +560,29 @@ contains
          if(allocated(Vcst))                deallocate(Vcst)
          if(allocated(Vvar))                deallocate(Vvar)
       end subroutine
+      !> Core of the shed line closing the iNWStart rows: mean of rows iNWStart and iNWStart+1 when a known row exists
+      function ClosingCore(iW, iSpan)
+         integer(IntKi), intent(in) :: iW, iSpan
+         real(ReKi)                 :: ClosingCore
+         ClosingCore = x%W(iW)%Eps_NW(1,iSpan,p%iNWStart)
+         if (bKnownRow) ClosingCore = 0.5_ReKi*(ClosingCore + x%W(iW)%Eps_NW(1,iSpan,p%iNWStart+1))
+      end function ClosingCore
+      !> Adds to V the velocity induced on the control points of all wings by one vortex segment
+      subroutine AddSegmentToVelocity(V, Pa, Pb, SegGamma, SegEps)
+         real(ReKi), dimension(:,:), intent(inout) :: V
+         real(ReKi), dimension(3),   intent(in)    :: Pa, Pb
+         real(ReKi),                 intent(in)    :: SegGamma, SegEps
+         real(ReKi), dimension(3)                  :: Uind
+         integer(IntKi)                            :: iWCP, iCP, kC
+         kC=0
+         do iWCP=1,p%nWings
+            do iCP=1,p%W(iWCP)%nSpan
+               kC=kC+1
+               call ui_seg_11(m%W(iWCP)%CP(1:3,iCP)-Pa, m%W(iWCP)%CP(1:3,iCP)-Pb, SegGamma, p%RegFunction, SegEps, Uind)
+               V(1:3,kC)=V(1:3,kC)+Uind
+            enddo
+         enddo
+      end subroutine AddSegmentToVelocity
    end subroutine Wings_ComputeCirculationPolarData
 
 

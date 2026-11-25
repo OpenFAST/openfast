@@ -1,0 +1,9 @@
+name: 'SimplifiedElastoDyn module tests'
+description: 'Run tests specific to the SimplifiedElastoDyn module'
+author: 'Andy Platt https://github.com/andrew-platt'
+runs:
+  using: "composite"
+  steps:
+    - run: ctest -VV -R "^sed_"   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

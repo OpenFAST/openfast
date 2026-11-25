@@ -1,4 +1,7 @@
 ##################### Registry for SubDyn ##################
+# Copyright (C) 2013-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.

@@ -1,3 +1,6 @@
+# Copyright (C) 2016-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
 # the "usefrom" keyword defines the types for the registry without generating
@@ -152,6 +155,9 @@ typedef     ^       ^           ReKi            Nodes               ::  0   -   
 typedef     ^       ^           IntKi           OriginalIndices     :   0   -   "Array of original node indices"  -
 typedef     ^       ^           IntKi           Dimensions          :   0   -   "The splitting dimension (1 for x, 2 for y) for each node."  -
 
+# Copyright (C) 2016-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
 # the "usefrom" keyword defines the types for the registry without generating

@@ -1,6 +1,7 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of SubDyn.
 !
@@ -906,7 +907,7 @@ end subroutine StoreNodesRelPos
 
 
 !------------------------------------------------------------------------------------------------------
-!> Set Element properties p%ElemProps, different properties are set depening on element type..
+!> Set Element properties p%ElemProps, different properties are set depending on element type.
 SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
@@ -922,6 +923,8 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    REAL(ReKi)               :: L                         ! length of the element
    REAL(ReKi)               :: r1, r2, t, Ixx, Iyy, Jzz, Jt, A, kappa, kappa_x, kappa_y, nu, ratio, ratioSq, D_inner, D_outer
    REAL(ReKi)               :: k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66
+   REAL(FEKi)               :: Rz(3, 3)     ! rotation matrix about the global z-axis
+   REAL(ReKi)               :: theta        ! rotation angle (radians) about the global z-axis
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
    REAL(ReKi)               :: Point1(3), Point2(3), spin ! (x,y,z) positions of two nodes making up an element and the element spin angle about its axis
@@ -929,15 +932,15 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
-   
+
    ALLOCATE( p%ElemProps(Init%NElem), STAT=ErrStat2); ErrMsg2='Error allocating p%ElemProps'
    if(Failed()) return
-   
+
    ! Loop over all elements and set ElementProperties
    do I = 1, Init%NElem
       N1 = p%Elems(I, 2)
       N2 = p%Elems(I, 3)
-      
+
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
@@ -948,9 +951,9 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       Point1 = Init%Nodes(N1,2:4)
       Point2 = Init%Nodes(N2,2:4)
 
-      if (iDirCos/=-1) then    ! Spring element only
+      if (iDirCos/=-1) then    ! Use the user-specified direction cosine matrix for a spring
          CALL GetDirCos(Point1, Point2, spin, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
-         
+
          ! overwrites direction cosines
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
          DirCos(2, 1) =  Init%COSMs(iDirCos, 3)
@@ -966,7 +969,17 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          CALL GetDirCos(Point1, Point2, spin, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
       endif
 
-
+      ! Apply rotation about the global z-axis if SubRotateZ is non-zero for spring elements
+      IF ( eType == idMemberSpring .AND. .NOT. EqualRealNos(Init%SubRotateZ, 0.0_ReKi) ) THEN
+         theta = PI * Init%SubRotateZ / 180.0_ReKi ! convert SubRotateZ from degrees to radians
+         Rz = 0.0_FEKi
+         Rz(1, 1) = COS(theta)
+         Rz(1, 2) = -SIN(theta)
+         Rz(2, 1) =  SIN(theta)
+         Rz(2, 2) =  COS(theta)
+         Rz(3, 3) = 1.0_FEKi
+         DirCos = MATMUL(Rz, DirCos)
+      END IF
 
       p%ElemProps(i)%eType  = eType
       p%ElemProps(i)%Length = L
@@ -1004,7 +1017,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%k55     = -9.99e+36
       p%ElemProps(i)%k56     = -9.99e+36
       p%ElemProps(i)%k66     = -9.99e+36
-  
+
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
          E   = Init%PropsBC(P1, 2) ! TODO E2
@@ -1032,8 +1045,8 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
             kappa = 0
          elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko
             Shear = .true.
-          ! kappa = 0.53            
-            ! equation 13 (Steinboeck et al) in SubDyn Theory Manual 
+          ! kappa = 0.53
+            ! equation 13 (Steinboeck et al) in SubDyn Theory Manual
             nu = E / (2.0_ReKi*G) - 1.0_ReKi
             D_outer = 2.0_ReKi * r1  ! average (outer) diameter
             D_inner = D_outer - 2*t  ! remove 2x thickness to get inner diameter
@@ -1221,7 +1234,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%k55  = Init%PropsS(P1,20)
          p%ElemProps(i)%k56  = Init%PropsS(P1,21)
          p%ElemProps(i)%k66  = Init%PropsS(P1,22)
-         
+
       else
          ! Should not happen
          print*,'Element type unknown',eType
@@ -1230,10 +1243,10 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    enddo ! I end loop over elements
 CONTAINS
    LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetElementProperties') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetElementProperties')
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
-END SUBROUTINE SetElementProperties 
+END SUBROUTINE SetElementProperties
 
 
 !> Distribute global DOF indices corresponding to Nodes, Elements, BCs, Reactions

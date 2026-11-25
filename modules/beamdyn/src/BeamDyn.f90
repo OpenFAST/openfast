@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2015-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 ! Copyright (C) 2016-2018  Envision Energy USA, LTD   
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,6 +126,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
       ! this routine sets *some* of the parameters (basically the "easy" ones)
    call SetParameters(InitInp, InputFileData, p, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Return the time step BeamDyn uses (DTBeam) so the caller can step (or sub-step) consistently
+   Interval = p%dt
 
 
    ! Temporary GLL point intrinsic coordinates array
@@ -2009,7 +2013,10 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Place any last minute operations or calculations here:
 
    ! Close files here:
-   if (m%Un_Sum > 0) CLOSE(m%Un_Sum)
+   if (m%Un_Sum > 0) then
+      CLOSE(m%Un_Sum)
+      m%Un_Sum = -1
+   endif
 
 
    ! Destroy the input data:
@@ -2059,6 +2066,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
+   TYPE(BD_InputType)                             :: u_interp   ! Inputs interpolated to t+dt (used only when sub-stepping)
    INTEGER(IntKi)                                 :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                           :: ErrMsg2    ! Temporary Error message
 
@@ -2070,9 +2078,26 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
-      ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+      ! change reference frame to root motion at t+dt
+      if (EqualRealNos(utimes(1), t + p%dt)) then
+         ! u(1) is at t+dt (BeamDyn time step is the same as the caller's)
+         call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+      else
+         ! BeamDyn is being sub-stepped, so u(1) is at the end of the caller's step, not at t+dt.
+         ! Interpolate the (global frame) inputs to t+dt so the root motion matches the states.
+         call BD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         if (ErrStat < AbortErrLev) then
+            call BD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         end if
+         if (ErrStat < AbortErrLev) then
+            call BD_UpdateGlobalRef(u_interp,p,x,OtherState,ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
+         end if
+         call BD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
+      end if
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF

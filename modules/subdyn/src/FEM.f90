@@ -1,6 +1,7 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of SubDyn.
 !
@@ -795,7 +796,7 @@ END SUBROUTINE GetRigidTransformation
 !! Transforms from element to global coordinates:  xg = DC.xe,  Kg = DC.Ke.DC^t
 !! Assumes that the element main direction is along ze.
 !!
-!! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
+!! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix
 !!      in the FAST framework.
 SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
@@ -809,7 +810,7 @@ SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(FEKi)                       :: RSpin(3, 3)       ! Spin rotation matrix about member axis (for rectangular members)
    ErrMsg  = ""
    ErrStat = ErrID_None
-   
+
    Dx=P2(1)-P1(1)
    Dy=P2(2)-P1(2)
    Dz=P2(3)-P1(3)
@@ -818,18 +819,24 @@ SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
 
    ! The spring element should have the same starting and ending location. P1 and P2 must be coincident (L must be 0).
    IF ( .not. EqualRealNos(L, 0.0_FEKi) .and. eType == 5) THEN
-      ErrMsg = ' Spring(s) must be defined with the same starting and ending locations in the element.' 
+      ErrMsg = ' Spring(s) must be defined with the same starting and ending locations in the element.'
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
-   
+
    IF ( EqualRealNos(L, 0.0_FEKi) .and. eType/= 5) THEN
       ErrMsg = ' Same starting and ending location in a beam, cable or rigid element.'
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
-   
-   IF ( EqualRealNos(Dxy, 0.0_FEKi) ) THEN 
+
+   IF ( EqualRealNos(L, 0.0_FEKi) ) THEN ! Spring element
+      ! COSMID = -1 aligns the spring's local axes with the global axes.
+      DirCos=0.0_FEKi    ! whole matrix set to 0
+      DirCos(1, 1) = 1.0_FEKi
+      DirCos(2, 2) = 1.0_FEKi
+      DirCos(3, 3) = 1.0_FEKi
+   ELSE IF ( EqualRealNos(Dxy, 0.0_FEKi) ) THEN
       DirCos=0.0_FEKi    ! whole matrix set to 0
       IF ( Dz < 0) THEN  !x is kept along global x
          DirCos(1, 1) =  1.0_FEKi
@@ -839,16 +846,16 @@ SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
          DirCos(1, 1) = 1.0_ReKi
          DirCos(2, 2) = 1.0_ReKi
          DirCos(3, 3) = 1.0_ReKi
-      ENDIF 
+      ENDIF
    ELSE
       DirCos(1, 1) =  Dy/Dxy
       DirCos(1, 2) = +Dx*Dz/(L*Dxy)
       DirCos(1, 3) =  Dx/L
-      
+
       DirCos(2, 1) = -Dx/Dxy
       DirCos(2, 2) = +Dz*Dy/(L*Dxy)
       DirCos(2, 3) =  Dy/L
-     
+
       DirCos(3, 1) = 0.0_FEKi
       DirCos(3, 2) = -Dxy/L
       DirCos(3, 3) = +Dz/L

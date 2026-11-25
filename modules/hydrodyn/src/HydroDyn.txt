@@ -1,5 +1,8 @@
 ###################################################################################################################################
 ###################################################################################################################################
+# Copyright (C) 2013-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # Registry for HydroDyn in the FAST Modularization Framework
 # This Registry file is used to create MODULE HydroDyn  which contains all of the user-defined types needed in HydroDyn.
 # It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.

@@ -18,7 +18,9 @@ runs:
         fi
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -R ad_ -LE python  #  -j7  do not run these tests in parallel due to a bug in accessing shared files
+          # Parallelism comes from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml). These were once limited
+          # because of a bug accessing shared files; ad_BAR_CombinedCases is registered last to avoid copy errors.
+          ctest -VV -R ad_ -LE python
         fi
 
       working-directory: ${{runner.workspace}}/openfast/build

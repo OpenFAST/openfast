@@ -1,5 +1,6 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2016-2025 National Renewable Energy Laboratory
+# Copyright 2025-2026 National Laboratory of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -162,6 +163,11 @@ else()
   find_package(LAPACK)
   if (LAPACK_FOUND)
     add_link_options(${LAPACK_LINKER_FLAGS})
+    if (OPENMP)
+      # Warn about OpenBLAS builds that should not be called from OpenMP threads as-is
+      include(${CMAKE_SOURCE_DIR}/cmake/CheckOpenBLASThreading.cmake)
+      check_openblas_threading()
+    endif()
   else()
     message(FATAL_ERROR "Unable to find BLAS and LAPACK")
   endif()

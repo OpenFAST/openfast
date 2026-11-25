@@ -1342,9 +1342,9 @@ The constraint are applied after the full system has been assembled.
 Spring Elements
 ~~~~~~~~~~~~~~~
 
-Do not confuse the spring member with the springs defined as 
-a boundary condition in land-based systems. The spring element 
-relates two joints by means of a 6 by 6 stiffness matrix that 
+Do not confuse the spring member with the springs defined as
+a boundary condition in land-based systems. The spring element
+relates two joints by means of a 6 by 6 stiffness matrix that
 is assumed symmetric (k_ij = k_ji).
 
 .. math::
@@ -1360,7 +1360,7 @@ is assumed symmetric (k_ij = k_ji).
       k_{61} & k_{62} & k_{63} & k_{64} & k_{65} & k_{66} \\
       \end{bmatrix}\end{aligned}
 
-The spring element does not have a mass associated. However, if desired, a lumped mass can be 
+The spring element does not have a mass associated. However, if desired, a lumped mass can be
 defined at the joints.
 
 Since each joint has 6 DOFs (3 translations and 3 rotations), mathematically, the
@@ -1375,11 +1375,12 @@ spring element has a 12 by 12 dimension.
       -k_{6x6} & k_{6x6}  \\
       \end{bmatrix}\end{aligned}
 
-The spring element must be defined between two coincident joints and the orientation has to be 
-provided by means of the direction cosine. This allows the assembly of the spring element in the
-global system stiffness matrix. 
+The spring element must be defined between two coincident joints. Its orientation can be
+provided by means of a direction cosine matrix. Alternatively, **COSMID=-1** aligns the
+spring's local axes with the global axes. This orientation allows the assembly of the spring
+element in the global system stiffness matrix.
 
-The spring element can be connected to beams, kinematic joints (e.g., revolute joint, universal joint, 
+The spring element can be connected to beams, kinematic joints (e.g., revolute joint, universal joint,
 and spherical joint), the interface joint and rigid links. However, it cannot be connected to a cable.
 
 .. _GenericCBReduction:
@@ -2767,4 +2768,3 @@ Note that the outputs for the floating case contains the elastic motions (simila
 
 
 **Loads**: Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
-
