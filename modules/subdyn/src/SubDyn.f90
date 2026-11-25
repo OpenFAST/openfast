@@ -4710,10 +4710,14 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    !call yaml_write_array(UnSum, 'CBB', CBparams%CBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    !call yaml_write_array(UnSum, 'CMM', CBparams%CMM, ReFmt, ErrStat2, ErrMsg2, comment='')
    !call yaml_write_array(UnSum, 'CMMdiag_zeta',2.0_ReKi * CBparams%OmegaL(1:p%nDOFM) * Init%JDampings(1:p%nDOFM) , ReFmt, ErrStat2, ErrMsg2, comment='(2ZetaOmegaM)')
-   call yaml_write_array(UnSum, 'CMMdiag',p%CMMDiag, ReFmt, ErrStat2, ErrMsg2, comment='(2 Zeta OmegaM)')
+   if (p%nDOFM > 0) then ! CMMDiag is only allocated when CB modes are retained
+      call yaml_write_array(UnSum, 'CMMdiag',p%CMMDiag, ReFmt, ErrStat2, ErrMsg2, comment='(2 Zeta OmegaM)')
+   endif
    call yaml_write_array(UnSum, 'KBB', CBparams%KBB, ReFmt, ErrStat2, ErrMsg2, comment='')
    call yaml_write_array(UnSum, 'KMM', CBparams%OmegaL**2, ReFmt, ErrStat2, ErrMsg2, comment='(diagonal components, OmegaL^2)')
-   call yaml_write_array(UnSum, 'KMMdiag', p%KMMDiag, ReFmt, ErrStat2, ErrMsg2, comment='(diagonal components, OmegaL^2)')
+   if (p%nDOFM > 0) then ! KMMDiag is only allocated when CB modes are retained
+      call yaml_write_array(UnSum, 'KMMdiag', p%KMMDiag, ReFmt, ErrStat2, ErrMsg2, comment='(diagonal components, OmegaL^2)')
+   endif
    IF (p%SttcSolve/= idSIM_None) THEN
       call yaml_write_array(UnSum, 'PhiL', transpose(p%PhiL_T), ReFmt, ErrStat2, ErrMsg2, comment='')
       call yaml_write_array(UnSum, 'PhiLOm2-1', p%PhiLInvOmgL2, ReFmt, ErrStat2, ErrMsg2, comment='')
