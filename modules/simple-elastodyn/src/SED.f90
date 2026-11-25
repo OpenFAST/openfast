@@ -607,7 +607,7 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
                   Num=p%NumBl, &
                   Flags=VF_RotFrame + VF_Linearize + VF_2PI, &
                   Perturb=2.0_R8Ki * D2R_D, &
-                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
+                  LinNames=[(MV_LinName('Blade '//trim(num2lstr(i))//' pitch command, rad'), i=1,p%NumBl)])
 
    call MV_AddVar(Vars%u, "YawPosCom", FieldScalar, &
                   DL=DatLoc(SED_u_YawPosCom), &

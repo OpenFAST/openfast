@@ -51,6 +51,11 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
   if(APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysFlangLinux.f90)
   endif()
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
+  # SysGnuLinux.f90 can't be used: LLVM Flang does not provide the FSTAT extension
+  if(APPLE OR UNIX)
+    set(NWTC_SYS_FILE src/SysFlangLinux.f90)
+  endif()
 endif ()
 
 # System file
@@ -87,6 +92,7 @@ set(NWTCLIBS_SOURCES
   src/YAML.f90
   src/JSON.f90
   src/KdTree.f90
+  src/BlockTriSolve.f90
 
   src/GridInterp.f90
   src/GridInterp_Types.f90
@@ -170,6 +176,13 @@ elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
 elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
    set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS
       "-fno-default-real-8")
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
+   # LLVM Flang has no -fno-default-real-8 (and per-source flags cannot remove a global
+   # flag), so FFTPACK is compiled as an object library in its own directory scope with
+   # -fdefault-real-8/-fdefault-double-8 stripped from CMAKE_Fortran_FLAGS.
+   add_subdirectory(src/NetLib/fftpack)
+   list(REMOVE_ITEM NWTCLIBS_SOURCES ${FFTPACK_SOURCES})
+   list(APPEND NWTCLIBS_SOURCES $<TARGET_OBJECTS:nwtc_fftpack_r4>)
 endif()
 
 # Recursive use of routine in qk61/dqk61 will trigger errors in debug

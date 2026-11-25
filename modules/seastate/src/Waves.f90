@@ -1109,8 +1109,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       MCFC = 0.0_ReKi
       IF (WaveField%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
          ka = 0.5_ReKi * WaveNmbr * WaveField%MCFD
+#ifdef __flang__
+         ! LLVM Flang maps single-precision BESSEL_JN/BESSEL_YN to libm jnf/ynf, which are not
+         ! available on all platforms (e.g. macOS), so evaluate in double precision instead.
+         JPrime = REAL( BESSEL_JN(1,REAL(ka,R8Ki)) / REAL(ka,R8Ki) - BESSEL_JN(2,REAL(ka,R8Ki)), SiKi )
+         YPrime = REAL( BESSEL_YN(1,REAL(ka,R8Ki)) / REAL(ka,R8Ki) - BESSEL_YN(2,REAL(ka,R8Ki)), SiKi )
+#else
          JPrime = BESSEL_JN(1,ka) / ka - BESSEL_JN(2,ka)
          YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
+#endif
          HPrime = SQRT(JPrime*JPrime + YPrime*YPrime)
          MCFC = 4.0_ReKi/( PI * ka * ka * HPrime )
       END IF
@@ -2360,6 +2367,9 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
             !   time:
 
          WaveS2Sdd = 0.5_SiKi*WaveS1SddArr(I)
+
+         ! Flush subnormals: optimized ifx SQRT (rsqrtps) returns Inf for them when FTZ is off
+         IF ( TwoPi_R4 * WaveS2Sdd / REAL(InitInp%WaveDT,SiKi) < TINY(WaveS2Sdd) ) WaveS2Sdd = 0.0_SiKi
 
             ! Compute the discrete Fourier transform of the instantaneous elevation of
             !   incident waves at the WAMIT reference point:

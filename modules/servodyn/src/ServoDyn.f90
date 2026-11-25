@@ -699,14 +699,14 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
                   Flags=ior(VF_RotFrame, VF_2PI), &
                   Num=size(u%BlPitch), &
                   Perturb=uPerturbAng, &
-                  LinNames=[('BlPitch('//trim(Num2LStr(i))//'), rad', i = 1, size(u%BlPitch))])
+                  LinNames=[(MV_LinName('BlPitch('//trim(Num2LStr(i))//'), rad'), i = 1, size(u%BlPitch))])
 
    call MV_AddVar(InitOut%Vars%u, "BlPRate", FieldScalar, &
                   DatLoc(SrvD_u_BlPRate), &
                   Flags=VF_RotFrame, &
                   Num=size(u%BlPRate), &
                   Perturb=uPerturbAng, &
-                  LinNames=[('BlPRate('//trim(Num2LStr(i))//'), rad/s', i = 1, size(u%BlPRate))])
+                  LinNames=[(MV_LinName('BlPRate('//trim(Num2LStr(i))//'), rad/s'), i = 1, size(u%BlPRate))])
 
    call MV_AddVar(InitOut%Vars%u, "Yaw", FieldScalar, &
                   DatLoc(SrvD_u_Yaw), &
@@ -768,19 +768,19 @@ subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, Er
                   DatLoc(SrvD_y_BlPitchCom), &
                   Flags=VF_RotFrame + VF_2PI, &
                   Num=size(y%BlPitchCom), &
-                  LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
+                  LinNames=[(MV_LinName('BlPitchCom('//trim(Num2LStr(i))//'), rad'), i = 1, size(y%BlPitchCom))])
 
    call MV_AddVar(InitOut%Vars%y, "BlPRateCom", FieldScalar, &
                   DatLoc(SrvD_y_BlPRateCom), &
                   Flags=VF_RotFrame, &
                   Num=size(y%BlPRateCom), &
-                  LinNames=[('BlPRateCom('//trim(Num2LStr(i))//'), rad/s', i = 1, size(y%BlPRateCom))])
+                  LinNames=[(MV_LinName('BlPRateCom('//trim(Num2LStr(i))//'), rad/s'), i = 1, size(y%BlPRateCom))])
 
    call MV_AddVar(InitOut%Vars%y, "BlPitchMom", FieldScalar, &
                   DatLoc(SrvD_y_BlPitchMom), &
                   Flags=VF_RotFrame, &
                   Num=size(y%BlPitchMom), &
-                  LinNames=[('BlPitchMom('//trim(Num2LStr(i))//'), Nm', i = 1, size(y%BlPitchMom))])
+                  LinNames=[(MV_LinName('BlPitchMom('//trim(Num2LStr(i))//'), Nm'), i = 1, size(y%BlPitchMom))])
 
    call MV_AddVar(InitOut%Vars%y, "YawMom", FieldScalar, &
                   DatLoc(SrvD_y_YawMom), &

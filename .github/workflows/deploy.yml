@@ -26,10 +26,10 @@ jobs:
     if: false
     # if: github.event_name == 'workflow_dispatch' 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -55,10 +55,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -95,20 +95,20 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Commenting out until we get the NREL DockerHub credentials
       # - name: Log in to DockerHub
-      #   uses: docker/login-action@v3
+      #   uses: docker/login-action@v4
       #   with:
       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.GH_REGISTRY }}
           username: ${{ github.actor }}
@@ -123,7 +123,7 @@ jobs:
           echo "Extracted tag  $CLEAN_TAG"
 
       - name: Build and push to registry
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ env.DOCKERFILE_PATH }}
@@ -140,7 +140,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' ||  github.event_name == 'release'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
           fetch-depth: 0
@@ -161,7 +161,7 @@ jobs:
 
       - name: Set up MATLAB
         id: setup-matlab
-        uses: matlab-actions/setup-matlab@v2
+        uses: matlab-actions/setup-matlab@v3
         with:
           products: Simulink
 
@@ -174,7 +174,7 @@ jobs:
         run: .github/scripts/test_windows_executables.bat
 
       - name: Build MATLAB Mex File
-        uses: matlab-actions/run-command@v2
+        uses: matlab-actions/run-command@v3
         with:
           command: |
             mexname = 'FAST_SFunc';
@@ -191,7 +191,7 @@ jobs:
                 fullfile('glue-codes','simulink','src','FAST_SFunc.c'));
 
       - name: Upload executables
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openfast-binaries
           path: |
