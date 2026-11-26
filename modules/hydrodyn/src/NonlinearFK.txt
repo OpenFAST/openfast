@@ -1,4 +1,6 @@
 ###################################################################################################################################
+# Copyright (C) 2026  National Laboratory of the Rockies
+#
 # Registry for NonlinearFK in the FAST Modularization Framework
 # This Registry file is used to create MODULE NonlinearFK which contains all of the user-defined types needed in NonlinearFK.
 # It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
