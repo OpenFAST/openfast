@@ -139,12 +139,8 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Python
-<<<<<<< HEAD
-        uses: actions/setup-python@v6
-=======
         id: setup-python
-        uses: actions/setup-python@v5
->>>>>>> OpenFAST/rc-5.0.1
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: List files in workspace
@@ -617,7 +613,7 @@ jobs:
 
   rtest-module-drivers:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -627,15 +623,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run AeroDyn tests
@@ -672,7 +661,7 @@ jobs:
 
   rtest-interfaces:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -682,15 +671,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
           # openfastcpp links hdf5/netcdf/mpi/yaml-cpp; openfast_io needs its package + xdist
@@ -731,7 +713,7 @@ jobs:
 
   rtest-OF:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -741,15 +723,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run 5MW tests
@@ -780,10 +755,10 @@ jobs:
 
   rtest-OF-offshore-mhk-md:
     runs-on: ubuntu-24.04
-    needs: build-all-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-all-release
       - name: Untar workspace
@@ -802,7 +777,7 @@ jobs:
           -L openfast -L offshore -L "moordyn|mhk" \
           -LE "cpp|linear|python|fastlib|multirotor"
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-offshore-mhk-md
@@ -817,7 +792,7 @@ jobs:
 
   rtest-OF-offshore:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -827,15 +802,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run remaining offshore tests
@@ -861,7 +829,7 @@ jobs:
 
   rtest-OF-multirotor:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -871,15 +839,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run multirotor tests
@@ -904,7 +865,7 @@ jobs:
 
   rtest-OF-linearization:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     steps:
       - name: Restore workspace from artifact
         uses: actions/download-artifact@v7
@@ -914,15 +875,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run OpenFAST linearization tests
@@ -943,117 +897,9 @@ jobs:
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-<<<<<<< HEAD
-  rtest-OF-aeromap:
-    runs-on: ubuntu-24.04
-    needs: utest-release
-    steps:
-      - name: Restore workspace from artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: build-all-release
-      - name: Untar workspace
-        run: |
-          tar -xf workspace.tar -C${{github.workspace}}
-          rm workspace.tar
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Run aero map tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          ctest -VV -L aeromap -LE "cpp|linear|python"
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v6
-        if: failure()
-        with:
-          name: rtest-OF-aeromap
-          path: |
-            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  rtest-openfast_io:
-    runs-on: ubuntu-24.04
-    needs: utest-release
-    steps:
-      - name: Restore workspace from artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: build-all-release
-      - name: Untar workspace
-        run: |
-          tar -xf workspace.tar -C${{github.workspace}}
-          rm workspace.tar
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Install openfast_io
-        working-directory: ${{github.workspace}}/openfast_io
-        run: |
-          pip install -e .
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run openfast_io tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          ctest -VV -L openfast_io 
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v6
-        if: failure()
-        with:
-          name: rtest-openfast_io
-          path: |
-            ${{github.workspace}}/build/reg_tests/openfast_io
-
-
-=======
->>>>>>> OpenFAST/rc-5.0.1
   rtest-FF:
     runs-on: ubuntu-24.04
-    needs: utest-release
+    needs: [build-all-release, utest-release]
     env:
       OMP_NUM_THREADS: 2
     steps:
@@ -1065,15 +911,8 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
-<<<<<<< HEAD
-      - name: List files in workspace
-        run: ls
-      - name: Setup Python
-        uses: actions/setup-python@v6
-=======
       - name: Setup test environment
         uses: ./.github/actions/rtest-setup
->>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run FAST.Farm tests
