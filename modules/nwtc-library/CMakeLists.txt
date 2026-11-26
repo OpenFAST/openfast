@@ -199,8 +199,8 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
 endif()
 
 # Recursive use of routine in qk61/dqk61 will trigger errors in debug
-string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type_upper)
-if (_build_type_upper STREQUAL "DEBUG")
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
+if (_build_type STREQUAL "DEBUG")
    if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
       set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS -frecursive)
       set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS -frecursive)
