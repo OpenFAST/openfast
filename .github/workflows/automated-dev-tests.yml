@@ -730,9 +730,11 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{github.workspace}}/build
         run: |
+          # multirotor is excluded here because rtest-OF-multirotor runs all of those cases, including
+          # the land-based ones (5MW_Land_QuadRotor_DLL_WSt_OLAF), which "offshore" does not exclude.
           ctest -VV \
           -L openfast \
-          -LE "cpp|linear|python|fastlib|offshore"
+          -LE "cpp|linear|python|fastlib|offshore|multirotor"
       - name: Run aero map tests
         # Run even if the step above failed: these used to be a separate job.
         if: ${{ !cancelled() }}
