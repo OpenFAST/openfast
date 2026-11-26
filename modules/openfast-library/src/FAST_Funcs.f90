@@ -2,7 +2,8 @@
 ! FAST_Funcs provides the glue code a uniform interface to module functions.
 !...............................................................................
 ! LICENSING
-! Copyright (C) 2024  National Renewable Energy Laboratory
+! Copyright (C) 2024-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of FAST.
 !

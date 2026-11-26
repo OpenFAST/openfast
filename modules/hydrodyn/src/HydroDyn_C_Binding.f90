@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2021 National Renewable Energy Lab
+! Copyright (C) 2021-2025 National Renewable Energy Lab
+! Copyright (C) 2025-2026 National Laboratory of the Rockies
 !
 ! This file is part of HydroDyn.
 !

@@ -1,0 +1,47 @@
+name: 'Regression-test job setup'
+description: >
+  Python and runtime packages for an rtest-* job that runs tests out of the restored
+  build-all-release workspace. Use it after the workspace artifact has been downloaded and
+  untarred (this file arrives in that tar).
+author: 'Andy Platt https://github.com/andrew-platt'
+
+# There is deliberately no `cmake` reconfigure and no `regression_test_controllers` rebuild here:
+# build-all-release configures with BUILD_TESTING=ON, and the `regression_tests` target (part of
+# `all`) already builds and copies the DISCON controllers into build/reg_tests. The workspace
+# path is the same on every runner, so the restored CTest files work as they are. The one path
+# baked into them that can change between runners is the Python interpreter, so this action
+# installs the exact Python version build-all-release used (passed in from its job outputs).
+# Without the reconfigure, only libatlas is needed at run time (static executables + ATLAS BLAS),
+# except for jobs that run openfastcpp, which also needs the hdf5/netcdf/mpi/yaml-cpp libraries.
+
+inputs:
+  python-version:
+    description: 'Exact Python version used by build-all-release (needs.build-all-release.outputs.python-version)'
+    required: true
+  apt-packages:
+    description: 'Extra apt packages to install besides libatlas-base-dev'
+    default: ''
+  pip-packages:
+    description: 'Extra pip install arguments besides requirements.txt and glue-codes/python'
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: pip
+        cache-dependency-path: requirements.txt
+    - name: Install dependencies
+      working-directory: ${{ github.workspace }}
+      shell: bash
+      run: |
+        pip install -r requirements.txt
+        pip install glue-codes/python/.   # Installs the interface library
+        if [[ -n "${{ inputs.pip-packages }}" ]]; then
+          pip install ${{ inputs.pip-packages }}
+        fi
+        sudo apt-get update -y
+        sudo apt-get install -y libatlas-base-dev ${{ inputs.apt-packages }}

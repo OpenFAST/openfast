@@ -10,7 +10,8 @@
 !!  
 !! ..................................................................................................................................
 !! ## Licensing
-!! Copyright (C) 2012-2013, 2015-2016  National Renewable Energy Laboratory
+!! Copyright (C) 2012-2025  National Renewable Energy Laboratory
+!! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !!
 !!    This file is part of LinDyn.
 !!

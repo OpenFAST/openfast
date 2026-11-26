@@ -17,7 +17,7 @@ runs:
         fi
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -j7 -R ifw_ -LE python
+          ctest -VV -R ifw_ -LE python   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
           # Exclude the Python-interface tests since those are run directly in the job
         fi
 

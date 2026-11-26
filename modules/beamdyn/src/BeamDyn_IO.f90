@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2015-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 ! Copyright (C) 2016-2018  Envision Energy USA, LTD
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
@@ -1532,6 +1533,10 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
       ! QuasiStaticInit only valid with DynamicSolve.  Warn and ignore
    IF(InputFileData%QuasiStaticInit .AND. (.NOT. InitInp%DynamicSolve)) & 
       CALL SetErrStat ( ErrID_Warn, 'QuasiStaticInit option only valid with dynamic solve.  Ignoring.', ErrStat, ErrMsg, RoutineName )
+
+      ! Time step must be positive for dynamic solves (not used in static solves)
+   IF(InitInp%DynamicSolve .AND. InputFileData%DTBeam <= 0.0_DbKi) &
+       CALL SetErrStat ( ErrID_Fatal, 'DTBeam must be greater than 0.', ErrStat, ErrMsg, RoutineName )
 
    IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )

@@ -1,3 +1,6 @@
+# Copyright (C) 2016-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
 # the "usefrom" keyword defines the types for the registry without generating
@@ -171,6 +174,9 @@ typedef     ^       ^              IntKi        LRCols              :   -   -   
 typedef     ^       ^              R8Ki         LRU                 :   -   -   "Left factors (rows x rank, column-major) of the low-rank panels"  -
 typedef     ^       ^              R8Ki         LRW                 :   -   -   "Right factors (rank x columns, column-major) of the low-rank panels"  -
 
+# Copyright (C) 2016-2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 # This file defines types that may be  used from the NWTC_Library
 # include this into a component registry file if you wish to use these types
 # the "usefrom" keyword defines the types for the registry without generating

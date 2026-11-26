@@ -118,7 +118,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'AeroDyn'
 filename = project.replace(' ','_')
-copyright = u'2023, National Renewable Energy Laboratory'
+copyright = u'2023-2025, National Renewable Energy Laboratory; 2025-2026, National Laboratory of the Rockies'
 author = u'OpenFAST Team'
 
 # The version info for the project you're documenting, acts as replacement for

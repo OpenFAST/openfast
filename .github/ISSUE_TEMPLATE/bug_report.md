@@ -29,7 +29,8 @@ Steps to reproduce the behavior:
 **************************************************************************************************
  OpenFAST
 
- Copyright (C)  National Renewable Energy Laboratory
+ Copyright (C) 2013-2025 National Renewable Energy Laboratory
+ Copyright (C) 2025-2026 National Laboratory of the Rockies
  Copyright (C)  Envision Energy USA LTD
 
  This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
