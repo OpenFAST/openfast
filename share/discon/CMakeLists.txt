@@ -22,7 +22,7 @@ macro(set_gfortran)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -m64 -ffree-line-length-none -fdefault-real-8 -C")
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
   endif()
 endmacro(set_gfortran)
@@ -41,7 +41,7 @@ macro(set_ifort_posix)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -m64 -fpp -real-size 64")
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -g -check all -traceback" )
   endif()
 endmacro(set_ifort_posix)
@@ -51,7 +51,7 @@ macro(set_ifort_windows)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qm64 /fpp /real-size:64 /libs:static")
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /Z7 /check:all /traceback" )
   endif()
 endmacro(set_ifort_windows)
@@ -69,6 +69,9 @@ file(TO_CMAKE_PATH ${SOURCE_PATH} SOURCE_PATH)
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
+
+# CMake treats the build type case-insensitively, so compare against an upper-case copy
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
 
 # set the build flags
 if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")

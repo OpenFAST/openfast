@@ -43,6 +43,11 @@
 macro(set_fast_fortran)
   get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
 
+  # CMake treats the build type case-insensitively (DEBUG, Debug and debug all select
+  # CMAKE_Fortran_FLAGS_DEBUG), so the compiler macros below compare against this
+  # upper-case copy when adding the debug flags.
+  string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
+
   # Abort if we do not have gfortran, Intel Fortran, or a Flang compiler.
   # Note: CMake reports Classic Flang (and Classic-based ROCm Flang) as "Flang",
   # and the modern LLVM Flang (flang-new / flang) as "LLVMFlang" (CMake >= 3.24).
@@ -141,7 +146,7 @@ macro(set_fast_gfortran)
   endif()
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all,no-array-temps -pedantic -fbacktrace -finit-real=inf -finit-integer=9999." )
   endif()
 
@@ -177,7 +182,7 @@ macro(set_fast_intel_fortran_posix)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     if(${CMAKE_Fortran_COMPILER_ID} MATCHES "IntelLLVM")
       # NOTE: there is a bug in the 2024 and 2025 IFX compiler causing conflicts between the `check:uninit` and `-lm -ldl` flags
       #     When this is fixed in IFX, we will want to update this to check against versions before fix
@@ -240,7 +245,7 @@ macro(set_fast_intel_fortran_windows)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:${stack_size}")
 
   # debug flags
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(_build_type STREQUAL "DEBUG")
     if(${CMAKE_Fortran_COMPILER_ID} MATCHES "IntelLLVM")
       set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all,noarg_temp_created,nouninit /traceback /Qinit=huge,infinity" )
     else()

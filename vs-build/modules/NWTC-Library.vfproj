@@ -119,7 +119,7 @@
 				</File>
 				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack5.1.f">
 					<FileConfiguration Name="Double_Debug|x64">
-						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Double_Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
@@ -131,13 +131,13 @@
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Matlab_Debug|x64">
-						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Debug|x64">
-						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="OpenMP_Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
@@ -145,7 +145,7 @@
 				</File>
 				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack_kind.f">
 					<FileConfiguration Name="Double_Debug|x64">
-						<Tool Name="VFFortranCompilerTool" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Double_Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
@@ -157,13 +157,13 @@
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Matlab_Debug|x64">
-						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
 					</FileConfiguration>
 					<FileConfiguration Name="Debug|x64">
-						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
+						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4" BoundsCheck="false"/>
 					</FileConfiguration>
 					<FileConfiguration Name="OpenMP_Release|x64">
 						<Tool Name="VFFortranCompilerTool" WarnInterfaces="false" RealKIND="realKIND4"/>
