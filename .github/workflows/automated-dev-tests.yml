@@ -600,14 +600,18 @@ jobs:
   #-----------------------------------------------------------------------------
   #  TEST JOBS
   #
-  #  Every rtest-* job runs out of the build-all-release workspace, so the time for a whole
-  #  pipeline run is about build-all-release + setup (~2.5 min) + the slowest rtest-* job.
+  #  Every rtest-* job runs out of the build-all-release workspace and waits for utest-release,
+  #  so the time for a whole pipeline run is about build-all-release + utest-release (~1 min) +
+  #  setup (~1 min) + the slowest rtest-* job.
   #  The split below spreads the r-tests so that no job holds much more than ~10 min of work at
-  #  -j2 (CTEST_PARALLEL_LEVEL above), without adding jobs: all workflow runs in the OpenFAST
-  #  org share one pool of concurrent runners, so every extra job slows other PRs down.
-  #  Measured cost per job (sum of each test's time when run alone):
-  #    offshore-mhk-md ~1120 s, offshore ~985 s, linearization ~1060 s, interfaces ~720 s,
-  #    OF ~700 s, module-drivers ~520 s, multirotor ~410 s, FF ~100 s.
+  #  -j2 (CTEST_PARALLEL_LEVEL above), with as few jobs as that takes: all workflow runs in the
+  #  OpenFAST org share one pool of concurrent runners, so every extra job slows other PRs down.
+  #  Time of the test steps of each job in CI at -j2 (dev, Nov 2026, median of 4 runs):
+  #    multirotor ~9 min, interfaces ~8 min, offshore ~8 min, OF ~6 min, module-drivers ~5 min,
+  #    offshore-mhk-md ~4 min, FF ~2 min.
+  #    Linearization was ~16 min as one job and finished last in every run, so it is split in two:
+  #    MHK_RM1_Floating_MR_Linear (~10 min, the longest r-test) runs alone in linearization-mhk,
+  #    and the other linearization cases (~15 min of test time, so ~8 min at -j2) stay together.
   #  If you add a slow r-test, check it doesn't make one job much longer than the others.
   #-----------------------------------------------------------------------------
 
@@ -884,12 +888,48 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{github.workspace}}/build
         run: |
-          ctest -VV -L linear
+          # All linearization cases except the MHK one, which runs in rtest-OF-linearization-mhk
+          ctest -VV -L linear -LE mhk
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: rtest-OF-linearization
+          path: |
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+  rtest-OF-linearization-mhk:
+    runs-on: ubuntu-24.04
+    needs: [build-all-release, utest-release]
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+        with:
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
+      - name: Run MHK linearization tests
+        working-directory: ${{github.workspace}}/build
+        run: |
+          # MHK_RM1_Floating_MR_Linear: by far the longest linearization case, so it has its own job
+          ctest -VV -L linear -L mhk
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: rtest-OF-linearization-mhk
           path: |
             ${{github.workspace}}/build/reg_tests/glue-codes/openfast
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
