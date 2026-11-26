@@ -60,8 +60,10 @@ subroutine test_uniform_line_load(error)
    type(error_type), allocatable, intent(out) :: error
 
    integer(IntKi), parameter :: nCases = 4
-   integer(IntKi), parameter :: nLine(nCases) = [ 20, 82, 82, 75 ]     ! AeroDyn nodes, clustered toward root and tip
-   integer(IntKi), parameter :: nPts(nCases)  = [ 82, 40, 120, 75 ]    ! force points, uniform
+      ! No more than 35 clustered AeroDyn nodes on this 1.2 m blade: that keeps the nodes at least 2.5 mm apart. In single
+      ! precision the mesh mapping takes the two nodes of a line element shorter than about 2.4 mm as the same position.
+   integer(IntKi), parameter :: nLine(nCases) = [ 20, 35, 35, 30 ]     ! AeroDyn nodes, clustered toward root and tip
+   integer(IntKi), parameter :: nPts(nCases)  = [ 82, 17, 120, 30 ]    ! force points, uniform
    real(ReKi), parameter     :: r0 = 0.1_ReKi
    real(ReKi), parameter     :: r1 = 1.3_ReKi
    real(ReKi), parameter     :: q = 30.0_ReKi
@@ -179,8 +181,8 @@ end subroutine
 subroutine test_first_moment_of_point_forces(error)
    type(error_type), allocatable, intent(out) :: error
 
-   integer(IntKi), parameter :: nL = 82
-   integer(IntKi), parameter :: nP = 40
+   integer(IntKi), parameter :: nL = 35     ! keeps the clustered nodes at least 2.5 mm apart (see test_uniform_line_load)
+   integer(IntKi), parameter :: nP = 17
    real(ReKi), parameter     :: r0 = 0.1_ReKi
    real(ReKi), parameter     :: r1 = 1.3_ReKi
    type(BladeMeshes)         :: B
