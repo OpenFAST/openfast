@@ -122,7 +122,9 @@ add_executable(openfast_library_utest
   ${PROJECT_SOURCE_DIR}/modules/openfast-library/tests/openfast_library_utest.F90
   ${PROJECT_SOURCE_DIR}/modules/openfast-library/tests/test_FAST_InputSolve_ExtInfw.F90
 )
-target_link_libraries(openfast_library_utest openfastlib versioninfolib testdrivelib)
+# Link the static library: the utest-* CI jobs run from an archive of build/unit_tests only,
+# so the unit test executables must not depend on shared libraries from the build tree.
+target_link_libraries(openfast_library_utest openfastlib_static versioninfolib testdrivelib)
 add_test(NAME openfast_library_utest COMMAND openfast_library_utest)
 
 # Custom target combining all the unit tests
