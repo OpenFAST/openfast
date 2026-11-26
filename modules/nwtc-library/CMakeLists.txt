@@ -144,6 +144,14 @@ get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 #
 # The Visual Studio build does the same thing via RealKIND="realKIND4" on both files
 # in vs-build/modules/NWTC-Library.vfproj.
+#
+# Array bounds checking is also turned off for these files.  The multiple-sequence
+# routines of FFTPACK 5.1 (used by the 2D transforms) declare their work arrays with the
+# increment as the first extent, e.g. CC(IN1,IDO,L1,4), and step through the sequences
+# by indexing that dimension with the jump between them.  This addresses the intended
+# storage but is outside the declared bounds, so a bounds-checked build (the Debug
+# flags) stops with a runtime error.  The Visual Studio build uses BoundsCheck="false"
+# on both files in its Debug configurations.
 set(FFTPACK_SOURCES
    src/NetLib/fftpack/fftpack5.1.f
    src/NetLib/fftpack/fftpack_kind.f
@@ -152,7 +160,7 @@ if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
    # -Wno-pedantic is required because -pedantic (added for Debug builds) promotes the
    # argument mismatches back to errors, overriding -fallow-argument-mismatch.
    set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS
-      "-fallow-argument-mismatch -Wno-pedantic -fno-default-real-8 -fno-default-double-8")
+      "-fallow-argument-mismatch -Wno-pedantic -fno-default-real-8 -fno-default-double-8 -fcheck=no-bounds")
 elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
    # Intel's -real-size 64 promotes REAL->REAL(8) *and* COMPLEX->COMPLEX(8), so it must be
    # undone here.  -double-size 64 restores the Intel default so the genuine DOUBLE
@@ -172,7 +180,12 @@ elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
          set(FFTPACK_REAL4_FLAGS "-real_size 32 -double_size 64")
       endif()
    endif()
-   set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS "${FFTPACK_REAL4_FLAGS}")
+   if (WIN32)
+      set(FFTPACK_NOBOUNDS_FLAG "/check:nobounds")
+   else()
+      set(FFTPACK_NOBOUNDS_FLAG "-check nobounds")
+   endif()
+   set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS "${FFTPACK_REAL4_FLAGS} ${FFTPACK_NOBOUNDS_FLAG}")
 elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
    set_source_files_properties(${FFTPACK_SOURCES} PROPERTIES COMPILE_FLAGS
       "-fno-default-real-8")
@@ -186,7 +199,8 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "LLVMFlang")
 endif()
 
 # Recursive use of routine in qk61/dqk61 will trigger errors in debug
-if (CMAKE_BUILD_TYPE MATCHES Debug)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type_upper)
+if (_build_type_upper STREQUAL "DEBUG")
    if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
       set_source_files_properties(src/NetLib/slatec/NWTC_SLATEC.f90 PROPERTIES COMPILE_FLAGS -frecursive)
       set_source_files_properties(src/NetLib/slatec/dqk61.f         PROPERTIES COMPILE_FLAGS -frecursive)
