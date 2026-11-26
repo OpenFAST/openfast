@@ -4325,13 +4325,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
    CHARACTER(ErrMsgLen)   :: ErrMsg2       ! Temporary storage for local errors
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
-   INTEGER(IntKi)         :: i, j, k, iElem, propIDs(2), Iprop(2)  !counter and temporary holders
+   INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: mType ! Member Type
-<<<<<<< HEAD
    INTEGER(IntKi)         :: iElemStart
-   INTEGER                :: iDirCos
-=======
->>>>>>> OpenFAST/rc-5.0.1
    REAL(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
    REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
@@ -4633,20 +4629,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
-   ! This loop writes one matrix per member, while ElemProps contains one matrix per element due to NDiv.
+   ! This loop writes one matrix per member, while ElemProps contains one matrix per element.
    ! The member's elements are consecutive and have the same orientation, so use its first element.
-   iElem = 1
+   ! The number of elements differs between members (MemberNDiv), so MemberElemStart gives its index.
    DO i=1,p%NMembers
-      mType  = Init%Members(I, iMType)
       ! ElemProps stores local-to-global matrices. The summary reports global-to-local matrices.
-      DirCos = TRANSPOSE(p%ElemProps(iElem)%DirCos)
+      DirCos = TRANSPOSE(p%ElemProps(Init%MemberElemStart(i))%DirCos)
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
-      ! Beam members have NDiv elements; all other member types have one element.
-      if (mType == idMemberBeamCirc .or. mType == idMemberBeamRect .or. mType == idMemberBeamArb) then
-         iElem = iElem + Init%NDiv
-      else
-         iElem = iElem + 1
-      endif
    ENDDO
 
 
