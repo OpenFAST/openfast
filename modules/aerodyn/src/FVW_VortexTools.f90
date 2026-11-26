@@ -1684,6 +1684,8 @@ contains
       real(ReKi), dimension(3) :: CP       !< Current CP
       integer :: icp
       type(T_VSgmt), pointer :: Seg ! Alias
+      ErrStat = ErrID_None
+      ErrMsg = ''
       Seg => Tree%Seg
       if(.not. associated(Seg%SP)) then
          ErrMsg='Ui Sgmt Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return

@@ -506,6 +506,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, err
 
    if (needInit) then
       ! ADI
+      InitInp%RootName   = dvr%out%Root   ! used by ADI_Init for the InflowWind root name
       InitInp%storeHHVel = .true.
       InitInp%WrVTK      = dvr%out%WrVTK
       InitInp%WrVTK_Type = dvr%out%WrVTK_Type
@@ -789,7 +790,6 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
       ! --- Base Motion
       orientation = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
       if (wt%motionType == idBaseMotionGeneral) then
-         orientation_loc = EulerConstruct( theta )
          call interpTimeValue(wt%motion, time, wt%iMotion, basMotion)
          y_ED%PlatformPtMesh%TranslationDisp(1:3,1) = basMotion(1:3)
          y_ED%PlatformPtMesh%TranslationVel (1:3,1) = basMotion(7:9)
