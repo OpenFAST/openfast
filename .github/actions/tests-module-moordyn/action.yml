@@ -14,7 +14,7 @@ runs:
     - run: |
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -j7 -R md_ -LE python
+          ctest -VV -R md_ -LE python   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
         fi
 
       working-directory: ${{runner.workspace}}/openfast/build

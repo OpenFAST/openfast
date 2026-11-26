@@ -1,0 +1,9 @@
+name: 'AeroDisk module tests'
+description: 'Run tests specific to the AeroDisk module'
+author: 'Andy Platt https://github.com/andrew-platt'
+runs:
+  using: "composite"
+  steps:
+    - run: ctest -VV -R "^adsk_"   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

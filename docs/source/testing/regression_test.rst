@@ -65,6 +65,107 @@ reported as failed. The failure criteria is outlined below.
         pass = False
 
 
+.. _regression_test_linearization:
+
+Linearization test comparisons
+------------------------------
+The linearization test cases (labelled ``linear`` in CTest) are run and compared
+by ``reg_tests/executeOpenfastLinearRegressionCase.py``. These tests compare only
+the linearization output files (``.lin``) to the baseline; the time series
+output of a linearization case is not compared. Every ``.lin`` file in the
+baseline directory is checked, including the module-level files if they are
+present.
+
+For each file, the comparison is made in three parts:
+
+1. **Structure**: the local and baseline files must have the same number of
+   lines, contain the same set of variables, and each matrix or vector must
+   have the same dimensions.
+
+2. **Frequencies and damping**: if the file contains the state matrix ``A``,
+   its eigenvalues are converted to natural frequencies and damping ratios.
+   The first ten frequencies above the high-pass frequency (the ``-highpass``
+   flag of the script, set per case in ``reg_tests/CTestList.cmake``) are
+   compared with a relative tolerance of 1e-2 and an absolute tolerance of
+   1e-2 Hz. The corresponding damping ratios, in percent, are compared with a
+   relative tolerance of 1e-2 and an absolute tolerance of 1e-1. If no
+   frequency is above the high-pass frequency, the first ten eigenvalues are
+   compared instead.
+
+3. **Element-wise values**: every element of the operating point vectors
+   (``x``, ``xdot``, ``u``, ``y``) and of the matrices (``A``, ``B``, ``C``,
+   ``D``, ``dUdu``, ``dUdy``) is compared to the baseline as described below.
+
+Element-wise tolerance
+~~~~~~~~~~~~~~~~~~~~~~
+An element of an operating point vector passes if
+
+.. code-block:: python
+
+    abs(local - baseline) <= rtol * abs(baseline) + atol
+
+with ``rtol = 2e-3`` and ``atol = 5e-4``. These two values are set in the
+script; the tolerance arguments on the command line are not used for the
+linearization comparison.
+
+The matrices need an additional consideration. Each matrix element is the
+result of sums, products, and linear solves involving terms that can be many
+orders of magnitude larger than the element itself. For example, a full-system
+matrix may contain elements of order 1e9 next to elements whose exact value is
+zero. The round-off error left in an element is set by the size of the terms
+in its row and column, not by the size of the element, and that round-off
+changes with the compiler, the math libraries, and the CPU model. (For
+instance, the GNU Fortran runtime library selects a different ``MATMUL``
+implementation on Intel and on AMD processors, so the same executable gives
+slightly different results on the two.) A fixed absolute tolerance would
+report this round-off as a regression.
+
+The absolute tolerance of a matrix element therefore has a round-off floor
+that is scaled by the size of the row and column of the baseline matrix that
+the element belongs to:
+
+.. code-block:: python
+
+    rowmax = max(abs(baseline), axis=1)     # largest element in each row
+    colmax = max(abs(baseline), axis=0)     # largest element in each column
+    matmax = max(abs(baseline))             # largest element in the matrix
+
+    scale[i,j] = rowmax[i] * colmax[j] / matmax
+    tol[i,j]   = rtol * abs(baseline[i,j]) + max(atol, noise_floor * scale[i,j])
+
+    passed[i,j] = abs(local[i,j] - baseline[i,j]) <= tol[i,j]
+
+The scale is the size that the element would have if the matrix were the outer
+product of its row and column magnitudes. It equals ``matmax`` for an element
+that lies in both the largest row and the largest column, and it is small for
+an element in a row or column that contains only small values. Those elements
+are still compared using ``atol`` alone.
+
+The default ``noise_floor`` is ``1e-8``. Round-off differences of up to 3e-10
+of the scale were measured between equally valid results of the same code
+(Intel and AMD processors, different BLAS/LAPACK libraries and thread counts,
+x86-64 and ARM64), so the default leaves a margin of about 30. The value can
+be changed for an individual case with the ``-noise-floor`` flag in the
+``OTHER_FLAGS`` argument of ``of_regression_linear`` in
+``reg_tests/CTestList.cmake``; a value of 0 disables the floor and restores
+the fixed ``atol`` for all elements.
+
+Some consequences of this method:
+
+- The floor can only relax the comparison. An element never has a smaller
+  tolerance than ``rtol * abs(baseline) + atol``.
+- An element that is smaller than ``noise_floor * scale`` is not resolved by
+  the test: it may change by up to the floor without being reported. Such an
+  element is at least eight orders of magnitude smaller than the outer-product
+  scale of its row and column.
+- When any element of a matrix passes only because of the floor, the script
+  prints the number of such elements for that matrix so that the effect is
+  visible in the test log.
+- When an element fails, the message lists the difference, the tolerance, and
+  the round-off floor for that element together with the row and column
+  descriptions. At most five failing elements are reported per file.
+
+
 Testing Environment
 -------------------
 We recommend using ``conda`` to create a local environment to install the

@@ -1,7 +1,25 @@
 #ifndef TEMPLATES_HPP
 #define TEMPLATES_HPP
 
+#include <cstdlib>
+#include <ctime>
 #include <string>
+
+// Year stamped into the copyright line of generated files ("CurrentYear" placeholder).
+// Honors SOURCE_DATE_EPOCH (reproducible builds) if set, otherwise uses the current date.
+inline std::string current_year()
+{
+    std::time_t t = std::time(nullptr);
+    if (const char *sde = std::getenv("SOURCE_DATE_EPOCH"))
+    {
+        char *end = nullptr;
+        long long v = std::strtoll(sde, &end, 10);
+        if (end != sde && *end == '\0')
+            t = static_cast<std::time_t>(v);
+    }
+    std::tm *tm = std::gmtime(&t);
+    return std::to_string(tm->tm_year + 1900);
+}
 
 const std::string FAST_preamble(
     "!STARTOFREGISTRYGENERATEDFILE 'ModuleName_Types.f90'\n"
@@ -15,7 +33,7 @@ const std::string FAST_preamble(
     "!.................................................................................................................................\n"
     "! This file is part of ModuleName.\n"
     "!\n"
-    "! Copyright (C) 2012-2016 National Renewable Energy Laboratory\n"
+    "! Copyright (C) CurrentYear National Laboratory of the Rockies\n"
     "!\n"
     "! Licensed under the Apache License, Version 2.0 (the \"License\");\n"
     "! you may not use this file except in compliance with the License.\n"
@@ -116,7 +134,7 @@ const std::string module_template(
     "!!\n"
     "! ..................................................................................................................................\n"
     "!! ## LICENSING\n"
-    "!! Copyright (C) 2025  National Renewable Energy Laboratory\n"
+    "!! Copyright (C) CurrentYear  National Laboratory of the Rockies\n"
     "!!\n"
     "!!    This file is part of ModuleName.\n"
     "!!\n"

@@ -1,5 +1,6 @@
 ! LICENSING
 ! Copyright (C) 2013-2016  University of Michigan, National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of module IceDyn.
 !

@@ -4,6 +4,6 @@ author: 'Rafael Mudafort https://github.com/rafmudaf'
 runs:
   using: "composite"
   steps: 
-    - run: ctest -VV -j7 -R SD_
+    - run: ctest -VV -R SD_   # parallelism from CTEST_PARALLEL_LEVEL (see automated-dev-tests.yml)
       working-directory: ${{runner.workspace}}/openfast/build
       shell: bash
