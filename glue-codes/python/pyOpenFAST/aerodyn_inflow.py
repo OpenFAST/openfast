@@ -1,7 +1,8 @@
 #-------------------------------------------------------------------------------
 # LICENSING
 #-------------------------------------------------------------------------------
-# Copyright (C) 2021-present by National Renewable Energy Lab (NREL)
+# Copyright (C) 2021-2025 by National Renewable Energy Lab (NREL)
+# Copyright (C) 2025-present by National Laboratory of the Rockies (NLR)
 #
 # This file is part of AeroDyn
 #

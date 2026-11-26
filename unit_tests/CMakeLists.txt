@@ -1,5 +1,6 @@
 #
-# Copyright 2017 National Renewable Energy Laboratory
+# Copyright 2017-2025 National Renewable Energy Laboratory
+# Copyright 2025-2026 National Laboratory of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,6 +108,23 @@ add_executable(versioninfo_utest
 target_link_libraries(versioninfo_utest versioninfolib testdrivelib)
 add_test(NAME versioninfo_utest COMMAND versioninfo_utest)
 
+# ExternalInflow Unit Tests
+add_executable(externalinflow_utest
+  ${PROJECT_SOURCE_DIR}/modules/externalinflow/tests/externalinflow_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/externalinflow/tests/test_ExtInfw_LineLoadsToPoints.F90
+  ${PROJECT_SOURCE_DIR}/modules/externalinflow/tests/test_ExtInfw_VelNodes.F90
+)
+target_link_libraries(externalinflow_utest extinflowlib versioninfolib testdrivelib)
+add_test(NAME externalinflow_utest COMMAND externalinflow_utest)
+
+# OpenFAST library (glue code) Unit Tests
+add_executable(openfast_library_utest
+  ${PROJECT_SOURCE_DIR}/modules/openfast-library/tests/openfast_library_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/openfast-library/tests/test_FAST_InputSolve_ExtInfw.F90
+)
+target_link_libraries(openfast_library_utest openfastlib versioninfolib testdrivelib)
+add_test(NAME openfast_library_utest COMMAND openfast_library_utest)
+
 # Custom target combining all the unit tests
 add_custom_target(
   unit_tests
@@ -116,6 +134,8 @@ add_custom_target(
     beamdyn_utest 
     aerodyn_utest 
     inflowwind_utest 
+    externalinflow_utest
+    openfast_library_utest
 )
 
 if (AMREX_READER AND BUILD_FASTFARM)

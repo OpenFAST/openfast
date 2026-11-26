@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2015-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 ! Copyright (C) 2016-2018  Envision Energy USA, LTD
 !
 !    This file is part of AeroDyn.

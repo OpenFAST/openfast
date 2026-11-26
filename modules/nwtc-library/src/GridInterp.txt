@@ -1,4 +1,7 @@
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
+# Copyright (C) 2025  National Renewable Energy Laboratory
+# Copyright (C) 2025-2026  National Laboratory of the Rockies
+#
 #<Key Word> <Module>      <TypeName>       <FieldType>    <FieldName>       <Dims>         <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 typedef     GridInterp    ParameterType    IntKi          n                 {4}              -        -      "number of evenly-spaced grid points in each dimension"  -

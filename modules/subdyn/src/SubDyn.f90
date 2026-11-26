@@ -1,6 +1,7 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    This file is part of SubDyn.
 !
@@ -4324,11 +4325,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
    CHARACTER(ErrMsgLen)   :: ErrMsg2       ! Temporary storage for local errors
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
-   INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
-   INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
+   INTEGER(IntKi)         :: i, j, k, iElem, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: mType ! Member Type
+<<<<<<< HEAD
    INTEGER(IntKi)         :: iElemStart
    INTEGER                :: iDirCos
+=======
+>>>>>>> OpenFAST/rc-5.0.1
    REAL(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
    REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
@@ -4337,7 +4340,6 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    REAL(ReKi)             :: rOP(3)      ! Vector from origin to P (ref point)
    REAL(ReKi)             :: rPG(3)      ! Vector from origin to G
    REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
-   REAL(ReKi)             :: XYZ1(3),XYZ2(3),spin !temporary arrays
    REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '#____________________________________________________________________________________________________'
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
@@ -4631,29 +4633,20 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
+   ! This loop writes one matrix per member, while ElemProps contains one matrix per element due to NDiv.
+   ! The member's elements are consecutive and have the same orientation, so use its first element.
+   iElem = 1
    DO i=1,p%NMembers
       mType  = Init%Members(I, iMType)
-      iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
-      iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
-      XYZ1   = Init%Joints(iNode1,2:4)
-      XYZ2   = Init%Joints(iNode2,2:4)
-      spin   = Init%MemberSpin(I)
-      if ( mType == idMemberSpring ) then ! The direction cosine for these member types must be provided by the user
-         iDirCos = p%Elems(i, iMDirCosID)
-         DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
-         DirCos(2, 1) =  Init%COSMs(iDirCos, 3)
-         DirCos(3, 1) =  Init%COSMs(iDirCos, 4)
-         DirCos(1, 2) =  Init%COSMs(iDirCos, 5)
-         DirCos(2, 2) =  Init%COSMs(iDirCos, 6)
-         DirCos(3, 2) =  Init%COSMs(iDirCos, 7)
-         DirCos(1, 3) =  Init%COSMs(iDirCos, 8)
-         DirCos(2, 3) =  Init%COSMs(iDirCos, 9)
-         DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
-      else
-         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), spin, mType, DirCos, mLength, ErrStat, ErrMsg)
-      endif
-      DirCos=TRANSPOSE(DirCos) !This is now global to local
+      ! ElemProps stores local-to-global matrices. The summary reports global-to-local matrices.
+      DirCos = TRANSPOSE(p%ElemProps(iElem)%DirCos)
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      ! Beam members have NDiv elements; all other member types have one element.
+      if (mType == idMemberBeamCirc .or. mType == idMemberBeamRect .or. mType == idMemberBeamArb) then
+         iElem = iElem + Init%NDiv
+      else
+         iElem = iElem + 1
+      endif
    ENDDO
 
 

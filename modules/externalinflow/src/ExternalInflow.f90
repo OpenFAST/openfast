@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !    ExternalInflow module
 !
@@ -32,6 +33,9 @@ MODULE ExternalInflow
    PUBLIC :: ExtInfw_SetInputs                      ! Glue-code routine to update inputs for ExternalInflow
    PUBLIC :: ExtInfw_SetWriteOutput
    PUBLIC :: ExtInfw_UpdateFlowField
+   PUBLIC :: ExtInfw_LineLoadsToPoints              ! Loads of the actuator force points from the AeroDyn line loads
+   PUBLIC :: ExtInfw_NumVelNodes                    ! Number of points the external driver provides the velocity at
+   PUBLIC :: ExtInfw_SetVelNodePositions            ! Positions of these points
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -70,25 +74,8 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
    IF (ErrStat >= AbortErrLev) RETURN
 
 
-      ! The accuracy of the AD15 to CFD coupling is expected to diminish if an insufficient number of AD15 nodes
-      ! is used.  Long term the AD15 nodes will be experted directly, but in the short term we will do a couple
-      ! quick sanity checks.
-   ! If the number of nodes requested from CFD (nNodesForceBlade) is more than 4x the number of AD15 blade nodes
-   ! we expect a lot of innacuracies.  The user should increase the number of nodes in AD15
-   if (ExtInfw%p%nNodesForceBlade > 4 * u_AD%rotors(1)%BladeMotion(1)%NNodes) then
-      ErrMsg2=trim(Num2LStr(ExtInfw%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
-            //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points. ' &
-            //'Increase number of AD15 mesh points to at least 50% as many points as the CFD requested.'
-      call WrScr('ExtInfw Error: '//trim(ErrMsg2))
-      call SetErrStat(ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      return
-   ! if the number of nodes requested from CFD (nNodesForceBlade) is more than double the number of nodes in AD15, issue a warning.
-   elseif (ExtInfw%p%nNodesForceBlade > 2 * u_AD%rotors(1)%BladeMotion(1)%NNodes) then
-      ErrMsg2=trim(Num2LStr(ExtInfw%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
-            //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points.  This may result in inacurate loads.'
-      call WrScr('ExtInfw WARNING: '//trim(ErrMsg2))
-      call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   endif
+      ! No relation is required between the number of force points asked for by the CFD code and the number of AD15 nodes:
+      ! the loads of the force points are integrals of the AD15 line loads (ExtInfw_LineLoadsToPoints).
 
       ! ExternalInflow does not export the AeroDyn generalized-support-structure (GS) node positions
       ! to CFD, nor map velocities back for them. GS nodes are appended to AeroDyn's wind-sampling
@@ -105,26 +92,8 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       ! Motion points from AD15
       !---------------------------
 
-      ! Hub node (always set)
-   ExtInfw%p%nNodesVel = 1  ! Hub is first point always
-
-      ! Blade nodes (always set)
-   DO k=1,ExtInfw%p%NumBl
-      ExtInfw%p%nNodesVel = ExtInfw%p%nNodesVel + u_AD%rotors(1)%BladeMotion(k)%NNodes
-   END DO
-
-      ! Tower motion
-   ExtInfw%p%nNodesVel = ExtInfw%p%nNodesVel + u_AD%rotors(1)%TowerMotion%NNodes
-
-      ! Nacelle motion
-   if (u_AD%rotors(1)%HubMotion%NNodes > 0) then
-      ExtInfw%p%nNodesVel = ExtInfw%p%nNodesVel + u_AD%rotors(1)%HubMotion%NNodes
-   endif
-
-      ! Tail fin nodes
-   if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
-      ExtInfw%p%nNodesVel = ExtInfw%p%nNodesVel + u_AD%rotors(1)%TFinMotion%NNodes
-   endif
+      ! Hub, blade nodes, tower nodes, nacelle and tail fin: the points AD15 reads the wind of, in its order
+   ExtInfw%p%nNodesVel = ExtInfw_NumVelNodes( u_AD%rotors(1) )
 
 
       !---------------------------
@@ -209,7 +178,8 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       ! to add ExternalInflow integrations in the rest fo the code).
       !............................................................................................
    ! Allocate space for mapping data structures
-   ALLOCATE( ExtInfw%m%ActForceLoadsPoints(ExtInfw%p%NMappings), ExtInfw%m%Line2_to_Point_Loads(ExtInfw%p%NMappings), ExtInfw%m%Line2_to_Point_Motions(ExtInfw%p%NMappings),STAT=ErrStat2);   if (Failed2()) return;
+   ! (the loads go through ExtInfw_LineLoadsToPoints, which needs the motion mappings only)
+   ALLOCATE( ExtInfw%m%ActForceLoadsPoints(ExtInfw%p%NMappings), ExtInfw%m%Line2_to_Point_Motions(ExtInfw%p%NMappings),STAT=ErrStat2);   if (Failed2()) return;
 
    do k=1,ExtInfw%p%NMappings
       call MeshCopy (  SrcMesh  = ExtInfw%m%ActForceMotionsPoints(k)  &
@@ -227,16 +197,11 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
    ! Mapping of meshes for blades
    DO k=1,ExtInfw%p%NumBl
       call MeshMapCreate( u_AD%rotors(1)%BladeMotion(k), ExtInfw%m%ActForceMotionsPoints(k), ExtInfw%m%Line2_to_Point_Motions(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
-      call MeshMapCreate( y_AD%rotors(1)%BladeLoad(k),   ExtInfw%m%ActForceLoadsPoints(k),   ExtInfw%m%Line2_to_Point_Loads(k),   ErrStat2, ErrMsg2 ); if (Failed()) return;
    END DO
 
    ! Mapping tower
    do k=ExtInfw%p%NumBl+1,ExtInfw%p%NMappings
       call MeshMapCreate( u_AD%rotors(1)%TowerMotion, ExtInfw%m%ActForceMotionsPoints(k), ExtInfw%m%Line2_to_Point_Motions(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
-
-      if ( y_AD%rotors(1)%TowerLoad%nnodes > 0 ) then ! we can have an input mesh on the tower without having an output mesh.
-         call MeshMapCreate( y_AD%rotors(1)%TowerLoad, ExtInfw%m%ActForceLoadsPoints(k), ExtInfw%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
-      end if
    end do
 
    call SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat2, ErrMsg2); if (Failed()) return;
@@ -421,39 +386,9 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
    ! Do the Velocity (AeroDyn) nodes first
    !-------------------------------------------------------------------------------------------------
    
-   ! Hub
-   Node = 1 
-   if (u_AD%rotors(1)%HubMotion%Committed) then
-      ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(1,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(1,1), c_float)
-      ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(2,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(2,1), c_float)
-      ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(3,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(3,1), c_float)
-   else
-      ExtInfw%u%pxVel(Node) = 0.0_c_float
-      ExtInfw%u%pyVel(Node) = 0.0_c_float
-      ExtInfw%u%pzVel(Node) = 0.0_c_float
-   end if
-
-
-   ! blade nodes
-   DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%nNodes
-
-         Node = Node + 1
-         ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j), c_float)
-         ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j), c_float)
-         ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j), c_float)
-      END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-   END DO !K = 1,p%NumBl
-
-   if (ExtInfw%p%NMappings .gt. ExtInfw%p%NumBl) then
-      ! tower nodes
-      DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
-         Node = Node + 1
-         ExtInfw%u%pxVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(1,J) + u_AD%rotors(1)%TowerMotion%Position(1,J), c_float)
-         ExtInfw%u%pyVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(2,J) + u_AD%rotors(1)%TowerMotion%Position(2,J), c_float)
-         ExtInfw%u%pzVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(3,J) + u_AD%rotors(1)%TowerMotion%Position(3,J), c_float)
-      END DO
-   end if
+   call ExtInfw_SetVelNodePositions( u_AD%rotors(1), ExtInfw%u%pxVel, ExtInfw%u%pyVel, ExtInfw%u%pzVel, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
 
    ! Do the Actuator Force nodes now
    !-------------------------------------------------------------------------------------------------
@@ -513,6 +448,110 @@ contains
 END SUBROUTINE SetExtInfwPositions
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Number of points the external driver provides the velocity at. AD15 reads the wind of these points in a fixed order
+!! (AD_CalcWind_Rotor): the hub, the nodes of each blade, the tower nodes, the nacelle and the tail fin. The hub always takes
+!! the first point; the tower, the nacelle and the tail fin take points only when AD15 has their meshes.
+FUNCTION ExtInfw_NumVelNodes( u_ADRot ) RESULT( nNodesVel )
+   TYPE(RotInputType),             INTENT(IN   )   :: u_ADRot     ! The input meshes of one AeroDyn rotor
+   INTEGER(IntKi)                                  :: nNodesVel   ! Number of points with velocity from the external driver
+
+   INTEGER(IntKi)                                  :: K           ! Loops through blades.
+
+      ! Hub node (always set)
+   nNodesVel = 1  ! Hub is first point always
+
+      ! Blade nodes (always set)
+   DO K = 1,SIZE(u_ADRot%BladeMotion)
+      nNodesVel = nNodesVel + u_ADRot%BladeMotion(K)%NNodes
+   END DO
+
+      ! Tower nodes
+   if (u_ADRot%TowerMotion%NNodes > 0) nNodesVel = nNodesVel + u_ADRot%TowerMotion%NNodes
+
+      ! Nacelle
+   if (u_ADRot%NacelleMotion%Committed) nNodesVel = nNodesVel + 1
+
+      ! Tail fin
+   if (u_ADRot%TFinMotion%Committed) nNodesVel = nNodesVel + 1
+
+END FUNCTION ExtInfw_NumVelNodes
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Positions of the points the external driver provides the velocity at, in the order of ExtInfw_NumVelNodes. Each point is where
+!! AD15 takes its wind to be (AD_CalcWind_Rotor): the reference position of the node plus its displacement.
+SUBROUTINE ExtInfw_SetVelNodePositions( u_ADRot, pxVel, pyVel, pzVel, ErrStat, ErrMsg )
+   TYPE(RotInputType),             INTENT(IN   )   :: u_ADRot     ! The input meshes (already calculated) of one AeroDyn rotor
+   REAL(C_FLOAT),                  INTENT(INOUT)   :: pxVel(:)    ! x position of the velocity points
+   REAL(C_FLOAT),                  INTENT(INOUT)   :: pyVel(:)    ! y position of the velocity points
+   REAL(C_FLOAT),                  INTENT(INOUT)   :: pzVel(:)    ! z position of the velocity points
+   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! Local variables:
+   INTEGER(IntKi)                                  :: J           ! Loops through nodes / elements.
+   INTEGER(IntKi)                                  :: K           ! Loops through blades.
+   INTEGER(IntKi)                                  :: Node        ! Node number for blade/node on mesh
+   INTEGER(IntKi)                                  :: nNodesVel   ! Number of velocity points
+   CHARACTER(*),   PARAMETER                       :: RoutineName = 'ExtInfw_SetVelNodePositions'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   nNodesVel = ExtInfw_NumVelNodes( u_ADRot )
+   if ( (SIZE(pxVel) /= nNodesVel) .or. (SIZE(pyVel) /= nNodesVel) .or. (SIZE(pzVel) /= nNodesVel) ) then
+      call SetErrStat( ErrID_Fatal, 'The arrays with the positions of the velocity points have '//trim(Num2LStr(SIZE(pxVel)))//', '//trim(Num2LStr(SIZE(pyVel)))//' and '//trim(Num2LStr(SIZE(pzVel)))//' entries; AeroDyn reads the wind at '//trim(Num2LStr(nNodesVel))//' points.', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ! Hub
+   Node = 1 
+   if (u_ADRot%HubMotion%Committed) then
+      pxVel(Node) = real(u_ADRot%HubMotion%Position(1,1) + u_ADRot%HubMotion%TranslationDisp(1,1), c_float)
+      pyVel(Node) = real(u_ADRot%HubMotion%Position(2,1) + u_ADRot%HubMotion%TranslationDisp(2,1), c_float)
+      pzVel(Node) = real(u_ADRot%HubMotion%Position(3,1) + u_ADRot%HubMotion%TranslationDisp(3,1), c_float)
+   else
+      pxVel(Node) = 0.0_c_float
+      pyVel(Node) = 0.0_c_float
+      pzVel(Node) = 0.0_c_float
+   end if
+
+   ! blade nodes
+   DO K = 1,SIZE(u_ADRot%BladeMotion)
+      DO J = 1,u_ADRot%BladeMotion(k)%nNodes
+         Node = Node + 1
+         pxVel(Node) = real(u_ADRot%BladeMotion(k)%TranslationDisp(1,j) + u_ADRot%BladeMotion(k)%Position(1,j), c_float)
+         pyVel(Node) = real(u_ADRot%BladeMotion(k)%TranslationDisp(2,j) + u_ADRot%BladeMotion(k)%Position(2,j), c_float)
+         pzVel(Node) = real(u_ADRot%BladeMotion(k)%TranslationDisp(3,j) + u_ADRot%BladeMotion(k)%Position(3,j), c_float)
+      END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
+   END DO !K = 1,p%NumBl
+
+   ! tower nodes (AD15 reads their wind for the tower loads and for the influence of the tower on the blades, whether the external driver has tower force points or not)
+   DO J = 1,u_ADRot%TowerMotion%nNodes
+      Node = Node + 1
+      pxVel(Node) = real(u_ADRot%TowerMotion%TranslationDisp(1,J) + u_ADRot%TowerMotion%Position(1,J), c_float)
+      pyVel(Node) = real(u_ADRot%TowerMotion%TranslationDisp(2,J) + u_ADRot%TowerMotion%Position(2,J), c_float)
+      pzVel(Node) = real(u_ADRot%TowerMotion%TranslationDisp(3,J) + u_ADRot%TowerMotion%Position(3,J), c_float)
+   END DO
+
+   ! nacelle
+   if (u_ADRot%NacelleMotion%Committed) then
+      Node = Node + 1
+      pxVel(Node) = real(u_ADRot%NacelleMotion%Position(1,1) + u_ADRot%NacelleMotion%TranslationDisp(1,1), c_float)
+      pyVel(Node) = real(u_ADRot%NacelleMotion%Position(2,1) + u_ADRot%NacelleMotion%TranslationDisp(2,1), c_float)
+      pzVel(Node) = real(u_ADRot%NacelleMotion%Position(3,1) + u_ADRot%NacelleMotion%TranslationDisp(3,1), c_float)
+   end if
+
+   ! tail fin
+   if (u_ADRot%TFinMotion%Committed) then
+      Node = Node + 1
+      pxVel(Node) = real(u_ADRot%TFinMotion%Position(1,1) + u_ADRot%TFinMotion%TranslationDisp(1,1), c_float)
+      pyVel(Node) = real(u_ADRot%TFinMotion%Position(2,1) + u_ADRot%TFinMotion%TranslationDisp(2,1), c_float)
+      pzVel(Node) = real(u_ADRot%TFinMotion%Position(3,1) + u_ADRot%TFinMotion%TranslationDisp(3,1), c_float)
+   end if
+
+END SUBROUTINE ExtInfw_SetVelNodePositions
+
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetExtInfwForces(p_FAST, u_AD, y_AD, ExtInfw, ErrStat, ErrMsg)
    TYPE(ExternalInflow_Data),      INTENT(INOUT)   :: ExtInfw        ! data for the ExternalInflow integration module
    TYPE(AD_InputType),             INTENT(IN   )   :: u_AD        ! The input meshes (already calculated) from AeroDyn
@@ -563,7 +602,7 @@ SUBROUTINE SetExtInfwForces(p_FAST, u_AD, y_AD, ExtInfw, ErrStat, ErrMsg)
       END DO
 #endif
 
-      call Transfer_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), ExtInfw%m%ActForceLoadsPoints(k), ExtInfw%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), ExtInfw%m%ActForceMotionsPoints(k) );   if (Failed()) return;
+      call ExtInfw_LineLoadsToPoints( y_AD%rotors(1)%BladeLoad(k), u_AD%rotors(1)%BladeMotion(k), ExtInfw%m%ActForceMotionsPoints(k), ExtInfw%m%Line2_to_Point_Motions(k), ExtInfw%m%ActForceLoadsPoints(k), ErrStat2, ErrMsg2 );   if (Failed()) return;
 
       DO J = 1, ExtInfw%p%nNodesForceBlade
          Node = Node + 1
@@ -595,7 +634,8 @@ SUBROUTINE SetExtInfwForces(p_FAST, u_AD, y_AD, ExtInfw, ErrStat, ErrMsg)
       END DO
 #endif
 
-      call Transfer_Line2_to_Point( y_AD%rotors(1)%TowerLoad, ExtInfw%m%ActForceLoadsPoints(k), ExtInfw%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%TowerMotion, ExtInfw%m%ActForceMotionsPoints(k) );   if (Failed()) return;
+      ! (we can have an input mesh on the tower without having an output mesh: the tower force points then get no load)
+      call ExtInfw_LineLoadsToPoints( y_AD%rotors(1)%TowerLoad, u_AD%rotors(1)%TowerMotion, ExtInfw%m%ActForceMotionsPoints(k), ExtInfw%m%Line2_to_Point_Motions(k), ExtInfw%m%ActForceLoadsPoints(k), ErrStat2, ErrMsg2 );   if (Failed()) return;
 
       DO J=1,ExtInfw%p%nNodesForceTower
          Node = Node + 1
@@ -625,6 +665,160 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function Failed
 END SUBROUTINE SetExtInfwForces
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Loads of the actuator force points from the AeroDyn line loads (loads per unit length on a line2 mesh).
+!! The load of force point i is the integral along the AeroDyn line of the line load times the hat function of the point: 1 at the
+!! point, 0 at its two neighbours, linear in between (the hat functions of the first and last points stay at 1 from there to the
+!! end of the line).  The hat functions add up to 1 everywhere, so the point forces add up to the integral of the line load, and
+!! the point moments (taken about each force point, with the arm of the force) to its moment, for any number of force points and
+!! of AeroDyn nodes; and the point loads follow the line load smoothly along the span.
+!! Transfer_Line2_to_Point is not used for these loads: it lumps the line load at the AeroDyn nodes and at the projections of the
+!! force points and gives each lumped load to the force point nearest to it, which leaves point loads that jump from one point
+!! to the next unless the two sets of points coincide.
+SUBROUTINE ExtInfw_LineLoadsToPoints( LineLoad, LineMotion, PointMotion, MotionMap, PointLoad, ErrStat, ErrMsg )
+   TYPE(MeshType),                 INTENT(IN   )   :: LineLoad    !< AeroDyn line2 mesh with the loads per unit length (nodes numbered along the line)
+   TYPE(MeshType),                 INTENT(IN   )   :: LineMotion  !< AeroDyn line2 mesh with the motions (sibling of LineLoad)
+   TYPE(MeshType),                 INTENT(IN   )   :: PointMotion !< Actuator force points with their motions (already transferred from LineMotion)
+   TYPE(MeshMapType),              INTENT(IN   )   :: MotionMap   !< Mapping of the motions from LineMotion to PointMotion (element and shape functions of each point)
+   TYPE(MeshType),                 INTENT(INOUT)   :: PointLoad   !< Actuator force points: their Force and Moment are set here
+   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                                  :: nL          ! Number of nodes of the line
+   INTEGER(IntKi)                                  :: nP          ! Number of force points
+   INTEGER(IntKi)                                  :: iL          ! Loops through the line nodes / elements
+   INTEGER(IntKi)                                  :: iP          ! Force point at the start of the interval between two force points
+   INTEGER(IntKi)                                  :: iP2         ! Force point at the end of that interval
+   INTEGER(IntKi)                                  :: iQ          ! Loops through the points of Simpson's rule
+   INTEGER(IntKi)                                  :: elem        ! Line element a force point lies on
+   INTEGER(IntKi)                                  :: n1, n2      ! Nodes of that element
+   REAL(R8Ki), ALLOCATABLE                         :: sLine(:)    ! Distance along the line of its nodes (reference positions)
+   REAL(R8Ki), ALLOCATABLE                         :: sPts(:)     ! Distance along the line of the force points
+   REAL(R8Ki), ALLOCATABLE                         :: xLine(:,:)  ! Displaced positions of the line nodes
+   REAL(R8Ki), ALLOCATABLE                         :: xPts(:,:)   ! Displaced positions of the force points
+   REAL(R8Ki), ALLOCATABLE                         :: F(:,:)      ! Forces of the force points
+   REAL(R8Ki), ALLOCATABLE                         :: M(:,:)      ! Moments of the force points
+   REAL(R8Ki)                                      :: a, b        ! Ends of the piece of line being integrated
+   REAL(R8Ki)                                      :: s           ! Distance along the line
+   REAL(R8Ki)                                      :: xi          ! Position on the line element, 0 to 1
+   REAL(R8Ki)                                      :: h           ! Hat function of force point iP2 (that of iP is 1-h)
+   REAL(R8Ki)                                      :: w           ! Integration weight
+   REAL(R8Ki)                                      :: fLine(3)    ! Line force at s
+   REAL(R8Ki)                                      :: mLine(3)    ! Line moment at s
+   REAL(R8Ki)                                      :: x(3)        ! Displaced position of the line at s
+   LOGICAL                                         :: hasMoment   ! The line mesh carries moments per unit length
+   REAL(R8Ki), PARAMETER                           :: wSimpson(3) = [ 1.0_R8Ki, 4.0_R8Ki, 1.0_R8Ki ] / 6.0_R8Ki
+   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
+   CHARACTER(*),   PARAMETER                       :: RoutineName = 'ExtInfw_LineLoadsToPoints'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   PointLoad%Force  = 0.0_ReKi
+   PointLoad%Moment = 0.0_ReKi
+
+   nL = LineLoad%NNodes
+   nP = PointMotion%NNodes
+   if (nL < 2 .or. nP < 1) return   ! no line loads, or no force points
+
+   if (LineMotion%NNodes /= nL .or. LineMotion%ElemTable(ELEMENT_LINE2)%nelem /= nL-1) then
+      call SetErrStat( ErrID_Fatal, 'The line meshes of the loads and of the motions must have the same nodes, joined by one line of elements.', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+   ALLOCATE( sLine(nL), sPts(nP), xLine(3,nL), xPts(3,nP), F(3,nP), M(3,nP), STAT=ErrStat2 )
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for the loads of the force points.', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+
+      ! Distance along the line of its nodes; element iL has to join the nodes iL and iL+1
+   sLine(1) = 0.0_R8Ki
+   DO iL = 1,nL-1
+      if (LineMotion%ElemTable(ELEMENT_LINE2)%Elements(iL)%ElemNodes(1) /= iL .or. LineMotion%ElemTable(ELEMENT_LINE2)%Elements(iL)%ElemNodes(2) /= iL+1) then
+         call SetErrStat( ErrID_Fatal, 'The nodes of the line mesh must be numbered along the line.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      sLine(iL+1) = sLine(iL) + sqrt( sum( ( real(LineLoad%Position(:,iL+1),R8Ki) - real(LineLoad%Position(:,iL),R8Ki) )**2 ) )
+   END DO
+
+      ! Distance along the line of the force points, from the element and the shape functions of the motion mapping
+   DO iP = 1,nP
+      elem = MotionMap%MapMotions(iP)%OtherMesh_Element
+      if (elem < 1 .or. elem > nL-1) then
+         call SetErrStat( ErrID_Fatal, 'Force point '//trim(Num2LStr(iP))//' is not mapped to an element of the line mesh.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      n1 = LineMotion%ElemTable(ELEMENT_LINE2)%Elements(elem)%ElemNodes(1)
+      n2 = LineMotion%ElemTable(ELEMENT_LINE2)%Elements(elem)%ElemNodes(2)
+      sPts(iP) = MotionMap%MapMotions(iP)%shape_fn(1)*sLine(n1) + MotionMap%MapMotions(iP)%shape_fn(2)*sLine(n2)
+      if (iP > 1) then
+         if (sPts(iP) < sPts(iP-1) - 1.0E-6_R8Ki*sLine(nL)) then
+            call SetErrStat( ErrID_Fatal, 'The force points must be ordered along the line: point '//trim(Num2LStr(iP))//' comes before point '//trim(Num2LStr(iP-1))//'.', ErrStat, ErrMsg, RoutineName )
+            return
+         end if
+         sPts(iP) = max( sPts(iP), sPts(iP-1) )
+      end if
+   END DO
+
+      ! Displaced positions, for the arms of the moments
+   xLine = real(LineMotion%Position(:,1:nL),R8Ki)  + LineMotion%TranslationDisp(:,1:nL)
+   xPts  = real(PointMotion%Position(:,1:nP),R8Ki) + PointMotion%TranslationDisp(:,1:nP)
+
+   hasMoment = LineLoad%FieldMask(MASKID_MOMENT)
+   mLine = 0.0_R8Ki
+   F = 0.0_R8Ki
+   M = 0.0_R8Ki
+
+      ! Each line element is cut at the force points it holds; on each piece [a,b] the line load, the position and the hat
+      ! functions are linear in s, so Simpson's rule integrates their products exactly.
+   iP = 1
+   DO iL = 1,nL-1
+      if (sLine(iL+1) <= sLine(iL)) cycle
+      a = sLine(iL)
+      DO WHILE (a < sLine(iL+1))
+
+            ! force points iP and iP2 on either side of a (the first two, or the last two, when a is beyond the force points)
+         DO WHILE (iP < nP-1)
+            if (sPts(iP+1) > a) exit
+            iP = iP + 1
+         END DO
+         iP2 = min(iP+1, nP)
+
+            ! end of the piece: the next force point or the end of the element, whichever comes first
+         b = sLine(iL+1)
+         if (sPts(iP) > a) then
+            b = min(b, sPts(iP))
+         elseif (sPts(iP2) > a) then
+            b = min(b, sPts(iP2))
+         end if
+
+         DO iQ = 1,3
+            s  = a + 0.5_R8Ki*(iQ-1)*(b - a)
+            xi = (s - sLine(iL)) / (sLine(iL+1) - sLine(iL))
+            fLine = (1.0_R8Ki - xi)*LineLoad%Force(:,iL) + xi*LineLoad%Force(:,iL+1)
+            if (hasMoment) mLine = (1.0_R8Ki - xi)*LineLoad%Moment(:,iL) + xi*LineLoad%Moment(:,iL+1)
+            x = (1.0_R8Ki - xi)*xLine(:,iL) + xi*xLine(:,iL+1)
+
+            h = 0.0_R8Ki
+            if (sPts(iP2) > sPts(iP)) h = min( 1.0_R8Ki, max( 0.0_R8Ki, (s - sPts(iP)) / (sPts(iP2) - sPts(iP)) ) )
+
+            w = wSimpson(iQ)*(b - a)
+            F(:,iP)  = F(:,iP)  + w*(1.0_R8Ki - h)*fLine
+            F(:,iP2) = F(:,iP2) + w*h*fLine
+            M(:,iP)  = M(:,iP)  + w*(1.0_R8Ki - h)*( mLine + cross_product( x - xPts(:,iP),  fLine ) )
+            M(:,iP2) = M(:,iP2) + w*h*( mLine + cross_product( x - xPts(:,iP2), fLine ) )
+         END DO
+
+         a = b
+      END DO
+   END DO
+
+   PointLoad%Force(:,1:nP)  = real(F, ReKi)
+   PointLoad%Moment(:,1:nP) = real(M, ReKi)
+
+END SUBROUTINE ExtInfw_LineLoadsToPoints
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtInfw_SetWriteOutput( ExtInfw )

@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
 !
 !> This code provides a wrapper for the LAPACK routines currently used at the NWTC (mainly codes in the FAST framework). This 
 !! enables us to call generic routines (not single- or double-precision specific ones) so that we don't have to change source
@@ -1442,7 +1443,12 @@ MODULE NWTC_LAPACK
    
          IF (N <= 0) RETURN
    
-         ALLOCATE(A(N,N))
+         ALLOCATE(A(N,N), STAT=INFO)
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "LAPACK_DPOTRF: Error allocating memory for the full-storage matrix A."
+            RETURN
+         END IF
          A = 0.0_R8Ki
    
          IF (UPLO == 'U') THEN
@@ -1534,7 +1540,12 @@ MODULE NWTC_LAPACK
    
          IF (N <= 0) RETURN
    
-         ALLOCATE(A(N,N))
+         ALLOCATE(A(N,N), STAT=INFO)
+         IF (INFO /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "LAPACK_SPOTRF: Error allocating memory for the full-storage matrix A."
+            RETURN
+         END IF
          A = 0.0_SiKi
    
          IF (UPLO == 'U') THEN

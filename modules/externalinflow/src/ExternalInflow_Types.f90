@@ -9,7 +9,7 @@
 !.................................................................................................................................
 ! This file is part of ExternalInflow.
 !
-! Copyright (C) 2012-2016 National Renewable Energy Laboratory
+! Copyright (C) 2026 National Laboratory of the Rockies
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -86,7 +86,6 @@ IMPLICIT NONE
     TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceMotionsPoints      !< point mesh for transferring AeroDyn motions to ExternalInflow  (includes hub+blades+nacelle+tower+tailfin) [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceLoadsPoints      !< point mesh for transferring AeroDyn distributed loads to ExternalInflow (includes hub+blades+nacelle+tower+tailfin) [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Line2_to_Point_Loads      !< mapping data structure to convert line2 loads to point loads [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Line2_to_Point_Motions      !< mapping data structure to convert line2 loads to point motions [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data type [-]
   END TYPE ExtInfw_MiscVarType
@@ -648,22 +647,6 @@ subroutine ExtInfw_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcMiscData%Line2_to_Point_Loads)) then
-      LB(1:1) = lbound(SrcMiscData%Line2_to_Point_Loads)
-      UB(1:1) = ubound(SrcMiscData%Line2_to_Point_Loads)
-      if (.not. allocated(DstMiscData%Line2_to_Point_Loads)) then
-         allocate(DstMiscData%Line2_to_Point_Loads(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Line2_to_Point_Loads.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcMiscData%Line2_to_Point_Loads(i1), DstMiscData%Line2_to_Point_Loads(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
    if (allocated(SrcMiscData%Line2_to_Point_Motions)) then
       LB(1:1) = lbound(SrcMiscData%Line2_to_Point_Motions)
       UB(1:1) = ubound(SrcMiscData%Line2_to_Point_Motions)
@@ -725,15 +708,6 @@ subroutine ExtInfw_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%ActForceLoadsPoints)
    end if
-   if (allocated(MiscData%Line2_to_Point_Loads)) then
-      LB(1:1) = lbound(MiscData%Line2_to_Point_Loads)
-      UB(1:1) = ubound(MiscData%Line2_to_Point_Loads)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(MiscData%Line2_to_Point_Loads(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%Line2_to_Point_Loads)
-   end if
    if (allocated(MiscData%Line2_to_Point_Motions)) then
       LB(1:1) = lbound(MiscData%Line2_to_Point_Motions)
       UB(1:1) = ubound(MiscData%Line2_to_Point_Motions)
@@ -776,15 +750,6 @@ subroutine ExtInfw_PackMisc(RF, Indata)
       UB(1:1) = ubound(InData%ActForceLoadsPoints)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%ActForceLoadsPoints(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%Line2_to_Point_Loads))
-   if (allocated(InData%Line2_to_Point_Loads)) then
-      call RegPackBounds(RF, 1, lbound(InData%Line2_to_Point_Loads), ubound(InData%Line2_to_Point_Loads))
-      LB(1:1) = lbound(InData%Line2_to_Point_Loads)
-      UB(1:1) = ubound(InData%Line2_to_Point_Loads)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%Line2_to_Point_Loads(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%Line2_to_Point_Motions))
@@ -842,19 +807,6 @@ subroutine ExtInfw_UnPackMisc(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call MeshUnpack(RF, OutData%ActForceLoadsPoints(i1)) ! ActForceLoadsPoints 
-      end do
-   end if
-   if (allocated(OutData%Line2_to_Point_Loads)) deallocate(OutData%Line2_to_Point_Loads)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Line2_to_Point_Loads(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Line2_to_Point_Loads.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%Line2_to_Point_Loads(i1)) ! Line2_to_Point_Loads 
       end do
    end if
    if (allocated(OutData%Line2_to_Point_Motions)) deallocate(OutData%Line2_to_Point_Motions)

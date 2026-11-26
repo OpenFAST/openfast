@@ -3,7 +3,8 @@
 ! FAST Modularization Framework. ExtPtfm_MCKF_Types is auto-generated based on FAST_Registry.txt.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2016 National Renewable Energy Laboratory
+! Copyright (C) 2012-2025 National Renewable Energy Laboratory
+! Copyright (C) 2025-2026 National Laboratory of the Rockies
 !
 !    This file is part of ExtPtfm_MCKF.
 !

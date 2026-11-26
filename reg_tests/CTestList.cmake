@@ -1,5 +1,6 @@
 #
-# Copyright 2017 National Renewable Energy Laboratory
+# Copyright 2017-2025 National Renewable Energy Laboratory
+# Copyright 2025-2026 National Laboratory of the Rockies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -386,6 +387,8 @@ of_regression("IEA22MW_ModalDampingLoose"              "openfast;beamdyn;servody
 of_regression("OC6_phaseII"                            "openfast;soildyn;subdyn;hydrodyn;offshore;stc")
 of_regression("MinimalExample"                         "openfast;elastodyn")
 of_regression("Floating_Cylinder_Guide_Ropes"          "openfast;hydrodyn;moordyn;offshore")
+of_regression("OC7_PhaseII_VolturnUS_Strip"            "openfast;elastodyn;subdyn;seastate;hydrodyn;map;offshore")
+of_regression("OC7_PhaseII_VolturnUS_PotFlow"          "openfast;elastodyn;subdyn;seastate;hydrodyn;map;offshore")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn")
 
@@ -446,6 +449,11 @@ if(BUILD_FASTFARM)
   ff_regression("ModAmb_3"          ""                               "fastfarm")
   ff_regression("TSinflowADskSED"   ""                               "fastfarm;aerodisk;simple-elastodyn")
   ff_regression("MD_Shared"         "-compFile=FAST.Farm.FarmMD.MD"  "fastfarm;moordyn")
+  # TSinflow_curl reads ../TSinflow/90m_08mps.bts, which only exists in the build tree after the
+  # TSinflow test has copied its case directory there. The fixture makes ctest run TSinflow first
+  # (and pulls it in when TSinflow_curl is selected alone, e.g. `ctest -R TSinflow_curl`).
+  set_tests_properties(TSinflow      PROPERTIES FIXTURES_SETUP    ff_TSinflow_bts)
+  set_tests_properties(TSinflow_curl PROPERTIES FIXTURES_REQUIRED ff_TSinflow_bts)
 endif()
 
 # AeroDyn regression tests
@@ -477,6 +485,7 @@ ua_regression("ua_redfreq"                  "unsteadyaero")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"               "beamdyn;dynamic")
+bd_regression("bd_5MW_dynamic_substep"       "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_gravity_Az00"  "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_gravity_Az90"  "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_modal_damping" "beamdyn;dynamic")
@@ -580,6 +589,9 @@ md_regression("md_BdyExtLdDmpg"                               "moordyn")
 md_regression("md_VIV"                                        "moordyn")
 md_regression("md_waterkin2"                                  "moordyn")
 md_regression("md_waterkin3"                                  "moordyn")
+# md_waterkin3 peaks at ~8.7 GB RSS (measured Nov 2026). Run it alone so it can't share a 16 GB
+# CI runner with md_waterkin2 / hd_MCF_* and push the runner into swap.
+set_tests_properties(md_waterkin3 PROPERTIES RUN_SERIAL TRUE)
 py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")

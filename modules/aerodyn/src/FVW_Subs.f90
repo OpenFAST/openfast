@@ -1,3 +1,22 @@
+!*********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2019-2025  National Renewable Energy Laboratory
+! Copyright (C) 2025-2026  National Laboratory of the Rockies
+!
+!    This file is part of AeroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!*********************************************************************************************************************************
 module FVW_SUBS
 
    use NWTC_LIBRARY
@@ -1117,7 +1136,9 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          if (p%nNWMax>1) then
             write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
          endif
-         write(*,'(A,2F8.4)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+         if (p%WakeRegMethod==idRegAge) then
+            write(*,'(A,F9.6)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
+         endif
       endif
    enddo ! Loop on wings
 

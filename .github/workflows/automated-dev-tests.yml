@@ -27,7 +27,15 @@ env:
   C_COMPILER: gcc-14
   GCOV_EXE: gcov-14
   CMAKE_BUILD_PARALLEL_LEVEL: 8
-  CTEST_PARALLEL_LEVEL: 4
+  # Run 2 tests at a time, not 4. GitHub's ubuntu-24.04 runners report 4 vCPUs, but measured on
+  # the full r-test set (Nov 2026) they give only ~1.85x the throughput of one test at a time,
+  # both at -j2 and at -j4. -j4 adds no throughput: every test runs 1.5-2.5x slower, so the
+  # longest test sets the job time (StC_test_OC4Semi: 515 s alone, 900-1100 s at -j4). Peak
+  # memory also doubles (md_waterkin3 alone is ~8.7 GB of the runner's 16 GB). The module test
+  # actions in .github/actions/tests-module-* inherit this value; don't hard-code -j there.
+  # Measurements and the procedure to redo them:
+  # https://github.com/OpenFAST/openfast/pull/3544
+  CTEST_PARALLEL_LEVEL: 2
   OMP_NUM_THREADS: 1
 
 jobs:
@@ -121,13 +129,22 @@ jobs:
 
   build-all-release:
     runs-on: ubuntu-24.04
+    outputs:
+      # The rtest-* jobs reuse this build's CTest files, which hold the full path of this Python
+      # interpreter. They install exactly this version so that path exists on their runner too.
+      python-version: ${{ steps.setup-python.outputs.python-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup Python
+<<<<<<< HEAD
         uses: actions/setup-python@v6
+=======
+        id: setup-python
+        uses: actions/setup-python@v5
+>>>>>>> OpenFAST/rc-5.0.1
         with:
           python-version: '3.11'
       - name: List files in workspace
@@ -169,7 +186,7 @@ jobs:
         run: |
           tar -cvf workspace.tar -C ${{github.workspace}} \
           --exclude='*.a' --exclude='*.o' --exclude='build/ftnmods' \
-          --exclude='docs' --exclude='vs-build' \
+          --exclude='docs' --exclude='vs-build' --exclude='.git' \
           .
       - name: Save workspace for other jobs
         uses: actions/upload-artifact@v6
@@ -586,6 +603,16 @@ jobs:
 
   #-----------------------------------------------------------------------------
   #  TEST JOBS
+  #
+  #  Every rtest-* job runs out of the build-all-release workspace, so the time for a whole
+  #  pipeline run is about build-all-release + setup (~2.5 min) + the slowest rtest-* job.
+  #  The split below spreads the r-tests so that no job holds much more than ~10 min of work at
+  #  -j2 (CTEST_PARALLEL_LEVEL above), without adding jobs: all workflow runs in the OpenFAST
+  #  org share one pool of concurrent runners, so every extra job slows other PRs down.
+  #  Measured cost per job (sum of each test's time when run alone):
+  #    offshore-mhk-md ~1120 s, offshore ~985 s, linearization ~1060 s, interfaces ~720 s,
+  #    OF ~700 s, module-drivers ~520 s, multirotor ~410 s, FF ~100 s.
+  #  If you add a slow r-test, check it doesn't make one job much longer than the others.
   #-----------------------------------------------------------------------------
 
   rtest-module-drivers:
@@ -600,28 +627,17 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
@@ -642,6 +658,10 @@ jobs:
         uses: ./.github/actions/tests-module-seastate
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
+      - name: Run AeroDisk tests
+        uses: ./.github/actions/tests-module-aerodisk
+      - name: Run SimplifiedElastoDyn tests
+        uses: ./.github/actions/tests-module-simple-elastodyn
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
@@ -649,7 +669,6 @@ jobs:
           name: rtest-module-drivers
           path: |
             ${{github.workspace}}/build/reg_tests/modules
-
 
   rtest-interfaces:
     runs-on: ubuntu-24.04
@@ -663,34 +682,36 @@ jobs:
         run: |
           tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
+          # openfastcpp links hdf5/netcdf/mpi/yaml-cpp; openfast_io needs its package + xdist
+          apt-packages: libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+          pip-packages: -e openfast_io pytest-xdist
       - name: Run Interface / API tests
         working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
               -L "cpp|python|fastlib" \
               -LE "openfast_io"
+      - name: Run openfast_io tests
+        # Run even if the step above failed: these used to be a separate job.
+        if: ${{ !cancelled() }}
+        # openfast_io_library is a single CTest test that runs 43 OpenFAST cases one after the
+        # other; pytest-xdist runs them 2 at a time instead (each case has its own directory).
+        working-directory: ${{github.workspace}}/build
+        env:
+          PYTEST_ADDOPTS: "-n 2"
+        run: |
+          ctest -VV -L openfast_io
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
@@ -705,8 +726,8 @@ jobs:
             ${{github.workspace}}/build/reg_tests/modules/inflowwind
             ${{github.workspace}}/build/reg_tests/modules/hydrodyn
             ${{github.workspace}}/build/reg_tests/modules/seastate
+            ${{github.workspace}}/build/reg_tests/openfast_io
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
-
 
   rtest-OF:
     runs-on: ubuntu-24.04
@@ -718,37 +739,31 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run 5MW tests
         working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
           -L openfast \
           -LE "cpp|linear|python|fastlib|offshore"
+      - name: Run aero map tests
+        # Run even if the step above failed: these used to be a separate job.
+        if: ${{ !cancelled() }}
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ctest -VV -L aeromap -LE "cpp|linear|python"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
@@ -763,6 +778,42 @@ jobs:
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
+  rtest-OF-offshore-mhk-md:
+    runs-on: ubuntu-24.04
+    needs: build-all-release
+    steps:
+      - name: Restore workspace from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-all-release
+      - name: Untar workspace
+        run: |
+          tar -xf workspace.tar -C ${{github.workspace}}
+          rm workspace.tar
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+        with:
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
+      - name: Run offshore tests with MoorDyn or MHK
+        working-directory: ${{github.workspace}}/build
+        run: |
+          # StC_test_OC4Semi*, 5MW_OC4Semi_WSt_WavesWN, MHK_RM1_* (MHK_RM1_Floating_MR is in rtest-OF-multirotor)
+          ctest -VV \
+          -L openfast -L offshore -L "moordyn|mhk" \
+          -LE "cpp|linear|python|fastlib|multirotor"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-OF-offshore-mhk-md
+          path: |
+            ${{github.workspace}}/build/reg_tests/glue-codes/openfast
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AOC
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   rtest-OF-offshore:
     runs-on: ubuntu-24.04
@@ -774,37 +825,26 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
+      - name: Run remaining offshore tests
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
-        working-directory: ${{github.workspace}}/build
-        run: |
+          # OC3Mnpl*, OC3Trpd, OC4Jckt*, OC3Spar, ITIBarge, TLP, OC6 (all offshore cases without MoorDyn or MHK)
           ctest -VV \
           -L openfast -L offshore \
-          -LE "cpp|linear|python|fastlib|multirotor"
+          -LE "cpp|linear|python|fastlib|multirotor|moordyn|mhk"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
@@ -829,32 +869,20 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
-      - name: Run 5MW tests
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
+      - name: Run multirotor tests
         working-directory: ${{github.workspace}}/build
         run: |
           ctest -VV \
@@ -884,30 +912,19 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run OpenFAST linearization tests
         working-directory: ${{github.workspace}}/build
         run: |
@@ -926,6 +943,7 @@ jobs:
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{github.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
+<<<<<<< HEAD
   rtest-OF-aeromap:
     runs-on: ubuntu-24.04
     needs: utest-release
@@ -1031,11 +1049,12 @@ jobs:
             ${{github.workspace}}/build/reg_tests/openfast_io
 
 
+=======
+>>>>>>> OpenFAST/rc-5.0.1
   rtest-FF:
     runs-on: ubuntu-24.04
     needs: utest-release
     env:
-      CTEST_PARALLEL_LEVEL: 2
       OMP_NUM_THREADS: 2
     steps:
       - name: Restore workspace from artifact
@@ -1044,36 +1063,26 @@ jobs:
           name: build-all-release
       - name: Untar workspace
         run: |
-          tar -xf workspace.tar -C${{github.workspace}}
+          tar -xf workspace.tar -C ${{github.workspace}}
           rm workspace.tar
+<<<<<<< HEAD
       - name: List files in workspace
         run: ls
       - name: Setup Python
         uses: actions/setup-python@v6
+=======
+      - name: Setup test environment
+        uses: ./.github/actions/rtest-setup
+>>>>>>> OpenFAST/rc-5.0.1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libatlas-base-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
+          python-version: ${{ needs.build-all-release.outputs.python-version }}
       - name: Run FAST.Farm tests
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          ctest -VV -j1 -L fastfarm --verbose
+          # One test at a time: each FAST.Farm case already uses 2 OpenMP threads, which is all the
+          # throughput the runner has (see CTEST_PARALLEL_LEVEL at the top of this file).
+          ctest -VV -j1 -L fastfarm
       - name: Failing test artifacts
         uses: actions/upload-artifact@v6
         if: failure()
