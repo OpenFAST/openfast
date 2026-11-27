@@ -180,7 +180,13 @@ real(ReKi) function jinc ( x )
    if ( EqualRealNos(x,0.0_ReKi) ) then
       jinc = Pi
    else
+#ifdef __flang__
+      ! LLVM Flang maps single-precision BESSEL_JN to libm jnf, which is not
+      ! available on all platforms (e.g. macOS), so evaluate in double precision instead.
+      jinc = REAL( BESSEL_JN( 1, REAL(TwoPi*x,R8Ki) ) / REAL(x,R8Ki), ReKi )
+#else
       jinc = BESSEL_JN( 1, TwoPi*x )/x
+#endif
    end if
 
 end function jinc
