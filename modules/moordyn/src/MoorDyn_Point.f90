@@ -47,17 +47,31 @@ CONTAINS
 
 
    !--------------------------------------------------------------
-   SUBROUTINE Point_Initialize(Point, states, m)
+   SUBROUTINE Point_Initialize(Point, states, m, p, ErrStat, ErrMsg)
 
       Type(MD_Point), INTENT(INOUT)  :: Point        ! the Point object
       Real(DbKi),       INTENT(INOUT)  :: states(6)      ! state vector section for this Point
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
+      TYPE(MD_ParameterType), INTENT(IN   ) :: p          ! Parameters
+      integer(IntKi),      intent(  out) :: ErrStat
+      character(ErrMsgLen),intent(  out) :: ErrMsg
 
       INTEGER(IntKi)                   :: l
 
+      ErrStat = ErrID_None
+      ErrMsg  = ''
 
       if (Point%typeNum == 0) then  ! error check
-      
+
+         ! Free attachment points need mass (including added mass) or else NaN's. Attachment lines 
+         ! provide zero mass until activation.
+         IF ( Point%isAttachment .AND. ALL(Point%AttachHasEvent(1:Point%nAttached)) .AND. &
+              (Point%pointM + Point%pointV*p%rhoW*Point%pointCa < 1.0e-6_DbKi) ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = ' Free point '//trim(Int2Lstr(Point%IdNum))//' only has attachment events: it needs a non-attachment line, or a non zero mass or added mass.'
+            RETURN
+         END IF
+
          ! pass kinematics to any attached lines so they have initial positions at this initialization stage
          DO l=1,Point%nAttached
             IF (wordy > 1) print *, "Point ",  Point%IdNum, " setting end kinematics of line ", Point%attached(l), " to ", Point%r
@@ -216,6 +230,8 @@ CONTAINS
       Real(DbKi)                 :: Fnet_i(3) ! force from an attached line
       Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
       Real(DbKi)                 :: M_i(3,3)  ! mass from an attached line
+      Real(DbKi)                 :: FextTs(3) ! user-defined external force interpolated from a time series
+      Real(DbKi)                 :: AttachR   ! the fraction of an attached line's load and mass which reaches the point, from [0, 1]
 
 
       ! start with the Point's own forces including buoyancy and weight, and its own mass
@@ -245,7 +261,19 @@ CONTAINS
       !   print *, "  attached line ID", m%LineList(Point%attached(l))%IdNum
          
          CALL Line_GetEndStuff(m%LineList(Point%attached(l)), Fnet_i, Moment_dummy, M_i, Point%Top(l))
-         
+
+         ! Restrict force and mass coupling until attachment is triggered, then ramp with time.
+         IF (Point%isAttachment) THEN
+            IF (Point%AttachHasEvent(l)) THEN
+               AttachR = 0.0_DbKi
+               IF (.NOT. m%IC_gen) THEN ! call the ramp function (will be 0 until attachment time)
+                  CALL RampFactor(Point%AttachRampFcn(l), Point%time, Point%AttachTime(l), Point%AttachRampTime(l), Point%AttachRampCoef(l), AttachR)
+               END IF
+               Fnet_i = Fnet_i * AttachR
+               M_i    = M_i    * AttachR
+            END IF
+         END IF
+
          ! sum quantitites
          Point%Fnet = Point%Fnet + Fnet_i
          Point%M    = Point%M    + M_i
@@ -282,6 +310,10 @@ CONTAINS
 
       ! Added user-defined external force and damping on point
       Point%Fnet = Point%Fnet + Point%Fext
+      IF ((Point%nFextTsGsteps > 0) .AND. (.NOT. m%IC_gen)) THEN   ! add the external load time series if not icgen
+         CALL InterpExtLdSeries(Point%FextTsGts, Point%FextTsGfs, Point%time, FextTs)
+         Point%Fnet = Point%Fnet + FextTs
+      END IF
       DO J = 1, 3
          Point%Fnet(J) = Point%Fnet(J) - Point%Blin(J) * Point%rd(J) - Point%Bquad(J) * ABS(Point%rd(J)) * Point%rd(J)
       END DO
@@ -414,10 +446,24 @@ CONTAINS
             DO m = l,Point%nAttached 
             
                Point%Attached(m) = Point%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
-               Point%Top(     m) =      Point%Top(m+1) 
-            
+               Point%Top(     m) =      Point%Top(m+1)
+
+               ! the attachment event data is indexed like Attached, so it has to move with it
+               Point%AttachHasEvent(m) = Point%AttachHasEvent(m+1)
+               Point%AttachTime(    m) = Point%AttachTime(    m+1)
+               Point%AttachRampTime(m) = Point%AttachRampTime(m+1)
+               Point%AttachRampFcn( m) = Point%AttachRampFcn( m+1)
+               Point%AttachRampCoef(m) = Point%AttachRampCoef(m+1)
+
                Point%nAttached = Point%nAttached - 1                      ! reduce attached line counter by 1
-            
+
+               ! clear the vacated slot so a line added here later does not inherit a stale event
+               Point%AttachHasEvent(Point%nAttached+1) = .FALSE.
+               Point%AttachTime(    Point%nAttached+1) = 0.0_DbKi
+               Point%AttachRampTime(Point%nAttached+1) = 0.0_DbKi
+               Point%AttachRampFcn( Point%nAttached+1) = MD_RampLinear
+               Point%AttachRampCoef(Point%nAttached+1) = 0.0_DbKi
+
                ! also pass back the kinematics at the end
                DO J = 1,3
                   rEnd( J) = Point%r( J)
