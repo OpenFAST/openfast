@@ -2865,6 +2865,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
    real(FEKi), allocatable                   :: Temp(:,:)
+   real(FEKi), allocatable                   :: MbarLG(:,:)  ! Inertial load on L DOFs per unit Guyan acceleration, (MLL PhiR + MLR) TI G
    real(ReKi)                                :: dx,dy,dz
    real(ReKi)                                :: TI_transpose(p%nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
    real(ReKi)                                :: GMat_transpose(p%nDOFL_TP,p%nDOFL_TP)
@@ -3048,6 +3049,17 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%D1_141 = 0.0_ReKi
       p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb))
    END IF
+
+   if (p%SttcSolve /= idSIM_None) then
+      ! Static response of the truncated modes to the Guyan (incl. rigid-body) inertial load
+      CALL AllocAry( p%SLG, p%nDOF__L, p%nDOFL_TP, 'p%SLG', ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL AllocAry( MbarLG, p%nDOF__L, p%nDOFL_TP, 'MbarLG', ErrStat2, ErrMsg2 ); if(Failed()) return
+      MbarLG = matmul( matmul( Init%M(p%ID__L,p%ID__L), PhiRb ) + Init%M(p%ID__L,p%ID__Rb), p%TI )
+      if (p%TP1IsRBRefPt) MbarLG = matmul( MbarLG, p%GMat )
+      p%SLG = matmul( p%KLLm1, MbarLG )
+      if (p%nDOFM > 0) p%SLG = p%SLG - matmul( p%PhiLInvOmgL2(:,1:p%nDOFM), p%MMB )
+      deallocate(MbarLG)
+   endif
 
    if (p%TP1IsRBRefPt) then
       ! Equations of motion left-hand-side matrix for rigid-body acceleration
@@ -3713,6 +3725,8 @@ SUBROUTINE GetUFulls(u, p, x, m, ErrStat, ErrMsg)
          m%UL_0m  = MATMUL( p%PhiLInvOmgL2(:,1:p%nDOFM), m%F_L2(1:p%nDOFM) )
          m%UL_SIM = m%UL_SIM - m%UL_0m
       end if
+      ! Inertial load from Guyan/rigid-body acceleration (m%udotdot_TP = Udotdot_G after SD_SolveEOM)
+      m%UL_SIM = m%UL_SIM - MATMUL( p%SLG, m%udotdot_TP )
       m%UL = m%UL + m%UL_SIM
    endif
 

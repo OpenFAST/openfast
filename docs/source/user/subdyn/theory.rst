@@ -2010,84 +2010,116 @@ The case **GuyanDampMod=2**, is similar to the previous case, except that the us
 
 Static-Improvement Method
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-To account for the effects of static gravity (member self-weight) and
-buoyancy forces, one would have to include all of the structural axial
-modes in the C-B reduction. This inclusion often translates into
-hundreds of modes to be retained for practical problems. An alternative
-method is thus promoted to reduce this limitation and speed up SubDyn.
-This method is denoted as SIM, and computes two static solutions at each
-time step: one based on the full system stiffness matrix and one based
-on the reduced stiffness matrix. The dynamic solution then proceeds as
-described in the previous sections, and at each time step the
-time-varying dynamic solution is superimposed on the difference between
-the two static solutions, which amounts to quasi-statically accounting
-for the contribution of those modes not directly included within the
-dynamic solution.
+The C-B reduction retains only the *m* lowest-frequency internal modes.
+The discarded high-frequency modes, in particular the axial modes of the
+members, still contribute to the quasi-static deflection of the structure
+under loads that vary slowly compared to their natural periods, such as
+self-weight, buoyancy, and the distributed inertial load caused by the
+motion of the transition pieces or of the floating body. Capturing these
+contributions with the dynamic solution alone would often require
+hundreds of modes for practical structures. The static-improvement
+method (SIM), activated with **SttcSolve**, instead accounts for the
+truncated modes quasi-statically: at each time step, their static
+response to the current loads is superimposed on the C-B solution.
 
-The SIM formulation provides a correction for the displacements of the
-internal nodes. The uncorrected displacements are now noted :math:`{\hat{U}}_{L}`, while
-the corrected displacements are noted :math:`U_L`. The SIM correction
-consists in an additional term :math:`U_{L,\text{SIM}}` obtained 
-as the static deflection of all the internal DOFs (:math:`U_{L0}`)
-minus the static deflection associated
-with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
+**Derivation**
+
+The internal displacements are expanded using the Guyan modes and all
+:math:`L` internal modes, :math:`U_L = \Phi_R U_R + \Phi_L q_L`. Inserting
+this expansion into the second block row of Eq. :eq:`main2`, neglecting
+damping, and using :math:`K_{LR} + K_{LL}\Phi_R = 0` (Eq. :eq:`PhiR`),
+:math:`\Phi_L^T M_{LL}\Phi_L = I`, and :math:`\Phi_L^T K_{LL}\Phi_L = \Omega_L^2`,
+leads to a set of uncoupled modal equations:
+
+.. math:: :label: SIMmodal
+
+   \ddot{q}_L + \Omega_L^2 q_L = \Phi_L^T \hat{F}_L
+   ,\qquad
+   \hat{F}_L = F_L - \bar{M}_{LR}\,\ddot{U}_R
+   ,\qquad
+   \bar{M}_{LR} = M_{LL}\Phi_R + M_{LR}
+
+where :math:`F_L = F_{L,e} + F_{L,g}`, and :math:`\hat{F}_L` is the effective
+load on the internal DOFs. In addition to the external and gravity loads, it
+contains the inertial (d'Alembert) load of the internal nodes as they follow
+the accelerating boundary nodes through the Guyan modes. The first *m*
+equations are the retained C-B modes, which are integrated in time
+(Eq. :eq:`ddotqm`, noting that :math:`\Phi_m^T \bar{M}_{LR} T_I = \tilde{M}_{mB}`).
+For the truncated modes, :math:`j>m`, the natural frequencies
+:math:`\omega_j` are assumed to be well above the frequency content of
+:math:`\hat{F}_L`, so that the modal inertia can be neglected and
+:math:`q_j \approx \phi_j^T \hat{F}_L / \omega_j^2`, with :math:`\phi_j` the
+*j*-th column of :math:`\Phi_L`. The internal displacements become:
 
 .. math::   :label: SIM
 
-   U_L = \hat{U}_L + U_{L,\text{SIM}} =\hat{U}_L+  \underbrace{U_{L0} - U_{L0m}}_{U_{L,\text{SIM}}} = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L}  +  \underbrace{\Phi_L q_{L0}}_{U_{L0}} - \underbrace{\Phi_m q_{m0}}_{U_{L0m}} 
- 
+   U_L = \underbrace{\Phi_R U_R + \Phi_m q_m}_{\hat{U}_L} + U_{L,\text{SIM}}
+   ,\qquad
+   U_{L,\text{SIM}} = \sum_{j>m} \frac{\phi_j \phi_j^T}{\omega_j^2}\, \hat{F}_L
+   = \underbrace{K_{LL}^{-1} \hat{F}_L}_{U_{L0}} - \underbrace{\Phi_m \Omega_m^{-2} \Phi_m^T \hat{F}_L}_{U_{L0m}}
 
-.. where the expression for :math:`U_{L0}` and :math:`U_{L0m}` will be derived in the next paragraph.
-   will be derived in the next paragraph. Eq. :eq:`SIM` can be rewritten as:
-            \begin{bmatrix} 
-                U_R \\ 
-                    U_L 
-            \end{bmatrix} =
-          \begin{bmatrix} 
-                I & 0 & 0 & 0 \\
-               \Phi_R & \Phi_m & \Phi_L & -\Phi_m 
-            \end{bmatrix} 
-            \begin{bmatrix} 
-                U_R \\ 
-                    q_m \\
-                    q_{L0} \\
-                    q_{m0}
-            \end{bmatrix}
-    with:
-        U_{L0} = \Phi_L q_{L0}, \qquad U_{L0m} = \Phi_m q_{m0}
+where :math:`\hat{U}_L` is the uncorrected C-B displacement, and the spectral
+expansion :math:`K_{LL}^{-1} = \Phi_L \Omega_L^{-2} \Phi_L^T` was used.
+The SIM correction is thus the difference between two static solutions
+obtained under the same effective load with the boundary nodes fixed: the
+static deflection of the full internal system, :math:`U_{L0}`, and the
+static deflection represented by the retained C-B modes, :math:`U_{L0m}`.
+Subtracting :math:`U_{L0m}` avoids double counting the quasi-static response
+of the retained modes, which is already contained in :math:`q_m`. In the
+limiting cases, :math:`U_{L,\text{SIM}} = U_{L0}` for a Guyan reduction
+(:math:`m=0`), and :math:`U_{L,\text{SIM}}=0` if all modes are retained.
 
-where :math:`{q_{m0}}` and :math:`{q_{L0}}` are the *m* and *L* modal coefficients that are assumed to be
-operating in a static fashion. These coefficients are
-calculated under the C-B hypothesis that the boundary nodes are fixed.
-The static displacement vectors can be calculated as follows:
+**Implementation**
 
+Expressing the boundary accelerations in terms of the TP accelerations
+(Eq. :eq:`UTP`), Eq. :eq:`SIM` is split into a load term and an
+acceleration term:
 
-.. math::  :label: SIM3
-	
-	K_{LL} U_{L0} = F_{L,e} + F_{L,g}
+.. math::  :label: SIM2
 
-By pre-multiplying both sides times , Eq. :eq:`SIM3` can be
-rewritten as: :math:`{\Phi_L^T K_{LL} \Phi_L q_{L0} = \Phi_L^T  \left( F_{L,e} + F_{L,g} \right) = \tilde{F}_L }` or, recalling that :math:`{\Phi_L^T K_{LL} \Phi_L = \Omega_L^2}`, as: :math:`{\Omega_L^2 q_{L0} =\tilde{F}_L }`, or equivalently in terms of :math:`U_{L0}`:
+   U_{L,\text{SIM}} = \left( K_{LL}^{-1} - \Phi_m \Omega_m^{-2} \Phi_m^T \right) F_L - S_{LG}\, \ddot{U}_G
+   ,\qquad
+   S_{LG} = K_{LL}^{-1} \bar{M}_{LR}\, T_I\, G - \Phi_m \Omega_m^{-2}\, \tilde{M}_{mB}
 
-.. math::  :label: UL02
+The constant matrix :math:`S_{LG}` is computed at initialization. Its second
+term uses the same coupling matrix :math:`\tilde{M}_{mB}` as the state
+equation, so that the retained and truncated modes are subjected to the same
+inertial load. The vector :math:`\ddot{U}_G` contains the Guyan accelerations
+that drive the retained modes in the state equation, and :math:`G` is the
+corresponding transformation to the TP accelerations:
 
-	U_{L0} = \Phi_L \left[ \Omega_L^2 \right]^{-1} \tilde{F}_L 
+- Fixed-bottom structure: :math:`G=I` and :math:`\ddot{U}_G = \ddot{U}_{TP}`,
+  the accelerations of the TPs in the global coordinate system.
 
-Similarly:
+- Floating structure with a single TP that also serves as the rigid-body
+  reference point: :math:`G=I` and :math:`\ddot{U}_G = R_{g2b}\ddot{U}_{TP}`,
+  the TP acceleration expressed in the body coordinate system.
 
-.. math::  :label: UL0m2
+- Floating structure with a dedicated rigid-body reference point
+  (**TPID** = 0) and coupled TPs: :math:`\ddot{U}_G` contains the rigid-body
+  acceleration of the reference point, followed by the accelerations of the
+  coupled TPs relative to the rigid-body motion, all in the body coordinate
+  system. :math:`G` maps these quantities to the TP accelerations.
 
-   K_{LL} U_{L0m} = F_{L,e} + F_{L,g} \quad\rightarrow \quad U_{L0m} = \Phi_m \left[ \Omega_m^2 \right]^{-1} \tilde{F}_m 
+In the floating case, the loads :math:`F_L` are also rotated to the body
+coordinate system, so that :math:`U_{L,\text{SIM}}` is obtained in the body
+coordinate system (see :numref:`SD_summary`).
+For the fixed-bottom case, :math:`F_L` includes the extra moments described
+in :numref:`SD_ExtraMoment`.
 
-with :math:`\tilde{F}_m =\Phi_m^T(F_{L,e} + F_{L,g})`.
-Note that: :math:`{ \dot{U}_{L0} = \dot{q}_{L0} = \dot{U}_{L0m} = \dot{q}_{m0} =0 }` and :math:`{ \ddot{U}_{L0} = \ddot{q}_{L0} = \ddot{U}_{L0m} = \ddot{q}_{m0} =0 }`.
+Notes:
 
-In the floating case the loads :math:`F_L` is rotated to the body coordinate system when "GuyanLoadCorrection" is True (see :numref:`SD_ExtraMoment` for more details and :numref:`SD_summary` for the final equations used).
+- Only the displacements of the internal nodes are corrected (Eq. :eq:`y2motions`).
+  Consistent with the quasi-static assumption, the time derivatives of
+  :math:`U_{L,\text{SIM}}` are neglected, and the velocities and accelerations
+  of the internal nodes are not modified.
 
+- The SIM displacements are included in the computation of the element
+  loads (Eq. :eq:`el_loads`).
 
-
-
-
+- In the floating case, the centripetal loads associated with the angular
+  velocity of the body are not included in :math:`\hat{F}_L`, consistent
+  with the state equation of the retained modes.
 
 
 
@@ -2415,9 +2447,32 @@ By convention, the 6-vector is multiplied by -1 for the first node and +1 for th
          ,\quad
          F_{6}^{n_2}  = + ( F_{k,12}^e(7:12) - F_{eq,12}^e(7:12) )
 
-where :math:`F_{eq,12}^e` contains the equivalent nodal moments from the self-weight of the element applied at its two end nodes (Eq. :eq:`FG`). Note that other external
+where :math:`F_{eq,12}^e` contains the equivalent (fixed-end) nodal moments of the distributed loads that act along the element, namely its self-weight and
+its inertial (d'Alembert) load. For a beam element of length :math:`L_e`, cross-section area :math:`A_z`, density :math:`\rho`, and unit axis vector
+:math:`\hat{t}` (third column of :math:`D_c`), the distributed load per unit length at the two end nodes is:
+
+.. math:: :label: wInertia
+
+   w_k = \rho A_z \left( g - R_{g2b}\, \ddot{u}_k \right), \qquad k=1,2
+
+where :math:`g` is the gravity vector, :math:`\ddot{u}_k` is the total translational acceleration of node *k* in the global frame (Guyan or rigid-body
+motion plus the elastic C-B contribution), and both terms are resolved in the frame of :math:`[k] U_e`: the global frame for a fixed-bottom
+structure (:math:`R_{g2b}=I`), and the rigid-body frame for a floating structure. Assuming that the load varies linearly between the two nodes,
+the fixed-end moments are:
+
+.. math:: :label: Feq_moments
+
+   F_{eq,12}^e(4:6) = \frac{L_e^2}{60}\, \hat{t} \times \left( 3 w_1 + 2 w_2 \right)
+   ,\qquad
+   F_{eq,12}^e(10:12) = -\frac{L_e^2}{60}\, \hat{t} \times \left( 2 w_1 + 3 w_2 \right)
+
+These moments are recomputed at every time step and transformed to the element coordinate system together with :math:`[k] U_e`. For a uniform
+load (:math:`w_1=w_2`), they reduce to the classical :math:`\pm L_e^2/12` fixed-end moments, and for a structure at rest they reduce to the
+self-weight moments of Eq. :eq:`FG`. Including the inertial load is necessary for the nodal moments to be consistent with the deflected shape
+whenever the structure accelerates, in particular for floating structures: in free fall, for instance, the self-weight and inertial loads cancel,
+and the member loads vanish. Note that other external
 load components, such as hydrodynamic and hydrostatic loads, are mapped to SubDyn as simple lumped nodal loads without additional equivalent moments; therefore, no correction
-is required. We also omitted the self-weight equivalent forces in :math:`F_{eq,12}^e` because the reconstruction of nodal forces is done using element averaging (interpolation)
+is required. The equivalent forces of the distributed loads are omitted in :math:`F_{eq,12}^e` because the reconstruction of nodal forces is done using element averaging (interpolation)
 and extrapolation instead as explained below. This method provides better reconstruction of member forces due to distributed external loads, such as those from HydroDyn, which
 are simplified into lumped loads by OpenFAST mesh mapping.
 

@@ -285,6 +285,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiL_T      !< Transpose of Matrix of C-B  modes [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PhiLInvOmgL2      !< Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KLLm1      !< KLL^{-1}, inverse of matrix KLL, for static solve only [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SLG      !< SIM response of truncated modes to Guyan acceleration, KLL^{-1} (MLL PhiR + MLR) TI G - PhiM KMM^{-1} MmB, size nL x nDOFL_TP [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI      !< Matrix to calculate TP reference point reaction at top of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TIreact      !< Matrix to calculate single point reaction at base of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GMat      !< Matrix to convert the first 6 Guyan modes to rigid-body modes [-]
@@ -2737,6 +2738,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%KLLm1 = SrcParamData%KLLm1
    end if
+   if (allocated(SrcParamData%SLG)) then
+      LB(1:2) = lbound(SrcParamData%SLG)
+      UB(1:2) = ubound(SrcParamData%SLG)
+      if (.not. allocated(DstParamData%SLG)) then
+         allocate(DstParamData%SLG(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%SLG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%SLG = SrcParamData%SLG
+   end if
    if (allocated(SrcParamData%TI)) then
       LB(1:2) = lbound(SrcParamData%TI)
       UB(1:2) = ubound(SrcParamData%TI)
@@ -3337,6 +3350,9 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%KLLm1)) then
       deallocate(ParamData%KLLm1)
    end if
+   if (allocated(ParamData%SLG)) then
+      deallocate(ParamData%SLG)
+   end if
    if (allocated(ParamData%TI)) then
       deallocate(ParamData%TI)
    end if
@@ -3549,6 +3565,7 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%PhiL_T)
    call RegPackAlloc(RF, InData%PhiLInvOmgL2)
    call RegPackAlloc(RF, InData%KLLm1)
+   call RegPackAlloc(RF, InData%SLG)
    call RegPackAlloc(RF, InData%TI)
    call RegPackAlloc(RF, InData%TIreact)
    call RegPackAlloc(RF, InData%GMat)
@@ -3750,6 +3767,7 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PhiL_T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PhiLInvOmgL2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%KLLm1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SLG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TIreact); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GMat); if (RegCheckErr(RF, RoutineName)) return
