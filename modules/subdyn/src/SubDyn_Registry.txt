@@ -238,6 +238,7 @@ typedef  ^  ParameterType  ReKi    MBM  {:}{:}     -  -  "Matrix after C-B reduc
 typedef  ^  ParameterType  ReKi    PhiL_T  {:}{:}  -  -  "Transpose of Matrix of C-B  modes"
 typedef  ^  ParameterType  ReKi    PhiLInvOmgL2  {:}{:}  -  -  "Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1)"
 typedef  ^  ParameterType  ReKi    KLLm1  {:}{:}   -  -  "KLL^{-1}, inverse of matrix KLL, for static solve only"
+typedef  ^  ParameterType  ReKi    SLG  {:}{:}     -  -  "SIM response of truncated modes to Guyan acceleration, KLL^{-1} (MLL PhiR + MLR) TI G - PhiM KMM^{-1} MmB, size nL x nDOFL_TP"
 typedef  ^  ParameterType  ReKi    TI  {:}{:}      -  -  "Matrix to calculate TP reference point reaction at top of structure"
 typedef  ^  ParameterType  ReKi    TIreact  {:}{:} -  -  "Matrix to calculate single point reaction at base of structure"
 typedef  ^  ParameterType  ReKi    GMat {:}{:}     -  -  "Matrix to convert the first 6 Guyan modes to rigid-body modes"
